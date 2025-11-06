@@ -11,7 +11,6 @@ import {
   IconInnerShadowTop,
   IconSearch,
   IconSettings,
-  IconUsers,
 } from "@tabler/icons-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -26,7 +25,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { HotelIcon, User2 } from "lucide-react"
+import { HotelIcon, User2, UserCircle } from "lucide-react"
 import Link from "next/link"
 
 const data = {
@@ -52,15 +51,15 @@ const data = {
       icon: IconChartBar,
     },
     {
+      title: "Customers",
+      url: "/dashboard/customers",
+      icon: UserCircle,
+    },
+    {
       title: "Users",
       url: "/dashboard/users",
       icon: User2,
-    },
-    {
-      title: "Team",
-      url: "#",
-      icon: IconUsers,
-    },
+    }
   ],
   navClouds: [
     {
