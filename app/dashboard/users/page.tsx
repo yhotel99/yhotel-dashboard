@@ -16,13 +16,25 @@ import {
 import { DataTable } from "@/components/data-table"
 import { useRouter } from "next/navigation"
 import {
-  Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter
-} from "@/components/ui/sheet"
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog"
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Input } from "@/components/ui/input";
-import { FormControl, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { toast } from "sonner";
 
 // User data type
@@ -287,42 +299,57 @@ function ChangePasswordForm({ userName, onClose }: { userName: string, onClose: 
   const form = useForm({ resolver: zodResolver(schema), defaultValues: { password: "", confirm: "" } });
 
   return (
-    <form
-      onSubmit={form.handleSubmit(async () => {
-        toast.success(`Đổi mật khẩu cho ${userName} thành công!`);
-        onClose();
-      })}
-      className="space-y-4 py-2"
-    >
-      <div>
-        <FormLabel htmlFor="password">Mật khẩu mới</FormLabel>
-        <FormControl>
-          <Input id="password" type="password" {...form.register("password")} />
-        </FormControl>
-        <FormMessage>{form.formState.errors.password?.message}</FormMessage>
-      </div>
-      <div>
-        <FormLabel htmlFor="confirm">Nhập lại mật khẩu</FormLabel>
-        <FormControl>
-          <Input id="confirm" type="password" {...form.register("confirm")} />
-        </FormControl>
-        <FormMessage>{form.formState.errors.confirm?.message}</FormMessage>
-      </div>
-      <SheetFooter>
-        <Button variant="outline" type="button" onClick={onClose}>
-          Hủy
-        </Button>
-        <Button type="submit" disabled={form.formState.isSubmitting}>
-          Đổi mật khẩu
-        </Button>
-      </SheetFooter>
-    </form>
+    <Form {...form}>
+      <form
+        onSubmit={form.handleSubmit(async () => {
+          toast.success(`Đổi mật khẩu cho ${userName} thành công!`);
+          form.reset();
+          onClose();
+        })}
+        className="space-y-4"
+      >
+        <FormField
+          control={form.control}
+          name="password"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Mật khẩu mới *</FormLabel>
+              <FormControl>
+                <Input type="password" placeholder="Nhập mật khẩu mới" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="confirm"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Nhập lại mật khẩu *</FormLabel>
+              <FormControl>
+                <Input type="password" placeholder="Nhập lại mật khẩu" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <DialogFooter>
+          <Button variant="outline" type="button" onClick={onClose}>
+            Hủy
+          </Button>
+          <Button type="submit" disabled={form.formState.isSubmitting}>
+            {form.formState.isSubmitting ? "Đang xử lý..." : "Đổi mật khẩu"}
+          </Button>
+        </DialogFooter>
+      </form>
+    </Form>
   );
 }
 
 function ActionsCell({ userId, userName }: { userId: string, userName: string }) {
   const router = useRouter();
-  const [openSheet, setOpenSheet] = React.useState(false);
+  const [openDialog, setOpenDialog] = React.useState(false);
 
   return (
     <>
@@ -342,21 +369,24 @@ function ActionsCell({ userId, userName }: { userId: string, userName: string })
             Chỉnh sửa
           </DropdownMenuItem>
           <DropdownMenuItem>Xem chi tiết</DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setOpenSheet(true)}>
+          <DropdownMenuItem onClick={() => setOpenDialog(true)}>
             Đổi mật khẩu
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem variant="destructive">Khóa tài khoản</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      <Sheet open={openSheet} onOpenChange={setOpenSheet}>
-        <SheetContent side="right">
-          <SheetHeader>
-            <SheetTitle>Đổi mật khẩu cho {userName}</SheetTitle>
-          </SheetHeader>
-          <ChangePasswordForm userName={userName} onClose={() => setOpenSheet(false)} />
-        </SheetContent>
-      </Sheet>
+      <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Đổi mật khẩu</DialogTitle>
+            <DialogDescription>
+              Đổi mật khẩu cho người dùng: {userName}
+            </DialogDescription>
+          </DialogHeader>
+          <ChangePasswordForm userName={userName} onClose={() => setOpenDialog(false)} />
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { DataTable } from "@/components/data-table"
+import { useRouter } from "next/navigation"
 
 // Customer data type
 type Customer = {
@@ -82,6 +83,7 @@ function StatusBadge({ status }: { status: Customer["status"] }) {
 
 // Actions
 function ActionsCell({ customerId }: { customerId: string }) {
+  const router = useRouter()
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -96,7 +98,7 @@ function ActionsCell({ customerId }: { customerId: string }) {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-32">
         <DropdownMenuItem>Xem chi tiết</DropdownMenuItem>
-        <DropdownMenuItem>Chỉnh sửa</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => router.push(`/dashboard/customers/edit/${customerId}`)}>Chỉnh sửa</DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive">Khóa khách hàng</DropdownMenuItem>
       </DropdownMenuContent>
@@ -155,6 +157,7 @@ const columns: ColumnDef<Customer>[] = [
 ]
 
 export default function CustomersPage() {
+  const router = useRouter()
   const [data] = React.useState<Customer[]>(customersData)
   return (
     <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
@@ -165,7 +168,7 @@ export default function CustomersPage() {
             Quản lý và theo dõi thông tin khách hàng sử dụng hệ thống
           </p>
         </div>
-        <Button className="gap-2">
+        <Button className="gap-2" onClick={() => router.push("/dashboard/customers/create") }>
           <IconPlus className="size-4" />
           Thêm khách hàng
         </Button>
