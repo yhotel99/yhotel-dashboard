@@ -14,6 +14,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { DataTable } from "@/components/data-table"
+import { useRouter } from "next/navigation"
+import {
+  Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter
+} from "@/components/ui/sheet"
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Input } from "@/components/ui/input";
+import { FormControl, FormLabel, FormMessage } from "@/components/ui/form";
+import { toast } from "sonner";
 
 // User data type
 type User = {
@@ -266,6 +276,91 @@ const formatDate = (dateString: string) => {
   })
 }
 
+function ChangePasswordForm({ userName, onClose }: { userName: string, onClose: () => void }) {
+  const schema = z.object({
+    password: z.string().min(6, "Mật khẩu tối thiểu 6 ký tự"),
+    confirm: z.string()
+  }).refine((data) => data.password === data.confirm, {
+    message: "Nhập lại mật khẩu không trùng khớp",
+    path: ["confirm"],
+  });
+  const form = useForm({ resolver: zodResolver(schema), defaultValues: { password: "", confirm: "" } });
+
+  return (
+    <form
+      onSubmit={form.handleSubmit(async () => {
+        toast.success(`Đổi mật khẩu cho ${userName} thành công!`);
+        onClose();
+      })}
+      className="space-y-4 py-2"
+    >
+      <div>
+        <FormLabel htmlFor="password">Mật khẩu mới</FormLabel>
+        <FormControl>
+          <Input id="password" type="password" {...form.register("password")} />
+        </FormControl>
+        <FormMessage>{form.formState.errors.password?.message}</FormMessage>
+      </div>
+      <div>
+        <FormLabel htmlFor="confirm">Nhập lại mật khẩu</FormLabel>
+        <FormControl>
+          <Input id="confirm" type="password" {...form.register("confirm")} />
+        </FormControl>
+        <FormMessage>{form.formState.errors.confirm?.message}</FormMessage>
+      </div>
+      <SheetFooter>
+        <Button variant="outline" type="button" onClick={onClose}>
+          Hủy
+        </Button>
+        <Button type="submit" disabled={form.formState.isSubmitting}>
+          Đổi mật khẩu
+        </Button>
+      </SheetFooter>
+    </form>
+  );
+}
+
+function ActionsCell({ userId, userName }: { userId: string, userName: string }) {
+  const router = useRouter();
+  const [openSheet, setOpenSheet] = React.useState(false);
+
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            className="data-[state=open]:bg-muted text-muted-foreground flex size-8"
+            size="icon"
+          >
+            <IconDotsVertical />
+            <span className="sr-only">Open menu</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-32">
+          <DropdownMenuItem onClick={() => router.push(`/dashboard/users/edit/${userId}`)}>
+            Chỉnh sửa
+          </DropdownMenuItem>
+          <DropdownMenuItem>Xem chi tiết</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setOpenSheet(true)}>
+            Đổi mật khẩu
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem variant="destructive">Khóa tài khoản</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <Sheet open={openSheet} onOpenChange={setOpenSheet}>
+        <SheetContent side="right">
+          <SheetHeader>
+            <SheetTitle>Đổi mật khẩu cho {userName}</SheetTitle>
+          </SheetHeader>
+          <ChangePasswordForm userName={userName} onClose={() => setOpenSheet(false)} />
+        </SheetContent>
+      </Sheet>
+    </>
+  );
+}
+
 // Table columns
 const columns: ColumnDef<User>[] = [
   {
@@ -302,37 +397,16 @@ const columns: ColumnDef<User>[] = [
   },
   {
     id: "actions",
-    cell: () => (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            className="data-[state=open]:bg-muted text-muted-foreground flex size-8"
-            size="icon"
-          >
-            <IconDotsVertical />
-            <span className="sr-only">Open menu</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-32">
-          <DropdownMenuItem>Xem chi tiết</DropdownMenuItem>
-          <DropdownMenuItem>Chỉnh sửa</DropdownMenuItem>
-          <DropdownMenuItem>Đổi mật khẩu</DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem variant="destructive">Khóa tài khoản</DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    ),
+    cell: ({ row }) => <ActionsCell userId={row.original.id} userName={row.original.name} />,
   },
 ]
 
 export default function UsersPage() {
   const [data] = React.useState<User[]>(usersData)
+  const router = useRouter()
 
   const handleCreateUser = () => {
-    // Handle create user action
-    console.log("Create user clicked")
-    // You can add a dialog/modal here for creating a new user
+    router.push('/dashboard/users/create')
   }
 
   return (
