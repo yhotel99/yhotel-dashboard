@@ -38,22 +38,22 @@ const data = {
   navMain: [
     {
       title: "Dashboard",
-      url: "#",
+      url: "/dashboard",
       icon: IconDashboard,
     },
     {
       title: "Rooms",
-      url: "#",
+      url: "/dashboard/rooms",
       icon: HotelIcon,
     },
     {
       title: "Bookings",
-      url: "#",
+      url: "/dashboard/bookings",
       icon: IconChartBar,
     },
     {
       title: "Users",
-      url: "#",
+      url: "/dashboard/users",
       icon: User2,
     },
     {
