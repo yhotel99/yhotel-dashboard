@@ -97,7 +97,7 @@ function ActionsCell({ customerId }: { customerId: string }) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-32">
-        <DropdownMenuItem>Xem chi tiết</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => router.push(`/dashboard/customers/${customerId}/bookings`)}>Xem chi tiết</DropdownMenuItem>
         <DropdownMenuItem onClick={() => router.push(`/dashboard/customers/edit/${customerId}`)}>Chỉnh sửa</DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive">Khóa khách hàng</DropdownMenuItem>

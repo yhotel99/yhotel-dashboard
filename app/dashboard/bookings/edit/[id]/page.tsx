@@ -35,7 +35,7 @@ export default function EditBookingPage() {
         checkIn: booking.checkIn,
         checkOut: booking.checkOut,
         guests: booking.guests.toString(),
-        status: booking.status,
+        status: String(booking.status) as any,
         paymentMethod: booking.paymentMethod,
         totalAmount: booking.totalAmount.toString(),
       }

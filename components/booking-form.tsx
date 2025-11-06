@@ -49,7 +49,7 @@ export const bookingFormSchema = z.object({
     .refine((val) => !isNaN(Number(val)) && Number(val) >= 1, {
       message: "Số khách phải là số và lớn hơn hoặc bằng 1",
     }),
-  status: z.enum(["pending", "confirmed", "checked-in", "checked-out", "cancelled"]),
+  status: z.enum(["pending", "confirmed", "checked_in", "checked_out", "cancelled"]),
   paymentMethod: z.string().min(1, "Phương thức thanh toán là bắt buộc"),
   totalAmount: z
     .string()
@@ -370,8 +370,8 @@ export function BookingForm({
                       <SelectContent>
                         <SelectItem value="pending">Chờ xác nhận</SelectItem>
                         <SelectItem value="confirmed">Đã xác nhận</SelectItem>
-                        <SelectItem value="checked-in">Đã check-in</SelectItem>
-                        <SelectItem value="checked-out">Đã check-out</SelectItem>
+                        <SelectItem value="checked_in">Đã check-in</SelectItem>
+                        <SelectItem value="checked_out">Đã check-out</SelectItem>
                         <SelectItem value="cancelled">Đã hủy</SelectItem>
                       </SelectContent>
                     </Select>

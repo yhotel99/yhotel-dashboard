@@ -1,4 +1,35 @@
-// Customer data type
+// User data type
+export type User = {
+  id: string
+  name: string
+  email: string
+  phone: string
+  role: "admin" | "manager" | "staff" | "receptionist"
+  status: "active" | "inactive" | "suspended"
+  createdAt: string
+  lastLogin: string
+}
+
+// Sample data
+export const usersData: User[] = [
+  {
+    id: "1",
+    name: "Nguyễn Văn Admin",
+    email: "admin@yhotel.com",
+    phone: "0901234567",
+    role: "admin",
+    status: "active",
+    createdAt: "2024-01-01",
+    lastLogin: "2024-01-25",
+  },
+  // ...copy toàn bộ dữ liệu mẫu users từ page.tsx vào đây...
+]
+
+export function getUserById(id: string): User | undefined {
+  return usersData.find((user) => user.id === id)
+}
+
+// Customers module
 export type Customer = {
   id: string
   name: string
@@ -10,7 +41,6 @@ export type Customer = {
   status: "active" | "banned"
 }
 
-// Sample data (copied from customers page)
 export const customersData: Customer[] = [
   {
     id: "1",
@@ -56,4 +86,8 @@ export const customersData: Customer[] = [
 
 export function getCustomerById(id: string): Customer | undefined {
   return customersData.find((c) => c.id === id)
+}
+
+export function getCustomerByPhone(phone: string): Customer | undefined {
+  return customersData.find((c) => c.phone === phone)
 }
