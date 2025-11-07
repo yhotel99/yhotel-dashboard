@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { useRouter } from "next/navigation"
+import { useRooms } from "@/hooks/use-rooms"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -21,7 +22,6 @@ import {
   FormField,
   FormItem,
   FormLabel,
-  FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import {
@@ -32,31 +32,31 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { toast } from "sonner"
+import { Textarea } from "@/components/ui/textarea"
+
+// Room type enum matching database
+export const roomTypeEnum = ["standard", "deluxe", "superior", "family"] as const
+export const roomStatusEnum = ["available", "maintenance", "inactive"] as const
 
 // Form validation schema
 export const roomFormSchema = z.object({
-  number: z.string().min(1, "Số phòng là bắt buộc"),
-  type: z.string().min(1, "Loại phòng là bắt buộc"),
-  status: z.enum(["available", "occupied", "maintenance"]),
-  price: z
+  name: z.string().min(1, "Tên phòng là bắt buộc"),
+  description: z.string().optional(),
+  room_type: z.enum(roomTypeEnum),
+  price_per_night: z
     .string()
-    .min(1, "Giá phòng là bắt buộc")
+    .min(1, "Giá mỗi đêm là bắt buộc")
     .refine((val) => !isNaN(Number(val)) && Number(val) >= 0, {
       message: "Giá phải là số và lớn hơn hoặc bằng 0",
     }),
-  floor: z
+  max_guests: z
     .string()
-    .min(1, "Tầng là bắt buộc")
+    .min(1, "Số khách tối đa là bắt buộc")
     .refine((val) => !isNaN(Number(val)) && Number(val) >= 1, {
-      message: "Tầng phải là số và lớn hơn hoặc bằng 1",
+      message: "Số khách tối đa phải là số và lớn hơn hoặc bằng 1",
     }),
-  capacity: z
-    .string()
-    .min(1, "Sức chứa là bắt buộc")
-    .refine((val) => !isNaN(Number(val)) && Number(val) >= 1, {
-      message: "Sức chứa phải là số và lớn hơn hoặc bằng 1",
-    }),
-  amenities: z.array(z.string()).min(1, "Vui lòng chọn ít nhất một tiện ích"),
+  status: z.enum(roomStatusEnum),
+  amenities: z.array(z.string()),
 })
 
 export type RoomFormValues = z.infer<typeof roomFormSchema>
@@ -90,21 +90,22 @@ export function RoomForm({
   onCancel,
 }: RoomFormProps) {
   const router = useRouter()
+  const { createRoom, updateRoom } = useRooms()
 
   const defaultFormValues: RoomFormValues = {
-    number: "",
-    type: "",
+    name: "",
+    description: "",
+    room_type: "standard",
+    price_per_night: "0",
+    max_guests: "2",
     status: "available",
-    price: "0",
-    floor: "1",
-    capacity: "2",
     amenities: [],
   }
 
   const form = useForm<RoomFormValues>({
     resolver: zodResolver(roomFormSchema),
     defaultValues: defaultValues
-      ? { ...defaultFormValues, ...defaultValues }
+      ? { ...defaultFormValues, ...defaultValues, amenities: defaultValues.amenities ?? [] }
       : defaultFormValues,
   })
 
@@ -115,38 +116,35 @@ export function RoomForm({
         return
       }
 
-      // Transform string numbers to actual numbers
+      // Transform data to match database schema
       const roomData = {
-        ...data,
-        price: Number(data.price),
-        floor: Number(data.floor),
-        capacity: Number(data.capacity),
+        name: data.name,
+        description: data.description || null,
+        room_type: data.room_type,
+        price_per_night: Number(data.price_per_night),
+        max_guests: Number(data.max_guests),
+        status: data.status,
+        amenities: data.amenities,
       }
 
-      // Simulate API call
       if (mode === "edit") {
-        console.log("Updating room:", roomId, roomData)
-        toast.success("Cập nhật phòng thành công!", {
-          description: `Phòng ${data.number} đã được cập nhật thành công.`,
-        })
+        // Update room
+        await updateRoom(roomId!, roomData)
       } else {
-        console.log("Creating room:", roomData)
-        toast.success("Tạo phòng thành công!", {
-          description: `Phòng ${data.number} đã được tạo thành công.`,
-        })
+        // Create room
+        await createRoom(roomData)
       }
-
-      // Simulate delay
-      await new Promise((resolve) => setTimeout(resolve, 1000))
 
       // Redirect to rooms page
       router.push("/dashboard/rooms")
+      router.refresh()
     } catch (error) {
       toast.error("Có lỗi xảy ra", {
         description: mode === "edit" 
           ? "Không thể cập nhật phòng. Vui lòng thử lại."
           : "Không thể tạo phòng. Vui lòng thử lại.",
       })
+      console.error("Room form error:", error)
     }
   }
 
@@ -179,27 +177,26 @@ export function RoomForm({
             <div className="grid gap-6 md:grid-cols-2">
               <FormField
                 control={form.control}
-                name="number"
+                name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Số phòng *</FormLabel>
+                    <FormLabel>Tên phòng *</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="VD: 101, 201, 301..."
+                        placeholder="VD: Deluxe 301, Suite 201..."
                         {...field}
                       />
                     </FormControl>
                     <FormDescription>
-                      Số phòng phải là duy nhất trong hệ thống
+                      Tên phòng phải là duy nhất trong hệ thống
                     </FormDescription>
-                    <FormMessage />
                   </FormItem>
                 )}
               />
 
               <FormField
                 control={form.control}
-                name="type"
+                name="room_type"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Loại phòng *</FormLabel>
@@ -213,19 +210,57 @@ export function RoomForm({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="Standard">Standard</SelectItem>
-                        <SelectItem value="Deluxe">Deluxe</SelectItem>
-                        <SelectItem value="Suite">Suite</SelectItem>
-                        <SelectItem value="Executive">Executive</SelectItem>
-                        <SelectItem value="Presidential">
-                          Presidential
-                        </SelectItem>
+                        <SelectItem value="standard">Standard</SelectItem>
+                        <SelectItem value="deluxe">Deluxe</SelectItem>
+                        <SelectItem value="superior">Superior</SelectItem>
+                        <SelectItem value="family">Family</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormDescription>
                       Loại phòng xác định mức giá và tiện ích
                     </FormDescription>
-                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="price_per_night"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Giá mỗi đêm (VNĐ) *</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="VD: 500000"
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Giá phòng cho một đêm
+                    </FormDescription>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="max_guests"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Số khách tối đa *</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="VD: 2, 4, 6..."
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Số lượng người tối đa có thể ở
+                    </FormDescription>
                   </FormItem>
                 )}
               />
@@ -247,78 +282,13 @@ export function RoomForm({
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="available">Có sẵn</SelectItem>
-                        <SelectItem value="occupied">Đã đặt</SelectItem>
                         <SelectItem value="maintenance">Bảo trì</SelectItem>
+                        <SelectItem value="inactive">Không hoạt động</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormDescription>
-                      Trạng thái hiện tại của phòng
+                      Trạng thái kỹ thuật/quản trị của phòng
                     </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="price"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Giá phòng (VNĐ) *</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="VD: 500000"
-                        {...field}
-                        value={field.value ?? ""}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Giá phòng cho một đêm
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="floor"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tầng *</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="VD: 1, 2, 3..."
-                        {...field}
-                        value={field.value ?? ""}
-                      />
-                    </FormControl>
-                    <FormDescription>Tầng của phòng</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="capacity"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Sức chứa (người) *</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="VD: 2, 4, 6..."
-                        {...field}
-                        value={field.value ?? ""}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Số lượng người tối đa có thể ở
-                    </FormDescription>
-                    <FormMessage />
                   </FormItem>
                 )}
               />
@@ -326,13 +296,33 @@ export function RoomForm({
 
             <FormField
               control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Mô tả</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Mô tả chi tiết về phòng..."
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Mô tả chi tiết về phòng và các đặc điểm nổi bật
+                  </FormDescription>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
               name="amenities"
               render={() => (
                 <FormItem>
                   <div className="mb-4">
-                    <FormLabel className="text-base">Tiện ích *</FormLabel>
+                    <FormLabel className="text-base">Tiện ích</FormLabel>
                     <FormDescription>
-                      Chọn các tiện ích có trong phòng
+                      Chọn các tiện ích có trong phòng (tùy chọn)
                     </FormDescription>
                   </div>
                   <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
@@ -373,7 +363,6 @@ export function RoomForm({
                       />
                     ))}
                   </div>
-                  <FormMessage />
                 </FormItem>
               )}
             />

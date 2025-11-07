@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 import {
   IconCamera,
   IconChartBar,
@@ -11,11 +11,11 @@ import {
   IconInnerShadowTop,
   IconSearch,
   IconSettings,
-} from "@tabler/icons-react"
+} from "@tabler/icons-react";
 
-import { NavMain } from "@/components/nav-main"
-import { NavSecondary } from "@/components/nav-secondary"
-import { NavUser } from "@/components/nav-user"
+import { NavMain } from "@/components/nav-main";
+import { NavSecondary } from "@/components/nav-secondary";
+import { NavUser } from "@/components/nav-user";
 import {
   Sidebar,
   SidebarContent,
@@ -24,10 +24,10 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/components/ui/sidebar"
-import { HotelIcon, User2, UserCircle } from "lucide-react"
-import Link from "next/link"
-import { useAuth } from "@/contexts/auth-context"
+} from "@/components/ui/sidebar";
+import { HotelIcon, Images, User2, UserCircle } from "lucide-react";
+import Link from "next/link";
+import { useAuth } from "@/contexts/auth-context";
 
 const data = {
   user: {
@@ -57,10 +57,15 @@ const data = {
       icon: UserCircle,
     },
     {
+      title: "Gallery",
+      url: "/dashboard/gallery",
+      icon: Images,
+    },
+    {
       title: "Users",
       url: "/dashboard/users",
       icon: User2,
-    }
+    },
   ],
   navClouds: [
     {
@@ -127,10 +132,10 @@ const data = {
       icon: IconSearch,
     },
   ],
-}
+};
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const {currentUser} = useAuth()
+  const { currentUser } = useAuth();
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -156,5 +161,5 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         {currentUser && <NavUser user={currentUser} />}
       </SidebarFooter>
     </Sidebar>
-  )
+  );
 }
