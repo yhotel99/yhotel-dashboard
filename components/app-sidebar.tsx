@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/sidebar"
 import { HotelIcon, User2, UserCircle } from "lucide-react"
 import Link from "next/link"
+import { useAuth } from "@/contexts/auth-context"
 
 const data = {
   user: {
@@ -129,6 +130,7 @@ const data = {
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const {currentUser} = useAuth()
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -151,7 +153,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        {currentUser && <NavUser user={currentUser} />}
       </SidebarFooter>
     </Sidebar>
   )
