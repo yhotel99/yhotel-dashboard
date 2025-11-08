@@ -424,7 +424,9 @@ export default function GalleryPage() {
                   {uploadProgress.map((progress, index) => (
                     <div key={index} className="space-y-2">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="truncate">{progress.fileName}</span>
+                        <span className="truncate max-w-[320px]">
+                          {progress.fileName}
+                        </span>
                         <span className="text-muted-foreground">
                           {progress.status === "uploading" && "Đang tải..."}
                           {progress.status === "success" && "✓ Thành công"}

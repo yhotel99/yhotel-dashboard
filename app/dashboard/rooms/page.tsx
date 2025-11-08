@@ -15,8 +15,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { DataTable } from "@/components/data-table";
 import { useRooms, type Room } from "@/hooks/use-rooms";
+import { toast } from "sonner";
 
 // Room type labels
 const roomTypeLabels: Record<Room["room_type"], string> = {
@@ -39,7 +50,13 @@ const StatusBadge = ({ status }: { status: Room["status"] }) => {
 };
 
 // Actions cell component
-function ActionsCell({ roomId }: { roomId: string }) {
+function ActionsCell({
+  room,
+  onDelete,
+}: {
+  room: Room;
+  onDelete: (room: Room) => void;
+}) {
   const router = useRouter();
 
   return (
@@ -56,20 +73,22 @@ function ActionsCell({ roomId }: { roomId: string }) {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-32">
         <DropdownMenuItem
-          onClick={() => router.push(`/dashboard/rooms/edit/${roomId}`)}
+          onClick={() => router.push(`/dashboard/rooms/edit/${room.id}`)}
         >
           Chỉnh sửa
         </DropdownMenuItem>
-        <DropdownMenuItem>Xem chi tiết</DropdownMenuItem>
+        {/* <DropdownMenuItem>Xem chi tiết</DropdownMenuItem> */}
         <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive">Xóa</DropdownMenuItem>
+        <DropdownMenuItem variant="destructive" onClick={() => onDelete(room)}>
+          Xóa
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
 }
 
-// Table columns
-const columns: ColumnDef<Room>[] = [
+// Table columns factory
+const createColumns = (onDelete: (room: Room) => void): ColumnDef<Room>[] => [
   {
     accessorKey: "name",
     header: "Tên phòng",
@@ -122,9 +141,97 @@ const columns: ColumnDef<Room>[] = [
   },
   {
     id: "actions",
-    cell: ({ row }) => <ActionsCell roomId={row.original.id} />,
+    cell: ({ row }) => <ActionsCell room={row.original} onDelete={onDelete} />,
   },
 ];
+
+// Delete confirmation dialog component
+function DeleteRoomDialog({
+  room,
+  open,
+  onOpenChange,
+  onConfirm,
+}: {
+  room: Room | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: () => Promise<void>;
+}) {
+  const [confirmName, setConfirmName] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const roomName = room?.name || "";
+  const isNameMatch = confirmName.trim() === roomName;
+
+  const handleConfirm = async () => {
+    if (!isNameMatch) return;
+    setIsDeleting(true);
+    try {
+      await onConfirm();
+      setConfirmName("");
+      onOpenChange(false);
+    } catch {
+      // Error is handled in parent component
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen) {
+      setConfirmName("");
+    }
+    onOpenChange(newOpen);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Xác nhận xóa phòng</DialogTitle>
+          <DialogDescription>
+            Hành động này không thể hoàn tác. Phòng sẽ bị xóa vĩnh viễn.
+            <br />
+            <br />
+            Để xác nhận, vui lòng nhập tên phòng: <strong>{roomName}</strong>
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="confirm-name">Tên phòng</Label>
+            <Input
+              id="confirm-name"
+              placeholder="Nhập tên phòng để xác nhận"
+              value={confirmName}
+              onChange={(e) => setConfirmName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && isNameMatch && !isDeleting) {
+                  handleConfirm();
+                }
+              }}
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => handleOpenChange(false)}
+            disabled={isDeleting}
+          >
+            Hủy
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={handleConfirm}
+            disabled={!isNameMatch || isDeleting}
+          >
+            {isDeleting ? "Đang xóa..." : "Xóa phòng"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export default function RoomsPage() {
   const router = useRouter();
@@ -191,11 +298,15 @@ export default function RoomsPage() {
     }
   }, [debouncedSearch, search, limit, updateSearchParams]);
 
-  const { rooms, isLoading, pagination, fetchRooms } = useRooms(
+  const { rooms, isLoading, pagination, fetchRooms, deleteRoom } = useRooms(
     page,
     limit,
     search
   );
+
+  // Delete room dialog state
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [roomToDelete, setRoomToDelete] = useState<Room | null>(null);
 
   // Handle empty page after deletion or invalid page number
   useEffect(() => {
@@ -223,6 +334,37 @@ export default function RoomsPage() {
   const handleCreateRoom = () => {
     router.push("/dashboard/rooms/create");
   };
+
+  const handleDeleteClick = useCallback((room: Room) => {
+    setRoomToDelete(room);
+    setIsDeleteDialogOpen(true);
+  }, []);
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!roomToDelete) return;
+
+    try {
+      await deleteRoom(roomToDelete.id);
+      toast.success("Xóa phòng thành công!", {
+        description: `Phòng ${roomToDelete.name} đã được xóa thành công.`,
+      });
+      setIsDeleteDialogOpen(false);
+      setRoomToDelete(null);
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Không thể xóa phòng";
+      toast.error("Xóa phòng thất bại", {
+        description: errorMessage,
+      });
+      throw err;
+    }
+  }, [roomToDelete, deleteRoom]);
+
+  // Create columns with delete handler
+  const columns = useMemo(
+    () => createColumns(handleDeleteClick),
+    [handleDeleteClick]
+  );
 
   return (
     <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
@@ -257,6 +399,13 @@ export default function RoomsPage() {
           onSearchChange={setLocalSearch}
         ></DataTable>
       </div>
+
+      <DeleteRoomDialog
+        room={roomToDelete}
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }
