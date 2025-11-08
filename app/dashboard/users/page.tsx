@@ -99,9 +99,11 @@ const formatDate = (dateString: string | null) => {
 };
 
 function ChangePasswordForm({
+  userId,
   userName,
   onClose,
 }: {
+  userId: string;
   userName: string;
   onClose: () => void;
 }) {
@@ -119,16 +121,42 @@ function ChangePasswordForm({
     defaultValues: { password: "", confirm: "" },
   });
 
+  const handleSubmit = async (data: { password: string; confirm: string }) => {
+    try {
+      const response = await fetch("/api/users/update-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId,
+          password: data.password,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Không thể đổi mật khẩu");
+      }
+
+      toast.success("Đổi mật khẩu thành công!", {
+        description: `Mật khẩu cho ${userName} đã được cập nhật thành công.`,
+      });
+      form.reset();
+      onClose();
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Không thể đổi mật khẩu";
+      toast.error("Đổi mật khẩu thất bại", {
+        description: errorMessage,
+      });
+    }
+  };
+
   return (
     <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(async () => {
-          toast.success(`Đổi mật khẩu cho ${userName} thành công!`);
-          form.reset();
-          onClose();
-        })}
-        className="space-y-4"
-      >
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
         <FormField
           control={form.control}
           name="password"
@@ -415,14 +443,13 @@ function ActionsCell({
           <DropdownMenuItem onClick={() => onEdit(profile)}>
             Chỉnh sửa
           </DropdownMenuItem>
-          <DropdownMenuItem>Xem chi tiết</DropdownMenuItem>
           <DropdownMenuItem onClick={() => setOpenPasswordDialog(true)}>
             Đổi mật khẩu
           </DropdownMenuItem>
-          <DropdownMenuSeparator />
+          {/* <DropdownMenuSeparator />
           <DropdownMenuItem variant="destructive">
-            Khóa tài khoản
-          </DropdownMenuItem>
+            Xóa tài khoản
+          </DropdownMenuItem> */}
         </DropdownMenuContent>
       </DropdownMenu>
       <Dialog open={openPasswordDialog} onOpenChange={setOpenPasswordDialog}>
@@ -434,6 +461,7 @@ function ActionsCell({
             </DialogDescription>
           </DialogHeader>
           <ChangePasswordForm
+            userId={profile.id}
             userName={userName}
             onClose={() => setOpenPasswordDialog(false)}
           />

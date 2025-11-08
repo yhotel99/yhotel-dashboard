@@ -36,6 +36,7 @@ export async function POST(request: NextRequest) {
           full_name,
           phone: phone || null,
         },
+        email_confirm: true, // email will be confirmed automatically
       });
 
     if (authError) {
