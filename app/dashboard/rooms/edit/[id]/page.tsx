@@ -1,17 +1,17 @@
-"use client"
+"use client";
 
-import { useRouter, useParams } from "next/navigation"
-import { IconArrowLeft } from "@tabler/icons-react"
+import { useRouter, useParams } from "next/navigation";
+import { IconArrowLeft } from "@tabler/icons-react";
 
-import { Button } from "@/components/ui/button"
-import { RoomForm, type RoomFormValues } from "@/components/room-form"
-import { useRoom } from "@/hooks/use-rooms"
+import { Button } from "@/components/ui/button";
+import { RoomForm, type RoomFormValues } from "@/components/room-form";
+import { useRoom } from "@/hooks/use-rooms";
 
 export default function EditRoomPage() {
-  const router = useRouter()
-  const params = useParams()
-  const roomId = params.id as string
-  const { room, isLoading } = useRoom(roomId)
+  const router = useRouter();
+  const params = useParams();
+  const roomId = params.id as string;
+  const { room, isLoading } = useRoom(roomId);
 
   const defaultValues: Partial<RoomFormValues> | undefined = room
     ? {
@@ -22,8 +22,10 @@ export default function EditRoomPage() {
         price_per_night: room.price_per_night.toString(),
         max_guests: room.max_guests.toString(),
         amenities: room.amenities,
+        thumbnail: room.thumbnail,
+        images: room.images,
       }
-    : undefined
+    : undefined;
 
   if (isLoading) {
     return (
@@ -44,7 +46,7 @@ export default function EditRoomPage() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   if (!room) {
@@ -68,7 +70,7 @@ export default function EditRoomPage() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -92,13 +94,8 @@ export default function EditRoomPage() {
       </div>
 
       <div className="px-4 lg:px-6">
-        <RoomForm
-          mode="edit"
-          roomId={roomId}
-          defaultValues={defaultValues}
-        />
+        <RoomForm mode="edit" roomId={roomId} defaultValues={defaultValues} />
       </div>
     </div>
-  )
+  );
 }
-

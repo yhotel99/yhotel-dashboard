@@ -1,30 +1,8 @@
 // Shared booking data and helpers
-export type BookingStatus =
-  | 'pending'
-  | 'awaiting_payment'
-  | 'confirmed'
-  | 'checked_in'
-  | 'checked_out'
-  | 'completed'
-  | 'cancelled'
-  | 'no_show'
-  | 'refunded'
+import type { BookingStatus, Booking } from "@/lib/types";
 
-export type Booking = {
-  id: string
-  bookingCode: string
-  customerName: string
-  customerPhone: string
-  roomNumber: string
-  checkIn: string
-  checkOut: string
-  nights: number
-  guests: number
-  totalAmount: number
-  status: BookingStatus
-  paymentMethod: string
-  createdAt: string
-}
+// Re-export types for backward compatibility
+export type { BookingStatus, Booking } from "@/lib/types";
 
 // NOTE: Keep in sync with main page dataset
 export const rawBookingsData: Booking[] = [

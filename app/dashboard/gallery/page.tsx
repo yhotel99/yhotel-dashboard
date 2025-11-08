@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useGallery } from "@/hooks/use-gallery";
+import { useStorage } from "@/hooks/use-storage";
 import { ImageZoom } from "@/components/ui/shadcn-io/image-zoom";
 import Image from "next/image";
 
@@ -38,14 +39,24 @@ export default function GalleryPage() {
 
   const limit = useMemo(() => {
     const limitParam = searchParams.get("limit");
-    const limitNum = limitParam ? parseInt(limitParam, 10) : 20;
-    return limitNum > 0 ? limitNum : 20;
+    const limitNum = limitParam ? parseInt(limitParam, 10) : 18;
+    return limitNum > 0 ? limitNum : 18;
   }, [searchParams]);
 
   const { images, isLoading, pagination, addImages, deleteImage } = useGallery(
     page,
     limit
   );
+
+  // Storage upload hook
+  const {
+    upload,
+    isUploading: isUploadingFiles,
+    uploadProgress,
+  } = useStorage({
+    bucket: "yhotel",
+    folder: "gallery",
+  });
 
   // Update URL search params when pagination changes
   const updateSearchParams = useCallback(
@@ -68,10 +79,22 @@ export default function GalleryPage() {
 
   // Upload dialog state
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
-  const [imageUrls, setImageUrls] = useState<string[]>([]);
-  const [urlInput, setUrlInput] = useState("");
-  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Delete confirmation dialog state
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [imageIdToDelete, setImageIdToDelete] = useState<string | null>(null);
+
+  // Store preview items with unique IDs
+  type PreviewItem = {
+    id: string;
+    file: File;
+    url: string;
+  };
+  const [previewItems, setPreviewItems] = useState<PreviewItem[]>([]);
+
+  // Store all URLs that need cleanup on unmount
+  const urlsToCleanupRef = useRef<Set<string>>(new Set());
 
   // Handle file selection
   const handleFileSelect = useCallback(
@@ -80,79 +103,144 @@ export default function GalleryPage() {
       if (!files || files.length === 0) return;
 
       const newFiles: File[] = Array.from(files);
-      const fileUrls: string[] = [];
+      const newPreviewItems: PreviewItem[] = [];
 
-      newFiles.forEach((file) => {
+      newFiles.forEach((file, index) => {
         if (!file.type.startsWith("image/")) {
           toast.error(`File ${file.name} không phải là hình ảnh`);
           return;
         }
 
-        // Create preview URL
+        // Create preview URL and unique ID
         const url = URL.createObjectURL(file);
-        fileUrls.push(url);
+        const id = `${Date.now()}-${index}-${Math.random()
+          .toString(36)
+          .substring(2, 11)}-${file.name}`;
+        newPreviewItems.push({ id, file, url });
+        // Track URL for cleanup on unmount
+        urlsToCleanupRef.current.add(url);
       });
 
-      setImageUrls((prev) => [...prev, ...fileUrls]);
+      setPreviewItems((prev) => [...prev, ...newPreviewItems]);
     },
     []
   );
 
-  // Handle URL input (paste multiple URLs separated by newline)
-  const handleUrlInput = useCallback((urls: string) => {
-    const urlList = urls
-      .split("\n")
-      .map((url) => url.trim())
-      .filter((url) => url.length > 0 && isValidUrl(url));
-    setImageUrls((prev) => [...prev, ...urlList]);
-  }, []);
-
-  // Check if URL is valid
-  const isValidUrl = (url: string): boolean => {
-    try {
-      new URL(url);
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
   // Handle upload
   const handleUpload = useCallback(async () => {
-    if (imageUrls.length === 0) {
+    if (previewItems.length === 0) {
       toast.error("Vui lòng chọn ít nhất một hình ảnh");
       return;
     }
 
-    setIsUploading(true);
     try {
-      await addImages(imageUrls);
-      setImageUrls([]);
-      setUrlInput("");
+      // Upload files to storage
+      const filesToUpload = previewItems.map((item) => item.file);
+      const results = await upload(filesToUpload);
+
+      // Get URLs from upload results
+      const uploadedUrls = results.map((result) => result.url);
+
+      // Add to gallery
+      await addImages(uploadedUrls);
+
+      // Clean up preview URLs
+      previewItems.forEach((item) => {
+        URL.revokeObjectURL(item.url);
+        // Remove from cleanup tracking
+        urlsToCleanupRef.current.delete(item.url);
+      });
+
+      // Reset state
+      setPreviewItems([]);
       setIsUploadDialogOpen(false);
 
       // Reset file input
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsUploading(false);
-    }
-  }, [imageUrls, addImages]);
 
-  // Handle delete image
-  const handleDelete = useCallback(
-    async (id: string) => {
-      await deleteImage(id);
-    },
-    [deleteImage]
-  );
+      toast.success(`Đã tải lên thành công ${results.length} hình ảnh`);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Không thể tải lên hình ảnh";
+      toast.error("Tải lên thất bại", {
+        description: errorMessage,
+      });
+    }
+  }, [previewItems, upload, addImages]);
+
+  // Handle delete image click - open confirmation dialog
+  const handleDeleteClick = useCallback((id: string) => {
+    setImageIdToDelete(id);
+    setIsDeleteDialogOpen(true);
+  }, []);
+
+  // Confirm delete image
+  const handleConfirmDelete = useCallback(async () => {
+    if (!imageIdToDelete) return;
+
+    try {
+      await deleteImage(imageIdToDelete);
+      setIsDeleteDialogOpen(false);
+      setImageIdToDelete(null);
+      toast.success("Đã xóa hình ảnh");
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Không thể xóa hình ảnh";
+      toast.error("Xóa hình ảnh thất bại", {
+        description: errorMessage,
+      });
+    }
+  }, [imageIdToDelete, deleteImage]);
 
   // Remove preview image
-  const handleRemovePreview = useCallback((index: number) => {
-    setImageUrls((prev) => prev.filter((_, i) => i !== index));
+  const handleRemovePreview = useCallback((id: string) => {
+    setPreviewItems((prev) => {
+      const itemToRemove = prev.find((item) => item.id === id);
+      if (itemToRemove) {
+        // Revoke object URL to free memory
+        URL.revokeObjectURL(itemToRemove.url);
+        // Remove from cleanup tracking
+        urlsToCleanupRef.current.delete(itemToRemove.url);
+      }
+      return prev.filter((item) => item.id !== id);
+    });
+  }, []);
+
+  // Handle dialog close with cleanup
+  const handleDialogClose = useCallback(
+    (open: boolean) => {
+      if (!open && !isUploadingFiles) {
+        // Cleanup all preview URLs when dialog closes
+        previewItems.forEach((item) => {
+          URL.revokeObjectURL(item.url);
+          urlsToCleanupRef.current.delete(item.url);
+        });
+        // Reset preview items
+        setPreviewItems([]);
+        // Reset file input
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+      }
+      setIsUploadDialogOpen(open);
+    },
+    [previewItems, isUploadingFiles]
+  );
+
+  // Cleanup preview URLs on unmount (when navigating away)
+  useEffect(() => {
+    // Store reference to the Set for cleanup
+    const urlsSet = urlsToCleanupRef.current;
+
+    return () => {
+      // Cleanup all tracked URLs when component unmounts
+      urlsSet.forEach((url) => {
+        URL.revokeObjectURL(url);
+      });
+      urlsSet.clear();
+    };
   }, []);
 
   // Handle empty page after deletion
@@ -191,19 +279,21 @@ export default function GalleryPage() {
       </div>
 
       <div className="px-4 lg:px-6">
+        {/* Image Count */}
+        <div className="mb-4 text-muted-foreground text-sm">
+          Hiển thị {images.length} trong tổng số {pagination.total} hình ảnh
+        </div>
+
         {/* Image Grid */}
         {isLoading ? (
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
             {Array.from({ length: limit }).map((_, i) => (
               <div key={i} className="aspect-square bg-muted rounded-lg" />
             ))}
           </div>
         ) : images.length > 0 ? (
           <>
-            <div className="mb-4 text-muted-foreground text-sm">
-              Hiển thị {images.length} trong tổng số {pagination.total} hình ảnh
-            </div>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
               {images.map((image) => (
                 <div
                   key={image.id}
@@ -224,7 +314,7 @@ export default function GalleryPage() {
                     className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 z-10 shadow-lg pointer-events-auto"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleDelete(image.id);
+                      handleDeleteClick(image.id);
                     }}
                   >
                     <IconTrash className="size-4" />
@@ -273,12 +363,12 @@ export default function GalleryPage() {
       </div>
 
       {/* Upload Dialog */}
-      <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
+      <Dialog open={isUploadDialogOpen} onOpenChange={handleDialogClose}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Tải ảnh lên</DialogTitle>
             <DialogDescription>
-              Chọn file ảnh hoặc nhập URL hình ảnh (mỗi URL một dòng)
+              Chọn file ảnh từ máy tính của bạn
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -299,44 +389,62 @@ export default function GalleryPage() {
               </p>
             </div>
 
-            {/* URL Input */}
-            <div className="space-y-2">
-              <Label htmlFor="url-input">Hoặc nhập URL hình ảnh</Label>
-              <textarea
-                id="url-input"
-                value={urlInput}
-                onChange={(e) => {
-                  setUrlInput(e.target.value);
-                  handleUrlInput(e.target.value);
-                }}
-                placeholder={
-                  "https://example.com/image1.jpg\nhttps://example.com/image2.jpg"
-                }
-                className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              />
-              <p className="text-muted-foreground text-xs">Mỗi URL một dòng</p>
-            </div>
-
             {/* Preview */}
-            {imageUrls.length > 0 && (
+            {previewItems.length > 0 && (
               <div className="space-y-2">
-                <Label>Ảnh đã chọn ({imageUrls.length})</Label>
+                <Label>Ảnh đã chọn ({previewItems.length})</Label>
                 <div className="grid grid-cols-4 gap-2 max-h-[200px] overflow-y-auto p-2 border rounded-md">
-                  {imageUrls.map((url, index) => (
-                    <div key={index} className="relative aspect-square group">
-                      <img
-                        src={url}
-                        alt={`Preview ${index + 1}`}
+                  {previewItems.map((item) => (
+                    <div key={item.id} className="relative aspect-square group">
+                      <Image
+                        src={item.url}
+                        alt={`Preview ${item.file.name}`}
+                        fill
                         className="w-full h-full object-cover rounded border"
                       />
                       <Button
                         variant="destructive"
                         size="icon"
                         className="absolute top-1 right-1 size-6 opacity-0 group-hover:opacity-100"
-                        onClick={() => handleRemovePreview(index)}
+                        onClick={() => handleRemovePreview(item.id)}
                       >
                         <IconTrash className="size-3" />
                       </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Upload Progress */}
+            {isUploadingFiles && uploadProgress.length > 0 && (
+              <div className="space-y-2">
+                <Label>Tiến trình tải lên</Label>
+                <div className="space-y-3">
+                  {uploadProgress.map((progress, index) => (
+                    <div key={index} className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="truncate">{progress.fileName}</span>
+                        <span className="text-muted-foreground">
+                          {progress.status === "uploading" && "Đang tải..."}
+                          {progress.status === "success" && "✓ Thành công"}
+                          {progress.status === "error" && "✗ Lỗi"}
+                          {progress.status === "pending" && "Chờ..."}
+                        </span>
+                      </div>
+                      {progress.status === "uploading" && (
+                        <div className="h-2 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-primary transition-all"
+                            style={{ width: `${progress.progress}%` }}
+                          />
+                        </div>
+                      )}
+                      {progress.error && (
+                        <p className="text-sm text-destructive">
+                          {progress.error}
+                        </p>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -347,24 +455,48 @@ export default function GalleryPage() {
             <Button
               variant="outline"
               onClick={() => {
-                setIsUploadDialogOpen(false);
-                setImageUrls([]);
-                setUrlInput("");
-                if (fileInputRef.current) {
-                  fileInputRef.current.value = "";
-                }
+                // Close dialog - cleanup will happen in handleDialogClose
+                handleDialogClose(false);
               }}
+              disabled={isUploadingFiles}
             >
               Hủy
             </Button>
             <Button
               onClick={handleUpload}
-              disabled={isUploading || imageUrls.length === 0}
+              disabled={isUploadingFiles || previewItems.length === 0}
             >
               <IconUpload className="size-4 mr-2" />
-              {isUploading
+              {isUploadingFiles
                 ? "Đang tải lên..."
-                : `Tải lên ${imageUrls.length} ảnh`}
+                : `Tải lên ${previewItems.length} ảnh`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Xác nhận xóa hình ảnh</DialogTitle>
+            <DialogDescription>
+              Bạn có chắc chắn muốn xóa hình ảnh này? Hành động này không thể
+              hoàn tác.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsDeleteDialogOpen(false);
+                setImageIdToDelete(null);
+              }}
+            >
+              Hủy
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmDelete}>
+              Xác nhận xóa
             </Button>
           </DialogFooter>
         </DialogContent>

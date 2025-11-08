@@ -119,8 +119,49 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  html, body {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none;  /* IE & Edge */
+  }
+  
+  html::-webkit-scrollbar, 
+  body::-webkit-scrollbar {
+    display: none; /* Chrome, Safari */
+  }
 }
 
 button {
   cursor: pointer;
 }
+
+/* Toast description styling - make description text more visible */
+[data-sonner-toast] [data-description] {
+  color: var(--foreground) !important;
+  opacity: 0.9 !important;
+  font-weight: 500;
+}
+
+.dark [data-sonner-toast] [data-description] {
+  color: var(--foreground) !important;
+  opacity: 0.95 !important;
+}
+
+/* Ensure description is visible in all toast variants */
+[data-sonner-toast][data-type="success"] [data-description],
+[data-sonner-toast][data-type="error"] [data-description],
+[data-sonner-toast][data-type="info"] [data-description],
+[data-sonner-toast][data-type="warning"] [data-description] {
+  color: var(--foreground) !important;
+  opacity: 0.9 !important;
+  font-weight: 500;
+}
+
+.dark [data-sonner-toast][data-type="success"] [data-description],
+.dark [data-sonner-toast][data-type="error"] [data-description],
+.dark [data-sonner-toast][data-type="info"] [data-description],
+.dark [data-sonner-toast][data-type="warning"] [data-description] {
+  color: var(--foreground) !important;
+  opacity: 0.95 !important;
+}
+

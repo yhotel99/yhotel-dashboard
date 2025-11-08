@@ -1,20 +1,20 @@
-"use client"
+"use client";
 
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import * as z from "zod"
-import { useRouter } from "next/navigation"
-import { useRooms } from "@/hooks/use-rooms"
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { useRouter } from "next/navigation";
+import { useRooms } from "@/hooks/use-rooms";
 
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
+} from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Form,
   FormControl,
@@ -22,21 +22,27 @@ import {
   FormField,
   FormItem,
   FormLabel,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { toast } from "sonner"
-import { Textarea } from "@/components/ui/textarea"
+} from "@/components/ui/select";
+import { toast } from "sonner";
+import { Textarea } from "@/components/ui/textarea";
+import { ImageSelector, ImageListSelector } from "@/components/image-selector";
 
 // Room type enum matching database
-export const roomTypeEnum = ["standard", "deluxe", "superior", "family"] as const
-export const roomStatusEnum = ["available", "maintenance", "inactive"] as const
+export const roomTypeEnum = [
+  "standard",
+  "deluxe",
+  "superior",
+  "family",
+] as const;
+export const roomStatusEnum = ["available", "maintenance", "inactive"] as const;
 
 // Form validation schema
 export const roomFormSchema = z.object({
@@ -57,9 +63,23 @@ export const roomFormSchema = z.object({
     }),
   status: z.enum(roomStatusEnum),
   amenities: z.array(z.string()),
-})
+  thumbnail: z
+    .object({
+      id: z.string(),
+      url: z.string(),
+    })
+    .optional(),
+  images: z
+    .array(
+      z.object({
+        id: z.string(),
+        url: z.string(),
+      })
+    )
+    .optional(),
+});
 
-export type RoomFormValues = z.infer<typeof roomFormSchema>
+export type RoomFormValues = z.infer<typeof roomFormSchema>;
 
 export const availableAmenities = [
   "WiFi",
@@ -72,14 +92,14 @@ export const availableAmenities = [
   "Hair Dryer",
   "Coffee Maker",
   "Room Service",
-]
+];
 
 interface RoomFormProps {
-  mode?: "create" | "edit"
-  defaultValues?: Partial<RoomFormValues>
-  roomId?: string
-  onSubmit?: (data: RoomFormValues) => Promise<void>
-  onCancel?: () => void
+  mode?: "create" | "edit";
+  defaultValues?: Partial<RoomFormValues>;
+  roomId?: string;
+  onSubmit?: (data: RoomFormValues) => Promise<void>;
+  onCancel?: () => void;
 }
 
 export function RoomForm({
@@ -89,8 +109,8 @@ export function RoomForm({
   onSubmit: externalOnSubmit,
   onCancel,
 }: RoomFormProps) {
-  const router = useRouter()
-  const { createRoom, updateRoom } = useRooms()
+  const router = useRouter();
+  const { createRoom, updateRoom } = useRooms();
 
   const defaultFormValues: RoomFormValues = {
     name: "",
@@ -100,20 +120,26 @@ export function RoomForm({
     max_guests: "2",
     status: "available",
     amenities: [],
-  }
+    thumbnail: undefined,
+    images: undefined,
+  };
 
   const form = useForm<RoomFormValues>({
     resolver: zodResolver(roomFormSchema),
     defaultValues: defaultValues
-      ? { ...defaultFormValues, ...defaultValues, amenities: defaultValues.amenities ?? [] }
+      ? {
+          ...defaultFormValues,
+          ...defaultValues,
+          amenities: defaultValues.amenities ?? [],
+        }
       : defaultFormValues,
-  })
+  });
 
   const handleSubmit = async (data: RoomFormValues) => {
     try {
       if (externalOnSubmit) {
-        await externalOnSubmit(data)
-        return
+        await externalOnSubmit(data);
+        return;
       }
 
       // Transform data to match database schema
@@ -125,36 +151,55 @@ export function RoomForm({
         max_guests: Number(data.max_guests),
         status: data.status,
         amenities: data.amenities,
-      }
+      };
 
       if (mode === "edit") {
-        // Update room
-        await updateRoom(roomId!, roomData)
+        // Update room with images
+        const updatedRoom = await updateRoom(
+          roomId!,
+          roomData,
+          data.thumbnail,
+          data.images && data.images.length > 0 ? data.images : undefined
+        );
+        toast.success("Cập nhật phòng thành công!", {
+          description: `Phòng ${updatedRoom.name} đã được cập nhật thành công.`,
+        });
       } else {
-        // Create room
-        await createRoom(roomData)
+        // Create room with images
+        const newRoom = await createRoom(
+          roomData,
+          data.thumbnail,
+          data.images && data.images.length > 0 ? data.images : undefined
+        );
+        toast.success("Tạo phòng thành công!", {
+          description: `Phòng ${newRoom.name} đã được tạo thành công.`,
+        });
       }
 
       // Redirect to rooms page
-      router.push("/dashboard/rooms")
-      router.refresh()
+      router.push("/dashboard/rooms");
+      router.refresh();
     } catch (error) {
-      toast.error("Có lỗi xảy ra", {
-        description: mode === "edit" 
-          ? "Không thể cập nhật phòng. Vui lòng thử lại."
-          : "Không thể tạo phòng. Vui lòng thử lại.",
-      })
-      console.error("Room form error:", error)
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : mode === "edit"
+          ? "Không thể cập nhật phòng"
+          : "Không thể tạo phòng";
+      toast.error(mode === "edit" ? "Cập nhật phòng thất bại" : "Tạo phòng thất bại", {
+        description: errorMessage,
+      });
+      console.error("Room form error:", error);
     }
-  }
+  };
 
   const handleCancel = () => {
     if (onCancel) {
-      onCancel()
+      onCancel();
     } else {
-      router.back()
+      router.back();
     }
-  }
+  };
 
   return (
     <Card>
@@ -237,9 +282,7 @@ export function RoomForm({
                         value={field.value ?? ""}
                       />
                     </FormControl>
-                    <FormDescription>
-                      Giá phòng cho một đêm
-                    </FormDescription>
+                    <FormDescription>Giá phòng cho một đêm</FormDescription>
                   </FormItem>
                 )}
               />
@@ -283,7 +326,9 @@ export function RoomForm({
                       <SelectContent>
                         <SelectItem value="available">Có sẵn</SelectItem>
                         <SelectItem value="maintenance">Bảo trì</SelectItem>
-                        <SelectItem value="inactive">Không hoạt động</SelectItem>
+                        <SelectItem value="inactive">
+                          Không hoạt động
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                     <FormDescription>
@@ -350,7 +395,7 @@ export function RoomForm({
                                           (field.value || []).filter(
                                             (value) => value !== amenity
                                           )
-                                        )
+                                        );
                                   }}
                                 />
                               </FormControl>
@@ -358,7 +403,7 @@ export function RoomForm({
                                 {amenity}
                               </FormLabel>
                             </FormItem>
-                          )
+                          );
                         }}
                       />
                     ))}
@@ -367,12 +412,42 @@ export function RoomForm({
               )}
             />
 
+            <FormField
+              control={form.control}
+              name="thumbnail"
+              render={({ field }) => (
+                <FormItem>
+                  <FormControl>
+                    <ImageSelector
+                      value={field.value}
+                      onChange={field.onChange}
+                      label="Ảnh chính (Thumbnail)"
+                      description="Chọn ảnh đại diện cho phòng"
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="images"
+              render={({ field }) => (
+                <FormItem>
+                  <FormControl>
+                    <ImageListSelector
+                      value={field.value || []}
+                      onChange={field.onChange}
+                      label="Danh sách ảnh"
+                      description="Chọn nhiều ảnh để hiển thị trong chi tiết phòng"
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
             <div className="flex justify-end gap-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleCancel}
-              >
+              <Button type="button" variant="outline" onClick={handleCancel}>
                 Hủy
               </Button>
               <Button type="submit" disabled={form.formState.isSubmitting}>
@@ -381,14 +456,13 @@ export function RoomForm({
                     ? "Đang cập nhật..."
                     : "Đang tạo..."
                   : mode === "edit"
-                    ? "Cập nhật phòng"
-                    : "Tạo phòng"}
+                  ? "Cập nhật phòng"
+                  : "Tạo phòng"}
               </Button>
             </div>
           </form>
         </Form>
       </CardContent>
     </Card>
-  )
+  );
 }
-

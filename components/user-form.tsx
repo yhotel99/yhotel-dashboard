@@ -38,7 +38,7 @@ const baseSchema = z.object({
     .string()
     .min(1, "Số điện thoại bắt buộc")
     .regex(/^[0-9]{10,11}$/, "Số điện thoại không hợp lệ"),
-  role: z.enum(["admin", "manager", "staff", "receptionist"]),
+  role: z.enum(["admin", "manager", "staff"]),
   status: z.enum(["active", "inactive", "suspended"]),
 })
 
@@ -178,7 +178,6 @@ export function UserForm({
                         <SelectItem value="admin">Quản trị viên</SelectItem>
                         <SelectItem value="manager">Quản lý</SelectItem>
                         <SelectItem value="staff">Nhân viên</SelectItem>
-                        <SelectItem value="receptionist">Lễ tân</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

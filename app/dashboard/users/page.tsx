@@ -1,20 +1,20 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { ColumnDef } from "@tanstack/react-table"
-import { IconDotsVertical, IconPlus } from "@tabler/icons-react"
+import * as React from "react";
+import { ColumnDef } from "@tanstack/react-table";
+import { IconDotsVertical, IconPlus } from "@tabler/icons-react";
+import { useSearchParams, useRouter } from "next/navigation";
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { DataTable } from "@/components/data-table"
-import { useRouter } from "next/navigation"
+} from "@/components/ui/dropdown-menu";
+import { DataTable } from "@/components/data-table";
 import {
   Dialog,
   DialogContent,
@@ -22,7 +22,7 @@ import {
   DialogTitle,
   DialogFooter,
   DialogDescription,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -36,267 +36,88 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { toast } from "sonner";
-
-// User data type
-type User = {
-  id: string
-  name: string
-  email: string
-  phone: string
-  role: "admin" | "manager" | "staff" | "receptionist"
-  status: "active" | "inactive" | "suspended"
-  createdAt: string
-  lastLogin: string
-}
-
-// Sample data
-const usersData: User[] = [
-  {
-    id: "1",
-    name: "Nguyễn Văn Admin",
-    email: "admin@yhotel.com",
-    phone: "0901234567",
-    role: "admin",
-    status: "active",
-    createdAt: "2024-01-01",
-    lastLogin: "2024-01-25",
-  },
-  {
-    id: "2",
-    name: "Trần Thị Quản lý",
-    email: "manager@yhotel.com",
-    phone: "0902345678",
-    role: "manager",
-    status: "active",
-    createdAt: "2024-01-02",
-    lastLogin: "2024-01-24",
-  },
-  {
-    id: "3",
-    name: "Lê Văn Lễ tân",
-    email: "receptionist1@yhotel.com",
-    phone: "0903456789",
-    role: "receptionist",
-    status: "active",
-    createdAt: "2024-01-03",
-    lastLogin: "2024-01-25",
-  },
-  {
-    id: "4",
-    name: "Phạm Thị Nhân viên",
-    email: "staff1@yhotel.com",
-    phone: "0904567890",
-    role: "staff",
-    status: "active",
-    createdAt: "2024-01-04",
-    lastLogin: "2024-01-23",
-  },
-  {
-    id: "5",
-    name: "Hoàng Văn Nhân viên 2",
-    email: "staff2@yhotel.com",
-    phone: "0905678901",
-    role: "staff",
-    status: "inactive",
-    createdAt: "2024-01-05",
-    lastLogin: "2024-01-20",
-  },
-  {
-    id: "6",
-    name: "Vũ Thị Lễ tân 2",
-    email: "receptionist2@yhotel.com",
-    phone: "0906789012",
-    role: "receptionist",
-    status: "active",
-    createdAt: "2024-01-06",
-    lastLogin: "2024-01-25",
-  },
-  {
-    id: "7",
-    name: "Đặng Văn Quản lý 2",
-    email: "manager2@yhotel.com",
-    phone: "0907890123",
-    role: "manager",
-    status: "active",
-    createdAt: "2024-01-07",
-    lastLogin: "2024-01-24",
-  },
-  {
-    id: "8",
-    name: "Bùi Thị Nhân viên 3",
-    email: "staff3@yhotel.com",
-    phone: "0908901234",
-    role: "staff",
-    status: "suspended",
-    createdAt: "2024-01-08",
-    lastLogin: "2024-01-15",
-  },
-  {
-    id: "9",
-    name: "Đỗ Văn Lễ tân 3",
-    email: "receptionist3@yhotel.com",
-    phone: "0909012345",
-    role: "receptionist",
-    status: "active",
-    createdAt: "2024-01-09",
-    lastLogin: "2024-01-25",
-  },
-  {
-    id: "10",
-    name: "Ngô Thị Nhân viên 4",
-    email: "staff4@yhotel.com",
-    phone: "0900123456",
-    role: "staff",
-    status: "active",
-    createdAt: "2024-01-10",
-    lastLogin: "2024-01-22",
-  },
-  {
-    id: "11",
-    name: "Dương Văn Admin 2",
-    email: "admin2@yhotel.com",
-    phone: "0911234567",
-    role: "admin",
-    status: "active",
-    createdAt: "2024-01-11",
-    lastLogin: "2024-01-25",
-  },
-  {
-    id: "12",
-    name: "Phan Thị Nhân viên 5",
-    email: "staff5@yhotel.com",
-    phone: "0912345678",
-    role: "staff",
-    status: "inactive",
-    createdAt: "2024-01-12",
-    lastLogin: "2024-01-18",
-  },
-  {
-    id: "13",
-    name: "Võ Văn Quản lý 3",
-    email: "manager3@yhotel.com",
-    phone: "0913456789",
-    role: "manager",
-    status: "active",
-    createdAt: "2024-01-13",
-    lastLogin: "2024-01-24",
-  },
-  {
-    id: "14",
-    name: "Lý Thị Lễ tân 4",
-    email: "receptionist4@yhotel.com",
-    phone: "0914567890",
-    role: "receptionist",
-    status: "active",
-    createdAt: "2024-01-14",
-    lastLogin: "2024-01-25",
-  },
-  {
-    id: "15",
-    name: "Cao Văn Nhân viên 6",
-    email: "staff6@yhotel.com",
-    phone: "0915678901",
-    role: "staff",
-    status: "active",
-    createdAt: "2024-01-15",
-    lastLogin: "2024-01-21",
-  },
-  {
-    id: "16",
-    name: "Tăng Thị Nhân viên 7",
-    email: "staff7@yhotel.com",
-    phone: "0916789012",
-    role: "staff",
-    status: "active",
-    createdAt: "2024-01-16",
-    lastLogin: "2024-01-23",
-  },
-  {
-    id: "17",
-    name: "Trịnh Văn Lễ tân 5",
-    email: "receptionist5@yhotel.com",
-    phone: "0917890123",
-    role: "receptionist",
-    status: "suspended",
-    createdAt: "2024-01-17",
-    lastLogin: "2024-01-10",
-  },
-  {
-    id: "18",
-    name: "Lương Thị Nhân viên 8",
-    email: "staff8@yhotel.com",
-    phone: "0918901234",
-    role: "staff",
-    status: "active",
-    createdAt: "2024-01-18",
-    lastLogin: "2024-01-24",
-  },
-  {
-    id: "19",
-    name: "Mai Văn Quản lý 4",
-    email: "manager4@yhotel.com",
-    phone: "0919012345",
-    role: "manager",
-    status: "active",
-    createdAt: "2024-01-19",
-    lastLogin: "2024-01-25",
-  },
-  {
-    id: "20",
-    name: "Hồ Thị Nhân viên 9",
-    email: "staff9@yhotel.com",
-    phone: "0920123456",
-    role: "staff",
-    status: "inactive",
-    createdAt: "2024-01-20",
-    lastLogin: "2024-01-19",
-  },
-]
+import { useProfiles } from "@/hooks/use-profiles";
+import type { Profile } from "@/lib/types";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // Role badge component
-const RoleBadge = ({ role }: { role: User["role"] }) => {
+const RoleBadge = ({ role }: { role: Profile["role"] }) => {
   const roleConfig = {
-    admin: { label: "Quản trị viên", variant: "default" as const },
-    manager: { label: "Quản lý", variant: "secondary" as const },
-    staff: { label: "Nhân viên", variant: "outline" as const },
-    receptionist: { label: "Lễ tân", variant: "outline" as const },
-  }
+    admin: {
+      label: "Quản trị viên",
+      variant: "default" as const,
+      className: "",
+    },
+    manager: {
+      label: "Quản lý",
+      variant: "default" as const,
+      className: "bg-blue-500 hover:bg-blue-600 text-white border-0",
+    },
+    staff: {
+      label: "Nhân viên",
+      variant: "default" as const,
+      className: "bg-green-500 hover:bg-green-600 text-white border-0",
+    },
+  };
 
-  const config = roleConfig[role]
-  return <Badge variant={config.variant}>{config.label}</Badge>
-}
+  const config = roleConfig[role];
+
+  return (
+    <Badge variant={config.variant} className={config.className}>
+      {config.label}
+    </Badge>
+  );
+};
 
 // Status badge component
-const StatusBadge = ({ status }: { status: User["status"] }) => {
+const StatusBadge = ({ status }: { status: Profile["status"] }) => {
   const statusConfig = {
     active: { label: "Hoạt động", variant: "default" as const },
     inactive: { label: "Không hoạt động", variant: "secondary" as const },
     suspended: { label: "Đã khóa", variant: "outline" as const },
-  }
+  };
 
-  const config = statusConfig[status]
-  return <Badge variant={config.variant}>{config.label}</Badge>
-}
+  const config = statusConfig[status];
+  return <Badge variant={config.variant}>{config.label}</Badge>;
+};
 
 // Format date
-const formatDate = (dateString: string) => {
-  const date = new Date(dateString)
+const formatDate = (dateString: string | null) => {
+  if (!dateString) return "-";
+  const date = new Date(dateString);
   return date.toLocaleDateString("vi-VN", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
-  })
-}
-
-function ChangePasswordForm({ userName, onClose }: { userName: string, onClose: () => void }) {
-  const schema = z.object({
-    password: z.string().min(6, "Mật khẩu tối thiểu 6 ký tự"),
-    confirm: z.string()
-  }).refine((data) => data.password === data.confirm, {
-    message: "Nhập lại mật khẩu không trùng khớp",
-    path: ["confirm"],
   });
-  const form = useForm({ resolver: zodResolver(schema), defaultValues: { password: "", confirm: "" } });
+};
+
+function ChangePasswordForm({
+  userName,
+  onClose,
+}: {
+  userName: string;
+  onClose: () => void;
+}) {
+  const schema = z
+    .object({
+      password: z.string().min(6, "Mật khẩu tối thiểu 6 ký tự"),
+      confirm: z.string(),
+    })
+    .refine((data) => data.password === data.confirm, {
+      message: "Nhập lại mật khẩu không trùng khớp",
+      path: ["confirm"],
+    });
+  const form = useForm({
+    resolver: zodResolver(schema),
+    defaultValues: { password: "", confirm: "" },
+  });
 
   return (
     <Form {...form}>
@@ -315,7 +136,11 @@ function ChangePasswordForm({ userName, onClose }: { userName: string, onClose: 
             <FormItem>
               <FormLabel>Mật khẩu mới *</FormLabel>
               <FormControl>
-                <Input type="password" placeholder="Nhập mật khẩu mới" {...field} />
+                <Input
+                  type="password"
+                  placeholder="Nhập mật khẩu mới"
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -328,7 +153,11 @@ function ChangePasswordForm({ userName, onClose }: { userName: string, onClose: 
             <FormItem>
               <FormLabel>Nhập lại mật khẩu *</FormLabel>
               <FormControl>
-                <Input type="password" placeholder="Nhập lại mật khẩu" {...field} />
+                <Input
+                  type="password"
+                  placeholder="Nhập lại mật khẩu"
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -347,9 +176,227 @@ function ChangePasswordForm({ userName, onClose }: { userName: string, onClose: 
   );
 }
 
-function ActionsCell({ userId, userName }: { userId: string, userName: string }) {
-  const router = useRouter();
-  const [openDialog, setOpenDialog] = React.useState(false);
+// User form schema for create (with password)
+const createUserFormSchema = z.object({
+  full_name: z.string().min(1, "Tên người dùng là bắt buộc"),
+  email: z.string().email("Email không hợp lệ"),
+  password: z.string().min(6, "Mật khẩu tối thiểu 6 ký tự"),
+  phone: z.string().optional(),
+  role: z.enum(["manager", "staff"]), // Only manager and staff when creating
+  status: z.enum(["active", "inactive", "suspended"]),
+});
+
+// User form schema for edit (without password)
+const editUserFormSchema = z.object({
+  full_name: z.string().min(1, "Tên người dùng là bắt buộc"),
+  email: z.string().email("Email không hợp lệ"),
+  phone: z.string().optional(),
+  role: z.enum(["admin", "manager", "staff"]), // Only 3 roles
+  status: z.enum(["active", "inactive", "suspended"]),
+});
+
+type CreateUserFormValues = z.infer<typeof createUserFormSchema>;
+type EditUserFormValues = z.infer<typeof editUserFormSchema>;
+
+function UserForm({
+  profile,
+  onClose,
+  onCreate,
+  onUpdate,
+}: {
+  profile?: Profile;
+  onClose: () => void;
+  onCreate: (data: CreateUserFormValues) => Promise<void>;
+  onUpdate: (id: string, data: EditUserFormValues) => Promise<void>;
+}) {
+  const isEdit = !!profile;
+  const form = useForm<CreateUserFormValues | EditUserFormValues>({
+    resolver: zodResolver(isEdit ? editUserFormSchema : createUserFormSchema),
+    defaultValues: profile
+      ? {
+          full_name: profile.full_name,
+          email: profile.email,
+          phone: profile.phone || "",
+          role: profile.role,
+          status: profile.status,
+        }
+      : {
+          full_name: "",
+          email: "",
+          password: "",
+          phone: "",
+          role: "staff",
+          status: "active",
+        },
+  });
+
+  const onSubmit = async (data: CreateUserFormValues | EditUserFormValues) => {
+    try {
+      if (isEdit) {
+        await onUpdate(profile.id, data as EditUserFormValues);
+      } else {
+        await onCreate(data as CreateUserFormValues);
+      }
+      form.reset();
+      onClose();
+    } catch {
+      // Error is handled in hook
+    }
+  };
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="full_name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Tên người dùng *</FormLabel>
+              <FormControl>
+                <Input placeholder="Nhập tên người dùng" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Email *</FormLabel>
+              <FormControl>
+                <Input
+                  type="email"
+                  placeholder="Nhập email"
+                  {...field}
+                  disabled={isEdit}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        {!isEdit && (
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Mật khẩu *</FormLabel>
+                <FormControl>
+                  <Input
+                    type="password"
+                    placeholder="Nhập mật khẩu (tối thiểu 6 ký tự)"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+        <FormField
+          control={form.control}
+          name="phone"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Số điện thoại</FormLabel>
+              <FormControl>
+                <Input placeholder="Nhập số điện thoại" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="role"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Vai trò *</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value}>
+                <FormControl className="w-full">
+                  <SelectTrigger>
+                    <SelectValue placeholder="Chọn vai trò" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {isEdit ? (
+                    <>
+                      <SelectItem value="admin">Quản trị viên</SelectItem>
+                      <SelectItem value="manager">Quản lý</SelectItem>
+                      <SelectItem value="staff">Nhân viên</SelectItem>
+                    </>
+                  ) : (
+                    <>
+                      <SelectItem value="manager">Quản lý</SelectItem>
+                      <SelectItem value="staff">Nhân viên</SelectItem>
+                    </>
+                  )}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="status"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Trạng thái *</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value}>
+                <FormControl className="w-full">
+                  <SelectTrigger>
+                    <SelectValue placeholder="Chọn trạng thái" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="active">Hoạt động</SelectItem>
+                  <SelectItem value="inactive">Không hoạt động</SelectItem>
+                  <SelectItem value="suspended">Đã khóa</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            disabled={form.formState.isSubmitting}
+          >
+            Hủy
+          </Button>
+          <Button type="submit" disabled={form.formState.isSubmitting}>
+            {form.formState.isSubmitting
+              ? isEdit
+                ? "Đang cập nhật..."
+                : "Đang tạo..."
+              : isEdit
+              ? "Cập nhật"
+              : "Tạo mới"}
+          </Button>
+        </DialogFooter>
+      </form>
+    </Form>
+  );
+}
+
+function ActionsCell({
+  userName,
+  profile,
+  onEdit,
+}: {
+  userName: string;
+  profile: Profile;
+  onEdit: (profile: Profile) => void;
+}) {
+  const [openPasswordDialog, setOpenPasswordDialog] = React.useState(false);
 
   return (
     <>
@@ -365,18 +412,20 @@ function ActionsCell({ userId, userName }: { userId: string, userName: string })
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-32">
-          <DropdownMenuItem onClick={() => router.push(`/dashboard/users/edit/${userId}`)}>
+          <DropdownMenuItem onClick={() => onEdit(profile)}>
             Chỉnh sửa
           </DropdownMenuItem>
           <DropdownMenuItem>Xem chi tiết</DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setOpenDialog(true)}>
+          <DropdownMenuItem onClick={() => setOpenPasswordDialog(true)}>
             Đổi mật khẩu
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem variant="destructive">Khóa tài khoản</DropdownMenuItem>
+          <DropdownMenuItem variant="destructive">
+            Khóa tài khoản
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+      <Dialog open={openPasswordDialog} onOpenChange={setOpenPasswordDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Đổi mật khẩu</DialogTitle>
@@ -384,17 +433,22 @@ function ActionsCell({ userId, userName }: { userId: string, userName: string })
               Đổi mật khẩu cho người dùng: {userName}
             </DialogDescription>
           </DialogHeader>
-          <ChangePasswordForm userName={userName} onClose={() => setOpenDialog(false)} />
+          <ChangePasswordForm
+            userName={userName}
+            onClose={() => setOpenPasswordDialog(false)}
+          />
         </DialogContent>
       </Dialog>
     </>
   );
 }
 
-// Table columns
-const columns: ColumnDef<User>[] = [
+// Table columns - will be updated with onEdit handler in component
+const createColumns = (
+  onEdit: (profile: Profile) => void
+): ColumnDef<Profile>[] => [
   {
-    accessorKey: "name",
+    accessorKey: "full_name",
     header: "Tên",
   },
   {
@@ -404,6 +458,7 @@ const columns: ColumnDef<User>[] = [
   {
     accessorKey: "phone",
     header: "Số điện thoại",
+    cell: ({ row }) => row.original.phone || "-",
   },
   {
     accessorKey: "role",
@@ -416,28 +471,156 @@ const columns: ColumnDef<User>[] = [
     cell: ({ row }) => <StatusBadge status={row.original.status} />,
   },
   {
-    accessorKey: "createdAt",
+    accessorKey: "created_at",
     header: "Ngày tạo",
-    cell: ({ row }) => formatDate(row.original.createdAt),
-  },
-  {
-    accessorKey: "lastLogin",
-    header: "Đăng nhập lần cuối",
-    cell: ({ row }) => formatDate(row.original.lastLogin),
+    cell: ({ row }) => formatDate(row.original.created_at),
   },
   {
     id: "actions",
-    cell: ({ row }) => <ActionsCell userId={row.original.id} userName={row.original.name} />,
+    cell: ({ row }) => (
+      <ActionsCell
+        userName={row.original.full_name}
+        profile={row.original}
+        onEdit={onEdit}
+      />
+    ),
   },
-]
+];
 
 export default function UsersPage() {
-  const [data] = React.useState<User[]>(usersData)
-  const router = useRouter()
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [localSearch, setLocalSearch] = React.useState("");
+  const [openUserDialog, setOpenUserDialog] = React.useState(false);
+  const [editingProfile, setEditingProfile] = React.useState<
+    Profile | undefined
+  >();
+
+  // Get pagination and search from URL params
+  const page = React.useMemo(() => {
+    const pageParam = searchParams.get("page");
+    const pageNum = pageParam ? parseInt(pageParam, 10) : 1;
+    return pageNum > 0 ? pageNum : 1;
+  }, [searchParams]);
+
+  const limit = React.useMemo(() => {
+    const limitParam = searchParams.get("limit");
+    const limitNum = limitParam ? parseInt(limitParam, 10) : 10;
+    return limitNum > 0 ? limitNum : 10;
+  }, [searchParams]);
+
+  const search = React.useMemo(() => {
+    return searchParams.get("search") || "";
+  }, [searchParams]);
+
+  // Update search params
+  const updateSearchParams = React.useCallback(
+    (newPage: number, newLimit: number, newSearch: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (newPage > 1) {
+        params.set("page", newPage.toString());
+      } else {
+        params.delete("page");
+      }
+      if (newLimit !== 10) {
+        params.set("limit", newLimit.toString());
+      } else {
+        params.delete("limit");
+      }
+      if (newSearch) {
+        params.set("search", newSearch);
+      } else {
+        params.delete("search");
+      }
+      router.push(`?${params.toString()}`);
+    },
+    [router, searchParams]
+  );
+
+  // Sync local search with URL search
+  React.useEffect(() => {
+    setLocalSearch(search);
+  }, [search]);
+
+  // Debounce search
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      if (localSearch !== search) {
+        updateSearchParams(1, limit, localSearch);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [localSearch, limit, search, updateSearchParams]);
+
+  const {
+    profiles,
+    isLoading,
+    pagination,
+    fetchProfiles,
+    createProfile,
+    updateProfile,
+  } = useProfiles(page, limit, search);
 
   const handleCreateUser = () => {
-    router.push('/dashboard/users/create')
-  }
+    setEditingProfile(undefined);
+    setOpenUserDialog(true);
+  };
+
+  const handleEditUser = (profile: Profile) => {
+    setEditingProfile(profile);
+    setOpenUserDialog(true);
+  };
+
+  const handleCloseUserDialog = () => {
+    setOpenUserDialog(false);
+    setEditingProfile(undefined);
+  };
+
+  const handleCreate = async (data: CreateUserFormValues) => {
+    try {
+      await createProfile({
+        full_name: data.full_name,
+        email: data.email,
+        password: data.password,
+        phone: data.phone || null,
+        role: data.role,
+        status: data.status,
+      });
+      toast.success("Tạo người dùng thành công!", {
+        description: `Người dùng ${data.full_name} đã được tạo thành công.`,
+      });
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Không thể tạo người dùng";
+      toast.error("Tạo người dùng thất bại", {
+        description: errorMessage,
+      });
+      throw err;
+    }
+  };
+
+  const handleUpdate = async (id: string, data: EditUserFormValues) => {
+    try {
+      const updatedProfile = await updateProfile(id, {
+        full_name: data.full_name,
+        email: data.email,
+        phone: data.phone || null,
+        role: data.role,
+        status: data.status,
+      });
+      toast.success("Cập nhật người dùng thành công!", {
+        description: `Người dùng ${updatedProfile.full_name} đã được cập nhật thành công.`,
+      });
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Không thể cập nhật người dùng";
+      toast.error("Cập nhật người dùng thất bại", {
+        description: errorMessage,
+      });
+      throw err;
+    }
+  };
 
   return (
     <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
@@ -456,16 +639,50 @@ export default function UsersPage() {
 
       <div className="px-4 lg:px-6">
         <DataTable
-          columns={columns}
-          data={data}
-          searchKey="name"
+          columns={createColumns(handleEditUser)}
+          data={profiles}
+          searchKey="full_name"
           searchPlaceholder="Tìm kiếm theo tên, email, số điện thoại..."
           emptyMessage="Không tìm thấy kết quả."
           entityName="người dùng"
           getRowId={(row) => row.id}
+          fetchData={() => fetchProfiles(page, limit, search)}
+          isLoading={isLoading}
+          serverPagination={pagination}
+          onPageChange={(newPage) => updateSearchParams(newPage, limit, search)}
+          onLimitChange={(newLimit) => updateSearchParams(1, newLimit, search)}
+          serverSearch={localSearch}
+          onSearchChange={setLocalSearch}
         />
       </div>
-    </div>
-  )
-}
 
+      <Dialog
+        open={openUserDialog}
+        onOpenChange={(open) => {
+          if (!open) {
+            handleCloseUserDialog();
+          }
+        }}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {editingProfile ? "Chỉnh sửa người dùng" : "Tạo người dùng mới"}
+            </DialogTitle>
+            <DialogDescription>
+              {editingProfile
+                ? "Cập nhật thông tin người dùng trong hệ thống"
+                : "Điền đầy đủ thông tin để tạo người dùng mới"}
+            </DialogDescription>
+          </DialogHeader>
+          <UserForm
+            profile={editingProfile}
+            onClose={handleCloseUserDialog}
+            onCreate={handleCreate}
+            onUpdate={handleUpdate}
+          />
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
