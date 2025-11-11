@@ -40,6 +40,7 @@ export type Room = {
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
+  thumbnail?: ImageValue;
 };
 
 // Room input type for create/update
@@ -143,20 +144,34 @@ export type Booking = {
 // Customer Types
 // ============================================================================
 
-// Customer type
+// Customer type matching database schema (customers table)
 export type Customer = {
   id: string;
-  name: string;
-  phone: string;
+  full_name: string;
   email: string;
-  totalBookings: number;
-  totalSpent: number;
-  createdAt: string;
-  status: "active" | "banned";
+  phone: string | null;
+  nationality: string | null;
+  id_card: string | null;
+  customer_type: "regular" | "vip" | "blacklist";
+  date_of_birth: string | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
 };
 
-// Customer status type
-export type CustomerStatus = "active" | "banned";
+// Customer input type for create/update
+export type CustomerInput = {
+  full_name: string;
+  email: string;
+  phone?: string | null;
+  nationality?: string | null;
+  id_card?: string | null;
+  customer_type?: "regular" | "vip" | "blacklist";
+  date_of_birth?: string | null;
+};
+
+// Customer type enum
+export type CustomerType = "regular" | "vip" | "blacklist";
 
 // ============================================================================
 // Pagination Types

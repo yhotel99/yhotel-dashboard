@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ColumnDef } from "@tanstack/react-table";
 import { IconDotsVertical, IconPlus } from "@tabler/icons-react";
 import { useMemo, useEffect, useCallback, useState } from "react";
+import Image from "next/image";
 import { useDebounce } from "@/hooks/use-debounce";
 
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +24,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DataTable } from "@/components/data-table";
@@ -87,8 +93,40 @@ function ActionsCell({
   );
 }
 
+// Thumbnail cell component
+function ThumbnailCell({ thumbnailUrl }: { thumbnailUrl?: string }) {
+  if (!thumbnailUrl) {
+    return (
+      <div className="flex items-center justify-center size-12 bg-muted rounded-md border border-dashed">
+        <span className="text-muted-foreground text-[10px] text-center px-1">
+          Chưa có ảnh
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative size-12 rounded-md overflow-hidden border">
+      <Image
+        src={thumbnailUrl}
+        alt="Room thumbnail"
+        fill
+        className="object-cover"
+        sizes="48px"
+      />
+    </div>
+  );
+}
+
 // Table columns factory
 const createColumns = (onDelete: (room: Room) => void): ColumnDef<Room>[] => [
+  {
+    accessorKey: "thumbnail",
+    header: "Ảnh",
+    cell: ({ row }) => (
+      <ThumbnailCell thumbnailUrl={row.original.thumbnail?.url} />
+    ),
+  },
   {
     accessorKey: "name",
     header: "Tên phòng",
@@ -128,13 +166,43 @@ const createColumns = (onDelete: (room: Room) => void): ColumnDef<Room>[] => [
       if (amenities.length === 0) {
         return <span className="text-muted-foreground text-sm">-</span>;
       }
+
+      const visibleAmenities = amenities.slice(0, 2);
+      const remainingCount = amenities.length - 2;
+      const remainingAmenities = amenities.slice(2);
+
       return (
-        <div className="flex gap-1 flex-wrap">
-          {amenities.map((amenity, index) => (
+        <div className="flex gap-1 flex-wrap items-center">
+          {visibleAmenities.map((amenity, index) => (
             <Badge key={index} variant="outline" className="text-xs">
               {amenity}
             </Badge>
           ))}
+          {remainingCount > 0 && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge variant="outline" className="text-xs">
+                  +{remainingCount}
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs">
+                <div className="flex flex-col gap-1">
+                  <p className="font-semibold mb-1">Tiện ích khác:</p>
+                  <div className="flex flex-wrap gap-1">
+                    {remainingAmenities.map((amenity, index) => (
+                      <Badge
+                        key={index}
+                        variant="secondary"
+                        className="text-xs"
+                      >
+                        {amenity}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          )}
         </div>
       );
     },

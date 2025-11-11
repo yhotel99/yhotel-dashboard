@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type {
   Room,
@@ -51,10 +51,23 @@ export function useRooms(
         const from = (pageNum - 1) * limitNum;
         const to = from + limitNum - 1;
 
-        // Build query
+        // Build query with room_images join to get thumbnails
         let query = supabase
           .from("rooms")
-          .select("*", { count: "exact" })
+          .select(
+            `
+            *,
+            room_images (
+              image_id,
+              is_main,
+              images (
+                id,
+                url
+              )
+            )
+          `,
+            { count: "exact" }
+          )
           .is("deleted_at", null);
 
         // Add search filter if search term exists
@@ -71,10 +84,44 @@ export function useRooms(
           throw new Error(error.message);
         }
 
-        const roomsData = (data || []).map((room) => ({
-          ...room,
-          amenities: Array.isArray(room.amenities) ? room.amenities : [],
-        })) as Room[];
+        // Process rooms to extract thumbnails
+        type RoomWithImagesData = Room & {
+          room_images?: Array<{
+            image_id: string;
+            is_main: boolean;
+            position: number;
+            images: {
+              id: string;
+              url: string;
+            } | null;
+          }>;
+        };
+
+        const roomsData = (data || []).map((room: RoomWithImagesData) => {
+          const roomImages = room.room_images || [];
+
+          // Find thumbnail (is_main = true)
+          const thumbnailRoomImage = roomImages.find(
+            (ri) => ri.is_main === true
+          );
+          const thumbnail =
+            thumbnailRoomImage && thumbnailRoomImage.images
+              ? {
+                  id: thumbnailRoomImage.images.id,
+                  url: thumbnailRoomImage.images.url,
+                }
+              : undefined;
+
+          // Remove room_images from room data
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { room_images, ...roomWithoutImages } = room;
+
+          return {
+            ...roomWithoutImages,
+            amenities: Array.isArray(room.amenities) ? room.amenities : [],
+            thumbnail,
+          } as Room;
+        });
 
         const total = count || 0;
         const totalPages = Math.ceil(total / limitNum);
@@ -100,7 +147,8 @@ export function useRooms(
   // Load rooms on mount or when page/limit/search changes
   useEffect(() => {
     fetchRooms(page, limit, search);
-  }, [page, limit, search, fetchRooms]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, limit, search]);
 
   // Create room
   const createRoom = useCallback(
@@ -297,88 +345,14 @@ export function useRooms(
     [fetchRooms, page, limit, search]
   );
 
-  // Get room by ID
-  const getRoomById = useCallback(async (id: string): Promise<Room | null> => {
-    try {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from("rooms")
-        .select("*")
-        .eq("id", id)
-        .is("deleted_at", null)
-        .single();
-
-      if (error || !data) {
-        return null;
-      }
-
-      return {
-        ...data,
-        amenities: Array.isArray(data.amenities) ? data.amenities : [],
-      } as Room;
-    } catch {
-      return null;
-    }
-  }, []);
-
-  return {
-    rooms,
-    isLoading,
-    error,
-    pagination,
-    fetchRooms,
-    createRoom,
-    updateRoom,
-    deleteRoom,
-    getRoomById,
-  };
-}
-
-
-// Hook for getting a single room with images
-export function useRoom(id: string | null) {
-  const [room, setRoom] = useState<RoomWithImages | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
-  const isMountedRef = useRef(true);
-
-  // Handle null id case - reset state asynchronously to avoid linter warning
-  useEffect(() => {
-    if (!id) {
-      const timer = setTimeout(() => {
-        setIsLoading(false);
-        setRoom(null);
-        setError(null);
-      }, 0);
-      return () => clearTimeout(timer);
-    }
-  }, [id]);
-
-  useEffect(() => {
-    if (!id) {
-      return;
-    }
-
-    isMountedRef.current = true;
-
-    // Abort previous request if it exists
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-
-    // Create new AbortController for this request
-    const abortController = new AbortController();
-    abortControllerRef.current = abortController;
-
-    const fetchRoom = async () => {
+  // Get room by ID with images
+  const getRoomById = useCallback(
+    async (id: string): Promise<RoomWithImages | null> => {
       try {
-        setIsLoading(true);
-        setError(null);
         const supabase = createClient();
 
-        // Fetch room data with nested room_images and images in one query
-        const { data, error: fetchError } = await supabase
+        // Fetch room data with nested room_images and images
+        const { data, error } = await supabase
           .from("rooms")
           .select(
             `
@@ -398,18 +372,8 @@ export function useRoom(id: string | null) {
           .is("deleted_at", null)
           .single();
 
-        // Check if request was aborted
-        if (abortController.signal.aborted) {
-          return;
-        }
-
-        if (fetchError || !data) {
-          // Only update state if not aborted and component is still mounted
-          if (!abortController.signal.aborted && isMountedRef.current) {
-            setRoom(null);
-            setIsLoading(false);
-          }
-          return;
+        if (error || !data) {
+          return null;
         }
 
         const roomData = {
@@ -455,46 +419,31 @@ export function useRoom(id: string | null) {
           })
           .filter((img): img is ImageValue => img !== null);
 
-        // Remove room_images from roomData before setting state
+        // Remove room_images from roomData
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { room_images, ...roomWithoutImages } = roomData;
 
-        // Only update state if not aborted and component is still mounted
-        if (!abortController.signal.aborted && isMountedRef.current) {
-          setRoom({
-            ...(roomWithoutImages as Room),
-            thumbnail,
-            images,
-          });
-          setIsLoading(false);
-        }
-      } catch (err) {
-        // Ignore AbortError
-        if (err instanceof Error && err.name === "AbortError") {
-          return;
-        }
-
-        // Only update state if not aborted and component is still mounted
-        if (!abortController.signal.aborted && isMountedRef.current) {
-          const errorMessage =
-            err instanceof Error
-              ? err.message
-              : "Không thể tải thông tin phòng";
-          setError(errorMessage);
-          setRoom(null);
-          setIsLoading(false);
-        }
+        return {
+          ...(roomWithoutImages as Room),
+          thumbnail,
+          images,
+        } as RoomWithImages;
+      } catch {
+        return null;
       }
-    };
+    },
+    []
+  );
 
-    fetchRoom();
-
-    // Cleanup function to abort request when component unmounts or id changes
-    return () => {
-      isMountedRef.current = false;
-      abortController.abort();
-    };
-  }, [id]);
-
-  return { room, isLoading, error };
+  return {
+    rooms,
+    isLoading,
+    error,
+    pagination,
+    fetchRooms,
+    createRoom,
+    updateRoom,
+    deleteRoom,
+    getRoomById,
+  };
 }

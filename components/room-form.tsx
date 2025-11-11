@@ -34,6 +34,7 @@ import {
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
 import { ImageSelector, ImageListSelector } from "@/components/image-selector";
+import { formatCurrency } from "@/lib/utils";
 
 // Room type enum matching database
 export const roomTypeEnum = [
@@ -186,9 +187,12 @@ export function RoomForm({
           : mode === "edit"
           ? "Không thể cập nhật phòng"
           : "Không thể tạo phòng";
-      toast.error(mode === "edit" ? "Cập nhật phòng thất bại" : "Tạo phòng thất bại", {
-        description: errorMessage,
-      });
+      toast.error(
+        mode === "edit" ? "Cập nhật phòng thất bại" : "Tạo phòng thất bại",
+        {
+          description: errorMessage,
+        }
+      );
       console.error("Room form error:", error);
     }
   };
@@ -282,7 +286,12 @@ export function RoomForm({
                         value={field.value ?? ""}
                       />
                     </FormControl>
-                    <FormDescription>Giá phòng cho một đêm</FormDescription>
+                    <FormDescription>
+                      Giá phòng cho một đêm{" "}
+                      <span className="text-base font-bold text-green-400">
+                        {formatCurrency(Number(field.value))}
+                      </span>
+                    </FormDescription>
                   </FormItem>
                 )}
               />
