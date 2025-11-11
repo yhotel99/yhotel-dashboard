@@ -2,38 +2,20 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { ColumnDef } from "@tanstack/react-table";
-import { IconDotsVertical, IconPlus } from "@tabler/icons-react";
+import { IconPlus } from "@tabler/icons-react";
 import { useMemo, useEffect, useCallback, useState } from "react";
-import Image from "next/image";
 import { useDebounce } from "@/hooks/use-debounce";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { DataTable } from "@/components/data-table";
 import { useRooms, type Room } from "@/hooks/use-rooms";
 import { toast } from "sonner";
+import { StatusBadge } from "@/components/rooms/status";
+import { RoomActionsCell } from "@/components/rooms/actions-cell";
+import { ThumbnailCell } from "@/components/rooms/thumbnail-cell";
+import { AmenitiesCell } from "@/components/rooms/amenities-cell";
+import { DeleteRoomDialog } from "@/components/rooms/delete-room-dialog";
+import { formatCurrency } from "@/lib/utils";
 
 // Room type labels
 const roomTypeLabels: Record<Room["room_type"], string> = {
@@ -42,81 +24,6 @@ const roomTypeLabels: Record<Room["room_type"], string> = {
   superior: "Superior",
   family: "Family",
 };
-
-// Status badge component
-const StatusBadge = ({ status }: { status: Room["status"] }) => {
-  const statusConfig = {
-    available: { label: "Có sẵn", variant: "default" as const },
-    maintenance: { label: "Bảo trì", variant: "outline" as const },
-    inactive: { label: "Không hoạt động", variant: "secondary" as const },
-  };
-
-  const config = statusConfig[status];
-  return <Badge variant={config.variant}>{config.label}</Badge>;
-};
-
-// Actions cell component
-function ActionsCell({
-  room,
-  onDelete,
-}: {
-  room: Room;
-  onDelete: (room: Room) => void;
-}) {
-  const router = useRouter();
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          className="data-[state=open]:bg-muted text-muted-foreground flex size-8"
-          size="icon"
-        >
-          <IconDotsVertical />
-          <span className="sr-only">Open menu</span>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-32">
-        <DropdownMenuItem
-          onClick={() => router.push(`/dashboard/rooms/edit/${room.id}`)}
-        >
-          Chỉnh sửa
-        </DropdownMenuItem>
-        {/* <DropdownMenuItem>Xem chi tiết</DropdownMenuItem> */}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onClick={() => onDelete(room)}>
-          Xóa
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-// Thumbnail cell component
-function ThumbnailCell({ thumbnailUrl }: { thumbnailUrl?: string }) {
-  if (!thumbnailUrl) {
-    return (
-      <div className="flex items-center justify-center size-12 bg-muted rounded-md border border-dashed">
-        <span className="text-muted-foreground text-[10px] text-center px-1">
-          Chưa có ảnh
-        </span>
-      </div>
-    );
-  }
-
-  return (
-    <div className="relative size-12 rounded-md overflow-hidden border">
-      <Image
-        src={thumbnailUrl}
-        alt="Room thumbnail"
-        fill
-        className="object-cover"
-        sizes="48px"
-      />
-    </div>
-  );
-}
 
 // Table columns factory
 const createColumns = (onDelete: (room: Room) => void): ColumnDef<Room>[] => [
@@ -144,12 +51,7 @@ const createColumns = (onDelete: (room: Room) => void): ColumnDef<Room>[] => [
   {
     accessorKey: "price_per_night",
     header: "Giá mỗi đêm",
-    cell: ({ row }) => {
-      return new Intl.NumberFormat("vi-VN", {
-        style: "currency",
-        currency: "VND",
-      }).format(row.original.price_per_night);
-    },
+    cell: ({ row }) => formatCurrency(row.original.price_per_night),
   },
   {
     accessorKey: "max_guests",
@@ -163,143 +65,16 @@ const createColumns = (onDelete: (room: Room) => void): ColumnDef<Room>[] => [
       const amenities = Array.isArray(row.original.amenities)
         ? row.original.amenities
         : [];
-      if (amenities.length === 0) {
-        return <span className="text-muted-foreground text-sm">-</span>;
-      }
-
-      const visibleAmenities = amenities.slice(0, 2);
-      const remainingCount = amenities.length - 2;
-      const remainingAmenities = amenities.slice(2);
-
-      return (
-        <div className="flex gap-1 flex-wrap items-center">
-          {visibleAmenities.map((amenity, index) => (
-            <Badge key={index} variant="outline" className="text-xs">
-              {amenity}
-            </Badge>
-          ))}
-          {remainingCount > 0 && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Badge variant="outline" className="text-xs">
-                  +{remainingCount}
-                </Badge>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-xs">
-                <div className="flex flex-col gap-1">
-                  <p className="font-semibold mb-1">Tiện ích khác:</p>
-                  <div className="flex flex-wrap gap-1">
-                    {remainingAmenities.map((amenity, index) => (
-                      <Badge
-                        key={index}
-                        variant="secondary"
-                        className="text-xs"
-                      >
-                        {amenity}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          )}
-        </div>
-      );
+      return <AmenitiesCell amenities={amenities} />;
     },
   },
   {
     id: "actions",
-    cell: ({ row }) => <ActionsCell room={row.original} onDelete={onDelete} />,
+    cell: ({ row }) => (
+      <RoomActionsCell room={row.original} onDelete={onDelete} />
+    ),
   },
 ];
-
-// Delete confirmation dialog component
-function DeleteRoomDialog({
-  room,
-  open,
-  onOpenChange,
-  onConfirm,
-}: {
-  room: Room | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onConfirm: () => Promise<void>;
-}) {
-  const [confirmName, setConfirmName] = useState("");
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  const roomName = room?.name || "";
-  const isNameMatch = confirmName.trim() === roomName;
-
-  const handleConfirm = async () => {
-    if (!isNameMatch) return;
-    setIsDeleting(true);
-    try {
-      await onConfirm();
-      setConfirmName("");
-      onOpenChange(false);
-    } catch {
-      // Error is handled in parent component
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  const handleOpenChange = (newOpen: boolean) => {
-    if (!newOpen) {
-      setConfirmName("");
-    }
-    onOpenChange(newOpen);
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Xác nhận xóa phòng</DialogTitle>
-          <DialogDescription>
-            Hành động này không thể hoàn tác. Phòng sẽ bị xóa vĩnh viễn.
-            <br />
-            <br />
-            Để xác nhận, vui lòng nhập tên phòng: <strong>{roomName}</strong>
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="confirm-name">Tên phòng</Label>
-            <Input
-              id="confirm-name"
-              placeholder="Nhập tên phòng để xác nhận"
-              value={confirmName}
-              onChange={(e) => setConfirmName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && isNameMatch && !isDeleting) {
-                  handleConfirm();
-                }
-              }}
-            />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => handleOpenChange(false)}
-            disabled={isDeleting}
-          >
-            Hủy
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={handleConfirm}
-            disabled={!isNameMatch || isDeleting}
-          >
-            {isDeleting ? "Đang xóa..." : "Xóa phòng"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 export default function RoomsPage() {
   const router = useRouter();

@@ -1,252 +1,270 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useRouter } from "next/navigation"
-import { ColumnDef } from "@tanstack/react-table"
-import { IconDotsVertical, IconPlus } from "@tabler/icons-react"
+import { useMemo, useState, useEffect, useCallback } from "react";
 
-import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { DataTable } from "@/components/data-table"
+import { useRouter, useSearchParams } from "next/navigation";
+import { ColumnDef } from "@tanstack/react-table";
+import { IconPlus } from "@tabler/icons-react";
+
+import { Button } from "@/components/ui/button";
+import { DataTable } from "@/components/data-table";
 import { toast } from "sonner";
+import { useDebounce } from "@/hooks/use-debounce";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@/components/ui/select";
-import { cn } from "@/lib/utils"
-import { getCustomerByPhone } from "@/app/dashboard/customers/data"
-import { rawBookingsData, type Booking, type BookingStatus } from "./data"
+  useBookings,
+  type BookingRecord,
+  type BookingInput,
+  type BookingStatus,
+} from "@/hooks/use-bookings";
+import { StatusSelect } from "@/components/bookings/status";
+import { BookingActionsCell } from "@/components/bookings/actions-cell";
+import { CreateBookingDialog } from "@/components/bookings/create-booking-dialog";
+import { EditBookingDialog } from "@/components/bookings/edit-booking-dialog";
 
 // Status badge component
-const StatusBadge = ({ status }: { status: BookingStatus }) => {
-  const statusStyle: Record<BookingStatus, { label: string; className: string }> = {
-    pending: { label: "Chờ xác nhận", className: "text-amber-600 dark:text-amber-400" },
-    awaiting_payment: { label: "Chờ thanh toán", className: "text-amber-700 dark:text-amber-300" },
-    confirmed: { label: "Đã xác nhận", className: "text-blue-600 dark:text-blue-400" },
-    checked_in: { label: "Đã check-in", className: "text-green-600 dark:text-green-400" },
-    checked_out: { label: "Đã check-out", className: "text-emerald-600 dark:text-emerald-400" },
-    completed: { label: "Hoàn tất", className: "text-primary" },
-    cancelled: { label: "Đã hủy", className: "text-red-600 dark:text-red-400" },
-    no_show: { label: "Không đến", className: "text-zinc-500 dark:text-zinc-400" },
-    refunded: { label: "Đã hoàn tiền", className: "text-purple-600 dark:text-purple-400" },
-  }
-  const s = statusStyle[status]
-  return <span className={cn(s.className)}>{s.label}</span>
-}
-
-// Status select component for inline editing
-function StatusSelect({ bookingId, currentStatus }: { bookingId: string; currentStatus: BookingStatus }) {
-  const updateStatus = React.useContext(UpdateBookingStatusContext)
-  const statusConfig: Record<BookingStatus, string> = {
-    pending: "Chờ xác nhận",
-    awaiting_payment: "Chờ thanh toán",
-    confirmed: "Đã xác nhận",
-    checked_in: "Đã check-in",
-    checked_out: "Đã check-out",
-    completed: "Hoàn tất",
-    cancelled: "Đã hủy",
-    no_show: "Không đến",
-    refunded: "Đã hoàn tiền",
-  }
-
-  return (
-    <Select
-      value={currentStatus}
-      onValueChange={(value: BookingStatus) => {
-        updateStatus(bookingId, value)
-        toast.success("Đã cập nhật trạng thái thành công")
-      }}
-    >
-      <SelectTrigger className="w-auto min-w-[140px] h-auto border-none shadow-none hover:bg-black/10 px-2 py-1 gap-1">
-        <StatusBadge status={currentStatus} />
-      </SelectTrigger>
-      <SelectContent>
-        {Object.entries(statusConfig).map(([value, label]) => (
-          <SelectItem key={value} value={value}>
-            {label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  )
-}
+// status components moved to components/bookings/status
 
 // Format date
 const formatDate = (dateString: string) => {
-  const date = new Date(dateString)
+  if (!dateString) return "-";
+  const date = new Date(dateString);
   return date.toLocaleDateString("vi-VN", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
-  })
-}
+  });
+};
 
-// Context to update booking status from action cells
-const UpdateBookingStatusContext = React.createContext<(id: string, status: BookingStatus) => void>(() => {})
+// actions cell moved to components/bookings/actions-cell
 
-function BookingActionsCell({ bookingId, customerPhone, customerName }: { bookingId: string; customerPhone: string; customerName: string }) {
-  const router = useRouter();
-  const [openCancel, setOpenCancel] = React.useState(false);
-  const updateStatus = React.useContext(UpdateBookingStatusContext)
-  return (
-    <>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            className="data-[state=open]:bg-muted text-muted-foreground flex size-8"
-            size="icon"
-          >
-            <IconDotsVertical />
-            <span className="sr-only">Open menu</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-44">
-          <DropdownMenuItem onClick={() => router.push(`/dashboard/bookings/edit/${bookingId}`)}>
-            Chỉnh sửa
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => {
-            const c = getCustomerByPhone(customerPhone)
-            if (c) router.push(`/dashboard/customers/${c.id}/bookings`)
-            else toast.error("Không tìm thấy khách hàng từ SĐT này")
-          }}>
-            Xem chi tiết
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem variant="destructive" onClick={() => setOpenCancel(true)}>
-            Hủy booking
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-
-      <Dialog open={openCancel} onOpenChange={setOpenCancel}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Xác nhận hủy booking</DialogTitle>
-            <DialogDescription>
-              Thao tác này sẽ hủy booking này và không thể hoàn tác.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpenCancel(false)}>Bỏ qua</Button>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                updateStatus(bookingId, 'cancelled')
-                toast.success("Đã hủy booking thành công");
-                setOpenCancel(false);
-              }}
-            >
-              Xác nhận hủy
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
-  );
-}
-
-// Table columns
-const columns: ColumnDef<Booking>[] = [
+const createColumns = (
+  onChangeStatus: (id: string, status: BookingStatus) => Promise<void>,
+  onCancelBooking: (id: string) => Promise<void>,
+  onEdit: (booking: BookingRecord) => void
+): ColumnDef<BookingRecord>[] => [
   {
-    accessorKey: "bookingCode",
-    header: "Mã booking",
-  },
-  {
-    accessorKey: "customerName",
+    accessorKey: "customer_id",
     header: "Khách hàng",
+    cell: ({ row }) => row.original.customers?.full_name ?? "-",
   },
   {
-    accessorKey: "customerPhone",
-    header: "Số điện thoại",
+    accessorKey: "room_id",
+    header: "Phòng",
+    cell: ({ row }) => row.original.rooms?.name ?? "-",
   },
   {
-    accessorKey: "roomNumber",
-    header: "Số phòng",
-  },
-  {
-    accessorKey: "checkIn",
+    accessorKey: "check_in_date",
     header: "Check-in",
-    cell: ({ row }) => formatDate(row.original.checkIn),
+    cell: ({ row }) => formatDate(row.original.check_in_date),
   },
   {
-    accessorKey: "checkOut",
+    accessorKey: "check_out_date",
     header: "Check-out",
-    cell: ({ row }) => formatDate(row.original.checkOut),
+    cell: ({ row }) => formatDate(row.original.check_out_date),
   },
   {
-    accessorKey: "nights",
+    accessorKey: "number_of_nights",
     header: "Số đêm",
-    cell: ({ row }) => `${row.original.nights} đêm`,
+    cell: ({ row }) => `${row.original.number_of_nights} đêm`,
   },
   {
-    accessorKey: "guests",
+    accessorKey: "total_guests",
     header: "Số khách",
-    cell: ({ row }) => `${row.original.guests} người`,
+    cell: ({ row }) => `${row.original.total_guests} người`,
   },
   {
-    accessorKey: "totalAmount",
+    accessorKey: "total_amount",
     header: "Tổng tiền",
-    cell: ({ row }) => {
-      return new Intl.NumberFormat("vi-VN", {
+    cell: ({ row }) =>
+      new Intl.NumberFormat("vi-VN", {
         style: "currency",
         currency: "VND",
-      }).format(row.original.totalAmount)
-    },
+      }).format(row.original.total_amount),
   },
   {
     accessorKey: "status",
     header: "Trạng thái",
     cell: ({ row }) => (
-      <StatusSelect 
-        bookingId={row.original.id} 
-        currentStatus={row.original.status} 
+      <StatusSelect
+        bookingId={row.original.id}
+        currentStatus={row.original.status}
+        onChangeStatus={onChangeStatus}
       />
     ),
   },
   {
-    accessorKey: "paymentMethod",
-    header: "Thanh toán",
+    accessorKey: "advance_payment",
+    header: "Đặt cọc",
+    cell: ({ row }) =>
+      new Intl.NumberFormat("vi-VN", {
+        style: "currency",
+        currency: "VND",
+      }).format(row.original.advance_payment),
+  },
+  {
+    accessorKey: "notes",
+    header: "Ghi chú",
+    cell: ({ row }) => row.original.notes ?? "-",
   },
   {
     id: "actions",
     cell: ({ row }) => (
       <BookingActionsCell
-        bookingId={row.original.id}
-        customerPhone={row.original.customerPhone}
-        customerName={row.original.customerName}
+        booking={row.original}
+        customerId={row.original.customer_id}
+        onEdit={onEdit}
+        onCancelBooking={onCancelBooking}
       />
     ),
   },
-]
+];
+
+// Create dialog types/helpers are defined in components/bookings/create-booking-dialog
+
+// CreateBookingDialog extracted to components/bookings/create-booking-dialog
 
 export default function BookingsPage() {
-  const router = useRouter()
-  const [data, setData] = React.useState<Booking[]>(rawBookingsData)
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
-  const handleCreateBooking = () => {
-    router.push("/dashboard/bookings/create")
-  }
+  const page = useMemo(() => {
+    const pageParam = searchParams.get("page");
+    const pageNum = pageParam ? parseInt(pageParam, 10) : 1;
+    return pageNum > 0 ? pageNum : 1;
+  }, [searchParams]);
 
-  const updateBookingStatus = React.useCallback((id: string, status: BookingStatus) => {
-    setData((prev) => prev.map((b) => (b.id === id ? { ...b, status } : b)))
-  }, [])
+  const limit = useMemo(() => {
+    const limitParam = searchParams.get("limit");
+    const limitNum = limitParam ? parseInt(limitParam, 10) : 10;
+    return limitNum > 0 ? limitNum : 10;
+  }, [searchParams]);
+
+  const search = useMemo(() => {
+    return searchParams.get("search") || "";
+  }, [searchParams]);
+
+  const updateSearchParams = useCallback(
+    (newPage: number, newLimit: number, newSearch?: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (newPage > 1) {
+        params.set("page", newPage.toString());
+      } else {
+        params.delete("page");
+      }
+      if (newLimit !== 10) {
+        params.set("limit", newLimit.toString());
+      } else {
+        params.delete("limit");
+      }
+      if (newSearch !== undefined) {
+        if (newSearch.trim() !== "") {
+          params.set("search", newSearch.trim());
+        } else {
+          params.delete("search");
+        }
+      }
+      router.push(`/dashboard/bookings?${params.toString()}`);
+    },
+    [router, searchParams]
+  );
+
+  const [localSearch, setLocalSearch] = useState(search);
+  const debouncedSearch = useDebounce(localSearch, 500);
+
+  useEffect(() => {
+    setLocalSearch(search);
+  }, [search]);
+
+  useEffect(() => {
+    if (debouncedSearch !== search) {
+      updateSearchParams(1, limit, debouncedSearch);
+    }
+  }, [debouncedSearch, search, limit, updateSearchParams]);
+
+  const {
+    bookings,
+    isLoading,
+    pagination,
+    fetchBookings,
+    createBooking,
+    updateBooking,
+  } = useBookings(page, limit, search);
+
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState<BookingRecord | null>(
+    null
+  );
+
+  const handleOpenCreateDialog = () => {
+    setIsCreateDialogOpen(true);
+  };
+
+  const handleEdit = useCallback((booking: BookingRecord) => {
+    setSelectedBooking(booking);
+    setIsEditDialogOpen(true);
+  }, []);
+
+  const handleUpdateBooking = useCallback(
+    async (id: string, input: BookingInput) => {
+      try {
+        await updateBooking(id, input);
+        toast.success("Cập nhật booking thành công!", {
+          description: "Thông tin booking đã được cập nhật.",
+        });
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Không thể cập nhật booking";
+        toast.error("Cập nhật booking thất bại", { description: message });
+        throw error;
+      }
+    },
+    [updateBooking]
+  );
+
+  const handleCreateBookingSubmit = useCallback(
+    async (input: BookingInput) => {
+      try {
+        await createBooking(input);
+        toast.success("Tạo booking thành công!", {
+          description: "Booking mới đã được thêm vào hệ thống.",
+        });
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Không thể tạo booking";
+        toast.error("Tạo booking thất bại", { description: message });
+      }
+    },
+    [createBooking]
+  );
+
+  const handleChangeStatus = useCallback(
+    async (id: string, status: BookingStatus) => {
+      try {
+        await updateBooking(id, { status });
+        toast.success("Đã cập nhật trạng thái thành công");
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Không thể cập nhật trạng thái";
+        toast.error("Cập nhật trạng thái thất bại", { description: message });
+      }
+    },
+    [updateBooking]
+  );
+
+  const handleCancelBooking = useCallback(
+    async (id: string) => {
+      await handleChangeStatus(id, "cancelled");
+    },
+    [handleChangeStatus]
+  );
+
+  const columns = useMemo(
+    () => createColumns(handleChangeStatus, handleCancelBooking, handleEdit),
+    [handleChangeStatus, handleCancelBooking, handleEdit]
+  );
 
   return (
     <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
@@ -257,26 +275,48 @@ export default function BookingsPage() {
             Quản lý và theo dõi các đặt phòng trong khách sạn
           </p>
         </div>
-        <Button onClick={handleCreateBooking} className="gap-2">
+        <Button onClick={handleOpenCreateDialog} className="gap-2">
           <IconPlus className="size-4" />
           Tạo booking mới
         </Button>
       </div>
 
       <div className="px-4 lg:px-6">
-        <UpdateBookingStatusContext.Provider value={updateBookingStatus}>
-          <DataTable
-            columns={columns}
-            data={data}
-            searchKey="bookingCode"
-            searchPlaceholder="Tìm kiếm theo mã booking, tên khách hàng, số phòng..."
-            emptyMessage="Không tìm thấy kết quả."
-            entityName="booking"
-            getRowId={(row) => row.id}
-          />
-        </UpdateBookingStatusContext.Provider>
+        <DataTable
+          columns={columns}
+          data={bookings}
+          searchKey="id"
+          searchPlaceholder="Tìm kiếm theo mã, ghi chú..."
+          emptyMessage="Không tìm thấy kết quả."
+          entityName="booking"
+          getRowId={(row) => row.id}
+          fetchData={() => fetchBookings(page, limit, search)}
+          isLoading={isLoading}
+          serverPagination={pagination}
+          onPageChange={(newPage) => updateSearchParams(newPage, limit, search)}
+          onLimitChange={(newLimit) => updateSearchParams(1, newLimit, search)}
+          serverSearch={localSearch}
+          onSearchChange={setLocalSearch}
+        />
       </div>
-    </div>
-  )
-}
 
+      <CreateBookingDialog
+        open={isCreateDialogOpen}
+        onOpenChange={setIsCreateDialogOpen}
+        onCreate={handleCreateBookingSubmit}
+      />
+
+      <EditBookingDialog
+        open={isEditDialogOpen}
+        onOpenChange={(open) => {
+          setIsEditDialogOpen(open);
+          if (!open) {
+            setSelectedBooking(null);
+          }
+        }}
+        booking={selectedBooking}
+        onUpdate={handleUpdateBooking}
+      />
+    </div>
+  );
+}

@@ -1,89 +1,61 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { ColumnDef } from "@tanstack/react-table"
-import { IconDotsVertical, IconPlus } from "@tabler/icons-react"
+import { useMemo, useState, useEffect, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ColumnDef } from "@tanstack/react-table";
+import { IconDotsVertical, IconPlus } from "@tabler/icons-react";
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { DataTable } from "@/components/data-table"
-import { useRouter } from "next/navigation"
+} from "@/components/ui/dropdown-menu";
+import { DataTable } from "@/components/data-table";
+import { useDebounce } from "@/hooks/use-debounce";
+import { useCustomers, type Customer, type CustomerInput } from "@/hooks/use-customers";
+import { CreateCustomerDialog } from "@/components/customers/create-customer-dialog";
+import { EditCustomerDialog } from "@/components/customers/edit-customer-dialog";
+import { toast } from "sonner";
 
-// Customer data type
-type Customer = {
-  id: string
-  name: string
-  phone: string
-  email: string
-  totalBookings: number
-  totalSpent: number
-  createdAt: string
-  status: "active" | "banned"
-}
-
-// Sample data
-const customersData: Customer[] = [
-  {
-    id: "1",
-    name: "Nguyễn Văn A",
-    phone: "0901234567",
-    email: "a@example.com",
-    totalBookings: 5,
-    totalSpent: 6000000,
-    createdAt: "2023-10-10",
-    status: "active",
-  },
-  {
-    id: "2",
-    name: "Trần Thị B",
-    phone: "0902345678",
-    email: "b@example.com",
-    totalBookings: 2,
-    totalSpent: 2000000,
-    createdAt: "2023-11-15",
-    status: "active",
-  },
-  {
-    id: "3",
-    name: "Phạm Văn C",
-    phone: "0903456789",
-    email: "c@example.com",
-    totalBookings: 7,
-    totalSpent: 9000000,
-    createdAt: "2023-12-01",
-    status: "banned",
-  },
-  {
-    id: "4",
-    name: "Lê Thị D",
-    phone: "0904567890",
-    email: "d@example.com",
-    totalBookings: 1,
-    totalSpent: 1000000,
-    createdAt: "2024-01-05",
-    status: "active",
-  },
-]
+// Format date
+const formatDate = (dateString: string) => {
+  if (!dateString) return "-";
+  const date = new Date(dateString);
+  return date.toLocaleDateString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+};
 
 // Status badge
-function StatusBadge({ status }: { status: Customer["status"] }) {
-  return status === "active" ? (
-    <Badge variant="outline" className="border-green-500 text-green-600">Đang hoạt động</Badge>
-  ) : (
-    <Badge variant="destructive">Đã khóa</Badge>
-  )
+function StatusBadge({
+  customerType,
+}: {
+  customerType: Customer["customer_type"];
+}) {
+  const statusConfig = {
+    regular: { label: "Khách thường", variant: "outline" as const },
+    vip: { label: "Khách VIP", variant: "default" as const },
+    blacklist: { label: "Danh sách đen", variant: "destructive" as const },
+  };
+  const config = statusConfig[customerType];
+  return <Badge variant={config.variant}>{config.label}</Badge>;
 }
 
 // Actions
-function ActionsCell({ customerId }: { customerId: string }) {
-  const router = useRouter()
+function ActionsCell({
+  customer,
+  onEdit,
+}: {
+  customer: Customer;
+  onEdit: (customer: Customer) => void;
+}) {
+  const router = useRouter();
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -97,68 +69,201 @@ function ActionsCell({ customerId }: { customerId: string }) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-32">
-        <DropdownMenuItem onClick={() => router.push(`/dashboard/customers/${customerId}/bookings`)}>Xem chi tiết</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => router.push(`/dashboard/customers/edit/${customerId}`)}>Chỉnh sửa</DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() =>
+            router.push(`/dashboard/customers/${customer.id}/bookings`)
+          }
+        >
+          Xem chi tiết
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onEdit(customer)}>
+          Chỉnh sửa
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive">Khóa khách hàng</DropdownMenuItem>
+        <DropdownMenuItem variant="destructive">
+          Khóa khách hàng
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-  )
+  );
 }
 
 // Columns
-const columns: ColumnDef<Customer>[] = [
+const createColumns = (
+  onEdit: (customer: Customer) => void
+): ColumnDef<Customer>[] => [
   {
-    accessorKey: "name",
+    accessorKey: "full_name",
     header: "Họ tên",
     enableHiding: false,
   },
   {
     accessorKey: "phone",
     header: "SĐT",
+    cell: ({ row }) => row.original.phone ?? "-",
   },
   {
     accessorKey: "email",
     header: "Email",
     cell: ({ row }) => (
-      <span className="text-blue-700 underline cursor-pointer">{row.original.email}</span>
-    )
+      <span className="text-blue-700 underline cursor-pointer">
+        {row.original.email}
+      </span>
+    ),
   },
   {
-    accessorKey: "totalBookings",
+    accessorKey: "total_bookings",
     header: "Số đơn",
-    cell: ({ row }) => (
-      <span>{row.original.totalBookings} lần</span>
-    ),
+    cell: ({ row }) => <span>{row.original.total_bookings ?? 0} lần</span>,
   },
   {
-    accessorKey: "totalSpent",
+    accessorKey: "total_spent",
     header: "Tổng chi tiêu",
-    cell: ({ row }) => (
-      <span>{row.original.totalSpent.toLocaleString("vi-VN") + " ₫"}</span>
-    ),
+    cell: ({ row }) => {
+      const total = row.original.total_spent ?? 0;
+      return (
+        <span>
+          {new Intl.NumberFormat("vi-VN", {
+            style: "currency",
+            currency: "VND",
+          }).format(total)}
+        </span>
+      );
+    },
   },
   {
-    accessorKey: "createdAt",
+    accessorKey: "created_at",
     header: "Ngày đăng ký",
-    cell: ({ row }) => (
-      <span>{row.original.createdAt}</span>
-    ),
+    cell: ({ row }) => formatDate(row.original.created_at),
   },
   {
-    accessorKey: "status",
-    header: "Trạng thái",
-    cell: ({ row }) => <StatusBadge status={row.original.status} />,
+    accessorKey: "customer_type",
+    header: "Loại khách hàng",
+    cell: ({ row }) => (
+      <StatusBadge customerType={row.original.customer_type} />
+    ),
   },
   {
     id: "actions",
-    cell: ({ row }) => <ActionsCell customerId={row.original.id} />,
+    cell: ({ row }) => (
+      <ActionsCell customer={row.original} onEdit={onEdit} />
+    ),
   },
-]
+];
 
 export default function CustomersPage() {
-  const router = useRouter()
-  const [data] = React.useState<Customer[]>(customersData)
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const page = useMemo(() => {
+    const pageParam = searchParams.get("page");
+    const pageNum = pageParam ? parseInt(pageParam, 10) : 1;
+    return pageNum > 0 ? pageNum : 1;
+  }, [searchParams]);
+
+  const limit = useMemo(() => {
+    const limitParam = searchParams.get("limit");
+    const limitNum = limitParam ? parseInt(limitParam, 10) : 10;
+    return limitNum > 0 ? limitNum : 10;
+  }, [searchParams]);
+
+  const search = useMemo(() => {
+    return searchParams.get("search") || "";
+  }, [searchParams]);
+
+  const updateSearchParams = useCallback(
+    (newPage: number, newLimit: number, newSearch?: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (newPage > 1) {
+        params.set("page", newPage.toString());
+      } else {
+        params.delete("page");
+      }
+      if (newLimit !== 10) {
+        params.set("limit", newLimit.toString());
+      } else {
+        params.delete("limit");
+      }
+      if (newSearch !== undefined) {
+        if (newSearch.trim() !== "") {
+          params.set("search", newSearch.trim());
+        } else {
+          params.delete("search");
+        }
+      }
+      router.push(`/dashboard/customers?${params.toString()}`);
+    },
+    [router, searchParams]
+  );
+
+  const [localSearch, setLocalSearch] = useState(search);
+  const debouncedSearch = useDebounce(localSearch, 500);
+
+  useEffect(() => {
+    setLocalSearch(search);
+  }, [search]);
+
+  useEffect(() => {
+    if (debouncedSearch !== search) {
+      updateSearchParams(1, limit, debouncedSearch);
+    }
+  }, [debouncedSearch, search, limit, updateSearchParams]);
+
+  const { customers, isLoading, pagination, fetchCustomers, createCustomer, updateCustomer } = useCustomers(
+    page,
+    limit,
+    search
+  );
+
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+
+  const handleOpenCreateDialog = () => {
+    setIsCreateDialogOpen(true);
+  };
+
+  const handleEdit = useCallback((customer: Customer) => {
+    setSelectedCustomer(customer);
+    setIsEditDialogOpen(true);
+  }, []);
+
+  const handleCreateCustomer = useCallback(
+    async (input: CustomerInput) => {
+      try {
+        await createCustomer(input);
+        toast.success("Tạo khách hàng thành công!", {
+          description: "Khách hàng mới đã được thêm vào hệ thống.",
+        });
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Không thể tạo khách hàng";
+        toast.error("Tạo khách hàng thất bại", { description: message });
+        throw error;
+      }
+    },
+    [createCustomer]
+  );
+
+  const handleUpdateCustomer = useCallback(
+    async (id: string, input: CustomerInput) => {
+      try {
+        await updateCustomer(id, input);
+        toast.success("Cập nhật khách hàng thành công!", {
+          description: "Thông tin khách hàng đã được cập nhật.",
+        });
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Không thể cập nhật khách hàng";
+        toast.error("Cập nhật khách hàng thất bại", { description: message });
+        throw error;
+      }
+    },
+    [updateCustomer]
+  );
+
+  const columns = useMemo(() => createColumns(handleEdit), [handleEdit]);
+
   return (
     <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
       <div className="flex items-center justify-between px-4 lg:px-6">
@@ -168,7 +273,7 @@ export default function CustomersPage() {
             Quản lý và theo dõi thông tin khách hàng sử dụng hệ thống
           </p>
         </div>
-        <Button className="gap-2" onClick={() => router.push("/dashboard/customers/create") }>
+        <Button className="gap-2" onClick={handleOpenCreateDialog}>
           <IconPlus className="size-4" />
           Thêm khách hàng
         </Button>
@@ -176,14 +281,39 @@ export default function CustomersPage() {
       <div className="px-4 lg:px-6">
         <DataTable
           columns={columns}
-          data={data}
-          searchKey="name"
+          data={customers}
+          searchKey="full_name"
           searchPlaceholder="Tìm kiếm theo tên, SĐT hoặc email..."
           emptyMessage="Không tìm thấy khách hàng nào."
           entityName="khách hàng"
           getRowId={(row) => row.id}
+          fetchData={() => fetchCustomers(page, limit, search)}
+          isLoading={isLoading}
+          serverPagination={pagination}
+          onPageChange={(newPage) => updateSearchParams(newPage, limit, search)}
+          onLimitChange={(newLimit) => updateSearchParams(1, newLimit, search)}
+          serverSearch={localSearch}
+          onSearchChange={setLocalSearch}
         />
       </div>
+
+      <CreateCustomerDialog
+        open={isCreateDialogOpen}
+        onOpenChange={setIsCreateDialogOpen}
+        onCreate={handleCreateCustomer}
+      />
+
+      <EditCustomerDialog
+        open={isEditDialogOpen}
+        onOpenChange={(open) => {
+          setIsEditDialogOpen(open);
+          if (!open) {
+            setSelectedCustomer(null);
+          }
+        }}
+        customer={selectedCustomer}
+        onUpdate={handleUpdateCustomer}
+      />
     </div>
-  )
+  );
 }

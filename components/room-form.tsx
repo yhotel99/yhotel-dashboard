@@ -43,7 +43,14 @@ export const roomTypeEnum = [
   "superior",
   "family",
 ] as const;
-export const roomStatusEnum = ["available", "maintenance", "inactive"] as const;
+export const roomStatusEnum = [
+  "available",
+  "maintenance",
+  "occupied",
+  "not_clean",
+  "clean",
+  "blocked",
+] as const;
 
 // Form validation schema
 export const roomFormSchema = z.object({
@@ -335,9 +342,10 @@ export function RoomForm({
                       <SelectContent>
                         <SelectItem value="available">Có sẵn</SelectItem>
                         <SelectItem value="maintenance">Bảo trì</SelectItem>
-                        <SelectItem value="inactive">
-                          Không hoạt động
-                        </SelectItem>
+                        <SelectItem value="occupied">Đang sử dụng</SelectItem>
+                        <SelectItem value="not_clean">Chưa dọn</SelectItem>
+                        <SelectItem value="clean">Đã dọn</SelectItem>
+                        <SelectItem value="blocked">Đang chặn</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormDescription>

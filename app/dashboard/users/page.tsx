@@ -2,476 +2,24 @@
 
 import * as React from "react";
 import { ColumnDef } from "@tanstack/react-table";
-import { IconDotsVertical, IconPlus } from "@tabler/icons-react";
+import { IconPlus } from "@tabler/icons-react";
 import { useSearchParams, useRouter } from "next/navigation";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { DataTable } from "@/components/data-table";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Input } from "@/components/ui/input";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
 import { toast } from "sonner";
 import { useProfiles } from "@/hooks/use-profiles";
 import type { Profile } from "@/lib/types";
+import { RoleBadge, StatusBadge } from "@/components/users/status";
+import { UserActionsCell } from "@/components/users/actions-cell";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  UserFormDialog,
+  type CreateUserFormValues,
+  type EditUserFormValues,
+} from "@/components/users/user-form-dialog";
+import { formatDate } from "@/lib/utils";
 
-// Role badge component
-const RoleBadge = ({ role }: { role: Profile["role"] }) => {
-  const roleConfig = {
-    admin: {
-      label: "Quản trị viên",
-      variant: "default" as const,
-      className: "",
-    },
-    manager: {
-      label: "Quản lý",
-      variant: "default" as const,
-      className: "bg-blue-500 hover:bg-blue-600 text-white border-0",
-    },
-    staff: {
-      label: "Nhân viên",
-      variant: "default" as const,
-      className: "bg-green-500 hover:bg-green-600 text-white border-0",
-    },
-  };
-
-  const config = roleConfig[role];
-
-  return (
-    <Badge variant={config.variant} className={config.className}>
-      {config.label}
-    </Badge>
-  );
-};
-
-// Status badge component
-const StatusBadge = ({ status }: { status: Profile["status"] }) => {
-  const statusConfig = {
-    active: { label: "Hoạt động", variant: "default" as const },
-    inactive: { label: "Không hoạt động", variant: "secondary" as const },
-    suspended: { label: "Đã khóa", variant: "outline" as const },
-  };
-
-  const config = statusConfig[status];
-  return <Badge variant={config.variant}>{config.label}</Badge>;
-};
-
-// Format date
-const formatDate = (dateString: string | null) => {
-  if (!dateString) return "-";
-  const date = new Date(dateString);
-  return date.toLocaleDateString("vi-VN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-};
-
-function ChangePasswordForm({
-  userId,
-  userName,
-  onClose,
-}: {
-  userId: string;
-  userName: string;
-  onClose: () => void;
-}) {
-  const schema = z
-    .object({
-      password: z.string().min(6, "Mật khẩu tối thiểu 6 ký tự"),
-      confirm: z.string(),
-    })
-    .refine((data) => data.password === data.confirm, {
-      message: "Nhập lại mật khẩu không trùng khớp",
-      path: ["confirm"],
-    });
-  const form = useForm({
-    resolver: zodResolver(schema),
-    defaultValues: { password: "", confirm: "" },
-  });
-
-  const handleSubmit = async (data: { password: string; confirm: string }) => {
-    try {
-      const response = await fetch("/api/users/update-password", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          userId,
-          password: data.password,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || "Không thể đổi mật khẩu");
-      }
-
-      toast.success("Đổi mật khẩu thành công!", {
-        description: `Mật khẩu cho ${userName} đã được cập nhật thành công.`,
-      });
-      form.reset();
-      onClose();
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Không thể đổi mật khẩu";
-      toast.error("Đổi mật khẩu thất bại", {
-        description: errorMessage,
-      });
-    }
-  };
-
-  return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-        <FormField
-          control={form.control}
-          name="password"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Mật khẩu mới *</FormLabel>
-              <FormControl>
-                <Input
-                  type="password"
-                  placeholder="Nhập mật khẩu mới"
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="confirm"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Nhập lại mật khẩu *</FormLabel>
-              <FormControl>
-                <Input
-                  type="password"
-                  placeholder="Nhập lại mật khẩu"
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <DialogFooter>
-          <Button variant="outline" type="button" onClick={onClose}>
-            Hủy
-          </Button>
-          <Button type="submit" disabled={form.formState.isSubmitting}>
-            {form.formState.isSubmitting ? "Đang xử lý..." : "Đổi mật khẩu"}
-          </Button>
-        </DialogFooter>
-      </form>
-    </Form>
-  );
-}
-
-// User form schema for create (with password)
-const createUserFormSchema = z.object({
-  full_name: z.string().min(1, "Tên người dùng là bắt buộc"),
-  email: z.string().email("Email không hợp lệ"),
-  password: z.string().min(6, "Mật khẩu tối thiểu 6 ký tự"),
-  phone: z.string().optional(),
-  role: z.enum(["manager", "staff"]), // Only manager and staff when creating
-  status: z.enum(["active", "inactive", "suspended"]),
-});
-
-// User form schema for edit (without password)
-const editUserFormSchema = z.object({
-  full_name: z.string().min(1, "Tên người dùng là bắt buộc"),
-  email: z.string().email("Email không hợp lệ"),
-  phone: z.string().optional(),
-  role: z.enum(["admin", "manager", "staff"]), // Only 3 roles
-  status: z.enum(["active", "inactive", "suspended"]),
-});
-
-type CreateUserFormValues = z.infer<typeof createUserFormSchema>;
-type EditUserFormValues = z.infer<typeof editUserFormSchema>;
-
-function UserForm({
-  profile,
-  onClose,
-  onCreate,
-  onUpdate,
-}: {
-  profile?: Profile;
-  onClose: () => void;
-  onCreate: (data: CreateUserFormValues) => Promise<void>;
-  onUpdate: (id: string, data: EditUserFormValues) => Promise<void>;
-}) {
-  const isEdit = !!profile;
-  const form = useForm<CreateUserFormValues | EditUserFormValues>({
-    resolver: zodResolver(isEdit ? editUserFormSchema : createUserFormSchema),
-    defaultValues: profile
-      ? {
-          full_name: profile.full_name,
-          email: profile.email,
-          phone: profile.phone || "",
-          role: profile.role,
-          status: profile.status,
-        }
-      : {
-          full_name: "",
-          email: "",
-          password: "",
-          phone: "",
-          role: "staff",
-          status: "active",
-        },
-  });
-
-  const onSubmit = async (data: CreateUserFormValues | EditUserFormValues) => {
-    try {
-      if (isEdit) {
-        await onUpdate(profile.id, data as EditUserFormValues);
-      } else {
-        await onCreate(data as CreateUserFormValues);
-      }
-      form.reset();
-      onClose();
-    } catch {
-      // Error is handled in hook
-    }
-  };
-
-  return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormField
-          control={form.control}
-          name="full_name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Tên người dùng *</FormLabel>
-              <FormControl>
-                <Input placeholder="Nhập tên người dùng" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="email"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Email *</FormLabel>
-              <FormControl>
-                <Input
-                  type="email"
-                  placeholder="Nhập email"
-                  {...field}
-                  disabled={isEdit}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        {!isEdit && (
-          <FormField
-            control={form.control}
-            name="password"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Mật khẩu *</FormLabel>
-                <FormControl>
-                  <Input
-                    type="password"
-                    placeholder="Nhập mật khẩu (tối thiểu 6 ký tự)"
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        )}
-        <FormField
-          control={form.control}
-          name="phone"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Số điện thoại</FormLabel>
-              <FormControl>
-                <Input placeholder="Nhập số điện thoại" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="role"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Vai trò *</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
-                <FormControl className="w-full">
-                  <SelectTrigger>
-                    <SelectValue placeholder="Chọn vai trò" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {isEdit ? (
-                    <>
-                      <SelectItem value="admin">Quản trị viên</SelectItem>
-                      <SelectItem value="manager">Quản lý</SelectItem>
-                      <SelectItem value="staff">Nhân viên</SelectItem>
-                    </>
-                  ) : (
-                    <>
-                      <SelectItem value="manager">Quản lý</SelectItem>
-                      <SelectItem value="staff">Nhân viên</SelectItem>
-                    </>
-                  )}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="status"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Trạng thái *</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
-                <FormControl className="w-full">
-                  <SelectTrigger>
-                    <SelectValue placeholder="Chọn trạng thái" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="active">Hoạt động</SelectItem>
-                  <SelectItem value="inactive">Không hoạt động</SelectItem>
-                  <SelectItem value="suspended">Đã khóa</SelectItem>
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onClose}
-            disabled={form.formState.isSubmitting}
-          >
-            Hủy
-          </Button>
-          <Button type="submit" disabled={form.formState.isSubmitting}>
-            {form.formState.isSubmitting
-              ? isEdit
-                ? "Đang cập nhật..."
-                : "Đang tạo..."
-              : isEdit
-              ? "Cập nhật"
-              : "Tạo mới"}
-          </Button>
-        </DialogFooter>
-      </form>
-    </Form>
-  );
-}
-
-function ActionsCell({
-  userName,
-  profile,
-  onEdit,
-}: {
-  userName: string;
-  profile: Profile;
-  onEdit: (profile: Profile) => void;
-}) {
-  const [openPasswordDialog, setOpenPasswordDialog] = React.useState(false);
-
-  return (
-    <>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            className="data-[state=open]:bg-muted text-muted-foreground flex size-8"
-            size="icon"
-          >
-            <IconDotsVertical />
-            <span className="sr-only">Open menu</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-32">
-          <DropdownMenuItem onClick={() => onEdit(profile)}>
-            Chỉnh sửa
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setOpenPasswordDialog(true)}>
-            Đổi mật khẩu
-          </DropdownMenuItem>
-          {/* <DropdownMenuSeparator />
-          <DropdownMenuItem variant="destructive">
-            Xóa tài khoản
-          </DropdownMenuItem> */}
-        </DropdownMenuContent>
-      </DropdownMenu>
-      <Dialog open={openPasswordDialog} onOpenChange={setOpenPasswordDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Đổi mật khẩu</DialogTitle>
-            <DialogDescription>
-              Đổi mật khẩu cho người dùng: {userName}
-            </DialogDescription>
-          </DialogHeader>
-          <ChangePasswordForm
-            userId={profile.id}
-            userName={userName}
-            onClose={() => setOpenPasswordDialog(false)}
-          />
-        </DialogContent>
-      </Dialog>
-    </>
-  );
-}
-
-// Table columns - will be updated with onEdit handler in component
+// Table columns
 const createColumns = (
   onEdit: (profile: Profile) => void
 ): ColumnDef<Profile>[] => [
@@ -501,16 +49,12 @@ const createColumns = (
   {
     accessorKey: "created_at",
     header: "Ngày tạo",
-    cell: ({ row }) => formatDate(row.original.created_at),
+    cell: ({ row }) => formatDate(row.original.created_at || ""),
   },
   {
     id: "actions",
     cell: ({ row }) => (
-      <ActionsCell
-        userName={row.original.full_name}
-        profile={row.original}
-        onEdit={onEdit}
-      />
+      <UserActionsCell profile={row.original} onEdit={onEdit} />
     ),
   },
 ];
@@ -684,33 +228,17 @@ export default function UsersPage() {
         />
       </div>
 
-      <Dialog
+      <UserFormDialog
+        profile={editingProfile}
         open={openUserDialog}
         onOpenChange={(open) => {
           if (!open) {
             handleCloseUserDialog();
           }
         }}
-      >
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>
-              {editingProfile ? "Chỉnh sửa người dùng" : "Tạo người dùng mới"}
-            </DialogTitle>
-            <DialogDescription>
-              {editingProfile
-                ? "Cập nhật thông tin người dùng trong hệ thống"
-                : "Điền đầy đủ thông tin để tạo người dùng mới"}
-            </DialogDescription>
-          </DialogHeader>
-          <UserForm
-            profile={editingProfile}
-            onClose={handleCloseUserDialog}
-            onCreate={handleCreate}
-            onUpdate={handleUpdate}
-          />
-        </DialogContent>
-      </Dialog>
+        onCreate={handleCreate}
+        onUpdate={handleUpdate}
+      />
     </div>
   );
 }

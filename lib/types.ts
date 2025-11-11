@@ -36,7 +36,13 @@ export type Room = {
   price_per_night: number;
   max_guests: number;
   amenities: string[];
-  status: "available" | "maintenance" | "inactive";
+  status:
+    | "available"
+    | "maintenance"
+    | "occupied"
+    | "not_clean"
+    | "clean"
+    | "blocked";
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
@@ -51,14 +57,26 @@ export type RoomInput = {
   price_per_night: number;
   max_guests: number;
   amenities: string[];
-  status: "available" | "maintenance" | "inactive";
+  status:
+    | "available"
+    | "maintenance"
+    | "occupied"
+    | "not_clean"
+    | "clean"
+    | "blocked";
 };
 
 // Room type enum
 export type RoomType = "standard" | "deluxe" | "superior" | "family";
 
 // Room status type
-export type RoomStatus = "available" | "maintenance" | "inactive";
+export type RoomStatus =
+  | "available"
+  | "maintenance"
+  | "occupied"
+  | "not_clean"
+  | "clean"
+  | "blocked";
 
 // ============================================================================
 // Image Types
@@ -123,21 +141,49 @@ export type BookingStatus =
   | "no_show"
   | "refunded";
 
-// Booking type
-export type Booking = {
+// Booking record matching database schema (bookings table)
+export type BookingRecord = {
   id: string;
-  bookingCode: string;
-  customerName: string;
-  customerPhone: string;
-  roomNumber: string;
-  checkIn: string;
-  checkOut: string;
-  nights: number;
-  guests: number;
-  totalAmount: number;
+  customer_id: string | null;
+  room_id: string | null;
+  check_in_date: string;
+  check_out_date: string;
+  number_of_nights: number;
+  total_guests: number;
   status: BookingStatus;
-  paymentMethod: string;
-  createdAt: string;
+  notes: string | null;
+  total_amount: number;
+  advance_payment: number;
+  actual_check_in: string | null;
+  actual_check_out: string | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+  // Relations (from join queries)
+  customers?: {
+    id: string;
+    full_name: string;
+  } | null;
+  rooms?: {
+    id: string;
+    name: string;
+  } | null;
+};
+
+// Booking input type for create/update operations
+export type BookingInput = {
+  customer_id?: string | null;
+  room_id?: string | null;
+  check_in_date: string;
+  check_out_date: string;
+  number_of_nights?: number;
+  total_guests?: number;
+  status?: BookingStatus;
+  notes?: string | null;
+  total_amount: number;
+  advance_payment?: number;
+  actual_check_in?: string | null;
+  actual_check_out?: string | null;
 };
 
 // ============================================================================
@@ -157,6 +203,9 @@ export type Customer = {
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
+  // Computed fields from bookings
+  total_bookings?: number;
+  total_spent?: number;
 };
 
 // Customer input type for create/update
