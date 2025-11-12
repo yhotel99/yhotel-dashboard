@@ -18,6 +18,7 @@ import {
   type EditUserFormValues,
 } from "@/components/users/user-form-dialog";
 import { formatDate } from "@/lib/utils";
+import { useDebounce } from "@/hooks/use-debounce";
 
 // Table columns
 const createColumns = (

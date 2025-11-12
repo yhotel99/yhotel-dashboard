@@ -1,4 +1,10 @@
-import { useState, useEffect, type ChangeEvent, type FormEvent } from "react";
+import {
+  useState,
+  useEffect,
+  useRef,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,9 +24,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { IconSearch, IconPlus } from "@tabler/icons-react";
 import type { BookingInput } from "@/hooks/use-bookings";
 import { useRooms } from "@/hooks/use-rooms";
 import { useCustomers } from "@/hooks/use-customers";
+import { useDebounce } from "@/hooks/use-debounce";
+import { CreateCustomerDialog } from "@/components/customers/create-customer-dialog";
+import type { Customer } from "@/lib/types";
 
 function calculateNightsValue(checkIn: string, checkOut: string) {
   if (!checkIn || !checkOut) return 0;
@@ -39,8 +49,7 @@ function calculateNightsValue(checkIn: string, checkOut: string) {
 }
 
 type CreateBookingFormState = {
-  full_name: string;
-  email: string;
+  customer_id: string;
   room_id: string;
   check_in_date: string;
   check_out_date: string;
@@ -51,8 +60,7 @@ type CreateBookingFormState = {
 };
 
 const initialCreateBookingState: CreateBookingFormState = {
-  full_name: "",
-  email: "",
+  customer_id: "",
   room_id: "",
   check_in_date: "",
   check_out_date: "",
@@ -76,8 +84,24 @@ export function CreateBookingDialog({
   );
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [searchResults, setSearchResults] = useState<Customer[]>([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
+    null
+  );
+  const [isCreateCustomerDialogOpen, setIsCreateCustomerDialogOpen] =
+    useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchResultsRef = useRef<HTMLDivElement>(null);
   const { rooms } = useRooms();
-  const { getCustomerByEmail, createCustomer } = useCustomers();
+  const debouncedSearch = useDebounce(customerSearch, 300);
+  // Use separate hook for search results
+  const { customers: searchCustomers, createCustomer } = useCustomers(
+    1,
+    10,
+    debouncedSearch.trim().length >= 2 ? debouncedSearch : ""
+  );
 
   const nights = calculateNightsValue(
     formValues.check_in_date,
@@ -113,6 +137,36 @@ export function CreateBookingDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formValues.check_in_date, formValues.check_out_date]);
 
+  // Update search results when customers from hook change
+  useEffect(() => {
+    if (debouncedSearch.trim().length >= 2) {
+      setSearchResults(searchCustomers);
+      setShowSearchResults(true);
+    } else {
+      setSearchResults([]);
+      setShowSearchResults(false);
+    }
+  }, [searchCustomers, debouncedSearch]);
+
+  // Close search results when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        searchInputRef.current &&
+        !searchInputRef.current.contains(event.target as Node) &&
+        searchResultsRef.current &&
+        !searchResultsRef.current.contains(event.target as Node)
+      ) {
+        setShowSearchResults(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   const handleInputChange =
     (field: keyof CreateBookingFormState) =>
     (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -124,6 +178,26 @@ export function CreateBookingDialog({
     setFormValues(initialCreateBookingState);
     setError(null);
     setIsSubmitting(false);
+    setCustomerSearch("");
+    setSearchResults([]);
+    setShowSearchResults(false);
+    setSelectedCustomer(null);
+  };
+
+  const handleCustomerSelect = (customer: Customer) => {
+    setSelectedCustomer(customer);
+    setFormValues((prev) => ({ ...prev, customer_id: customer.id }));
+    setCustomerSearch(
+      `${customer.full_name}${customer.phone ? ` - ${customer.phone}` : ""}${
+        customer.email ? ` (${customer.email})` : ""
+      }`
+    );
+    setShowSearchResults(false);
+  };
+
+  const handleCreateCustomerSuccess = (customer: Customer) => {
+    handleCustomerSelect(customer);
+    setIsCreateCustomerDialogOpen(false);
   };
 
   const handleDialogOpenChange = (nextOpen: boolean) => {
@@ -178,59 +252,33 @@ export function CreateBookingDialog({
       return;
     }
 
-    const fullName = formValues.full_name.trim();
-    const email = formValues.email.trim();
-
-    // Find or create customer by email
-    let customerId: string | null = null;
-    if (email) {
-      try {
-        let customer = await getCustomerByEmail(email);
-        if (!customer && fullName) {
-          // Create new customer if not found
-          customer = await createCustomer({
-            full_name: fullName,
-            email: email,
-          });
-        }
-        if (customer) {
-          customerId = customer.id;
-        }
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error
-            ? err.message
-            : "Không thể tìm hoặc tạo khách hàng";
-        setError(errorMessage);
-        setIsSubmitting(false);
-        return;
-      }
+    if (!formValues.customer_id) {
+      setError("Vui lòng chọn khách hàng.");
+      return;
     }
 
-    if (customerId) {
-      const payload: BookingInput = {
-        customer_id: customerId,
-        room_id: formValues.room_id,
-        check_in_date: formValues.check_in_date,
-        check_out_date: formValues.check_out_date,
-        number_of_nights,
-        total_guests: totalGuests,
-        notes: formValues.notes.trim() || null,
-        total_amount: totalAmount,
-        advance_payment: advancePayment,
-      };
+    const payload: BookingInput = {
+      customer_id: formValues.customer_id,
+      room_id: formValues.room_id,
+      check_in_date: formValues.check_in_date,
+      check_out_date: formValues.check_out_date,
+      number_of_nights,
+      total_guests: totalGuests,
+      notes: formValues.notes.trim() || null,
+      total_amount: totalAmount,
+      advance_payment: advancePayment,
+    };
 
-      try {
-        setIsSubmitting(true);
-        await onCreate(payload);
-        resetForm();
-        onOpenChange(false);
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "Không thể tạo booking";
-        setError(errorMessage);
-        setIsSubmitting(false);
-      }
+    try {
+      setIsSubmitting(true);
+      await onCreate(payload);
+      resetForm();
+      onOpenChange(false);
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Không thể tạo booking";
+      setError(errorMessage);
+      setIsSubmitting(false);
     }
   };
 
@@ -245,25 +293,81 @@ export function CreateBookingDialog({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="full_name">Họ và tên</Label>
-              <Input
-                id="full_name"
-                type="text"
-                placeholder="Nhập họ và tên khách hàng"
-                value={formValues.full_name}
-                onChange={handleInputChange("full_name")}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="Nhập email khách hàng"
-                value={formValues.email}
-                onChange={handleInputChange("email")}
-              />
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="customer_search">Khách hàng *</Label>
+              <div className="relative" ref={searchInputRef}>
+                <div className="relative">
+                  <IconSearch className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="customer_search"
+                    type="text"
+                    placeholder="Nhập mã, Tên, SĐT khách hàng"
+                    value={customerSearch}
+                    onChange={(e) => {
+                      setCustomerSearch(e.target.value);
+                      if (e.target.value === "") {
+                        setSelectedCustomer(null);
+                        setFormValues((prev) => ({ ...prev, customer_id: "" }));
+                      }
+                    }}
+                    className="pl-9 pr-20"
+                  />
+                  <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="size-7"
+                      onClick={() => setIsCreateCustomerDialogOpen(true)}
+                      title="Tạo khách hàng mới"
+                    >
+                      <IconPlus className="size-4" />
+                    </Button>
+                  </div>
+                </div>
+                {!selectedCustomer &&
+                  showSearchResults &&
+                  searchResults.length > 0 && (
+                    <div
+                      ref={searchResultsRef}
+                      className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border bg-popover shadow-md"
+                    >
+                      {searchResults.map((customer) => (
+                        <button
+                          key={customer.id}
+                          type="button"
+                          onClick={() => handleCustomerSelect(customer)}
+                          className="w-full px-4 py-2 text-left hover:bg-accent hover:text-accent-foreground"
+                        >
+                          <div className="font-medium">
+                            {customer.full_name}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {customer.phone && `${customer.phone} • `}
+                            {customer.email}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                {!selectedCustomer &&
+                  showSearchResults &&
+                  debouncedSearch.trim().length >= 2 &&
+                  searchResults.length === 0 && (
+                    <div
+                      ref={searchResultsRef}
+                      className="absolute z-50 mt-1 w-full rounded-md border bg-popover p-4 text-center text-sm text-muted-foreground shadow-md"
+                    >
+                      Không tìm thấy khách hàng
+                    </div>
+                  )}
+              </div>
+              {selectedCustomer && (
+                <p className="text-xs text-muted-foreground">
+                  Đã chọn: {selectedCustomer.full_name}
+                  {selectedCustomer.phone && ` - ${selectedCustomer.phone}`}
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="room_id">Chọn phòng *</Label>
@@ -389,6 +493,20 @@ export function CreateBookingDialog({
           </DialogFooter>
         </form>
       </DialogContent>
+
+      <CreateCustomerDialog
+        open={isCreateCustomerDialogOpen}
+        onOpenChange={setIsCreateCustomerDialogOpen}
+        onCreate={async (input) => {
+          try {
+            const newCustomer = await createCustomer(input);
+            handleCreateCustomerSuccess(newCustomer);
+          } catch (err) {
+            // Error is handled by CreateCustomerDialog
+            throw err;
+          }
+        }}
+      />
     </Dialog>
   );
 }
