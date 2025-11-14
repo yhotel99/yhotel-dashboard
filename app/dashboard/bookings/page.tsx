@@ -20,20 +20,10 @@ import { StatusSelect } from "@/components/bookings/status";
 import { BookingActionsCell } from "@/components/bookings/actions-cell";
 import { CreateBookingDialog } from "@/components/bookings/create-booking-dialog";
 import { EditBookingDialog } from "@/components/bookings/edit-booking-dialog";
+import { formatCurrency, formatDate } from "@/lib/utils";
 
 // Status badge component
 // status components moved to components/bookings/status
-
-// Format date
-const formatDate = (dateString: string) => {
-  if (!dateString) return "-";
-  const date = new Date(dateString);
-  return date.toLocaleDateString("vi-VN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-};
 
 // actions cell moved to components/bookings/actions-cell
 
@@ -95,11 +85,7 @@ const createColumns = (
   {
     accessorKey: "advance_payment",
     header: "Đặt cọc",
-    cell: ({ row }) =>
-      new Intl.NumberFormat("vi-VN", {
-        style: "currency",
-        currency: "VND",
-      }).format(row.original.advance_payment),
+    cell: ({ row }) => formatCurrency(row.original.advance_payment),
   },
   {
     accessorKey: "notes",

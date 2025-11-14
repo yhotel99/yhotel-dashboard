@@ -91,7 +91,7 @@ export function StatusSelect({
         }
       }}
     >
-      <SelectTrigger className="w-auto min-w-[140px] h-auto border-none shadow-none hover:bg-black/10 px-2 py-1 gap-1">
+      <SelectTrigger className="w-auto min-w-[120px] h-auto border-none shadow-none hover:bg-black/10 px-2 py-1 gap-1">
         <StatusBadge status={currentStatus} />
       </SelectTrigger>
       <SelectContent>
