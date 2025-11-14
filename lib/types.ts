@@ -146,8 +146,8 @@ export type BookingRecord = {
   id: string;
   customer_id: string | null;
   room_id: string | null;
-  check_in_date: string;
-  check_out_date: string;
+  check_in: string;
+  check_out: string;
   number_of_nights: number;
   total_guests: number;
   status: BookingStatus;
@@ -174,8 +174,8 @@ export type BookingRecord = {
 export type BookingInput = {
   customer_id?: string | null;
   room_id?: string | null;
-  check_in_date: string;
-  check_out_date: string;
+  check_in: string;
+  check_out: string;
   number_of_nights?: number;
   total_guests?: number;
   status?: BookingStatus;

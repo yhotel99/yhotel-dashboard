@@ -43,14 +43,14 @@ const createColumns = (
     cell: ({ row }) => row.original.rooms?.name ?? "-",
   },
   {
-    accessorKey: "check_in_date",
+    accessorKey: "check_in",
     header: "Check-in",
-    cell: ({ row }) => formatDate(row.original.check_in_date),
+    cell: ({ row }) => formatDate(row.original.check_in),
   },
   {
-    accessorKey: "check_out_date",
+    accessorKey: "check_out",
     header: "Check-out",
-    cell: ({ row }) => formatDate(row.original.check_out_date),
+    cell: ({ row }) => formatDate(row.original.check_out),
   },
   {
     accessorKey: "number_of_nights",
@@ -195,13 +195,41 @@ export default function BookingsPage() {
     async (id: string, input: BookingInput) => {
       try {
         await updateBooking(id, input);
+
         toast.success("Cập nhật booking thành công!", {
           description: "Thông tin booking đã được cập nhật.",
         });
       } catch (error) {
-        const message =
+        const rawMessage =
           error instanceof Error ? error.message : "Không thể cập nhật booking";
-        toast.error("Cập nhật booking thất bại", { description: message });
+
+        // Translate error messages
+        let message = rawMessage;
+
+        if (
+          rawMessage.includes(
+            'conflicting key value violates exclusion constraint "bookings_no_overlap"'
+          ) ||
+          rawMessage.includes(
+            "Room is not available for the selected date/time"
+          )
+        ) {
+          message =
+            "Phòng không khả dụng cho khoảng thời gian đã chọn. Vui lòng chọn phòng hoặc thời gian khác.";
+        } else if (
+          rawMessage.includes("check_out must be later than check_in")
+        ) {
+          message = "Ngày check-out phải sau ngày check-in.";
+        } else if (
+          rawMessage.includes("number_of_nights must be greater than 0")
+        ) {
+          message = "Số đêm phải lớn hơn 0.";
+        }
+
+        toast.error("Cập nhật booking thất bại", {
+          description: message,
+          position: "top-center",
+        });
         throw error;
       }
     },
@@ -216,9 +244,37 @@ export default function BookingsPage() {
           description: "Booking mới đã được thêm vào hệ thống.",
         });
       } catch (error) {
-        const message =
+        const rawMessage =
           error instanceof Error ? error.message : "Không thể tạo booking";
-        toast.error("Tạo booking thất bại", { description: message });
+
+        // Translate error messages
+        let message = rawMessage;
+
+        if (
+          rawMessage.includes(
+            "Room is not available for the selected date/time"
+          ) ||
+          rawMessage.includes(
+            'conflicting key value violates exclusion constraint "bookings_no_overlap"'
+          )
+        ) {
+          message =
+            "Phòng không khả dụng cho khoảng thời gian đã chọn. Vui lòng chọn phòng hoặc thời gian khác.";
+        } else if (
+          rawMessage.includes("check_out must be later than check_in")
+        ) {
+          message = "Ngày check-out phải sau ngày check-in.";
+        } else if (
+          rawMessage.includes("number_of_nights must be greater than 0")
+        ) {
+          message = "Số đêm phải lớn hơn 0.";
+        }
+
+        toast.error("Tạo booking thất bại", {
+          description: message,
+          position: "top-center",
+        });
+        throw error;
       }
     },
     [createBooking]

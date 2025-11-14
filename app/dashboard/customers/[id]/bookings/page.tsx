@@ -24,14 +24,14 @@ const createColumns = (): ColumnDef<BookingRecord>[] => [
     cell: ({ row }) => row.original.rooms?.name ?? "-",
   },
   {
-    accessorKey: "check_in_date",
+    accessorKey: "check_in",
     header: "Check-in",
-    cell: ({ row }) => formatDate(row.original.check_in_date),
+    cell: ({ row }) => formatDate(row.original.check_in),
   },
   {
-    accessorKey: "check_out_date",
+    accessorKey: "check_out",
     header: "Check-out",
-    cell: ({ row }) => formatDate(row.original.check_out_date),
+    cell: ({ row }) => formatDate(row.original.check_out),
   },
   {
     accessorKey: "number_of_nights",

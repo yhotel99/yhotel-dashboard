@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { parse, formatISO } from "date-fns";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -39,9 +40,20 @@ export function formatCurrency(amount: number) {
 export function formatDate(dateString: string) {
   if (!dateString) return "-";
   const date = new Date(dateString);
-  return date.toLocaleDateString("vi-VN", {
+  if (isNaN(date.getTime())) return "-";
+  // Format với cả ngày và giờ cho TIMESTAMPTZ
+  return date.toLocaleString("vi-VN", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
+}
+
+// Helper để parse date + time và convert sang ISO string
+export function getDateTimeISO(date: string, time: string): string | null {
+  if (!date || !time) return null;
+  const dt = parse(`${date} ${time}`, "yyyy-MM-dd HH:mm", new Date());
+  return isNaN(dt.getTime()) ? null : formatISO(dt);
 }

@@ -12,46 +12,6 @@ export type {
   PaginationMeta,
 } from "@/lib/types";
 
-// Type for raw booking data from Supabase with relations
-type BookingWithRelations = BookingRecord & {
-  customers?: {
-    id: string;
-    full_name: string;
-  } | null;
-  rooms?: {
-    id: string;
-    name: string;
-  } | null;
-};
-
-// Utility to normalise numeric fields coming from Supabase (NUMERIC -> string)
-function normaliseBooking(data: BookingWithRelations): BookingRecord {
-  return {
-    ...data,
-    number_of_nights:
-      typeof data.number_of_nights === "number"
-        ? data.number_of_nights
-        : Number(data.number_of_nights ?? 0),
-    total_guests:
-      typeof data.total_guests === "number"
-        ? data.total_guests
-        : Number(data.total_guests ?? 0),
-    total_amount:
-      typeof data.total_amount === "number"
-        ? data.total_amount
-        : Number(data.total_amount ?? 0),
-    advance_payment:
-      typeof data.advance_payment === "number"
-        ? data.advance_payment
-        : Number(data.advance_payment ?? 0),
-    notes: data.notes ?? null,
-    actual_check_in: data.actual_check_in ?? null,
-    actual_check_out: data.actual_check_out ?? null,
-    customers: data.customers ?? null,
-    rooms: data.rooms ?? null,
-  } as BookingRecord;
-}
-
 export function useBookings(
   page: number = 1,
   limit: number = 10,
@@ -112,7 +72,7 @@ export function useBookings(
           throw new Error(error.message);
         }
 
-        const bookingsData = (data || []).map(normaliseBooking);
+        const bookingsData = (data || []) as BookingRecord[];
         const total = count || 0;
         const totalPages = Math.ceil(total / limitNum);
 
@@ -145,17 +105,60 @@ export function useBookings(
     async (input: BookingInput) => {
       try {
         const supabase = createClient();
-        const { data, error } = await supabase
-          .from("bookings")
-          .insert([input])
-          .select()
-          .single();
 
-        if (error) {
-          throw new Error(error.message);
+        // Gọi RPC function để tạo booking (atomic, tránh race condition)
+        // Thứ tự tham số theo function SQL definition
+        const { data: bookingId, error: rpcError } = await supabase.rpc(
+          "create_booking_secure",
+          {
+            p_customer_id: input.customer_id || null,
+            p_room_id: input.room_id || null,
+            p_check_in: input.check_in, // TIMESTAMPTZ
+            p_check_out: input.check_out, // TIMESTAMPTZ
+            p_number_of_nights: input.number_of_nights || 0,
+            p_total_amount: input.total_amount,
+            p_total_guests: input.total_guests ?? 1,
+            p_notes: input.notes || null,
+            p_advance_payment: input.advance_payment ?? 0,
+          }
+        );
+
+        if (rpcError) {
+          throw new Error(rpcError.message);
         }
 
-        const newBooking = normaliseBooking(data);
+        if (!bookingId) {
+          throw new Error("Không thể tạo booking");
+        }
+
+        // Fetch lại booking vừa tạo với đầy đủ relations
+        const { data: bookingData, error: fetchError } = await supabase
+          .from("bookings")
+          .select(
+            `
+            *,
+            customers (
+              id,
+              full_name
+            ),
+            rooms (
+              id,
+              name
+            )
+            `
+          )
+          .eq("id", bookingId)
+          .single();
+
+        if (fetchError || !bookingData) {
+          // Nếu không fetch được, vẫn refresh danh sách
+          await fetchBookings(page, limit, search);
+          throw new Error(
+            fetchError?.message || "Không thể lấy thông tin booking vừa tạo"
+          );
+        }
+
+        const newBooking = bookingData as BookingRecord;
         await fetchBookings(page, limit, search);
         return newBooking;
       } catch (err) {
@@ -180,14 +183,29 @@ export function useBookings(
           throw new Error(error.message);
         }
 
-        const updatedBooking = normaliseBooking(data);
-        await fetchBookings(page, limit, search);
+        const updatedBooking = data as BookingRecord;
+
+        // Cập nhật state thay vì fetch lại, giữ nguyên relations nếu response không có
+        setBookings((prevBookings) =>
+          prevBookings.map((booking) => {
+            if (booking.id === id) {
+              // Nếu response không có relations, giữ nguyên từ booking cũ
+              return {
+                ...updatedBooking,
+                customers: updatedBooking.customers ?? booking.customers,
+                rooms: updatedBooking.rooms ?? booking.rooms,
+              };
+            }
+            return booking;
+          })
+        );
+
         return updatedBooking;
       } catch (err) {
         throw err;
       }
     },
-    [fetchBookings, page, limit, search]
+    []
   );
 
   const deleteBooking = useCallback(
@@ -226,7 +244,7 @@ export function useBookings(
           return null;
         }
 
-        return normaliseBooking(data);
+        return data as BookingRecord;
       } catch {
         return null;
       }
@@ -262,7 +280,7 @@ export function useBookings(
           throw new Error(error.message);
         }
 
-        return ((data || []) as BookingWithRelations[]).map(normaliseBooking);
+        return (data || []) as BookingRecord[];
       } catch {
         return [];
       }

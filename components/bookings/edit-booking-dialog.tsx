@@ -20,6 +20,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import type { BookingInput, BookingRecord } from "@/hooks/use-bookings";
 import { useRooms } from "@/hooks/use-rooms";
+import { TimeSelect } from "@/components/ui/time-select";
+import { getDateTimeISO } from "@/lib/utils";
 
 function calculateNightsValue(checkIn: string, checkOut: string) {
   if (!checkIn || !checkOut) return 0;
@@ -32,15 +34,18 @@ function calculateNightsValue(checkIn: string, checkOut: string) {
   ) {
     return 0;
   }
-  return Math.ceil(
-    (checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24)
-  );
+  // Tính số đêm = ceil((check_out - check_in) / 1 ngày)
+  const diffInMs = checkOutDate.getTime() - checkInDate.getTime();
+  const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
+  return Math.ceil(diffInDays);
 }
 
 type EditBookingFormState = {
   room_id: string;
   check_in_date: string;
+  check_in_time: string;
   check_out_date: string;
+  check_out_time: string;
   total_guests: string;
   total_amount: string;
   advance_payment: string;
@@ -61,7 +66,9 @@ export function EditBookingDialog({
   const [formValues, setFormValues] = useState<EditBookingFormState>({
     room_id: "",
     check_in_date: "",
+    check_in_time: "14:00",
     check_out_date: "",
+    check_out_time: "12:00",
     total_guests: "1",
     total_amount: "0",
     advance_payment: "0",
@@ -74,17 +81,43 @@ export function EditBookingDialog({
   // Load booking data into form when booking changes
   useEffect(() => {
     if (booking) {
-      // Format dates for input (YYYY-MM-DD)
+      // Format timestamps: tách date và time
       const formatDateForInput = (dateString: string) => {
         if (!dateString) return "";
         const date = new Date(dateString);
-        return date.toISOString().split("T")[0];
+        if (isNaN(date.getTime())) return "";
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+      };
+
+      const formatTimeForInput = (dateString: string) => {
+        if (!dateString) return "14:00";
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return "14:00";
+        let hours = date.getHours();
+        let minutes = date.getMinutes();
+        // Round to nearest 30 minutes
+        const roundedMinutes = Math.round(minutes / 30) * 30;
+        if (roundedMinutes === 60) {
+          hours = (hours + 1) % 24;
+          minutes = 0;
+        } else {
+          minutes = roundedMinutes;
+        }
+        return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(
+          2,
+          "0"
+        )}`;
       };
 
       setFormValues({
         room_id: booking.room_id || "",
-        check_in_date: formatDateForInput(booking.check_in_date),
-        check_out_date: formatDateForInput(booking.check_out_date),
+        check_in_date: formatDateForInput(booking.check_in),
+        check_in_time: formatTimeForInput(booking.check_in),
+        check_out_date: formatDateForInput(booking.check_out),
+        check_out_time: formatTimeForInput(booking.check_out),
         total_guests: booking.total_guests.toString(),
         total_amount: booking.total_amount.toString(),
         advance_payment: booking.advance_payment.toString(),
@@ -94,10 +127,17 @@ export function EditBookingDialog({
     }
   }, [booking]);
 
-  const nights = calculateNightsValue(
+  // Kết hợp date và time bằng helper function để tính toán
+  const checkInISO = getDateTimeISO(
     formValues.check_in_date,
-    formValues.check_out_date
+    formValues.check_in_time
   );
+  const checkOutISO = getDateTimeISO(
+    formValues.check_out_date,
+    formValues.check_out_time
+  );
+
+  const nights = calculateNightsValue(checkInISO || "", checkOutISO || "");
 
   // Get selected room
   const selectedRoom = rooms.find((room) => room.id === formValues.room_id);
@@ -122,11 +162,16 @@ export function EditBookingDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formValues.room_id]);
 
-  // Update total when check-in or check-out dates change
+  // Update total when check-in or check-out dates/times change
   useEffect(() => {
     updateTotalAmount();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formValues.check_in_date, formValues.check_out_date]);
+  }, [
+    formValues.check_in_date,
+    formValues.check_in_time,
+    formValues.check_out_date,
+    formValues.check_out_time,
+  ]);
 
   const handleInputChange =
     (field: keyof EditBookingFormState) =>
@@ -153,13 +198,25 @@ export function EditBookingDialog({
 
     setError(null);
 
-    const number_of_nights = calculateNightsValue(
+    // Kết hợp date và time bằng helper function
+    const checkInISO = getDateTimeISO(
       formValues.check_in_date,
-      formValues.check_out_date
+      formValues.check_in_time
+    );
+    const checkOutISO = getDateTimeISO(
+      formValues.check_out_date,
+      formValues.check_out_time
     );
 
+    if (!checkInISO || !checkOutISO) {
+      setError("Vui lòng nhập đầy đủ ngày và giờ check-in/check-out.");
+      return;
+    }
+
+    const number_of_nights = calculateNightsValue(checkInISO, checkOutISO);
+
     if (number_of_nights <= 0) {
-      setError("Ngày check-out phải sau ngày check-in.");
+      setError("Ngày và giờ check-out phải sau ngày và giờ check-in.");
       return;
     }
 
@@ -194,10 +251,12 @@ export function EditBookingDialog({
       return;
     }
 
+    // checkInISO và checkOutISO đã được tính ở trên bằng getDateTimeISO
+
     const payload: BookingInput = {
       room_id: formValues.room_id,
-      check_in_date: formValues.check_in_date,
-      check_out_date: formValues.check_out_date,
+      check_in: checkInISO,
+      check_out: checkOutISO,
       number_of_nights,
       total_guests: totalGuests,
       notes: formValues.notes.trim() || null,
@@ -211,10 +270,33 @@ export function EditBookingDialog({
       resetForm();
       onOpenChange(false);
     } catch (err) {
-      const errorMessage =
+      const rawMessage =
         err instanceof Error ? err.message : "Không thể cập nhật booking";
-      setError(errorMessage);
+
+      // Translate error messages
+      let message = rawMessage;
+
+      if (
+        rawMessage.includes(
+          "Room is not available for the selected date/time"
+        ) ||
+        rawMessage.includes(
+          'conflicting key value violates exclusion constraint "bookings_no_overlap"'
+        )
+      ) {
+        message =
+          "Phòng không khả dụng cho khoảng thời gian đã chọn. Vui lòng chọn phòng hoặc thời gian khác.";
+      } else if (rawMessage.includes("check_out must be later than check_in")) {
+        message = "Ngày check-out phải sau ngày check-in.";
+      } else if (
+        rawMessage.includes("number_of_nights must be greater than 0")
+      ) {
+        message = "Số đêm phải lớn hơn 0.";
+      }
+
+      setError(message);
       setIsSubmitting(false);
+      // Không đóng dialog để người dùng có thể chỉnh sửa
     }
   };
 
@@ -271,27 +353,48 @@ export function EditBookingDialog({
                 onChange={handleInputChange("total_guests")}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="check_in_date">Ngày check-in *</Label>
-              <Input
-                id="check_in_date"
-                type="date"
-                value={formValues.check_in_date}
-                onChange={handleInputChange("check_in_date")}
-                required
-              />
+            <div className="space-y-2 md:col-span-2">
+              <Label>Ngày và giờ check-in *</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  id="check_in_date"
+                  type="date"
+                  value={formValues.check_in_date}
+                  onChange={handleInputChange("check_in_date")}
+                  required
+                />
+                <TimeSelect
+                  value={formValues.check_in_time}
+                  onValueChange={(value) =>
+                    setFormValues((prev) => ({ ...prev, check_in_time: value }))
+                  }
+                  placeholder="Chọn giờ"
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="check_out_date">
-                Ngày check-out * {nights > 0 ? `(${nights} đêm)` : ""}
+            <div className="space-y-2 md:col-span-2">
+              <Label>
+                Ngày và giờ check-out * {nights > 0 ? `(${nights} đêm)` : ""}
               </Label>
-              <Input
-                id="check_out_date"
-                type="date"
-                value={formValues.check_out_date}
-                onChange={handleInputChange("check_out_date")}
-                required
-              />
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  id="check_out_date"
+                  type="date"
+                  value={formValues.check_out_date}
+                  onChange={handleInputChange("check_out_date")}
+                  required
+                />
+                <TimeSelect
+                  value={formValues.check_out_time}
+                  onValueChange={(value) =>
+                    setFormValues((prev) => ({
+                      ...prev,
+                      check_out_time: value,
+                    }))
+                  }
+                  placeholder="Chọn giờ"
+                />
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="total_amount">Tổng tiền (VNĐ) *</Label>
@@ -358,4 +461,3 @@ export function EditBookingDialog({
     </Dialog>
   );
 }
-
