@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -83,6 +84,33 @@ export function UserFormDialog({
           status: "active",
         },
   });
+
+  // Reset form when profile changes or dialog opens/closes
+  useEffect(() => {
+    if (open) {
+      if (profile) {
+        // Edit mode: reset with profile data
+        form.reset({
+          full_name: profile.full_name,
+          email: profile.email,
+          phone: profile.phone || "",
+          role: profile.role,
+          status: profile.status,
+        });
+      } else {
+        // Create mode: reset to default values
+        form.reset({
+          full_name: "",
+          email: "",
+          password: "",
+          phone: "",
+          role: "staff",
+          status: "active",
+        });
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, profile ?? null]);
 
   const onSubmit = async (data: CreateUserFormValues | EditUserFormValues) => {
     try {
@@ -254,4 +282,3 @@ export function UserFormDialog({
     </Dialog>
   );
 }
-

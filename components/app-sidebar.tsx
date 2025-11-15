@@ -9,6 +9,7 @@ import {
   IconFileDescription,
   IconHelp,
   IconInnerShadowTop,
+  IconLayoutGrid,
   IconSearch,
   IconSettings,
 } from "@tabler/icons-react";
@@ -45,6 +46,11 @@ const data = {
       title: "Rooms",
       url: "/dashboard/rooms",
       icon: HotelIcon,
+    },
+    {
+      title: "Room Layout",
+      url: "/dashboard/rooms/map",
+      icon: IconLayoutGrid,
     },
     {
       title: "Bookings",

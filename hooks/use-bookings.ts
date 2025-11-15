@@ -208,6 +208,66 @@ export function useBookings(
     []
   );
 
+  const updateBookingNotes = useCallback(
+    async (id: string, notes: string | null): Promise<BookingRecord> => {
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from("bookings")
+          .update({ notes })
+          .eq("id", id)
+          .select()
+          .single();
+
+        if (error) {
+          throw new Error(error.message);
+        }
+
+        const updatedBooking = data as BookingRecord;
+
+        // Cập nhật state trực tiếp, giữ nguyên relations nếu response không có
+        setBookings((prevBookings) =>
+          prevBookings.map((booking) => {
+            if (booking.id === id) {
+              return {
+                ...updatedBooking,
+                customers: updatedBooking.customers ?? booking.customers,
+                rooms: updatedBooking.rooms ?? booking.rooms,
+              };
+            }
+            return booking;
+          })
+        );
+
+        return updatedBooking;
+      } catch (err) {
+        throw err;
+      }
+    },
+    []
+  );
+
+  const checkoutBooking = useCallback(async (id: string): Promise<void> => {
+    try {
+      const supabase = createClient();
+      const now = new Date().toISOString();
+
+      const { error } = await supabase
+        .from("bookings")
+        .update({
+          status: "checked_out",
+          actual_check_out: now,
+        })
+        .eq("id", id);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+    } catch (err) {
+      throw err;
+    }
+  }, []);
+
   const deleteBooking = useCallback(
     async (id: string) => {
       try {
@@ -247,6 +307,39 @@ export function useBookings(
         return data as BookingRecord;
       } catch {
         return null;
+      }
+    },
+    []
+  );
+
+  const getBookingByIdWithDetails = useCallback(
+    async (id: string): Promise<BookingRecord | null> => {
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from("bookings")
+          .select(
+            `
+            *,
+            customers (
+              id,
+              full_name,
+              phone,
+              email
+            )
+          `
+          )
+          .eq("id", id)
+          .is("deleted_at", null)
+          .maybeSingle();
+
+        if (error) {
+          throw new Error(error.message);
+        }
+
+        return (data as BookingRecord) || null;
+      } catch (err) {
+        throw err;
       }
     },
     []
@@ -296,8 +389,11 @@ export function useBookings(
     fetchBookings,
     createBooking,
     updateBooking,
+    updateBookingNotes,
+    checkoutBooking,
     deleteBooking,
     getBookingById,
+    getBookingByIdWithDetails,
     getBookingsByCustomerId,
   };
 }

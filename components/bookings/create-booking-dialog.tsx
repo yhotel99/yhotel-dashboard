@@ -32,24 +32,8 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { CreateCustomerDialog } from "@/components/customers/create-customer-dialog";
 import type { Customer } from "@/lib/types";
 import { TimeSelect } from "@/components/ui/time-select";
-import { getDateTimeISO } from "@/lib/utils";
-
-function calculateNightsValue(checkIn: string, checkOut: string) {
-  if (!checkIn || !checkOut) return 0;
-  const checkInDate = new Date(checkIn);
-  const checkOutDate = new Date(checkOut);
-  if (
-    isNaN(checkInDate.getTime()) ||
-    isNaN(checkOutDate.getTime()) ||
-    checkOutDate <= checkInDate
-  ) {
-    return 0;
-  }
-  // Tính số đêm = ceil((check_out - check_in) / 1 ngày)
-  const diffInMs = checkOutDate.getTime() - checkInDate.getTime();
-  const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
-  return Math.ceil(diffInDays);
-}
+import { formatCurrency, getDateTimeISO } from "@/lib/utils";
+import { calculateNightsValue, translateBookingError } from "@/lib/functions";
 
 type CreateBookingFormState = {
   customer_id: string;
@@ -81,10 +65,12 @@ export function CreateBookingDialog({
   open,
   onOpenChange,
   onCreate,
+  defaultRoomId,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreate: (input: BookingInput) => Promise<void>;
+  defaultRoomId?: string;
 }) {
   const [formValues, setFormValues] = useState<CreateBookingFormState>(
     initialCreateBookingState
@@ -129,27 +115,18 @@ export function CreateBookingDialog({
   const calculatedTotalAmount =
     selectedRoom && nights > 0 ? selectedRoom.price_per_night * nights : 0;
 
-  // Update total amount when room or dates change
-  const updateTotalAmount = () => {
+  // Auto-update total amount when room or dates change
+  // Always recalculate when room/dates change
+  useEffect(() => {
     if (calculatedTotalAmount > 0) {
       setFormValues((prev) => ({
         ...prev,
         total_amount: calculatedTotalAmount.toString(),
       }));
     }
-  };
-
-  // Update total when room_id changes
-  useEffect(() => {
-    updateTotalAmount();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formValues.room_id]);
-
-  // Update total when check-in or check-out dates/times change
-  useEffect(() => {
-    updateTotalAmount();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
+    formValues.room_id,
     formValues.check_in_date,
     formValues.check_in_time,
     formValues.check_out_date,
@@ -223,6 +200,16 @@ export function CreateBookingDialog({
     setIsCreateCustomerDialogOpen(false);
   };
 
+  // Set default room_id when dialog opens
+  useEffect(() => {
+    if (open && defaultRoomId) {
+      setFormValues((prev) => ({
+        ...prev,
+        room_id: defaultRoomId,
+      }));
+    }
+  }, [open, defaultRoomId]);
+
   const handleDialogOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
       resetForm();
@@ -267,25 +254,31 @@ export function CreateBookingDialog({
       return;
     }
 
-    // Calculate total amount from room price and nights
+    // Validate room exists
     const selectedRoom = rooms.find((room) => room.id === formValues.room_id);
     if (!selectedRoom) {
       setError("Phòng đã chọn không tồn tại.");
       return;
     }
 
-    const totalAmount = selectedRoom.price_per_night * number_of_nights;
-
-    const advancePayment = Number(formValues.advance_payment || 0);
-    if (!Number.isFinite(advancePayment) || advancePayment < 0) {
-      setError("Tiền đặt cọc không hợp lệ.");
+    // Use total_amount from form (allows manual editing)
+    const totalAmount = Number(formValues.total_amount || 0);
+    if (!Number.isFinite(totalAmount) || totalAmount < 0) {
+      setError("Tổng tiền không hợp lệ.");
       return;
     }
 
-    if (advancePayment > totalAmount) {
-      setError("Tiền đặt cọc không được vượt quá tổng tiền.");
-      return;
-    }
+    // const advancePayment = Number(formValues.advance_payment || 0);
+    // if (!Number.isFinite(advancePayment) || advancePayment < 0) {
+    //   setError("Tiền đặt cọc không hợp lệ.");
+    //   return;
+    // }
+
+    // if (advancePayment > totalAmount) {
+    //   setError("Tiền đặt cọc không được vượt quá tổng tiền.");
+    //   return;
+    // }
+    const advancePayment = 0; // Đặt cọc luôn là 0
 
     if (!formValues.customer_id) {
       setError("Vui lòng chọn khách hàng.");
@@ -316,26 +309,7 @@ export function CreateBookingDialog({
         err instanceof Error ? err.message : "Không thể tạo booking";
 
       // Translate error messages
-      let message = rawMessage;
-
-      if (
-        rawMessage.includes(
-          "Room is not available for the selected date/time"
-        ) ||
-        rawMessage.includes(
-          'conflicting key value violates exclusion constraint "bookings_no_overlap"'
-        )
-      ) {
-        message =
-          "Phòng không khả dụng cho khoảng thời gian đã chọn. Vui lòng chọn phòng hoặc thời gian khác.";
-      } else if (rawMessage.includes("check_out must be later than check_in")) {
-        message = "Ngày check-out phải sau ngày check-in.";
-      } else if (
-        rawMessage.includes("number_of_nights must be greater than 0")
-      ) {
-        message = "Số đêm phải lớn hơn 0.";
-      }
-
+      const message = translateBookingError(rawMessage);
       setError(message);
       setIsSubmitting(false);
       // Không đóng dialog để người dùng có thể chỉnh sửa
@@ -521,29 +495,13 @@ export function CreateBookingDialog({
                 step="1000"
                 value={formValues.total_amount}
                 onChange={handleInputChange("total_amount")}
-                readOnly
                 className="bg-muted"
               />
               {selectedRoom && nights > 0 && (
                 <p className="text-xs text-muted-foreground">
-                  {nights} đêm ×{" "}
-                  {new Intl.NumberFormat("vi-VN").format(
-                    selectedRoom.price_per_night
-                  )}{" "}
-                  VNĐ/đêm
+                  {formatCurrency(Number(formValues.total_amount || 0))}
                 </p>
               )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="advance_payment">Đặt cọc (VNĐ)</Label>
-              <Input
-                id="advance_payment"
-                type="number"
-                min={0}
-                step="1000"
-                value={formValues.advance_payment}
-                onChange={handleInputChange("advance_payment")}
-              />
             </div>
           </div>
           <div className="space-y-2">

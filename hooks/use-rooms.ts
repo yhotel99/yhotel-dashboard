@@ -345,6 +345,26 @@ export function useRooms(
     [fetchRooms, page, limit, search]
   );
 
+  // Update room status
+  const updateRoomStatus = useCallback(
+    async (id: string, status: "clean" | "not_clean") => {
+      try {
+        const supabase = createClient();
+        const { error } = await supabase
+          .from("rooms")
+          .update({ status })
+          .eq("id", id);
+
+        if (error) {
+          throw new Error(error.message);
+        }
+      } catch (err) {
+        throw err;
+      }
+    },
+    []
+  );
+
   // Get room by ID with images
   const getRoomById = useCallback(
     async (id: string): Promise<RoomWithImages | null> => {
@@ -445,5 +465,6 @@ export function useRooms(
     updateRoom,
     deleteRoom,
     getRoomById,
+    updateRoomStatus,
   };
 }

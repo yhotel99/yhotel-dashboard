@@ -82,11 +82,11 @@ const createColumns = (
       />
     ),
   },
-  {
-    accessorKey: "advance_payment",
-    header: "Đặt cọc",
-    cell: ({ row }) => formatCurrency(row.original.advance_payment),
-  },
+  // {
+  //   accessorKey: "advance_payment",
+  //   header: "Đặt cọc",
+  //   cell: ({ row }) => formatCurrency(row.original.advance_payment),
+  // },
   {
     accessorKey: "notes",
     header: "Ghi chú",

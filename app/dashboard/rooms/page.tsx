@@ -15,18 +15,15 @@ import { RoomActionsCell } from "@/components/rooms/actions-cell";
 import { ThumbnailCell } from "@/components/rooms/thumbnail-cell";
 import { AmenitiesCell } from "@/components/rooms/amenities-cell";
 import { DeleteRoomDialog } from "@/components/rooms/delete-room-dialog";
+import { UpdateRoomStatusDialog } from "@/components/rooms/update-room-status-dialog";
 import { formatCurrency } from "@/lib/utils";
-
-// Room type labels
-const roomTypeLabels: Record<Room["room_type"], string> = {
-  standard: "Standard",
-  deluxe: "Deluxe",
-  superior: "Superior",
-  family: "Family",
-};
+import { roomTypeLabels } from "@/lib/constants";
 
 // Table columns factory
-const createColumns = (onDelete: (room: Room) => void): ColumnDef<Room>[] => [
+const createColumns = (
+  onDelete: (room: Room) => void,
+  onChangeStatus?: (room: Room) => void
+): ColumnDef<Room>[] => [
   {
     accessorKey: "thumbnail",
     header: "Ảnh",
@@ -71,7 +68,11 @@ const createColumns = (onDelete: (room: Room) => void): ColumnDef<Room>[] => [
   {
     id: "actions",
     cell: ({ row }) => (
-      <RoomActionsCell room={row.original} onDelete={onDelete} />
+      <RoomActionsCell
+        room={row.original}
+        onDelete={onDelete}
+        onChangeStatus={onChangeStatus}
+      />
     ),
   },
 ];
@@ -141,15 +142,18 @@ export default function RoomsPage() {
     }
   }, [debouncedSearch, search, limit, updateSearchParams]);
 
-  const { rooms, isLoading, pagination, fetchRooms, deleteRoom } = useRooms(
-    page,
-    limit,
-    search
-  );
+  const { rooms, isLoading, pagination, fetchRooms, deleteRoom, updateRoom } =
+    useRooms(page, limit, search);
 
   // Delete room dialog state
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [roomToDelete, setRoomToDelete] = useState<Room | null>(null);
+
+  // Update status dialog state
+  const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
+  const [roomToUpdateStatus, setRoomToUpdateStatus] = useState<Room | null>(
+    null
+  );
 
   // Handle empty page after deletion or invalid page number
   useEffect(() => {
@@ -183,6 +187,33 @@ export default function RoomsPage() {
     setIsDeleteDialogOpen(true);
   }, []);
 
+  const handleChangeStatusClick = useCallback((room: Room) => {
+    setRoomToUpdateStatus(room);
+    setIsStatusDialogOpen(true);
+  }, []);
+
+  const handleConfirmStatusUpdate = useCallback(
+    async (roomId: string, newStatus: Room["status"]) => {
+      try {
+        await updateRoom(roomId, { status: newStatus });
+        toast.success("Cập nhật trạng thái thành công!", {
+          description: `Trạng thái phòng đã được cập nhật thành công.`,
+        });
+        await fetchRooms(page, limit, search);
+        setIsStatusDialogOpen(false);
+        setRoomToUpdateStatus(null);
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Không thể cập nhật trạng thái";
+        toast.error("Cập nhật trạng thái thất bại", {
+          description: errorMessage,
+        });
+        throw err;
+      }
+    },
+    [updateRoom, fetchRooms, page, limit, search]
+  );
+
   const handleConfirmDelete = useCallback(async () => {
     if (!roomToDelete) return;
 
@@ -203,10 +234,10 @@ export default function RoomsPage() {
     }
   }, [roomToDelete, deleteRoom]);
 
-  // Create columns with delete handler
+  // Create columns with delete and change status handlers
   const columns = useMemo(
-    () => createColumns(handleDeleteClick),
-    [handleDeleteClick]
+    () => createColumns(handleDeleteClick, handleChangeStatusClick),
+    [handleDeleteClick, handleChangeStatusClick]
   );
 
   return (
@@ -248,6 +279,13 @@ export default function RoomsPage() {
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
         onConfirm={handleConfirmDelete}
+      />
+
+      <UpdateRoomStatusDialog
+        room={roomToUpdateStatus}
+        open={isStatusDialogOpen}
+        onOpenChange={setIsStatusDialogOpen}
+        onConfirm={handleConfirmStatusUpdate}
       />
     </div>
   );

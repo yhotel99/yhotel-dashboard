@@ -13,9 +13,11 @@ import type { Room } from "@/hooks/use-rooms";
 export function RoomActionsCell({
   room,
   onDelete,
+  onChangeStatus,
 }: {
   room: Room;
   onDelete: (room: Room) => void;
+  onChangeStatus?: (room: Room) => void;
 }) {
   const router = useRouter();
 
@@ -31,12 +33,17 @@ export function RoomActionsCell({
           <span className="sr-only">Open menu</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-32">
+      <DropdownMenuContent align="end" className="w-44">
         <DropdownMenuItem
           onClick={() => router.push(`/dashboard/rooms/edit/${room.id}`)}
         >
           Chỉnh sửa
         </DropdownMenuItem>
+        {onChangeStatus && (
+          <DropdownMenuItem onClick={() => onChangeStatus(room)}>
+            Thay đổi trạng thái
+          </DropdownMenuItem>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onClick={() => onDelete(room)}>
           Xóa
@@ -45,4 +52,3 @@ export function RoomActionsCell({
     </DropdownMenu>
   );
 }
-
