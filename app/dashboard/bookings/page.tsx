@@ -1,15 +1,14 @@
 "use client";
 
-import { useMemo, useState, useEffect, useCallback } from "react";
-
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useCallback, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { ColumnDef } from "@tanstack/react-table";
 import { IconPlus } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
 import { toast } from "sonner";
-import { useDebounce } from "@/hooks/use-debounce";
+import { usePaginationSearchParams } from "@/hooks/use-pagination-search-params";
 import {
   useBookings,
   type BookingRecord,
@@ -20,7 +19,7 @@ import { StatusSelect } from "@/components/bookings/status";
 import { BookingActionsCell } from "@/components/bookings/actions-cell";
 import { CreateBookingDialog } from "@/components/bookings/create-booking-dialog";
 import { EditBookingDialog } from "@/components/bookings/edit-booking-dialog";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 
 // Status badge component
 // status components moved to components/bookings/status
@@ -82,11 +81,6 @@ const createColumns = (
       />
     ),
   },
-  // {
-  //   accessorKey: "advance_payment",
-  //   header: "Đặt cọc",
-  //   cell: ({ row }) => formatCurrency(row.original.advance_payment),
-  // },
   {
     accessorKey: "notes",
     header: "Ghi chú",
@@ -110,62 +104,14 @@ const createColumns = (
 // CreateBookingDialog extracted to components/bookings/create-booking-dialog
 
 export default function BookingsPage() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-
-  const page = useMemo(() => {
-    const pageParam = searchParams.get("page");
-    const pageNum = pageParam ? parseInt(pageParam, 10) : 1;
-    return pageNum > 0 ? pageNum : 1;
-  }, [searchParams]);
-
-  const limit = useMemo(() => {
-    const limitParam = searchParams.get("limit");
-    const limitNum = limitParam ? parseInt(limitParam, 10) : 10;
-    return limitNum > 0 ? limitNum : 10;
-  }, [searchParams]);
-
-  const search = useMemo(() => {
-    return searchParams.get("search") || "";
-  }, [searchParams]);
-
-  const updateSearchParams = useCallback(
-    (newPage: number, newLimit: number, newSearch?: string) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (newPage > 1) {
-        params.set("page", newPage.toString());
-      } else {
-        params.delete("page");
-      }
-      if (newLimit !== 10) {
-        params.set("limit", newLimit.toString());
-      } else {
-        params.delete("limit");
-      }
-      if (newSearch !== undefined) {
-        if (newSearch.trim() !== "") {
-          params.set("search", newSearch.trim());
-        } else {
-          params.delete("search");
-        }
-      }
-      router.push(`/dashboard/bookings?${params.toString()}`);
-    },
-    [router, searchParams]
-  );
-
-  const [localSearch, setLocalSearch] = useState(search);
-  const debouncedSearch = useDebounce(localSearch, 500);
-
-  useEffect(() => {
-    setLocalSearch(search);
-  }, [search]);
-
-  useEffect(() => {
-    if (debouncedSearch !== search) {
-      updateSearchParams(1, limit, debouncedSearch);
-    }
-  }, [debouncedSearch, search, limit, updateSearchParams]);
+  const {
+    page,
+    limit,
+    search,
+    localSearch,
+    setLocalSearch,
+    updateSearchParams,
+  } = usePaginationSearchParams();
 
   const {
     bookings,

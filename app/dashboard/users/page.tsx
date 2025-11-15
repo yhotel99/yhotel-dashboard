@@ -3,11 +3,12 @@
 import * as React from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import { IconPlus } from "@tabler/icons-react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
 import { toast } from "sonner";
+import { usePaginationSearchParams } from "@/hooks/use-pagination-search-params";
 import { useProfiles } from "@/hooks/use-profiles";
 import type { Profile } from "@/lib/types";
 import { RoleBadge, StatusBadge } from "@/components/users/status";
@@ -18,7 +19,6 @@ import {
   type EditUserFormValues,
 } from "@/components/users/user-form-dialog";
 import { formatDate } from "@/lib/utils";
-import { useDebounce } from "@/hooks/use-debounce";
 
 // Table columns
 const createColumns = (
@@ -62,69 +62,19 @@ const createColumns = (
 
 export default function UsersPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const [localSearch, setLocalSearch] = React.useState("");
   const [openUserDialog, setOpenUserDialog] = React.useState(false);
   const [editingProfile, setEditingProfile] = React.useState<
     Profile | undefined
   >();
 
-  // Get pagination and search from URL params
-  const page = React.useMemo(() => {
-    const pageParam = searchParams.get("page");
-    const pageNum = pageParam ? parseInt(pageParam, 10) : 1;
-    return pageNum > 0 ? pageNum : 1;
-  }, [searchParams]);
-
-  const limit = React.useMemo(() => {
-    const limitParam = searchParams.get("limit");
-    const limitNum = limitParam ? parseInt(limitParam, 10) : 10;
-    return limitNum > 0 ? limitNum : 10;
-  }, [searchParams]);
-
-  const search = React.useMemo(() => {
-    return searchParams.get("search") || "";
-  }, [searchParams]);
-
-  // Update search params
-  const updateSearchParams = React.useCallback(
-    (newPage: number, newLimit: number, newSearch: string) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (newPage > 1) {
-        params.set("page", newPage.toString());
-      } else {
-        params.delete("page");
-      }
-      if (newLimit !== 10) {
-        params.set("limit", newLimit.toString());
-      } else {
-        params.delete("limit");
-      }
-      if (newSearch) {
-        params.set("search", newSearch);
-      } else {
-        params.delete("search");
-      }
-      router.push(`?${params.toString()}`);
-    },
-    [router, searchParams]
-  );
-
-  // Sync local search with URL search
-  React.useEffect(() => {
-    setLocalSearch(search);
-  }, [search]);
-
-  // Debounce search
-  React.useEffect(() => {
-    const timer = setTimeout(() => {
-      if (localSearch !== search) {
-        updateSearchParams(1, limit, localSearch);
-      }
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [localSearch, limit, search, updateSearchParams]);
+  const {
+    page,
+    limit,
+    search,
+    localSearch,
+    setLocalSearch,
+    updateSearchParams,
+  } = usePaginationSearchParams();
 
   const {
     profiles,
