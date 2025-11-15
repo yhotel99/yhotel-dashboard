@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState, useEffect, useCallback } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useMemo, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { ColumnDef } from "@tanstack/react-table";
 import { IconDotsVertical, IconPlus } from "@tabler/icons-react";
 
@@ -15,7 +15,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { DataTable } from "@/components/data-table";
-import { useDebounce } from "@/hooks/use-debounce";
+import { usePagination } from "@/hooks/use-pagination";
+import { useDialogState } from "@/hooks/use-dialog-state";
+import { useEmptyPageHandler } from "@/hooks/use-empty-page-handler";
 import {
   useCustomers,
   type Customer,
@@ -24,18 +26,7 @@ import {
 import { CreateCustomerDialog } from "@/components/customers/create-customer-dialog";
 import { EditCustomerDialog } from "@/components/customers/edit-customer-dialog";
 import { toast } from "sonner";
-import { formatCurrency } from "@/lib/utils";
-
-// Format date
-const formatDate = (dateString: string) => {
-  if (!dateString) return "-";
-  const date = new Date(dateString);
-  return date.toLocaleDateString("vi-VN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-};
+import { formatCurrency, formatDate } from "@/lib/utils";
 
 // Status badge
 function StatusBadge({
@@ -148,62 +139,26 @@ const createColumns = (
 ];
 
 export default function CustomersPage() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  // Use pagination hook
+  const {
+    page,
+    limit,
+    debouncedSearch,
+    localSearch,
+    setLocalSearch,
+    updateSearchParams,
+  } = usePagination({ defaultPage: 1, defaultLimit: 10 });
 
-  const page = useMemo(() => {
-    const pageParam = searchParams.get("page");
-    const pageNum = pageParam ? parseInt(pageParam, 10) : 1;
-    return pageNum > 0 ? pageNum : 1;
-  }, [searchParams]);
-
-  const limit = useMemo(() => {
-    const limitParam = searchParams.get("limit");
-    const limitNum = limitParam ? parseInt(limitParam, 10) : 10;
-    return limitNum > 0 ? limitNum : 10;
-  }, [searchParams]);
-
-  const search = useMemo(() => {
-    return searchParams.get("search") || "";
-  }, [searchParams]);
-
-  const updateSearchParams = useCallback(
-    (newPage: number, newLimit: number, newSearch?: string) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (newPage > 1) {
-        params.set("page", newPage.toString());
-      } else {
-        params.delete("page");
-      }
-      if (newLimit !== 10) {
-        params.set("limit", newLimit.toString());
-      } else {
-        params.delete("limit");
-      }
-      if (newSearch !== undefined) {
-        if (newSearch.trim() !== "") {
-          params.set("search", newSearch.trim());
-        } else {
-          params.delete("search");
-        }
-      }
-      router.push(`/dashboard/customers?${params.toString()}`);
-    },
-    [router, searchParams]
-  );
-
-  const [localSearch, setLocalSearch] = useState(search);
-  const debouncedSearch = useDebounce(localSearch, 500);
-
-  useEffect(() => {
-    setLocalSearch(search);
-  }, [search]);
-
-  useEffect(() => {
-    if (debouncedSearch !== search) {
-      updateSearchParams(1, limit, debouncedSearch);
-    }
-  }, [debouncedSearch, search, limit, updateSearchParams]);
+  // Use dialog state hook
+  const {
+    isCreateOpen,
+    isEditOpen,
+    selectedItem,
+    openCreate,
+    closeCreate,
+    openEdit,
+    closeEdit,
+  } = useDialogState<Customer>();
 
   const {
     customers,
@@ -212,22 +167,17 @@ export default function CustomersPage() {
     fetchCustomers,
     createCustomer,
     updateCustomer,
-  } = useCustomers(page, limit, search);
+  } = useCustomers(page, limit, debouncedSearch);
 
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
-    null
-  );
-
-  const handleOpenCreateDialog = () => {
-    setIsCreateDialogOpen(true);
-  };
-
-  const handleEdit = useCallback((customer: Customer) => {
-    setSelectedCustomer(customer);
-    setIsEditDialogOpen(true);
-  }, []);
+  // Handle empty page scenarios
+  useEmptyPageHandler({
+    isLoading,
+    pagination,
+    currentPage: page,
+    itemsCount: customers.length,
+    onPageChange: (newPage) =>
+      updateSearchParams(newPage, limit, debouncedSearch),
+  });
 
   const handleCreateCustomer = useCallback(
     async (input: CustomerInput) => {
@@ -236,6 +186,7 @@ export default function CustomersPage() {
         toast.success("Tạo khách hàng thành công!", {
           description: "Khách hàng mới đã được thêm vào hệ thống.",
         });
+        closeCreate();
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Không thể tạo khách hàng";
@@ -243,7 +194,7 @@ export default function CustomersPage() {
         throw error;
       }
     },
-    [createCustomer]
+    [createCustomer, closeCreate]
   );
 
   const handleUpdateCustomer = useCallback(
@@ -253,6 +204,7 @@ export default function CustomersPage() {
         toast.success("Cập nhật khách hàng thành công!", {
           description: "Thông tin khách hàng đã được cập nhật.",
         });
+        closeEdit();
       } catch (error) {
         const message =
           error instanceof Error
@@ -262,10 +214,10 @@ export default function CustomersPage() {
         throw error;
       }
     },
-    [updateCustomer]
+    [updateCustomer, closeEdit]
   );
 
-  const columns = useMemo(() => createColumns(handleEdit), [handleEdit]);
+  const columns = useMemo(() => createColumns(openEdit), [openEdit]);
 
   return (
     <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
@@ -276,7 +228,7 @@ export default function CustomersPage() {
             Quản lý và theo dõi thông tin khách hàng sử dụng hệ thống
           </p>
         </div>
-        <Button className="gap-2" onClick={handleOpenCreateDialog}>
+        <Button className="gap-2" onClick={openCreate}>
           <IconPlus className="size-4" />
           Thêm khách hàng
         </Button>
@@ -290,31 +242,34 @@ export default function CustomersPage() {
           emptyMessage="Không tìm thấy khách hàng nào."
           entityName="khách hàng"
           getRowId={(row) => row.id}
-          fetchData={() => fetchCustomers(page, limit, search)}
+          fetchData={() => fetchCustomers()}
           isLoading={isLoading}
           serverPagination={pagination}
-          onPageChange={(newPage) => updateSearchParams(newPage, limit, search)}
-          onLimitChange={(newLimit) => updateSearchParams(1, newLimit, search)}
+          onPageChange={(newPage) =>
+            updateSearchParams(newPage, limit, debouncedSearch)
+          }
+          onLimitChange={(newLimit) =>
+            updateSearchParams(1, newLimit, debouncedSearch)
+          }
           serverSearch={localSearch}
           onSearchChange={setLocalSearch}
         />
       </div>
 
       <CreateCustomerDialog
-        open={isCreateDialogOpen}
-        onOpenChange={setIsCreateDialogOpen}
+        open={isCreateOpen}
+        onOpenChange={(open) => {
+          if (!open) closeCreate();
+        }}
         onCreate={handleCreateCustomer}
       />
 
       <EditCustomerDialog
-        open={isEditDialogOpen}
+        open={isEditOpen}
         onOpenChange={(open) => {
-          setIsEditDialogOpen(open);
-          if (!open) {
-            setSelectedCustomer(null);
-          }
+          if (!open) closeEdit();
         }}
-        customer={selectedCustomer}
+        customer={selectedItem}
         onUpdate={handleUpdateCustomer}
       />
     </div>

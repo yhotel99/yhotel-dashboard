@@ -1,7 +1,6 @@
 "use client";
 
 import { Card } from "@/components/ui/card";
-// import { Separator } from "@/components/ui/separator";
 import { CreditCard } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import type { BookingRecord } from "@/lib/types";

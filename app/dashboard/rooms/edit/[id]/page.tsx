@@ -1,32 +1,17 @@
 "use client";
 
 import { useRouter, useParams } from "next/navigation";
-import { useEffect, useState } from "react";
 import { IconArrowLeft } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
 import { RoomForm, type RoomFormValues } from "@/components/room-form";
-import { useRooms, type RoomWithImages } from "@/hooks/use-rooms";
+import { useRoomById } from "@/hooks/use-rooms";
 
 export default function EditRoomPage() {
   const router = useRouter();
   const params = useParams();
   const roomId = params.id as string;
-  const { getRoomById } = useRooms();
-  const [room, setRoom] = useState<RoomWithImages | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchRoom = async () => {
-      if (!roomId) return;
-      setIsLoading(true);
-      const roomData = await getRoomById(roomId);
-      setRoom(roomData);
-      setIsLoading(false);
-    };
-
-    fetchRoom();
-  }, [roomId, getRoomById]);
+  const { data: room, isLoading } = useRoomById(roomId);
 
   const defaultValues: Partial<RoomFormValues> | undefined = room
     ? {

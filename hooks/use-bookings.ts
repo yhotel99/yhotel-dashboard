@@ -1,8 +1,19 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { BookingRecord, BookingInput, PaginationMeta } from "@/lib/types";
+import {
+  bookingKeys,
+  fetchBookingsQuery,
+  fetchBookingByIdQuery,
+  fetchBookingByIdWithDetailsQuery,
+  fetchBookingsByCustomerIdQuery,
+  createBookingMutation,
+  updateBookingMutation,
+  updateBookingNotesMutation,
+  checkoutBookingMutation,
+  deleteBookingMutation,
+} from "@/lib/queries/bookings";
 
 // Re-export types for backward compatibility
 export type {
@@ -12,388 +23,129 @@ export type {
   PaginationMeta,
 } from "@/lib/types";
 
+// Hook for managing bookings list
 export function useBookings(
   page: number = 1,
   limit: number = 10,
   search: string = ""
 ) {
-  const [bookings, setBookings] = useState<BookingRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [pagination, setPagination] = useState<PaginationMeta>({
+  const queryClient = useQueryClient();
+
+  // Fetch bookings with React Query
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: bookingKeys.list(page, limit, search),
+    queryFn: () => fetchBookingsQuery(page, limit, search),
+  });
+
+  const bookings = data?.bookings || [];
+  const pagination = data?.pagination || {
     total: 0,
     page: 1,
     limit: 10,
     totalPages: 0,
+  };
+
+  // Create booking mutation
+  const createBookingMutationHook = useMutation({
+    mutationFn: createBookingMutation,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: bookingKeys.lists() });
+    },
   });
 
-  const fetchBookings = useCallback(
-    async (
-      pageNum: number = page,
-      limitNum: number = limit,
-      searchTerm: string = search
-    ) => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const supabase = createClient();
-
-        const from = (pageNum - 1) * limitNum;
-        const to = from + limitNum - 1;
-
-        let query = supabase
-          .from("bookings")
-          .select(
-            `
-            *,
-            customers (
-              id,
-              full_name
-            ),
-            rooms (
-              id,
-              name
-            )
-            `,
-            { count: "exact" }
-          )
-          .is("deleted_at", null);
-
-        if (searchTerm && searchTerm.trim() !== "") {
-          const trimmed = searchTerm.trim();
-          query = query.or(`notes.ilike.%${trimmed}%,status.eq.${trimmed}`);
-        }
-
-        const { data, error, count } = await query
-          .order("created_at", { ascending: false })
-          .range(from, to);
-
-        if (error) {
-          throw new Error(error.message);
-        }
-
-        const bookingsData = (data || []) as BookingRecord[];
-        const total = count || 0;
-        const totalPages = Math.ceil(total / limitNum);
-
-        setBookings(bookingsData);
-        setPagination({
-          total,
-          page: pageNum,
-          limit: limitNum,
-          totalPages,
-        });
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error
-            ? err.message
-            : "Không thể tải danh sách booking";
-        setError(errorMessage);
-      } finally {
-        setIsLoading(false);
-      }
+  // Update booking mutation
+  const updateBookingMutationHook = useMutation({
+    mutationFn: updateBookingMutation,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: bookingKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: bookingKeys.details() });
     },
-    [page, limit, search]
-  );
+  });
 
-  useEffect(() => {
-    fetchBookings(page, limit, search);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, limit, search]);
-
-  const createBooking = useCallback(
-    async (input: BookingInput) => {
-      try {
-        const supabase = createClient();
-
-        // Gọi RPC function để tạo booking (atomic, tránh race condition)
-        // Thứ tự tham số theo function SQL definition
-        const { data: bookingId, error: rpcError } = await supabase.rpc(
-          "create_booking_secure",
-          {
-            p_customer_id: input.customer_id || null,
-            p_room_id: input.room_id || null,
-            p_check_in: input.check_in, // TIMESTAMPTZ
-            p_check_out: input.check_out, // TIMESTAMPTZ
-            p_number_of_nights: input.number_of_nights || 0,
-            p_total_amount: input.total_amount,
-            p_total_guests: input.total_guests ?? 1,
-            p_notes: input.notes || null,
-            p_advance_payment: input.advance_payment ?? 0,
-          }
-        );
-
-        if (rpcError) {
-          throw new Error(rpcError.message);
-        }
-
-        if (!bookingId) {
-          throw new Error("Không thể tạo booking");
-        }
-
-        // Fetch lại booking vừa tạo với đầy đủ relations
-        const { data: bookingData, error: fetchError } = await supabase
-          .from("bookings")
-          .select(
-            `
-            *,
-            customers (
-              id,
-              full_name
-            ),
-            rooms (
-              id,
-              name
-            )
-            `
-          )
-          .eq("id", bookingId)
-          .single();
-
-        if (fetchError || !bookingData) {
-          // Nếu không fetch được, vẫn refresh danh sách
-          await fetchBookings(page, limit, search);
-          throw new Error(
-            fetchError?.message || "Không thể lấy thông tin booking vừa tạo"
-          );
-        }
-
-        const newBooking = bookingData as BookingRecord;
-        await fetchBookings(page, limit, search);
-        return newBooking;
-      } catch (err) {
-        throw err;
-      }
+  // Update booking notes mutation
+  const updateBookingNotesMutationHook = useMutation({
+    mutationFn: updateBookingNotesMutation,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: bookingKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: bookingKeys.details() });
     },
-    [fetchBookings, page, limit, search]
-  );
+  });
 
-  const updateBooking = useCallback(
-    async (id: string, input: Partial<BookingInput>) => {
-      try {
-        const supabase = createClient();
-        const { data, error } = await supabase
-          .from("bookings")
-          .update(input)
-          .eq("id", id)
-          .select()
-          .single();
-
-        if (error) {
-          throw new Error(error.message);
-        }
-
-        const updatedBooking = data as BookingRecord;
-
-        // Cập nhật state thay vì fetch lại, giữ nguyên relations nếu response không có
-        setBookings((prevBookings) =>
-          prevBookings.map((booking) => {
-            if (booking.id === id) {
-              // Nếu response không có relations, giữ nguyên từ booking cũ
-              return {
-                ...updatedBooking,
-                customers: updatedBooking.customers ?? booking.customers,
-                rooms: updatedBooking.rooms ?? booking.rooms,
-              };
-            }
-            return booking;
-          })
-        );
-
-        return updatedBooking;
-      } catch (err) {
-        throw err;
-      }
+  // Checkout booking mutation
+  const checkoutBookingMutationHook = useMutation({
+    mutationFn: checkoutBookingMutation,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: bookingKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: bookingKeys.details() });
     },
-    []
-  );
+  });
 
-  const updateBookingNotes = useCallback(
-    async (id: string, notes: string | null): Promise<BookingRecord> => {
-      try {
-        const supabase = createClient();
-        const { data, error } = await supabase
-          .from("bookings")
-          .update({ notes })
-          .eq("id", id)
-          .select()
-          .single();
-
-        if (error) {
-          throw new Error(error.message);
-        }
-
-        const updatedBooking = data as BookingRecord;
-
-        // Cập nhật state trực tiếp, giữ nguyên relations nếu response không có
-        setBookings((prevBookings) =>
-          prevBookings.map((booking) => {
-            if (booking.id === id) {
-              return {
-                ...updatedBooking,
-                customers: updatedBooking.customers ?? booking.customers,
-                rooms: updatedBooking.rooms ?? booking.rooms,
-              };
-            }
-            return booking;
-          })
-        );
-
-        return updatedBooking;
-      } catch (err) {
-        throw err;
-      }
+  // Delete booking mutation
+  const deleteBookingMutationHook = useMutation({
+    mutationFn: deleteBookingMutation,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: bookingKeys.lists() });
     },
-    []
-  );
-
-  const checkoutBooking = useCallback(async (id: string): Promise<void> => {
-    try {
-      const supabase = createClient();
-      const now = new Date().toISOString();
-
-      const { error } = await supabase
-        .from("bookings")
-        .update({
-          status: "checked_out",
-          actual_check_out: now,
-        })
-        .eq("id", id);
-
-      if (error) {
-        throw new Error(error.message);
-      }
-    } catch (err) {
-      throw err;
-    }
-  }, []);
-
-  const deleteBooking = useCallback(
-    async (id: string) => {
-      try {
-        const supabase = createClient();
-        const { error } = await supabase
-          .from("bookings")
-          .update({ deleted_at: new Date().toISOString() })
-          .eq("id", id);
-
-        if (error) {
-          throw new Error(error.message);
-        }
-
-        await fetchBookings(page, limit, search);
-      } catch (err) {
-        throw err;
-      }
-    },
-    [fetchBookings, page, limit, search]
-  );
-
-  const getBookingById = useCallback(
-    async (id: string): Promise<BookingRecord | null> => {
-      try {
-        const supabase = createClient();
-        const { data, error } = await supabase
-          .from("bookings")
-          .select("*")
-          .eq("id", id)
-          .is("deleted_at", null)
-          .single();
-
-        if (error || !data) {
-          return null;
-        }
-
-        return data as BookingRecord;
-      } catch {
-        return null;
-      }
-    },
-    []
-  );
-
-  const getBookingByIdWithDetails = useCallback(
-    async (id: string): Promise<BookingRecord | null> => {
-      try {
-        const supabase = createClient();
-        const { data, error } = await supabase
-          .from("bookings")
-          .select(
-            `
-            *,
-            customers (
-              id,
-              full_name,
-              phone,
-              email
-            )
-          `
-          )
-          .eq("id", id)
-          .is("deleted_at", null)
-          .maybeSingle();
-
-        if (error) {
-          throw new Error(error.message);
-        }
-
-        return (data as BookingRecord) || null;
-      } catch (err) {
-        throw err;
-      }
-    },
-    []
-  );
-
-  // Get bookings by customer ID
-  const getBookingsByCustomerId = useCallback(
-    async (customerId: string): Promise<BookingRecord[]> => {
-      try {
-        const supabase = createClient();
-        const { data, error } = await supabase
-          .from("bookings")
-          .select(
-            `
-            *,
-            customers (
-              id,
-              full_name
-            ),
-            rooms (
-              id,
-              name
-            )
-            `
-          )
-          .eq("customer_id", customerId)
-          .is("deleted_at", null)
-          .order("created_at", { ascending: false });
-
-        if (error) {
-          throw new Error(error.message);
-        }
-
-        return (data || []) as BookingRecord[];
-      } catch {
-        return [];
-      }
-    },
-    []
-  );
+  });
 
   return {
     bookings,
     isLoading,
-    error,
+    error: error ? (error as Error).message : null,
     pagination,
-    fetchBookings,
-    createBooking,
-    updateBooking,
-    updateBookingNotes,
-    checkoutBooking,
-    deleteBooking,
-    getBookingById,
-    getBookingByIdWithDetails,
-    getBookingsByCustomerId,
+    fetchBookings: async () => {
+      await refetch();
+    },
+    createBooking: async (input: BookingInput) => {
+      return createBookingMutationHook.mutateAsync(input);
+    },
+    updateBooking: async (id: string, input: Partial<BookingInput>) => {
+      return updateBookingMutationHook.mutateAsync({ id, input });
+    },
+    updateBookingNotes: async (
+      id: string,
+      notes: string | null
+    ): Promise<BookingRecord> => {
+      const updated = await updateBookingNotesMutationHook.mutateAsync({
+        id,
+        notes,
+      });
+      // Fetch full booking with relations
+      const fullBooking = await fetchBookingByIdQuery(id);
+      return fullBooking || updated;
+    },
+    checkoutBooking: async (id: string) => {
+      return checkoutBookingMutationHook.mutateAsync(id);
+    },
+    deleteBooking: async (id: string) => {
+      return deleteBookingMutationHook.mutateAsync(id);
+    },
+    getBookingById: async (id: string) => {
+      return fetchBookingByIdQuery(id);
+    },
+    getBookingByIdWithDetails: async (id: string) => {
+      return fetchBookingByIdWithDetailsQuery(id);
+    },
+    getBookingsByCustomerId: async (customerId: string) => {
+      return fetchBookingsByCustomerIdQuery(customerId);
+    },
   };
+}
+
+// Hook for getting a single booking by ID
+export function useBookingById(id: string) {
+  return useQuery({
+    queryKey: bookingKeys.detail(id),
+    queryFn: () => fetchBookingByIdQuery(id),
+    enabled: !!id,
+  });
+}
+
+// Hook for getting bookings by customer ID
+export function useBookingsByCustomerId(customerId: string) {
+  return useQuery({
+    queryKey: bookingKeys.byCustomer(customerId),
+    queryFn: () => fetchBookingsByCustomerIdQuery(customerId),
+    enabled: !!customerId,
+  });
 }

@@ -115,17 +115,21 @@ export function CreateBookingDialog({
   const calculatedTotalAmount =
     selectedRoom && nights > 0 ? selectedRoom.price_per_night * nights : 0;
 
+  // Track previous calculated value to prevent unnecessary updates
+  const prevCalculatedTotalRef = useRef<number>(0);
+
   // Auto-update total amount when room or dates change
-  // Always recalculate when room/dates change
+  // Only update if the calculated value is different from previous calculated value
   useEffect(() => {
-    if (calculatedTotalAmount > 0) {
+    if (calculatedTotalAmount > 0 && calculatedTotalAmount !== prevCalculatedTotalRef.current) {
+      prevCalculatedTotalRef.current = calculatedTotalAmount;
       setFormValues((prev) => ({
         ...prev,
         total_amount: calculatedTotalAmount.toString(),
       }));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
+    calculatedTotalAmount,
     formValues.room_id,
     formValues.check_in_date,
     formValues.check_in_time,

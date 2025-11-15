@@ -1,15 +1,15 @@
 "use client";
 
-import { useMemo, useState, useEffect, useCallback } from "react";
-
-import { useRouter, useSearchParams } from "next/navigation";
+import { useMemo, useCallback } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import { IconPlus } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
 import { toast } from "sonner";
-import { useDebounce } from "@/hooks/use-debounce";
+import { usePagination } from "@/hooks/use-pagination";
+import { useDialogState } from "@/hooks/use-dialog-state";
+import { useEmptyPageHandler } from "@/hooks/use-empty-page-handler";
 import {
   useBookings,
   type BookingRecord,
@@ -110,62 +110,26 @@ const createColumns = (
 // CreateBookingDialog extracted to components/bookings/create-booking-dialog
 
 export default function BookingsPage() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  // Use pagination hook
+  const {
+    page,
+    limit,
+    debouncedSearch,
+    localSearch,
+    setLocalSearch,
+    updateSearchParams,
+  } = usePagination({ defaultPage: 1, defaultLimit: 10 });
 
-  const page = useMemo(() => {
-    const pageParam = searchParams.get("page");
-    const pageNum = pageParam ? parseInt(pageParam, 10) : 1;
-    return pageNum > 0 ? pageNum : 1;
-  }, [searchParams]);
-
-  const limit = useMemo(() => {
-    const limitParam = searchParams.get("limit");
-    const limitNum = limitParam ? parseInt(limitParam, 10) : 10;
-    return limitNum > 0 ? limitNum : 10;
-  }, [searchParams]);
-
-  const search = useMemo(() => {
-    return searchParams.get("search") || "";
-  }, [searchParams]);
-
-  const updateSearchParams = useCallback(
-    (newPage: number, newLimit: number, newSearch?: string) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (newPage > 1) {
-        params.set("page", newPage.toString());
-      } else {
-        params.delete("page");
-      }
-      if (newLimit !== 10) {
-        params.set("limit", newLimit.toString());
-      } else {
-        params.delete("limit");
-      }
-      if (newSearch !== undefined) {
-        if (newSearch.trim() !== "") {
-          params.set("search", newSearch.trim());
-        } else {
-          params.delete("search");
-        }
-      }
-      router.push(`/dashboard/bookings?${params.toString()}`);
-    },
-    [router, searchParams]
-  );
-
-  const [localSearch, setLocalSearch] = useState(search);
-  const debouncedSearch = useDebounce(localSearch, 500);
-
-  useEffect(() => {
-    setLocalSearch(search);
-  }, [search]);
-
-  useEffect(() => {
-    if (debouncedSearch !== search) {
-      updateSearchParams(1, limit, debouncedSearch);
-    }
-  }, [debouncedSearch, search, limit, updateSearchParams]);
+  // Use dialog state hook
+  const {
+    isCreateOpen,
+    isEditOpen,
+    selectedItem,
+    openCreate,
+    closeCreate,
+    openEdit,
+    closeEdit,
+  } = useDialogState<BookingRecord>();
 
   const {
     bookings,
@@ -174,22 +138,16 @@ export default function BookingsPage() {
     fetchBookings,
     createBooking,
     updateBooking,
-  } = useBookings(page, limit, search);
+  } = useBookings(page, limit, debouncedSearch);
 
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [selectedBooking, setSelectedBooking] = useState<BookingRecord | null>(
-    null
-  );
-
-  const handleOpenCreateDialog = () => {
-    setIsCreateDialogOpen(true);
-  };
-
-  const handleEdit = useCallback((booking: BookingRecord) => {
-    setSelectedBooking(booking);
-    setIsEditDialogOpen(true);
-  }, []);
+  // Handle empty page scenarios
+  useEmptyPageHandler({
+    isLoading,
+    pagination,
+    currentPage: page,
+    itemsCount: bookings.length,
+    onPageChange: (newPage) => updateSearchParams(newPage, limit, debouncedSearch),
+  });
 
   const handleUpdateBooking = useCallback(
     async (id: string, input: BookingInput) => {
@@ -199,6 +157,7 @@ export default function BookingsPage() {
         toast.success("Cập nhật booking thành công!", {
           description: "Thông tin booking đã được cập nhật.",
         });
+        closeEdit();
       } catch (error) {
         const rawMessage =
           error instanceof Error ? error.message : "Không thể cập nhật booking";
@@ -243,6 +202,7 @@ export default function BookingsPage() {
         toast.success("Tạo booking thành công!", {
           description: "Booking mới đã được thêm vào hệ thống.",
         });
+        closeCreate();
       } catch (error) {
         const rawMessage =
           error instanceof Error ? error.message : "Không thể tạo booking";
@@ -277,7 +237,7 @@ export default function BookingsPage() {
         throw error;
       }
     },
-    [createBooking]
+    [createBooking, closeCreate]
   );
 
   const handleChangeStatus = useCallback(
@@ -304,8 +264,8 @@ export default function BookingsPage() {
   );
 
   const columns = useMemo(
-    () => createColumns(handleChangeStatus, handleCancelBooking, handleEdit),
-    [handleChangeStatus, handleCancelBooking, handleEdit]
+    () => createColumns(handleChangeStatus, handleCancelBooking, openEdit),
+    [handleChangeStatus, handleCancelBooking, openEdit]
   );
 
   return (
@@ -317,7 +277,7 @@ export default function BookingsPage() {
             Quản lý và theo dõi các đặt phòng trong khách sạn
           </p>
         </div>
-        <Button onClick={handleOpenCreateDialog} className="gap-2">
+        <Button onClick={openCreate} className="gap-2">
           <IconPlus className="size-4" />
           Tạo booking mới
         </Button>
@@ -332,31 +292,30 @@ export default function BookingsPage() {
           emptyMessage="Không tìm thấy kết quả."
           entityName="booking"
           getRowId={(row) => row.id}
-          fetchData={() => fetchBookings(page, limit, search)}
+          fetchData={() => fetchBookings()}
           isLoading={isLoading}
           serverPagination={pagination}
-          onPageChange={(newPage) => updateSearchParams(newPage, limit, search)}
-          onLimitChange={(newLimit) => updateSearchParams(1, newLimit, search)}
+          onPageChange={(newPage) => updateSearchParams(newPage, limit, debouncedSearch)}
+          onLimitChange={(newLimit) => updateSearchParams(1, newLimit, debouncedSearch)}
           serverSearch={localSearch}
           onSearchChange={setLocalSearch}
         />
       </div>
 
       <CreateBookingDialog
-        open={isCreateDialogOpen}
-        onOpenChange={setIsCreateDialogOpen}
+        open={isCreateOpen}
+        onOpenChange={(open) => {
+          if (!open) closeCreate();
+        }}
         onCreate={handleCreateBookingSubmit}
       />
 
       <EditBookingDialog
-        open={isEditDialogOpen}
+        open={isEditOpen}
         onOpenChange={(open) => {
-          setIsEditDialogOpen(open);
-          if (!open) {
-            setSelectedBooking(null);
-          }
+          if (!open) closeEdit();
         }}
-        booking={selectedBooking}
+        booking={selectedItem}
         onUpdate={handleUpdateBooking}
       />
     </div>

@@ -1,14 +1,14 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { IconArrowLeft } from "@tabler/icons-react";
 import { ColumnDef } from "@tanstack/react-table";
 
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
-import { useCustomers } from "@/hooks/use-customers";
-import { useBookings, type BookingRecord } from "@/hooks/use-bookings";
+import { useCustomerById } from "@/hooks/use-customers";
+import { useBookingsByCustomerId, type BookingRecord } from "@/hooks/use-bookings";
 import { StatusBadge } from "@/components/bookings/status";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
@@ -65,40 +65,12 @@ export default function CustomerBookingsPage() {
   const router = useRouter();
   const customerId = params.id as string;
 
-  const [bookings, setBookings] = useState<BookingRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [customerName, setCustomerName] = useState<string>("Khách hàng");
-  const [phone, setPhone] = useState<string>("");
-  const { getCustomerById } = useCustomers();
-  const { getBookingsByCustomerId } = useBookings();
+  const { data: customer, isLoading: isLoadingCustomer } = useCustomerById(customerId);
+  const { data: bookings = [], isLoading: isLoadingBookings } = useBookingsByCustomerId(customerId);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!customerId) return;
-
-      setIsLoading(true);
-      try {
-        const [customerData, bookingsData] = await Promise.all([
-          getCustomerById(customerId),
-          getBookingsByCustomerId(customerId),
-        ]);
-
-        if (customerData) {
-          setCustomerName(customerData.full_name);
-          setPhone(customerData.phone || "");
-        }
-
-        setBookings(bookingsData);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        setBookings([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [customerId, getCustomerById, getBookingsByCustomerId]);
+  const isLoading = isLoadingCustomer || isLoadingBookings;
+  const customerName = customer?.full_name || "Khách hàng";
+  const phone = customer?.phone || "";
 
   const columns = useMemo(() => createColumns(), []);
 

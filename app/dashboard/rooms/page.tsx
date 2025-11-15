@@ -1,13 +1,14 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { ColumnDef } from "@tanstack/react-table";
 import { IconPlus } from "@tabler/icons-react";
-import { useMemo, useEffect, useCallback, useState } from "react";
-import { useDebounce } from "@/hooks/use-debounce";
+import { useMemo, useCallback, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
+import { usePagination } from "@/hooks/use-pagination";
+import { useEmptyPageHandler } from "@/hooks/use-empty-page-handler";
 import { useRooms, type Room } from "@/hooks/use-rooms";
 import { toast } from "sonner";
 import { StatusBadge } from "@/components/rooms/status";
@@ -79,68 +80,16 @@ const createColumns = (
 
 export default function RoomsPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-
-  // Get page, limit, and search from URL search params
-  const page = useMemo(() => {
-    const pageParam = searchParams.get("page");
-    const pageNum = pageParam ? parseInt(pageParam, 10) : 1;
-    return pageNum > 0 ? pageNum : 1;
-  }, [searchParams]);
-
-  const limit = useMemo(() => {
-    const limitParam = searchParams.get("limit");
-    const limitNum = limitParam ? parseInt(limitParam, 10) : 10;
-    return limitNum > 0 ? limitNum : 10;
-  }, [searchParams]);
-
-  const search = useMemo(() => {
-    return searchParams.get("search") || "";
-  }, [searchParams]);
-
-  // Update URL search params when pagination changes
-  const updateSearchParams = useCallback(
-    (newPage: number, newLimit: number, newSearch?: string) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (newPage > 1) {
-        params.set("page", newPage.toString());
-      } else {
-        params.delete("page");
-      }
-      if (newLimit !== 10) {
-        params.set("limit", newLimit.toString());
-      } else {
-        params.delete("limit");
-      }
-      if (newSearch !== undefined) {
-        if (newSearch.trim() !== "") {
-          params.set("search", newSearch.trim());
-        } else {
-          params.delete("search");
-        }
-      }
-      router.push(`/dashboard/rooms?${params.toString()}`);
-    },
-    [searchParams, router]
-  );
-
-  // Local search state for immediate UI updates
-  const [localSearch, setLocalSearch] = useState(search);
-
-  // Debounce search value - update URL after user stops typing
-  const debouncedSearch = useDebounce(localSearch, 500);
-
-  // Sync local search with URL search param when it changes externally
-  useEffect(() => {
-    setLocalSearch(search);
-  }, [search]);
-
-  // Update URL when debounced search changes
-  useEffect(() => {
-    if (debouncedSearch !== search) {
-      updateSearchParams(1, limit, debouncedSearch);
-    }
-  }, [debouncedSearch, search, limit, updateSearchParams]);
+  
+  // Use pagination hook
+  const {
+    page,
+    limit,
+    debouncedSearch,
+    localSearch,
+    setLocalSearch,
+    updateSearchParams,
+  } = usePagination({ defaultPage: 1, defaultLimit: 10 });
 
   const {
     rooms,
@@ -150,7 +99,7 @@ export default function RoomsPage() {
     deleteRoom,
     updateRoom,
     updateRoomStatus,
-  } = useRooms(page, limit, search);
+  } = useRooms(page, limit, debouncedSearch);
 
   // Delete room dialog state
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -162,28 +111,14 @@ export default function RoomsPage() {
     null
   );
 
-  // Handle empty page after deletion or invalid page number
-  useEffect(() => {
-    if (!isLoading && pagination.totalPages > 0) {
-      // If current page is beyond total pages, navigate to last page
-      if (page > pagination.totalPages) {
-        updateSearchParams(pagination.totalPages, limit);
-        return;
-      }
-      // If current page is empty (after deletion), navigate to previous page
-      if (rooms.length === 0 && page > 1) {
-        const targetPage = Math.min(page - 1, pagination.totalPages);
-        updateSearchParams(targetPage, limit);
-      }
-    }
-  }, [
-    rooms.length,
-    pagination.totalPages,
-    page,
-    limit,
+  // Handle empty page scenarios
+  useEmptyPageHandler({
     isLoading,
-    updateSearchParams,
-  ]);
+    pagination,
+    currentPage: page,
+    itemsCount: rooms.length,
+    onPageChange: (newPage) => updateSearchParams(newPage, limit, debouncedSearch),
+  });
 
   const handleCreateRoom = () => {
     router.push("/dashboard/rooms/create");
@@ -270,11 +205,11 @@ export default function RoomsPage() {
           emptyMessage="Không tìm thấy kết quả."
           entityName="phòng"
           getRowId={(row) => row.id}
-          fetchData={() => fetchRooms(page, limit, search)}
+          fetchData={() => fetchRooms()}
           isLoading={isLoading}
           serverPagination={pagination}
-          onPageChange={(newPage) => updateSearchParams(newPage, limit, search)}
-          onLimitChange={(newLimit) => updateSearchParams(1, newLimit, search)}
+          onPageChange={(newPage) => updateSearchParams(newPage, limit, debouncedSearch)}
+          onLimitChange={(newLimit) => updateSearchParams(1, newLimit, debouncedSearch)}
           serverSearch={localSearch}
           onSearchChange={setLocalSearch}
         ></DataTable>
