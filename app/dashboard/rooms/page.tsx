@@ -142,8 +142,15 @@ export default function RoomsPage() {
     }
   }, [debouncedSearch, search, limit, updateSearchParams]);
 
-  const { rooms, isLoading, pagination, fetchRooms, deleteRoom, updateRoom } =
-    useRooms(page, limit, search);
+  const {
+    rooms,
+    isLoading,
+    pagination,
+    fetchRooms,
+    deleteRoom,
+    updateRoom,
+    updateRoomStatus,
+  } = useRooms(page, limit, search);
 
   // Delete room dialog state
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -195,11 +202,10 @@ export default function RoomsPage() {
   const handleConfirmStatusUpdate = useCallback(
     async (roomId: string, newStatus: Room["status"]) => {
       try {
-        await updateRoom(roomId, { status: newStatus });
+        await updateRoomStatus(roomId, newStatus);
         toast.success("Cập nhật trạng thái thành công!", {
           description: `Trạng thái phòng đã được cập nhật thành công.`,
         });
-        await fetchRooms(page, limit, search);
         setIsStatusDialogOpen(false);
         setRoomToUpdateStatus(null);
       } catch (err) {
@@ -211,7 +217,7 @@ export default function RoomsPage() {
         throw err;
       }
     },
-    [updateRoom, fetchRooms, page, limit, search]
+    [updateRoomStatus]
   );
 
   const handleConfirmDelete = useCallback(async () => {

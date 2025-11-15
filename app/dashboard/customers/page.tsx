@@ -16,10 +16,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { DataTable } from "@/components/data-table";
 import { useDebounce } from "@/hooks/use-debounce";
-import { useCustomers, type Customer, type CustomerInput } from "@/hooks/use-customers";
+import {
+  useCustomers,
+  type Customer,
+  type CustomerInput,
+} from "@/hooks/use-customers";
 import { CreateCustomerDialog } from "@/components/customers/create-customer-dialog";
 import { EditCustomerDialog } from "@/components/customers/edit-customer-dialog";
 import { toast } from "sonner";
+import { formatCurrency } from "@/lib/utils";
 
 // Format date
 const formatDate = (dateString: string) => {
@@ -68,7 +73,7 @@ function ActionsCell({
           <span className="sr-only">Open menu</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-32">
+      <DropdownMenuContent align="end" className="w-44">
         <DropdownMenuItem
           onClick={() =>
             router.push(`/dashboard/customers/${customer.id}/bookings`)
@@ -121,14 +126,7 @@ const createColumns = (
     header: "Tổng chi tiêu",
     cell: ({ row }) => {
       const total = row.original.total_spent ?? 0;
-      return (
-        <span>
-          {new Intl.NumberFormat("vi-VN", {
-            style: "currency",
-            currency: "VND",
-          }).format(total)}
-        </span>
-      );
+      return <span>{formatCurrency(total)}</span>;
     },
   },
   {
@@ -145,9 +143,7 @@ const createColumns = (
   },
   {
     id: "actions",
-    cell: ({ row }) => (
-      <ActionsCell customer={row.original} onEdit={onEdit} />
-    ),
+    cell: ({ row }) => <ActionsCell customer={row.original} onEdit={onEdit} />,
   },
 ];
 
@@ -209,15 +205,20 @@ export default function CustomersPage() {
     }
   }, [debouncedSearch, search, limit, updateSearchParams]);
 
-  const { customers, isLoading, pagination, fetchCustomers, createCustomer, updateCustomer } = useCustomers(
-    page,
-    limit,
-    search
-  );
+  const {
+    customers,
+    isLoading,
+    pagination,
+    fetchCustomers,
+    createCustomer,
+    updateCustomer,
+  } = useCustomers(page, limit, search);
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
+    null
+  );
 
   const handleOpenCreateDialog = () => {
     setIsCreateDialogOpen(true);
@@ -254,7 +255,9 @@ export default function CustomersPage() {
         });
       } catch (error) {
         const message =
-          error instanceof Error ? error.message : "Không thể cập nhật khách hàng";
+          error instanceof Error
+            ? error.message
+            : "Không thể cập nhật khách hàng";
         toast.error("Cập nhật khách hàng thất bại", { description: message });
         throw error;
       }

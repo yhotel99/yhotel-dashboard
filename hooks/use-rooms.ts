@@ -259,56 +259,60 @@ export function useRooms(
           amenities: Array.isArray(data.amenities) ? data.amenities : [],
         } as Room;
 
-        // Delete existing room_images
-        const { error: deleteError } = await supabase
-          .from("room_images")
-          .delete()
-          .eq("room_id", id);
+        // Only update room_images if thumbnail or imageList is provided
+        // This prevents accidentally deleting images when only updating other fields
+        if (thumbnail !== undefined || imageList !== undefined) {
+          // Delete existing room_images
+          const { error: deleteError } = await supabase
+            .from("room_images")
+            .delete()
+            .eq("room_id", id);
 
-        if (deleteError) {
-          console.warn("Error deleting room_images:", deleteError);
-        }
+          if (deleteError) {
+            console.warn("Error deleting room_images:", deleteError);
+          }
 
-        // Create new room_images records
-        const roomImagesToInsert: Array<{
-          room_id: string;
-          image_id: string;
-          position: number;
-          is_main: boolean;
-        }> = [];
+          // Create new room_images records
+          const roomImagesToInsert: Array<{
+            room_id: string;
+            image_id: string;
+            position: number;
+            is_main: boolean;
+          }> = [];
 
-        // Handle thumbnail (main image)
-        if (thumbnail?.id) {
-          roomImagesToInsert.push({
-            room_id: id,
-            image_id: thumbnail.id,
-            position: 0,
-            is_main: true,
-          });
-        }
-
-        // Handle additional images
-        if (imageList && imageList.length > 0) {
-          let positionIndex = 0;
-          imageList.forEach((image) => {
+          // Handle thumbnail (main image)
+          if (thumbnail?.id) {
             roomImagesToInsert.push({
               room_id: id,
-              image_id: image.id,
-              position: positionIndex++, // Position increases: 0, 1, 2, 3...
-              is_main: false,
+              image_id: thumbnail.id,
+              position: 0,
+              is_main: true,
             });
-          });
-        }
+          }
 
-        // Insert room_images if any
-        if (roomImagesToInsert.length > 0) {
-          const { error: roomImagesError } = await supabase
-            .from("room_images")
-            .insert(roomImagesToInsert);
+          // Handle additional images
+          if (imageList && imageList.length > 0) {
+            let positionIndex = 0;
+            imageList.forEach((image) => {
+              roomImagesToInsert.push({
+                room_id: id,
+                image_id: image.id,
+                position: positionIndex++, // Position increases: 0, 1, 2, 3...
+                is_main: false,
+              });
+            });
+          }
 
-          if (roomImagesError) {
-            console.warn("Failed to insert room_images:", roomImagesError);
-            // Don't throw error, room is already updated
+          // Insert room_images if any
+          if (roomImagesToInsert.length > 0) {
+            const { error: roomImagesError } = await supabase
+              .from("room_images")
+              .insert(roomImagesToInsert);
+
+            if (roomImagesError) {
+              console.warn("Failed to insert room_images:", roomImagesError);
+              // Don't throw error, room is already updated
+            }
           }
         }
 
@@ -358,6 +362,11 @@ export function useRooms(
         if (error) {
           throw new Error(error.message);
         }
+
+        // Update state directly without refetching
+        setRooms((prevRooms) =>
+          prevRooms.map((room) => (room.id === id ? { ...room, status } : room))
+        );
       } catch (err) {
         throw err;
       }
