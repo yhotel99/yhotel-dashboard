@@ -247,6 +247,88 @@ export function useBookings(
     []
   );
 
+  // B. Chuyển pending → awaiting_payment
+  const moveToAwaitingPayment = useCallback(
+    async (id: string): Promise<void> => {
+      try {
+        const supabase = createClient();
+        const { error } = await supabase
+          .from("bookings")
+          .update({ status: "awaiting_payment" })
+          .eq("id", id);
+
+        if (error) {
+          throw new Error(error.message);
+        }
+
+        setBookings((prevBookings) =>
+          prevBookings.map((booking) =>
+            booking.id === id
+              ? { ...booking, status: "awaiting_payment" }
+              : booking
+          )
+        );
+      } catch (err) {
+        throw err;
+      }
+    },
+    []
+  );
+
+  // C. Chuyển pending/awaiting_payment → confirmed
+  const confirmBooking = useCallback(async (id: string): Promise<void> => {
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("bookings")
+        .update({ status: "confirmed" })
+        .eq("id", id);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      setBookings((prevBookings) =>
+        prevBookings.map((booking) =>
+          booking.id === id ? { ...booking, status: "confirmed" } : booking
+        )
+      );
+    } catch (err) {
+      throw err;
+    }
+  }, []);
+
+  // D. Chuyển confirmed → checked_in
+  const checkInBooking = useCallback(async (id: string): Promise<void> => {
+    try {
+      const supabase = createClient();
+      const now = new Date().toISOString();
+
+      const { error } = await supabase
+        .from("bookings")
+        .update({
+          status: "checked_in",
+          actual_check_in: now,
+        })
+        .eq("id", id);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      setBookings((prevBookings) =>
+        prevBookings.map((booking) =>
+          booking.id === id
+            ? { ...booking, status: "checked_in", actual_check_in: now }
+            : booking
+        )
+      );
+    } catch (err) {
+      throw err;
+    }
+  }, []);
+
+  // E. Chuyển checked_in → checked_out
   const checkoutBooking = useCallback(async (id: string): Promise<void> => {
     try {
       const supabase = createClient();
@@ -263,6 +345,106 @@ export function useBookings(
       if (error) {
         throw new Error(error.message);
       }
+
+      setBookings((prevBookings) =>
+        prevBookings.map((booking) =>
+          booking.id === id
+            ? { ...booking, status: "checked_out", actual_check_out: now }
+            : booking
+        )
+      );
+    } catch (err) {
+      throw err;
+    }
+  }, []);
+
+  // F. Chuyển checked_out → completed
+  const completeBooking = useCallback(async (id: string): Promise<void> => {
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("bookings")
+        .update({ status: "completed" })
+        .eq("id", id);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      setBookings((prevBookings) =>
+        prevBookings.map((booking) =>
+          booking.id === id ? { ...booking, status: "completed" } : booking
+        )
+      );
+    } catch (err) {
+      throw err;
+    }
+  }, []);
+
+  // G. Chuyển pending/awaiting_payment/confirmed → cancelled
+  const cancelBooking = useCallback(async (id: string): Promise<void> => {
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("bookings")
+        .update({ status: "cancelled" })
+        .eq("id", id);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      setBookings((prevBookings) =>
+        prevBookings.map((booking) =>
+          booking.id === id ? { ...booking, status: "cancelled" } : booking
+        )
+      );
+    } catch (err) {
+      throw err;
+    }
+  }, []);
+
+  // H. Chuyển confirmed → no_show
+  const markNoShow = useCallback(async (id: string): Promise<void> => {
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("bookings")
+        .update({ status: "no_show" })
+        .eq("id", id);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      setBookings((prevBookings) =>
+        prevBookings.map((booking) =>
+          booking.id === id ? { ...booking, status: "no_show" } : booking
+        )
+      );
+    } catch (err) {
+      throw err;
+    }
+  }, []);
+
+  // I. Chuyển cancelled → refunded
+  const refundBooking = useCallback(async (id: string): Promise<void> => {
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("bookings")
+        .update({ status: "refunded" })
+        .eq("id", id);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      setBookings((prevBookings) =>
+        prevBookings.map((booking) =>
+          booking.id === id ? { ...booking, status: "refunded" } : booking
+        )
+      );
     } catch (err) {
       throw err;
     }
@@ -390,7 +572,15 @@ export function useBookings(
     createBooking,
     updateBooking,
     updateBookingNotes,
+    // Status transition functions
+    moveToAwaitingPayment,
+    confirmBooking,
+    checkInBooking,
     checkoutBooking,
+    completeBooking,
+    cancelBooking,
+    markNoShow,
+    refundBooking,
     deleteBooking,
     getBookingById,
     getBookingByIdWithDetails,

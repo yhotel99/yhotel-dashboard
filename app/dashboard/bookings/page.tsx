@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { useRouter } from "next/navigation";
 import { ColumnDef } from "@tanstack/react-table";
 import { IconPlus } from "@tabler/icons-react";
 
@@ -120,6 +119,14 @@ export default function BookingsPage() {
     fetchBookings,
     createBooking,
     updateBooking,
+    moveToAwaitingPayment,
+    confirmBooking,
+    checkInBooking,
+    checkoutBooking,
+    completeBooking,
+    cancelBooking,
+    markNoShow,
+    refundBooking,
   } = useBookings(page, limit, search);
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -229,7 +236,38 @@ export default function BookingsPage() {
   const handleChangeStatus = useCallback(
     async (id: string, status: BookingStatus) => {
       try {
-        await updateBooking(id, { status });
+        // Map status to appropriate function
+        switch (status) {
+          case "awaiting_payment":
+            await moveToAwaitingPayment(id);
+            break;
+          case "confirmed":
+            await confirmBooking(id);
+            break;
+          case "checked_in":
+            await checkInBooking(id);
+            break;
+          case "checked_out":
+            await checkoutBooking(id);
+            break;
+          case "completed":
+            await completeBooking(id);
+            break;
+          case "cancelled":
+            await cancelBooking(id);
+            break;
+          case "no_show":
+            await markNoShow(id);
+            break;
+          case "refunded":
+            await refundBooking(id);
+            break;
+          case "pending":
+          default:
+            // Fallback to updateBooking for pending or unknown status
+            await updateBooking(id, { status });
+            break;
+        }
         toast.success("Đã cập nhật trạng thái thành công");
       } catch (error) {
         const message =
@@ -239,14 +277,31 @@ export default function BookingsPage() {
         toast.error("Cập nhật trạng thái thất bại", { description: message });
       }
     },
-    [updateBooking]
+    [
+      moveToAwaitingPayment,
+      confirmBooking,
+      checkInBooking,
+      checkoutBooking,
+      completeBooking,
+      cancelBooking,
+      markNoShow,
+      refundBooking,
+      updateBooking,
+    ]
   );
 
   const handleCancelBooking = useCallback(
     async (id: string) => {
-      await handleChangeStatus(id, "cancelled");
+      try {
+        await cancelBooking(id);
+        toast.success("Đã hủy booking thành công");
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Không thể hủy booking";
+        toast.error("Hủy booking thất bại", { description: message });
+      }
     },
-    [handleChangeStatus]
+    [cancelBooking]
   );
 
   const columns = useMemo(
