@@ -161,11 +161,9 @@ export type BookingRecord = {
   deleted_at: string | null;
   // Relations (from join queries)
   customers?: {
-    id: string;
     full_name: string;
   } | null;
   rooms?: {
-    id: string;
     name: string;
   } | null;
 };

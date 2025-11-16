@@ -18,7 +18,7 @@ import { StatusSelect } from "@/components/bookings/status";
 import { BookingActionsCell } from "@/components/bookings/actions-cell";
 import { CreateBookingDialog } from "@/components/bookings/create-booking-dialog";
 import { EditBookingDialog } from "@/components/bookings/edit-booking-dialog";
-import { formatDate } from "@/lib/utils";
+import { formatCurrency, formatDate } from "@/lib/utils";
 import {
   translateBookingErrorMessage,
   BOOKING_ERROR_PATTERNS,
@@ -67,11 +67,7 @@ const createColumns = (
   {
     accessorKey: "total_amount",
     header: "Tổng tiền",
-    cell: ({ row }) =>
-      new Intl.NumberFormat("vi-VN", {
-        style: "currency",
-        currency: "VND",
-      }).format(row.original.total_amount),
+    cell: ({ row }) => formatCurrency(row.original.total_amount),
   },
   {
     accessorKey: "status",

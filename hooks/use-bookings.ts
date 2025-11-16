@@ -38,42 +38,31 @@ export function useBookings(
         setError(null);
         const supabase = createClient();
 
-        const from = (pageNum - 1) * limitNum;
-        const to = from + limitNum - 1;
+        const trimmedSearch = searchTerm?.trim() || null;
 
-        let query = supabase
-          .from("bookings")
-          .select(
-            `
-            *,
-            customers (
-              id,
-              full_name
-            ),
-            rooms (
-              id,
-              name
-            )
-            `,
-            { count: "exact" }
-          )
-          .is("deleted_at", null);
+        // Call both RPC functions in parallel for better performance
+        const [bookingsResult, countResult] = await Promise.all([
+          supabase.rpc("search_bookings", {
+            p_search: trimmedSearch,
+            p_page: pageNum,
+            p_limit: limitNum,
+          }),
+          supabase.rpc("count_bookings", {
+            p_search: trimmedSearch,
+          }),
+        ]);
 
-        if (searchTerm && searchTerm.trim() !== "") {
-          const trimmed = searchTerm.trim();
-          query = query.or(`notes.ilike.%${trimmed}%,status.eq.${trimmed}`);
+        if (bookingsResult.error) {
+          throw new Error(bookingsResult.error.message);
         }
 
-        const { data, error, count } = await query
-          .order("created_at", { ascending: false })
-          .range(from, to);
-
-        if (error) {
-          throw new Error(error.message);
+        if (countResult.error) {
+          throw new Error(countResult.error.message);
         }
 
-        const bookingsData = (data || []) as BookingRecord[];
-        const total = count || 0;
+        const bookingsData = (bookingsResult.data || []) as BookingRecord[];
+
+        const total = (countResult.data as number) || 0;
         const totalPages = Math.ceil(total / limitNum);
 
         setBookings(bookingsData);
