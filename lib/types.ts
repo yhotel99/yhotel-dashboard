@@ -11,8 +11,8 @@ export type Profile = {
   full_name: string;
   email: string;
   phone: string | null;
-  role: "admin" | "manager" | "staff";
-  status: "active" | "inactive" | "suspended";
+  role: UserRole;
+  status: UserStatus;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -202,6 +202,41 @@ export type BookingInput = {
   advance_payment?: number;
   actual_check_in?: string | null;
   actual_check_out?: string | null;
+};
+
+// ============================================================================
+// Payment Types
+// ============================================================================
+
+// Payment method enum
+export type PaymentMethod = "bank_transfer" | "pay_at_hotel";
+
+// Payment status enum
+export type PaymentStatus = "pending" | "paid" | "failed" | "refunded";
+
+// Payment record matching database schema (payments table)
+export type Payment = {
+  id: string;
+  booking_id: string;
+  amount: number;
+  payment_method: PaymentMethod;
+  payment_status: PaymentStatus;
+  paid_at: string | null;
+  verified_at: string | null;
+  refunded_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+// Payment input type for create/update operations
+export type PaymentInput = {
+  booking_id: string;
+  amount: number;
+  payment_method?: PaymentMethod;
+  payment_status?: PaymentStatus;
+  paid_at?: string | null;
+  verified_at?: string | null;
+  refunded_at?: string | null;
 };
 
 // ============================================================================

@@ -4,6 +4,7 @@ import {
   SelectItem,
   SelectTrigger,
 } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { BookingStatus } from "@/hooks/use-bookings";
 import { BOOKING_STATUS, bookingStatusLabels } from "@/lib/constants";
@@ -66,7 +67,11 @@ export const statusOptions: Record<BookingStatus, string> = bookingStatusLabels;
 
 export function StatusBadge({ status }: { status: BookingStatus }) {
   const config = statusStyle[status];
-  return <span className={cn(config.className)}>{config.label}</span>;
+  return (
+    <Badge variant="outline" className={cn(config.className)}>
+      {config.label}
+    </Badge>
+  );
 }
 
 export function StatusSelect({

@@ -3,6 +3,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { BookingRecord, BookingInput, PaginationMeta } from "@/lib/types";
+import {
+  createPayment,
+  getPaymentByBookingId,
+  updatePaymentStatus,
+} from "@/services/payments";
+import { BOOKING_STATUS, PAYMENT_STATUS } from "@/lib/constants";
 
 // Re-export types for backward compatibility
 export type {
@@ -278,25 +284,85 @@ export function useBookings(
     []
   );
 
+  // A. Rollback awaiting_payment → pending
+  const rollbackToPending = useCallback(async (id: string): Promise<void> => {
+    try {
+      const supabase = createClient();
+
+      // Update booking status to pending
+      const { error } = await supabase
+        .from("bookings")
+        .update({ status: BOOKING_STATUS.PENDING })
+        .eq("id", id);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      // Check payment status - only update if payment is pending (not paid or refunded)
+      const payment = await getPaymentByBookingId(id);
+      if (payment && payment.payment_status === PAYMENT_STATUS.PENDING) {
+        // Only update payment to failed if it's still pending
+        // updatePaymentStatus will prevent changes if already refunded
+        await updatePaymentStatus(payment.id, PAYMENT_STATUS.FAILED);
+      }
+      // If payment is already paid or refunded, keep it as is (no change)
+
+      setBookings((prevBookings) =>
+        prevBookings.map((b) =>
+          b.id === id ? { ...b, status: BOOKING_STATUS.PENDING } : b
+        )
+      );
+    } catch (err) {
+      throw err;
+    }
+  }, []);
+
   // B. Chuyển pending → awaiting_payment
   const moveToAwaitingPayment = useCallback(
     async (id: string): Promise<void> => {
       try {
         const supabase = createClient();
+
+        // Get booking to get total_amount
+        const { data: booking, error: fetchError } = await supabase
+          .from("bookings")
+          .select("total_amount")
+          .eq("id", id)
+          .single();
+
+        if (fetchError || !booking) {
+          throw new Error(fetchError?.message || "Không tìm thấy booking");
+        }
+
+        // Update booking status
         const { error } = await supabase
           .from("bookings")
-          .update({ status: "awaiting_payment" })
+          .update({ status: BOOKING_STATUS.AWAITING_PAYMENT })
           .eq("id", id);
 
         if (error) {
           throw new Error(error.message);
         }
 
+        // Check if payment already exists, if not create new one
+        const existingPayment = await getPaymentByBookingId(id);
+        if (!existingPayment) {
+          // Create payment record with payment_status = pending
+          const payment = await createPayment({
+            booking_id: id,
+            amount: booking.total_amount,
+            payment_status: PAYMENT_STATUS.PENDING,
+          });
+
+          if (!payment) {
+            throw new Error("Không thể tạo payment record");
+          }
+        }
+
         setBookings((prevBookings) =>
-          prevBookings.map((booking) =>
-            booking.id === id
-              ? { ...booking, status: "awaiting_payment" }
-              : booking
+          prevBookings.map((b) =>
+            b.id === id ? { ...b, status: BOOKING_STATUS.AWAITING_PAYMENT } : b
           )
         );
       } catch (err) {
@@ -310,18 +376,32 @@ export function useBookings(
   const confirmBooking = useCallback(async (id: string): Promise<void> => {
     try {
       const supabase = createClient();
+
+      // Update booking status
       const { error } = await supabase
         .from("bookings")
-        .update({ status: "confirmed" })
+        .update({ status: BOOKING_STATUS.CONFIRMED })
         .eq("id", id);
 
       if (error) {
         throw new Error(error.message);
       }
 
+      // Update payment status to paid if payment exists and not refunded
+      const payment = await getPaymentByBookingId(id);
+      if (payment && payment.payment_status !== PAYMENT_STATUS.REFUNDED) {
+        const now = new Date().toISOString();
+        await updatePaymentStatus(payment.id, PAYMENT_STATUS.PAID, {
+          paid_at: now,
+          verified_at: now,
+        });
+      }
+
       setBookings((prevBookings) =>
         prevBookings.map((booking) =>
-          booking.id === id ? { ...booking, status: "confirmed" } : booking
+          booking.id === id
+            ? { ...booking, status: BOOKING_STATUS.CONFIRMED }
+            : booking
         )
       );
     } catch (err) {
@@ -338,7 +418,7 @@ export function useBookings(
       const { error } = await supabase
         .from("bookings")
         .update({
-          status: "checked_in",
+          status: BOOKING_STATUS.CHECKED_IN,
           actual_check_in: now,
         })
         .eq("id", id);
@@ -350,7 +430,11 @@ export function useBookings(
       setBookings((prevBookings) =>
         prevBookings.map((booking) =>
           booking.id === id
-            ? { ...booking, status: "checked_in", actual_check_in: now }
+            ? {
+                ...booking,
+                status: BOOKING_STATUS.CHECKED_IN,
+                actual_check_in: now,
+              }
             : booking
         )
       );
@@ -368,7 +452,7 @@ export function useBookings(
       const { error } = await supabase
         .from("bookings")
         .update({
-          status: "checked_out",
+          status: BOOKING_STATUS.CHECKED_OUT,
           actual_check_out: now,
         })
         .eq("id", id);
@@ -380,7 +464,11 @@ export function useBookings(
       setBookings((prevBookings) =>
         prevBookings.map((booking) =>
           booking.id === id
-            ? { ...booking, status: "checked_out", actual_check_out: now }
+            ? {
+                ...booking,
+                status: BOOKING_STATUS.CHECKED_OUT,
+                actual_check_out: now,
+              }
             : booking
         )
       );
@@ -395,7 +483,7 @@ export function useBookings(
       const supabase = createClient();
       const { error } = await supabase
         .from("bookings")
-        .update({ status: "completed" })
+        .update({ status: BOOKING_STATUS.COMPLETED })
         .eq("id", id);
 
       if (error) {
@@ -404,7 +492,9 @@ export function useBookings(
 
       setBookings((prevBookings) =>
         prevBookings.map((booking) =>
-          booking.id === id ? { ...booking, status: "completed" } : booking
+          booking.id === id
+            ? { ...booking, status: BOOKING_STATUS.COMPLETED }
+            : booking
         )
       );
     } catch (err) {
@@ -418,7 +508,7 @@ export function useBookings(
       const supabase = createClient();
       const { error } = await supabase
         .from("bookings")
-        .update({ status: "cancelled" })
+        .update({ status: BOOKING_STATUS.CANCELLED })
         .eq("id", id);
 
       if (error) {
@@ -427,7 +517,9 @@ export function useBookings(
 
       setBookings((prevBookings) =>
         prevBookings.map((booking) =>
-          booking.id === id ? { ...booking, status: "cancelled" } : booking
+          booking.id === id
+            ? { ...booking, status: BOOKING_STATUS.CANCELLED }
+            : booking
         )
       );
     } catch (err) {
@@ -441,7 +533,7 @@ export function useBookings(
       const supabase = createClient();
       const { error } = await supabase
         .from("bookings")
-        .update({ status: "no_show" })
+        .update({ status: BOOKING_STATUS.NO_SHOW })
         .eq("id", id);
 
       if (error) {
@@ -450,7 +542,9 @@ export function useBookings(
 
       setBookings((prevBookings) =>
         prevBookings.map((booking) =>
-          booking.id === id ? { ...booking, status: "no_show" } : booking
+          booking.id === id
+            ? { ...booking, status: BOOKING_STATUS.NO_SHOW }
+            : booking
         )
       );
     } catch (err) {
@@ -462,18 +556,31 @@ export function useBookings(
   const refundBooking = useCallback(async (id: string): Promise<void> => {
     try {
       const supabase = createClient();
+
+      // Update booking status
       const { error } = await supabase
         .from("bookings")
-        .update({ status: "refunded" })
+        .update({ status: BOOKING_STATUS.REFUNDED })
         .eq("id", id);
 
       if (error) {
         throw new Error(error.message);
       }
 
+      // Update payment status to refunded if payment exists
+      const payment = await getPaymentByBookingId(id);
+      if (payment) {
+        const now = new Date().toISOString();
+        await updatePaymentStatus(payment.id, PAYMENT_STATUS.REFUNDED, {
+          refunded_at: now,
+        });
+      }
+
       setBookings((prevBookings) =>
         prevBookings.map((booking) =>
-          booking.id === id ? { ...booking, status: "refunded" } : booking
+          booking.id === id
+            ? { ...booking, status: BOOKING_STATUS.REFUNDED }
+            : booking
         )
       );
     } catch (err) {
@@ -604,6 +711,7 @@ export function useBookings(
     updateBooking,
     updateBookingNotes,
     // Status transition functions
+    rollbackToPending,
     moveToAwaitingPayment,
     confirmBooking,
     checkInBooking,

@@ -1,13 +1,23 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
+import type { Profile } from "@/lib/types";
+import { fetchProfileById } from "@/services/profiles";
 
 const supabase = createClient();
 
 interface AuthContextType {
   currentUser: User | null;
+  profile: Profile | null;
+  handleSetProfile: (profile: Profile) => void;
   isLoading: boolean;
   isInitialized: boolean;
 }
@@ -16,44 +26,61 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
 
+  // Fetch profile when user changes
+  const fetchProfile = async (userId: string) => {
+    const profile = await fetchProfileById(userId);
+    setProfile(profile);
+  };
+
+  const handleSetProfile = (profile: Profile) => {
+    setProfile(profile);
+  };
+
   useEffect(() => {
     // Set up auth state change listener (outside initializeAuth for better performance)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log("Auth state changed:", event);
-        
-        // Handle all auth events with unified logic
-        if (session?.user) {
-          // User exists - update user state
-          console.log(`${event} for user:`, session.user.id);
-          setCurrentUser(session.user);
-        } else {
-          // No user - clear user state (session expired, user signed out, etc.)
-          console.log(`${event} - clearing user state`);
-          setCurrentUser(null);
-        }
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("Auth state changed:", event);
+
+      // Handle all auth events with unified logic
+      if (session?.user) {
+        // User exists - update user state
+        console.log(`${event} for user:`, session.user.id);
+        setCurrentUser(session.user);
+        // Fetch profile
+        await fetchProfile(session.user.id);
+      } else {
+        // No user - clear user state (session expired, user signed out, etc.)
+        console.log(`${event} - clearing user state`);
+        setCurrentUser(null);
+        setProfile(null);
       }
-    );
+    });
 
     // Initialize auth state
     const initializeAuth = async () => {
       try {
         // Check initial user without triggering errors
         try {
-          const { data: { user } } = await supabase.auth.getUser();
+          const {
+            data: { user },
+          } = await supabase.auth.getUser();
           if (user) {
-            console.log("Initial user found:", user.id);
+            console.log("Initial user found:", user);
             setCurrentUser(user);
+            // Fetch profile
+            await fetchProfile(user.id);
           }
-          
-        } catch (error) {
+        } catch {
           // Silently ignore auth errors during initialization
           console.log("No valid session found during initialization");
         }
-        
+
         setIsInitialized(true);
         setIsLoading(false);
       } catch (error) {
@@ -69,19 +96,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-
-
   const value = {
     currentUser,
+    profile,
+    handleSetProfile,
     isLoading,
     isInitialized,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

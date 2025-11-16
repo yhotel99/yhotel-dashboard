@@ -18,6 +18,7 @@ import {
   type EditUserFormValues,
 } from "@/components/users/user-form-dialog";
 import { formatDate } from "@/lib/utils";
+import { useAuth } from "@/contexts/auth-context";
 
 // Table columns
 const createColumns = (
@@ -78,6 +79,7 @@ export default function UsersPage() {
   const [editingProfile, setEditingProfile] = React.useState<
     Profile | undefined
   >();
+  const { handleSetProfile } = useAuth();
 
   const {
     page,
@@ -144,6 +146,9 @@ export default function UsersPage() {
         role: data.role,
         status: data.status,
       });
+      if (updatedProfile) {
+        handleSetProfile(updatedProfile);
+      }
       toast.success("Cập nhật người dùng thành công!", {
         description: `Người dùng ${updatedProfile.full_name} đã được cập nhật thành công.`,
       });

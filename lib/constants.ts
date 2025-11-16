@@ -122,6 +122,48 @@ export const bookingStatusLabels: Record<
 };
 
 /**
+ * Payment method values
+ */
+export const PAYMENT_METHOD = {
+  BANK_TRANSFER: "bank_transfer",
+  PAY_AT_HOTEL: "pay_at_hotel",
+} as const;
+
+/**
+ * Payment method labels mapping
+ */
+export const paymentMethodLabels: Record<
+  (typeof PAYMENT_METHOD)[keyof typeof PAYMENT_METHOD],
+  string
+> = {
+  [PAYMENT_METHOD.BANK_TRANSFER]: "Chuyển khoản",
+  [PAYMENT_METHOD.PAY_AT_HOTEL]: "Thanh toán tại khách sạn",
+};
+
+/**
+ * Payment status values
+ */
+export const PAYMENT_STATUS = {
+  PENDING: "pending",
+  PAID: "paid",
+  FAILED: "failed",
+  REFUNDED: "refunded",
+} as const;
+
+/**
+ * Payment status labels mapping
+ */
+export const paymentStatusLabels: Record<
+  (typeof PAYMENT_STATUS)[keyof typeof PAYMENT_STATUS],
+  string
+> = {
+  [PAYMENT_STATUS.PENDING]: "Chờ thanh toán",
+  [PAYMENT_STATUS.PAID]: "Đã thanh toán",
+  [PAYMENT_STATUS.FAILED]: "Thanh toán thất bại",
+  [PAYMENT_STATUS.REFUNDED]: "Đã hoàn tiền",
+};
+
+/**
  * Booking error message patterns constants
  */
 export const BOOKING_ERROR_PATTERNS = {

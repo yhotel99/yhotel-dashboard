@@ -14,7 +14,7 @@ import {
   type BookingInput,
   type BookingStatus,
 } from "@/hooks/use-bookings";
-import { StatusSelect } from "@/components/bookings/status";
+import { StatusBadge } from "@/components/bookings/status";
 import { BookingActionsCell } from "@/components/bookings/actions-cell";
 import { NotesCell } from "@/components/bookings/notes-cell";
 import { CreateBookingDialog } from "@/components/bookings/create-booking-dialog";
@@ -32,9 +32,9 @@ import {
 // actions cell moved to components/bookings/actions-cell
 
 const createColumns = (
-  onChangeStatus: (id: string, status: BookingStatus) => Promise<void>,
   onCancelBooking: (id: string) => Promise<void>,
-  onEdit: (booking: BookingRecord) => void
+  onEdit: (booking: BookingRecord) => void,
+  onChangeStatus: (id: string, status: BookingStatus) => Promise<void>
 ): ColumnDef<BookingRecord>[] => [
   {
     accessorKey: "customer_id",
@@ -88,13 +88,7 @@ const createColumns = (
   {
     accessorKey: "status",
     header: "Trạng thái",
-    cell: ({ row }) => (
-      <StatusSelect
-        bookingId={row.original.id}
-        currentStatus={row.original.status}
-        onChangeStatus={onChangeStatus}
-      />
-    ),
+    cell: ({ row }) => <StatusBadge status={row.original.status} />,
     size: 150,
     minSize: 130,
   },
@@ -113,6 +107,7 @@ const createColumns = (
         customerId={row.original.customer_id}
         onEdit={onEdit}
         onCancelBooking={onCancelBooking}
+        onChangeStatus={onChangeStatus}
       />
     ),
     size: 60,
@@ -141,6 +136,7 @@ export default function BookingsPage() {
     fetchBookings,
     createBooking,
     updateBooking,
+    rollbackToPending,
     moveToAwaitingPayment,
     confirmBooking,
     checkInBooking,
@@ -268,8 +264,11 @@ export default function BookingsPage() {
             await refundBooking(id);
             break;
           case BOOKING_STATUS.PENDING:
+            // Use rollbackToPending to handle payment logic when rolling back
+            await rollbackToPending(id);
+            break;
           default:
-            // Fallback to updateBooking for pending or unknown status
+            // Fallback to updateBooking for unknown status
             await updateBooking(id, { status });
             break;
         }
@@ -283,6 +282,7 @@ export default function BookingsPage() {
       }
     },
     [
+      rollbackToPending,
       moveToAwaitingPayment,
       confirmBooking,
       checkInBooking,
@@ -310,8 +310,8 @@ export default function BookingsPage() {
   );
 
   const columns = useMemo(
-    () => createColumns(handleChangeStatus, handleCancelBooking, handleEdit),
-    [handleChangeStatus, handleCancelBooking, handleEdit]
+    () => createColumns(handleCancelBooking, handleEdit, handleChangeStatus),
+    [handleCancelBooking, handleEdit, handleChangeStatus]
   );
 
   return (

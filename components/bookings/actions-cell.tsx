@@ -10,21 +10,25 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { CancelBookingConfirmDialog } from "./cancel-booking-confirm-dialog";
-import type { BookingRecord } from "@/hooks/use-bookings";
+import { ChangeBookingStatusDialog } from "./change-booking-status-dialog";
+import type { BookingRecord, BookingStatus } from "@/hooks/use-bookings";
 
 export function BookingActionsCell({
   booking,
   customerId,
   onEdit,
   onCancelBooking,
+  onChangeStatus,
 }: {
   booking: BookingRecord;
   customerId: string | null;
   onEdit: (booking: BookingRecord) => void;
   onCancelBooking: (id: string) => Promise<void>;
+  onChangeStatus: (id: string, status: BookingStatus) => Promise<void>;
 }) {
   const router = useRouter();
   const [openCancel, setOpenCancel] = useState(false);
+  const [openChangeStatus, setOpenChangeStatus] = useState(false);
   return (
     <>
       <DropdownMenu>
@@ -51,6 +55,9 @@ export function BookingActionsCell({
               Xem khách hàng
             </DropdownMenuItem>
           ) : null}
+          <DropdownMenuItem onClick={() => setOpenChangeStatus(true)}>
+            Thay đổi trạng thái
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
             variant="destructive"
@@ -66,6 +73,15 @@ export function BookingActionsCell({
         onOpenChange={setOpenCancel}
         onConfirm={async () => {
           await onCancelBooking(booking.id);
+        }}
+      />
+
+      <ChangeBookingStatusDialog
+        open={openChangeStatus}
+        onOpenChange={setOpenChangeStatus}
+        currentStatus={booking.status}
+        onConfirm={async (status) => {
+          await onChangeStatus(booking.id, status);
         }}
       />
     </>
