@@ -19,6 +19,10 @@ import { BookingActionsCell } from "@/components/bookings/actions-cell";
 import { CreateBookingDialog } from "@/components/bookings/create-booking-dialog";
 import { EditBookingDialog } from "@/components/bookings/edit-booking-dialog";
 import { formatDate } from "@/lib/utils";
+import {
+  translateBookingErrorMessage,
+  BOOKING_ERROR_PATTERNS,
+} from "@/lib/constants";
 
 // Status badge component
 // status components moved to components/bookings/status
@@ -127,6 +131,7 @@ export default function BookingsPage() {
     cancelBooking,
     markNoShow,
     refundBooking,
+    findConflictingBooking,
   } = useBookings(page, limit, search);
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -156,28 +161,7 @@ export default function BookingsPage() {
         const rawMessage =
           error instanceof Error ? error.message : "Không thể cập nhật booking";
 
-        // Translate error messages
-        let message = rawMessage;
-
-        if (
-          rawMessage.includes(
-            'conflicting key value violates exclusion constraint "bookings_no_overlap"'
-          ) ||
-          rawMessage.includes(
-            "Room is not available for the selected date/time"
-          )
-        ) {
-          message =
-            "Phòng không khả dụng cho khoảng thời gian đã chọn. Vui lòng chọn phòng hoặc thời gian khác.";
-        } else if (
-          rawMessage.includes("check_out must be later than check_in")
-        ) {
-          message = "Ngày check-out phải sau ngày check-in.";
-        } else if (
-          rawMessage.includes("number_of_nights must be greater than 0")
-        ) {
-          message = "Số đêm phải lớn hơn 0.";
-        }
+        const message = translateBookingErrorMessage(rawMessage);
 
         toast.error("Cập nhật booking thất bại", {
           description: message,
@@ -196,41 +180,44 @@ export default function BookingsPage() {
         toast.success("Tạo booking thành công!", {
           description: "Booking mới đã được thêm vào hệ thống.",
         });
-      } catch (error) {
-        const rawMessage =
-          error instanceof Error ? error.message : "Không thể tạo booking";
+      } catch (err) {
+        const error = err instanceof Error ? err : new Error(String(err));
+        const rawMessage = error.message || "Không thể tạo booking";
 
-        // Translate error messages
-        let message = rawMessage;
-
-        if (
+        // Check if it's an overlap error
+        const isOverlapError =
+          rawMessage.includes(BOOKING_ERROR_PATTERNS.ROOM_NOT_AVAILABLE) ||
           rawMessage.includes(
-            "Room is not available for the selected date/time"
+            BOOKING_ERROR_PATTERNS.CONFLICT_EXCLUSION_CONSTRAINT
           ) ||
           rawMessage.includes(
-            'conflicting key value violates exclusion constraint "bookings_no_overlap"'
-          )
-        ) {
-          message =
-            "Phòng không khả dụng cho khoảng thời gian đã chọn. Vui lòng chọn phòng hoặc thời gian khác.";
-        } else if (
-          rawMessage.includes("check_out must be later than check_in")
-        ) {
-          message = "Ngày check-out phải sau ngày check-in.";
-        } else if (
-          rawMessage.includes("number_of_nights must be greater than 0")
-        ) {
-          message = "Số đêm phải lớn hơn 0.";
+            BOOKING_ERROR_PATTERNS.CONFLICT_EXCLUSION_CONSTRAINT_GENERAL
+          );
+
+        let conflictingBooking = null;
+        if (isOverlapError && input.room_id && findConflictingBooking) {
+          // Try to find conflicting booking
+          conflictingBooking = await findConflictingBooking(
+            input.room_id,
+            input.check_in,
+            input.check_out
+          );
         }
+
+        const message = translateBookingErrorMessage(
+          rawMessage,
+          conflictingBooking
+        );
 
         toast.error("Tạo booking thất bại", {
           description: message,
           position: "top-center",
+          duration: 15000,
         });
-        throw error;
+        throw err;
       }
     },
-    [createBooking]
+    [createBooking, findConflictingBooking]
   );
 
   const handleChangeStatus = useCallback(

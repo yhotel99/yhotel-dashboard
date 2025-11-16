@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   IconTrendingUp,
   IconTrendingDown,
@@ -43,8 +43,15 @@ import {
   YAxis,
   CartesianGrid,
   ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
 } from "recharts";
 import { formatCurrency } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
+import { roomTypeLabels } from "@/lib/constants";
+import type { Room } from "@/lib/types";
 
 // Mock data for reports
 const revenueData = [
@@ -124,11 +131,91 @@ const chartConfig = {
     label: "Đặt phòng",
     color: "hsl(var(--primary) / 0.6)",
   },
+  standard: {
+    label: "Standard",
+    color: "hsl(var(--primary))",
+  },
+  deluxe: {
+    label: "Deluxe",
+    color: "hsl(217, 91%, 60%)",
+  },
+  superior: {
+    label: "Superior",
+    color: "hsl(142, 76%, 36%)",
+  },
+  family: {
+    label: "Family",
+    color: "hsl(47, 96%, 53%)",
+  },
 };
+
+// Colors for pie chart
+const ROOM_TYPE_COLORS = [
+  "hsl(var(--primary))",
+  "hsl(217, 91%, 60%)",
+  "hsl(142, 76%, 36%)",
+  "hsl(47, 96%, 53%)",
+];
 
 export function SystemReports() {
   const [timeRange, setTimeRange] = useState("month");
   const [reportType, setReportType] = useState("revenue");
+  const [roomStats, setRoomStats] = useState<
+    { type: string; label: string; count: number }[]
+  >([]);
+  const [isLoadingRoomStats, setIsLoadingRoomStats] = useState(true);
+
+  // Fetch room statistics by type
+  const fetchRoomStats = useCallback(async () => {
+    try {
+      setIsLoadingRoomStats(true);
+      const supabase = createClient();
+
+      // Fetch all rooms without pagination
+      const { data, error } = await supabase
+        .from("rooms")
+        .select("room_type")
+        .is("deleted_at", null);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      // Count rooms by type
+      const typeCounts: Record<string, number> = {
+        standard: 0,
+        deluxe: 0,
+        superior: 0,
+        family: 0,
+      };
+
+      (data || []).forEach((room: { room_type: Room["room_type"] }) => {
+        if (room.room_type && typeCounts[room.room_type] !== undefined) {
+          typeCounts[room.room_type]++;
+        }
+      });
+
+      // Transform to chart data
+      const stats = Object.entries(typeCounts).map(([type, count]) => ({
+        type,
+        label: roomTypeLabels[type as Room["room_type"]],
+        count,
+      }));
+
+      setRoomStats(stats);
+    } catch (err) {
+      console.error("Error fetching room stats:", err);
+      // Set empty stats on error
+      setRoomStats([]);
+    } finally {
+      setIsLoadingRoomStats(false);
+    }
+  }, []);
+
+  // Fetch room stats on mount
+  useEffect(() => {
+    fetchRoomStats();
+  }, [fetchRoomStats]);
 
   // Mock summary stats
   const summaryStats = {
@@ -426,6 +513,228 @@ export function SystemReports() {
                 </BarChart>
               </ResponsiveContainer>
             </ChartContainer>
+          </CardContent>
+        </Card>
+
+        {/* Room Statistics Chart */}
+        <Card className="border-primary/20 bg-gradient-to-br from-primary/5 via-card to-card">
+          <CardHeader>
+            <CardTitle className="text-2xl">
+              Thống kê số lượng theo loại phòng
+            </CardTitle>
+            <CardDescription className="text-base mt-1">
+              Biểu đồ phân bố số lượng phòng theo từng loại
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="px-2 sm:px-6">
+            {isLoadingRoomStats ? (
+              <div className="h-[350px] flex items-center justify-center">
+                <p className="text-muted-foreground">Đang tải dữ liệu...</p>
+              </div>
+            ) : roomStats.length === 0 ? (
+              <div className="h-[350px] flex items-center justify-center">
+                <p className="text-muted-foreground">Không có dữ liệu</p>
+              </div>
+            ) : (
+              <div className="grid gap-6 md:grid-cols-2">
+                {/* Bar Chart */}
+                <ChartContainer
+                  config={chartConfig}
+                  className="h-[350px] w-full"
+                >
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={roomStats}
+                      margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
+                      barCategoryGap="20%"
+                    >
+                      <defs>
+                        {roomStats.map((_, index) => (
+                          <linearGradient
+                            key={`gradient-${index}`}
+                            id={`roomGradient-${index}`}
+                            x1="0"
+                            y1="0"
+                            x2="0"
+                            y2="1"
+                          >
+                            <stop
+                              offset="0%"
+                              stopColor={
+                                ROOM_TYPE_COLORS[
+                                  index % ROOM_TYPE_COLORS.length
+                                ]
+                              }
+                              stopOpacity={1}
+                            />
+                            <stop
+                              offset="100%"
+                              stopColor={
+                                ROOM_TYPE_COLORS[
+                                  index % ROOM_TYPE_COLORS.length
+                                ]
+                              }
+                              stopOpacity={0.3}
+                            />
+                          </linearGradient>
+                        ))}
+                      </defs>
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        className="stroke-primary/10"
+                      />
+                      <XAxis
+                        dataKey="label"
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={12}
+                        className="text-xs font-medium"
+                        tick={{ fill: "hsl(var(--muted-foreground))" }}
+                      />
+                      <YAxis
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={12}
+                        className="text-xs font-medium"
+                        tick={{ fill: "hsl(var(--muted-foreground))" }}
+                      />
+                      <ChartTooltip
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            const data = payload[0].payload;
+                            return (
+                              <div className="rounded-lg border border-primary/20 bg-background p-3 shadow-lg">
+                                <div className="mb-2">
+                                  <p className="text-sm font-semibold text-primary">
+                                    {data.label}
+                                  </p>
+                                </div>
+                                <div className="flex items-center justify-between gap-4">
+                                  <div className="flex items-center gap-2">
+                                    <div
+                                      className="h-3 w-3 rounded-full"
+                                      style={{
+                                        backgroundColor:
+                                          ROOM_TYPE_COLORS[
+                                            roomStats.findIndex(
+                                              (s) => s.type === data.type
+                                            ) % ROOM_TYPE_COLORS.length
+                                          ],
+                                      }}
+                                    />
+                                    <span className="text-xs text-muted-foreground">
+                                      Số lượng
+                                    </span>
+                                  </div>
+                                  <span className="text-sm font-bold text-primary">
+                                    {data.count} phòng
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                        cursor={{ fill: "hsl(var(--primary) / 0.1)" }}
+                      />
+                      <Bar
+                        dataKey="count"
+                        radius={[12, 12, 0, 0]}
+                        className="hover:opacity-100 transition-opacity"
+                      >
+                        {roomStats.map((entry, index) => {
+                          const color =
+                            ROOM_TYPE_COLORS[index % ROOM_TYPE_COLORS.length];
+                          return <Cell key={`cell-${index}`} fill={color} />;
+                        })}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+
+                {/* Pie Chart */}
+                <ChartContainer
+                  config={chartConfig}
+                  className="h-[350px] w-full"
+                >
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={roomStats}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ label, percent }) =>
+                          `${label}: ${(percent * 100).toFixed(0)}%`
+                        }
+                        outerRadius={100}
+                        fill="#8884d8"
+                        dataKey="count"
+                      >
+                        {roomStats.map((_, index) => (
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={
+                              ROOM_TYPE_COLORS[index % ROOM_TYPE_COLORS.length]
+                            }
+                          />
+                        ))}
+                      </Pie>
+                      <ChartTooltip
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            const data = payload[0].payload;
+                            const total = roomStats.reduce(
+                              (sum, stat) => sum + stat.count,
+                              0
+                            );
+                            const percentage =
+                              total > 0
+                                ? ((data.count / total) * 100).toFixed(1)
+                                : 0;
+                            return (
+                              <div className="rounded-lg border border-primary/20 bg-background p-3 shadow-lg">
+                                <div className="mb-2">
+                                  <p className="text-sm font-semibold text-primary">
+                                    {data.label}
+                                  </p>
+                                </div>
+                                <div className="space-y-1">
+                                  <div className="flex items-center justify-between gap-4">
+                                    <span className="text-xs text-muted-foreground">
+                                      Số lượng
+                                    </span>
+                                    <span className="text-sm font-bold text-primary">
+                                      {data.count} phòng
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center justify-between gap-4">
+                                    <span className="text-xs text-muted-foreground">
+                                      Tỷ lệ
+                                    </span>
+                                    <span className="text-sm font-semibold text-primary/80">
+                                      {percentage}%
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Legend
+                        formatter={(value, entry) => (
+                          <span className="text-xs text-muted-foreground">
+                            {value}
+                          </span>
+                        )}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              </div>
+            )}
           </CardContent>
         </Card>
 

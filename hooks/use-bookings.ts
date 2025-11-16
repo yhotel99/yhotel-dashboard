@@ -101,6 +101,48 @@ export function useBookings(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, limit, search]);
 
+  // Helper function to find conflicting booking
+  const findConflictingBooking = useCallback(
+    async (
+      roomId: string | null,
+      checkIn: string,
+      checkOut: string
+    ): Promise<BookingRecord | null> => {
+      if (!roomId) return null;
+
+      try {
+        const supabase = createClient();
+        // Query bookings that overlap with the given time range
+        // Only check active bookings: pending, awaiting_payment, confirmed, checked_in
+        // Overlap condition: (check_in < p_check_out) AND (check_out > p_check_in)
+        const { data, error } = await supabase
+          .from("bookings")
+          .select("*")
+          .eq("room_id", roomId)
+          .in("status", [
+            "pending",
+            "awaiting_payment",
+            "confirmed",
+            "checked_in",
+          ])
+          .is("deleted_at", null)
+          .lt("check_in", checkOut)
+          .gt("check_out", checkIn)
+          .limit(1)
+          .maybeSingle();
+
+        if (error || !data) {
+          return null;
+        }
+
+        return data as BookingRecord;
+      } catch {
+        return null;
+      }
+    },
+    []
+  );
+
   const createBooking = useCallback(
     async (input: BookingInput) => {
       try {
@@ -585,5 +627,7 @@ export function useBookings(
     getBookingById,
     getBookingByIdWithDetails,
     getBookingsByCustomerId,
+    // Helper functions
+    findConflictingBooking,
   };
 }

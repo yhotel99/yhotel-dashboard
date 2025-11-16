@@ -53,11 +53,6 @@ const createColumns = (): ColumnDef<BookingRecord>[] => [
     header: "Trạng thái",
     cell: ({ row }) => <StatusBadge status={row.original.status} />,
   },
-  {
-    accessorKey: "advance_payment",
-    header: "Đặt cọc",
-    cell: ({ row }) => formatCurrency(row.original.advance_payment),
-  },
 ];
 
 export default function CustomerBookingsPage() {
