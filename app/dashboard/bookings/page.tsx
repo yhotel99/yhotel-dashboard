@@ -164,7 +164,7 @@ export default function BookingsPage() {
   }, []);
 
   const handleUpdateBooking = useCallback(
-    async (id: string, input: BookingInput) => {
+    async (id: string, input: Partial<BookingInput>) => {
       try {
         await updateBooking(id, input);
 

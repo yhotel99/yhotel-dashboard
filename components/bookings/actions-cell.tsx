@@ -58,6 +58,7 @@ export function BookingActionsCell({
           <DropdownMenuItem onClick={() => setOpenChangeStatus(true)}>
             Thay đổi trạng thái
           </DropdownMenuItem>
+          <DropdownMenuItem>Chuyển phòng</DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
             variant="destructive"

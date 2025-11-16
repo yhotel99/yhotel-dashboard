@@ -138,6 +138,58 @@ export async function updatePaymentStatus(
 }
 
 /**
+ * Update payment amount
+ * @param paymentId - The payment ID to update
+ * @param amount - New amount
+ * @returns Updated payment record or null if error
+ */
+export async function updatePaymentAmount(
+  paymentId: string,
+  amount: number
+): Promise<Payment | null> {
+  try {
+    const supabase = createClient();
+    
+    // Check current payment status - if already refunded, cannot change
+    const { data: currentPayment, error: fetchError } = await supabase
+      .from("payments")
+      .select("payment_status")
+      .eq("id", paymentId)
+      .single();
+
+    if (fetchError || !currentPayment) {
+      console.error("Error fetching payment:", fetchError);
+      return null;
+    }
+
+    // If payment is already refunded, cannot change amount
+    if (currentPayment.payment_status === "refunded") {
+      throw new Error("Không thể thay đổi số tiền của payment đã được hoàn tiền");
+    }
+
+    const { data, error } = await supabase
+      .from("payments")
+      .update({
+        amount,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", paymentId)
+      .select()
+      .single();
+
+    if (error || !data) {
+      console.error("Error updating payment amount:", error);
+      return null;
+    }
+
+    return data as Payment;
+  } catch (err) {
+    console.error("Error updating payment amount:", err);
+    throw err;
+  }
+}
+
+/**
  * Get all payments for a booking
  * @param bookingId - The booking ID to fetch payments for
  * @returns Array of payment records

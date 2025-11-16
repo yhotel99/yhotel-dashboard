@@ -7,6 +7,7 @@ import {
   createPayment,
   getPaymentByBookingId,
   updatePaymentStatus,
+  updatePaymentAmount,
 } from "@/services/payments";
 import { BOOKING_STATUS, PAYMENT_STATUS } from "@/lib/constants";
 
@@ -209,6 +210,14 @@ export function useBookings(
     async (id: string, input: Partial<BookingInput>) => {
       try {
         const supabase = createClient();
+
+        // Get current booking to check status
+        const { data: currentBooking } = await supabase
+          .from("bookings")
+          .select("status, total_amount")
+          .eq("id", id)
+          .single();
+
         const { data, error } = await supabase
           .from("bookings")
           .update(input)
@@ -221,6 +230,18 @@ export function useBookings(
         }
 
         const updatedBooking = data as BookingRecord;
+
+        // If booking status is awaiting_payment and total_amount changed, update payment amount
+        if (
+          currentBooking?.status === BOOKING_STATUS.AWAITING_PAYMENT &&
+          input.total_amount !== undefined &&
+          input.total_amount !== currentBooking.total_amount
+        ) {
+          const payment = await getPaymentByBookingId(id);
+          if (payment && payment.payment_status !== PAYMENT_STATUS.REFUNDED) {
+            await updatePaymentAmount(payment.id, input.total_amount);
+          }
+        }
 
         // Cập nhật state thay vì fetch lại, giữ nguyên relations nếu response không có
         setBookings((prevBookings) =>

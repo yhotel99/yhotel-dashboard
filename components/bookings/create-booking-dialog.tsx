@@ -496,6 +496,7 @@ export function CreateBookingDialog({
                 value={formValues.total_amount}
                 onChange={handleInputChange("total_amount")}
                 className="bg-muted"
+                readOnly
               />
               {selectedRoom && nights > 0 && (
                 <p className="text-xs text-muted-foreground">
