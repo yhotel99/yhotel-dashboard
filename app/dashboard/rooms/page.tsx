@@ -30,30 +30,42 @@ const createColumns = (
     cell: ({ row }) => (
       <ThumbnailCell thumbnailUrl={row.original.thumbnail?.url} />
     ),
+    size: 70,
+    minSize: 50,
   },
   {
     accessorKey: "name",
     header: "Tên phòng",
+    size: 100,
+    minSize: 80,
   },
   {
     accessorKey: "room_type",
     header: "Loại phòng",
     cell: ({ row }) => roomTypeLabels[row.original.room_type],
+    size: 100,
+    minSize: 80,
   },
   {
     accessorKey: "status",
     header: "Trạng thái",
     cell: ({ row }) => <StatusBadge status={row.original.status} />,
+    size: 100,
+    minSize: 80,
   },
   {
     accessorKey: "price_per_night",
     header: "Giá mỗi đêm",
     cell: ({ row }) => formatCurrency(row.original.price_per_night),
+    size: 120,
+    minSize: 100,
   },
   {
     accessorKey: "max_guests",
     header: "Số khách tối đa",
     cell: ({ row }) => `${row.original.max_guests} người`,
+    size: 120,
+    minSize: 100,
   },
   {
     accessorKey: "amenities",
@@ -64,6 +76,8 @@ const createColumns = (
         : [];
       return <AmenitiesCell amenities={amenities} />;
     },
+    size: 140,
+    minSize: 120,
   },
   {
     id: "actions",
@@ -88,8 +102,14 @@ export default function RoomsPage() {
     updateSearchParams,
   } = usePaginationSearchParams();
 
-  const { rooms, isLoading, pagination, fetchRooms, deleteRoom, updateRoom } =
-    useRooms(page, limit, search);
+  const {
+    rooms,
+    isLoading,
+    pagination,
+    fetchRooms,
+    deleteRoom,
+    updateRoomStatus,
+  } = useRooms(page, limit, search);
 
   // Delete room dialog state
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -141,7 +161,7 @@ export default function RoomsPage() {
   const handleConfirmStatusUpdate = useCallback(
     async (roomId: string, newStatus: Room["status"]) => {
       try {
-        await updateRoom(roomId, { status: newStatus });
+        await updateRoomStatus(roomId, newStatus);
         toast.success("Cập nhật trạng thái thành công!", {
           description: `Trạng thái phòng đã được cập nhật thành công.`,
         });
@@ -156,7 +176,7 @@ export default function RoomsPage() {
         throw err;
       }
     },
-    [updateRoom]
+    [updateRoomStatus]
   );
 
   const handleConfirmDelete = useCallback(async () => {

@@ -9,14 +9,18 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import type { RoomWithBooking } from "@/hooks/use-room-map";
+import type { RoomWithBooking } from "@/lib/types";
 import { toast } from "sonner";
 import { IconEdit } from "@tabler/icons-react";
 import type { BookingRecord } from "@/lib/types";
 import { EditBookingDialog } from "@/components/bookings/edit-booking-dialog";
 import { useBookings } from "@/hooks/use-bookings";
 import { cn } from "@/lib/utils";
-import { roomTypeLabels } from "@/lib/constants";
+import {
+  roomTypeLabels,
+  ROOM_MAP_STATUS,
+  roomMapStatusLabels,
+} from "@/lib/constants";
 import { CheckoutDialogSkeleton } from "./checkout-dialog-skeleton";
 import { BookingInfoCard } from "./booking-info-card";
 import { PaymentCard } from "./payment-card";
@@ -143,16 +147,16 @@ export function CheckoutDialog({
 
   const roomTypeLabel = roomTypeLabels[room.room_type] || room.room_type;
   const mapStatusLabel =
-    room.mapStatus === "occupied"
-      ? "Đang sử dụng"
-      : room.mapStatus === "upcoming_checkout"
-      ? "Sắp trả"
-      : "Quá giờ trả";
+    room.mapStatus === ROOM_MAP_STATUS.OCCUPIED
+      ? roomMapStatusLabels[ROOM_MAP_STATUS.OCCUPIED]
+      : room.mapStatus === ROOM_MAP_STATUS.UPCOMING_CHECKOUT
+      ? roomMapStatusLabels[ROOM_MAP_STATUS.UPCOMING_CHECKOUT]
+      : roomMapStatusLabels[ROOM_MAP_STATUS.OVERDUE_CHECKOUT];
 
   const statusColorClass =
-    room.mapStatus === "occupied"
+    room.mapStatus === ROOM_MAP_STATUS.OCCUPIED
       ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800"
-      : room.mapStatus === "upcoming_checkout"
+      : room.mapStatus === ROOM_MAP_STATUS.UPCOMING_CHECKOUT
       ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-800"
       : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border-red-200 dark:border-red-800";
 

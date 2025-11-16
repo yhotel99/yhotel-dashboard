@@ -90,11 +90,15 @@ const createColumns = (
     accessorKey: "full_name",
     header: "Họ tên",
     enableHiding: false,
+    size: 150,
+    minSize: 130,
   },
   {
     accessorKey: "phone",
     header: "SĐT",
     cell: ({ row }) => row.original.phone ?? "-",
+    size: 100,
+    minSize: 80,
   },
   {
     accessorKey: "email",
@@ -104,11 +108,15 @@ const createColumns = (
         {row.original.email}
       </span>
     ),
+    size: 180,
+    minSize: 150,
   },
   {
     accessorKey: "total_bookings",
     header: "Số đơn",
     cell: ({ row }) => <span>{row.original.total_bookings ?? 0} lần</span>,
+    size: 80,
+    minSize: 60,
   },
   {
     accessorKey: "total_spent",
@@ -117,11 +125,15 @@ const createColumns = (
       const total = row.original.total_spent ?? 0;
       return <span>{formatCurrency(total)}</span>;
     },
+    size: 120,
+    minSize: 100,
   },
   {
     accessorKey: "created_at",
     header: "Ngày đăng ký",
     cell: ({ row }) => formatDate(row.original.created_at),
+    size: 150,
+    minSize: 130,
   },
   {
     accessorKey: "customer_type",
@@ -129,10 +141,14 @@ const createColumns = (
     cell: ({ row }) => (
       <StatusBadge customerType={row.original.customer_type} />
     ),
+    size: 100,
+    minSize: 80,
   },
   {
     id: "actions",
     cell: ({ row }) => <ActionsCell customer={row.original} onEdit={onEdit} />,
+    size: 60,
+    minSize: 40,
   },
 ];
 

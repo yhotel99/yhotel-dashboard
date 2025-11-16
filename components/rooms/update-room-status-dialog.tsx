@@ -20,6 +20,7 @@ import {
 import { Label } from "@/components/ui/label";
 import type { Room } from "@/hooks/use-rooms";
 import { StatusBadge } from "./status";
+import { ROOM_STATUS, roomStatusLabels } from "@/lib/constants";
 
 interface UpdateRoomStatusDialogProps {
   open: boolean;
@@ -32,12 +33,10 @@ const statusOptions: Array<{
   value: Room["status"];
   label: string;
 }> = [
-  { value: "available", label: "Có sẵn" },
-  { value: "maintenance", label: "Bảo trì" },
-  { value: "occupied", label: "Đang sử dụng" },
-  { value: "not_clean", label: "Chưa dọn" },
-  { value: "clean", label: "Đã dọn" },
-  { value: "blocked", label: "Đang chặn" },
+  { value: ROOM_STATUS.AVAILABLE, label: roomStatusLabels[ROOM_STATUS.AVAILABLE] },
+  { value: ROOM_STATUS.MAINTENANCE, label: roomStatusLabels[ROOM_STATUS.MAINTENANCE] },
+  { value: ROOM_STATUS.NOT_CLEAN, label: roomStatusLabels[ROOM_STATUS.NOT_CLEAN] },
+  { value: ROOM_STATUS.CLEAN, label: roomStatusLabels[ROOM_STATUS.CLEAN] },
 ];
 
 export function UpdateRoomStatusDialog({

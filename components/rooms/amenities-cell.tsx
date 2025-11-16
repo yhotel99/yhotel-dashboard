@@ -10,9 +10,9 @@ export function AmenitiesCell({ amenities }: { amenities: string[] }) {
     return <span className="text-muted-foreground text-sm">-</span>;
   }
 
-  const visibleAmenities = amenities.slice(0, 2);
-  const remainingCount = amenities.length - 2;
-  const remainingAmenities = amenities.slice(2);
+  const visibleAmenities = amenities.slice(0, 1);
+  const remainingCount = amenities.length - 1;
+  const remainingAmenities = amenities.slice(1);
 
   return (
     <div className="flex gap-1 flex-wrap items-center">
@@ -33,11 +33,7 @@ export function AmenitiesCell({ amenities }: { amenities: string[] }) {
               <p className="font-semibold mb-1">Tiện ích khác:</p>
               <div className="flex flex-wrap gap-1">
                 {remainingAmenities.map((amenity, index) => (
-                  <Badge
-                    key={index}
-                    variant="secondary"
-                    className="text-xs"
-                  >
+                  <Badge key={index} variant="secondary" className="text-xs">
                     {amenity}
                   </Badge>
                 ))}
@@ -49,4 +45,3 @@ export function AmenitiesCell({ amenities }: { amenities: string[] }) {
     </div>
   );
 }
-

@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { CreditCard } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import type { BookingRecord } from "@/lib/types";
-import type { RoomWithBooking } from "@/hooks/use-room-map";
+import type { RoomWithBooking } from "@/lib/types";
 
 interface PaymentCardProps {
   booking: BookingRecord;

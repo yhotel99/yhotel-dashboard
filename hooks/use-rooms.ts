@@ -8,6 +8,7 @@ import type {
   RoomWithImages,
   PaginationMeta,
   ImageValue,
+  RoomStatus,
 } from "@/lib/types";
 
 // Re-export types for backward compatibility
@@ -349,9 +350,9 @@ export function useRooms(
     [fetchRooms, page, limit, search]
   );
 
-  // Update room status
+  // Update room status - only updates state, no refetch
   const updateRoomStatus = useCallback(
-    async (id: string, status: "clean" | "not_clean") => {
+    async (id: string, status: RoomStatus) => {
       try {
         const supabase = createClient();
         const { error } = await supabase

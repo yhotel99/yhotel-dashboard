@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import type { Room } from "@/hooks/use-rooms";
+import { ROOM_STATUS, roomStatusLabels } from "@/lib/constants";
 
 interface ChangeRoomStatusDialogProps {
   open: boolean;
@@ -30,8 +31,10 @@ export function ChangeRoomStatusDialog({
 }: ChangeRoomStatusDialogProps) {
   if (!room) return null;
 
-  const statusLabel = newStatus === "clean" ? "Sạch" : "Chưa dọn";
-  const currentStatusLabel = room.status === "clean" ? "Sạch" : "Chưa dọn";
+  const statusLabel =
+    newStatus === ROOM_STATUS.CLEAN
+      ? roomStatusLabels[ROOM_STATUS.CLEAN]
+      : roomStatusLabels[ROOM_STATUS.NOT_CLEAN];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -40,7 +43,10 @@ export function ChangeRoomStatusDialog({
           <DialogTitle>Chuyển trạng thái buồng phòng</DialogTitle>
           <DialogDescription className="text-base">
             Chuyển trạng thái buồng phòng {room.name} thành{" "}
-            <span className="font-semibold text-destructive">{statusLabel}</span>?
+            <span className="font-semibold text-destructive">
+              {statusLabel}
+            </span>
+            ?
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
@@ -63,4 +69,3 @@ export function ChangeRoomStatusDialog({
     </Dialog>
   );
 }
-

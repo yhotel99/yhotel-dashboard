@@ -43,13 +43,13 @@ export const roomTypeEnum = [
   "superior",
   "family",
 ] as const;
+import { ROOM_STATUS, roomStatusLabels } from "@/lib/constants";
+
 export const roomStatusEnum = [
-  "available",
-  "maintenance",
-  "occupied",
-  "not_clean",
-  "clean",
-  "blocked",
+  ROOM_STATUS.AVAILABLE,
+  ROOM_STATUS.MAINTENANCE,
+  ROOM_STATUS.NOT_CLEAN,
+  ROOM_STATUS.CLEAN,
 ] as const;
 
 // Form validation schema
@@ -126,7 +126,7 @@ export function RoomForm({
     room_type: "standard",
     price_per_night: "0",
     max_guests: "2",
-    status: "available",
+    status: ROOM_STATUS.AVAILABLE,
     amenities: [],
     thumbnail: undefined,
     images: undefined,
@@ -340,12 +340,18 @@ export function RoomForm({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="available">Có sẵn</SelectItem>
-                        <SelectItem value="maintenance">Bảo trì</SelectItem>
-                        <SelectItem value="occupied">Đang sử dụng</SelectItem>
-                        <SelectItem value="not_clean">Chưa dọn</SelectItem>
-                        <SelectItem value="clean">Đã dọn</SelectItem>
-                        <SelectItem value="blocked">Đang chặn</SelectItem>
+                        <SelectItem value={ROOM_STATUS.AVAILABLE}>
+                          {roomStatusLabels[ROOM_STATUS.AVAILABLE]}
+                        </SelectItem>
+                        <SelectItem value={ROOM_STATUS.MAINTENANCE}>
+                          {roomStatusLabels[ROOM_STATUS.MAINTENANCE]}
+                        </SelectItem>
+                        <SelectItem value={ROOM_STATUS.NOT_CLEAN}>
+                          {roomStatusLabels[ROOM_STATUS.NOT_CLEAN]}
+                        </SelectItem>
+                        <SelectItem value={ROOM_STATUS.CLEAN}>
+                          {roomStatusLabels[ROOM_STATUS.CLEAN]}
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                     <FormDescription>

@@ -16,12 +16,14 @@ import {
 } from "@/hooks/use-bookings";
 import { StatusSelect } from "@/components/bookings/status";
 import { BookingActionsCell } from "@/components/bookings/actions-cell";
+import { NotesCell } from "@/components/bookings/notes-cell";
 import { CreateBookingDialog } from "@/components/bookings/create-booking-dialog";
 import { EditBookingDialog } from "@/components/bookings/edit-booking-dialog";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
   translateBookingErrorMessage,
   BOOKING_ERROR_PATTERNS,
+  BOOKING_STATUS,
 } from "@/lib/constants";
 
 // Status badge component
@@ -38,36 +40,50 @@ const createColumns = (
     accessorKey: "customer_id",
     header: "Khách hàng",
     cell: ({ row }) => row.original.customers?.full_name ?? "-",
+    size: 150,
+    minSize: 120,
   },
   {
     accessorKey: "room_id",
     header: "Phòng",
     cell: ({ row }) => row.original.rooms?.name ?? "-",
+    size: 80,
+    minSize: 60,
   },
   {
     accessorKey: "check_in",
     header: "Check-in",
     cell: ({ row }) => formatDate(row.original.check_in),
+    size: 150,
+    minSize: 130,
   },
   {
     accessorKey: "check_out",
     header: "Check-out",
     cell: ({ row }) => formatDate(row.original.check_out),
+    size: 150,
+    minSize: 130,
   },
   {
     accessorKey: "number_of_nights",
     header: "Số đêm",
     cell: ({ row }) => `${row.original.number_of_nights} đêm`,
+    size: 90,
+    minSize: 70,
   },
   {
     accessorKey: "total_guests",
     header: "Số khách",
     cell: ({ row }) => `${row.original.total_guests} người`,
+    size: 90,
+    minSize: 70,
   },
   {
     accessorKey: "total_amount",
     header: "Tổng tiền",
     cell: ({ row }) => formatCurrency(row.original.total_amount),
+    size: 120,
+    minSize: 100,
   },
   {
     accessorKey: "status",
@@ -79,11 +95,15 @@ const createColumns = (
         onChangeStatus={onChangeStatus}
       />
     ),
+    size: 150,
+    minSize: 130,
   },
   {
     accessorKey: "notes",
     header: "Ghi chú",
-    cell: ({ row }) => row.original.notes ?? "-",
+    cell: ({ row }) => <NotesCell notes={row.original.notes} />,
+    size: 60,
+    minSize: 40,
   },
   {
     id: "actions",
@@ -95,6 +115,8 @@ const createColumns = (
         onCancelBooking={onCancelBooking}
       />
     ),
+    size: 60,
+    minSize: 40,
   },
 ];
 
@@ -221,31 +243,31 @@ export default function BookingsPage() {
       try {
         // Map status to appropriate function
         switch (status) {
-          case "awaiting_payment":
+          case BOOKING_STATUS.AWAITING_PAYMENT:
             await moveToAwaitingPayment(id);
             break;
-          case "confirmed":
+          case BOOKING_STATUS.CONFIRMED:
             await confirmBooking(id);
             break;
-          case "checked_in":
+          case BOOKING_STATUS.CHECKED_IN:
             await checkInBooking(id);
             break;
-          case "checked_out":
+          case BOOKING_STATUS.CHECKED_OUT:
             await checkoutBooking(id);
             break;
-          case "completed":
+          case BOOKING_STATUS.COMPLETED:
             await completeBooking(id);
             break;
-          case "cancelled":
+          case BOOKING_STATUS.CANCELLED:
             await cancelBooking(id);
             break;
-          case "no_show":
+          case BOOKING_STATUS.NO_SHOW:
             await markNoShow(id);
             break;
-          case "refunded":
+          case BOOKING_STATUS.REFUNDED:
             await refundBooking(id);
             break;
-          case "pending":
+          case BOOKING_STATUS.PENDING:
           default:
             // Fallback to updateBooking for pending or unknown status
             await updateBooking(id, { status });

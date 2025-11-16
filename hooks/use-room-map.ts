@@ -2,46 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
-import type { Room } from "@/lib/types";
-
-export type RoomMapStatus =
-  | "vacant" // Đang trống
-  | "upcoming_checkin" // Sắp nhận
-  | "occupied" // Đang sử dụng
-  | "upcoming_checkout" // Sắp trả
-  | "overdue_checkout"; // Quá giờ trả
-
-// Type từ room_status_view
-type RoomStatusViewData = {
-  id: string;
-  name: string;
-  description: string | null;
-  room_type: "standard" | "deluxe" | "superior" | "family";
-  price_per_night: string;
-  max_guests: number;
-  amenities: string[];
-  status: string;
-  deleted_at: string | null;
-  created_at: string;
-  updated_at: string;
-  technical_status: string;
-  check_in: string | null;
-  check_out: string | null;
-  booking_status: string | null;
-  current_status: string;
-  booking_id: string | null;
-};
-
-export type RoomWithBooking = Room & {
-  currentBooking: {
-    id: string;
-    check_in: string;
-    check_out: string;
-    status: string;
-  } | null;
-  mapStatus: RoomMapStatus;
-  isClean: boolean;
-};
+import type { Room, RoomStatusViewData, RoomWithBooking } from "@/lib/types";
+import type { RoomMapStatus } from "@/lib/constants";
 
 export function useRoomMap() {
   const [rooms, setRooms] = useState<RoomWithBooking[]>([]);
@@ -64,7 +26,6 @@ export function useRoomMap() {
         throw new Error(error.message);
       }
 
-      console.log(data);
       // Map data từ view sang RoomWithBooking
       const roomsWithBookings: RoomWithBooking[] = (data || []).map(
         (item: RoomStatusViewData) => {

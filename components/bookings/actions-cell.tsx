@@ -9,14 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { CancelBookingConfirmDialog } from "./cancel-booking-confirm-dialog";
 import type { BookingRecord } from "@/hooks/use-bookings";
 
 export function BookingActionsCell({
@@ -51,44 +44,30 @@ export function BookingActionsCell({
           </DropdownMenuItem>
           {customerId ? (
             <DropdownMenuItem
-              onClick={() => router.push(`/dashboard/customers/${customerId}/bookings`)}
+              onClick={() =>
+                router.push(`/dashboard/customers/${customerId}/bookings`)
+              }
             >
               Xem khách hàng
             </DropdownMenuItem>
           ) : null}
           <DropdownMenuSeparator />
-          <DropdownMenuItem variant="destructive" onClick={() => setOpenCancel(true)}>
+          <DropdownMenuItem
+            variant="destructive"
+            onClick={() => setOpenCancel(true)}
+          >
             Hủy booking
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <Dialog open={openCancel} onOpenChange={setOpenCancel}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Xác nhận hủy booking</DialogTitle>
-            <DialogDescription>
-              Thao tác này sẽ hủy booking này và không thể hoàn tác.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpenCancel(false)}>
-              Bỏ qua
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={async () => {
-                await onCancelBooking(booking.id);
-                setOpenCancel(false);
-              }}
-            >
-              Xác nhận hủy
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <CancelBookingConfirmDialog
+        open={openCancel}
+        onOpenChange={setOpenCancel}
+        onConfirm={async () => {
+          await onCancelBooking(booking.id);
+        }}
+      />
     </>
   );
 }
-
-

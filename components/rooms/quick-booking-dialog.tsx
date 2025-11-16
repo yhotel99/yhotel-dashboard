@@ -1,6 +1,6 @@
 import { CreateBookingDialog } from "@/components/bookings/create-booking-dialog";
 import type { BookingInput } from "@/hooks/use-bookings";
-import type { RoomWithBooking } from "@/hooks/use-room-map";
+import type { RoomWithBooking } from "@/lib/types";
 
 interface QuickBookingDialogProps {
   open: boolean;

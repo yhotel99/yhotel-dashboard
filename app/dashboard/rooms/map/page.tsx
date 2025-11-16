@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
-import { useRoomMap, type RoomMapStatus } from "@/hooks/use-room-map";
+import { useRoomMap } from "@/hooks/use-room-map";
 import { RoomCard } from "@/components/rooms/room-card";
 import {
   IconSearch,
@@ -13,7 +13,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
-import { roomTypeLabels } from "@/lib/constants";
+import {
+  roomTypeLabels,
+  type RoomMapStatus,
+  ROOM_MAP_STATUS,
+  roomMapStatusLabels,
+  roomMapStatusColors,
+} from "@/lib/constants";
 
 const statusFilters: Array<{
   status: RoomMapStatus | "all";
@@ -22,11 +28,31 @@ const statusFilters: Array<{
   count?: number;
 }> = [
   { status: "all", label: "Tất cả", color: "bg-gray-200" },
-  { status: "vacant", label: "Đang trống", color: "bg-blue-500" },
-  { status: "upcoming_checkin", label: "Sắp nhận", color: "bg-orange-500" },
-  { status: "occupied", label: "Đang sử dụng", color: "bg-green-500" },
-  { status: "upcoming_checkout", label: "Sắp trả", color: "bg-blue-400" },
-  { status: "overdue_checkout", label: "Quá giờ trả", color: "bg-red-500" },
+  {
+    status: ROOM_MAP_STATUS.VACANT,
+    label: roomMapStatusLabels[ROOM_MAP_STATUS.VACANT],
+    color: roomMapStatusColors[ROOM_MAP_STATUS.VACANT],
+  },
+  {
+    status: ROOM_MAP_STATUS.UPCOMING_CHECKIN,
+    label: roomMapStatusLabels[ROOM_MAP_STATUS.UPCOMING_CHECKIN],
+    color: roomMapStatusColors[ROOM_MAP_STATUS.UPCOMING_CHECKIN],
+  },
+  {
+    status: ROOM_MAP_STATUS.OCCUPIED,
+    label: roomMapStatusLabels[ROOM_MAP_STATUS.OCCUPIED],
+    color: roomMapStatusColors[ROOM_MAP_STATUS.OCCUPIED],
+  },
+  {
+    status: ROOM_MAP_STATUS.UPCOMING_CHECKOUT,
+    label: roomMapStatusLabels[ROOM_MAP_STATUS.UPCOMING_CHECKOUT],
+    color: roomMapStatusColors[ROOM_MAP_STATUS.UPCOMING_CHECKOUT],
+  },
+  {
+    status: ROOM_MAP_STATUS.OVERDUE_CHECKOUT,
+    label: roomMapStatusLabels[ROOM_MAP_STATUS.OVERDUE_CHECKOUT],
+    color: roomMapStatusColors[ROOM_MAP_STATUS.OVERDUE_CHECKOUT],
+  },
 ];
 
 // Nhóm phòng theo tầng (giả sử tên phòng có format số tầng ở đầu, ví dụ: 101, 201, STD201)
@@ -74,6 +100,8 @@ export default function RoomMapPage() {
     "all"
   );
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+
+  console.log(rooms);
 
   // Filter rooms
   const filteredRooms = useMemo(() => {
@@ -217,8 +245,7 @@ export default function RoomMapPage() {
       {/* Room Grid */}
       {isLoading ? (
         <div className="flex flex-col items-center justify-center h-96 gap-3">
-          <Loader2 className="size-8 animate-spin text-muted-foreground" />
-          <p className="text-muted-foreground">Đang tải...</p>
+          <Loader2 className="size-8 animate-spin text-primary" />
         </div>
       ) : filteredRooms.length === 0 ? (
         <div className="flex items-center justify-center h-96">

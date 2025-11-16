@@ -1,19 +1,18 @@
-"use client"
+"use client";
 
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import * as z from "zod"
-import { useRouter } from "next/navigation"
-import { useEffect } from "react"
+import { useForm, useWatch } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { useRouter } from "next/navigation";
 
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
+} from "@/components/ui/card";
 import {
   Form,
   FormControl,
@@ -22,71 +21,72 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { toast } from "sonner"
+} from "@/components/ui/select";
+import { toast } from "sonner";
+import { BOOKING_STATUS, bookingStatusLabels } from "@/lib/constants";
+import { useRooms } from "@/hooks/use-rooms";
 
 // Form validation schema
-export const bookingFormSchema = z.object({
-  customerName: z.string().min(1, "Tên khách hàng là bắt buộc"),
-  customerPhone: z
-    .string()
-    .min(1, "Số điện thoại là bắt buộc")
-    .regex(/^[0-9]{10,11}$/, "Số điện thoại không hợp lệ"),
-  roomNumber: z.string().min(1, "Số phòng là bắt buộc"),
-  checkIn: z.string().min(1, "Ngày check-in là bắt buộc"),
-  checkOut: z.string().min(1, "Ngày check-out là bắt buộc"),
-  guests: z
-    .string()
-    .min(1, "Số khách là bắt buộc")
-    .refine((val) => !isNaN(Number(val)) && Number(val) >= 1, {
-      message: "Số khách phải là số và lớn hơn hoặc bằng 1",
-    }),
-  status: z.enum(["pending", "confirmed", "checked_in", "checked_out", "cancelled"]),
-  paymentMethod: z.string().min(1, "Phương thức thanh toán là bắt buộc"),
-  totalAmount: z
-    .string()
-    .min(1, "Tổng tiền là bắt buộc")
-    .refine((val) => !isNaN(Number(val)) && Number(val) >= 0, {
-      message: "Tổng tiền phải là số và lớn hơn hoặc bằng 0",
-    }),
-}).refine((data) => {
-  const checkIn = new Date(data.checkIn)
-  const checkOut = new Date(data.checkOut)
-  return checkOut > checkIn
-}, {
-  message: "Ngày check-out phải sau ngày check-in",
-  path: ["checkOut"],
-})
+export const bookingFormSchema = z
+  .object({
+    customerName: z.string().min(1, "Tên khách hàng là bắt buộc"),
+    customerPhone: z
+      .string()
+      .min(1, "Số điện thoại là bắt buộc")
+      .regex(/^[0-9]{10,11}$/, "Số điện thoại không hợp lệ"),
+    roomNumber: z.string().min(1, "Số phòng là bắt buộc"),
+    checkIn: z.string().min(1, "Ngày check-in là bắt buộc"),
+    checkOut: z.string().min(1, "Ngày check-out là bắt buộc"),
+    guests: z
+      .string()
+      .min(1, "Số khách là bắt buộc")
+      .refine((val) => !isNaN(Number(val)) && Number(val) >= 1, {
+        message: "Số khách phải là số và lớn hơn hoặc bằng 1",
+      }),
+    status: z.enum([
+      BOOKING_STATUS.PENDING,
+      BOOKING_STATUS.CONFIRMED,
+      BOOKING_STATUS.CHECKED_IN,
+      BOOKING_STATUS.CHECKED_OUT,
+      BOOKING_STATUS.CANCELLED,
+    ]),
+    paymentMethod: z.string().min(1, "Phương thức thanh toán là bắt buộc"),
+    totalAmount: z
+      .string()
+      .min(1, "Tổng tiền là bắt buộc")
+      .refine((val) => !isNaN(Number(val)) && Number(val) >= 0, {
+        message: "Tổng tiền phải là số và lớn hơn hoặc bằng 0",
+      }),
+  })
+  .refine(
+    (data) => {
+      const checkIn = new Date(data.checkIn);
+      const checkOut = new Date(data.checkOut);
+      return checkOut > checkIn;
+    },
+    {
+      message: "Ngày check-out phải sau ngày check-in",
+      path: ["checkOut"],
+    }
+  );
 
-export type BookingFormValues = z.infer<typeof bookingFormSchema>
+export type BookingFormValues = z.infer<typeof bookingFormSchema>;
 
 interface BookingFormProps {
-  mode?: "create" | "edit"
-  defaultValues?: Partial<BookingFormValues>
-  bookingId?: string
-  onSubmit?: (data: BookingFormValues) => Promise<void>
-  onCancel?: () => void
+  mode?: "create" | "edit";
+  defaultValues?: Partial<BookingFormValues>;
+  bookingId?: string;
+  onSubmit?: (data: BookingFormValues) => Promise<void>;
+  onCancel?: () => void;
 }
-
-// Sample available rooms - in real app, fetch from API
-const availableRooms = [
-  { number: "101", type: "Standard" },
-  { number: "102", type: "Deluxe" },
-  { number: "201", type: "Suite" },
-  { number: "202", type: "Standard" },
-  { number: "301", type: "Deluxe" },
-  { number: "302", type: "Suite" },
-  { number: "401", type: "Standard" },
-  { number: "402", type: "Deluxe" },
-]
 
 export function BookingForm({
   mode = "create",
@@ -95,7 +95,8 @@ export function BookingForm({
   onSubmit: externalOnSubmit,
   onCancel,
 }: BookingFormProps) {
-  const router = useRouter()
+  const router = useRouter();
+  const { rooms } = useRooms();
 
   const defaultFormValues: BookingFormValues = {
     customerName: "",
@@ -104,42 +105,27 @@ export function BookingForm({
     checkIn: "",
     checkOut: "",
     guests: "2",
-    status: "pending",
+    status: BOOKING_STATUS.PENDING,
     paymentMethod: "",
     totalAmount: "0",
-  }
+  };
 
   const form = useForm<BookingFormValues>({
     resolver: zodResolver(bookingFormSchema),
     defaultValues: defaultValues
       ? { ...defaultFormValues, ...defaultValues }
       : defaultFormValues,
-  })
+  });
 
   // Calculate nights when checkIn or checkOut changes
-  const checkIn = form.watch("checkIn")
-  const checkOut = form.watch("checkOut")
-  const totalAmount = form.watch("totalAmount")
-
-  useEffect(() => {
-    if (checkIn && checkOut) {
-      const checkInDate = new Date(checkIn)
-      const checkOutDate = new Date(checkOut)
-      if (checkOutDate > checkInDate) {
-        const nights = Math.ceil(
-          (checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24)
-        )
-        // You can auto-calculate totalAmount here if needed
-        // For now, we'll just show nights in description
-      }
-    }
-  }, [checkIn, checkOut])
+  const checkIn = useWatch({ control: form.control, name: "checkIn" });
+  const checkOut = useWatch({ control: form.control, name: "checkOut" });
 
   const handleSubmit = async (data: BookingFormValues) => {
     try {
       if (externalOnSubmit) {
-        await externalOnSubmit(data)
-        return
+        await externalOnSubmit(data);
+        return;
       }
 
       // Transform string numbers to actual numbers
@@ -149,68 +135,70 @@ export function BookingForm({
         totalAmount: Number(data.totalAmount),
         // Calculate nights
         nights: (() => {
-          const checkInDate = new Date(data.checkIn)
-          const checkOutDate = new Date(data.checkOut)
+          const checkInDate = new Date(data.checkIn);
+          const checkOutDate = new Date(data.checkOut);
           return Math.ceil(
-            (checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24)
-          )
+            (checkOutDate.getTime() - checkInDate.getTime()) /
+              (1000 * 60 * 60 * 24)
+          );
         })(),
-      }
+      };
 
       // Simulate API call
       if (mode === "edit") {
-        console.log("Updating booking:", bookingId, bookingData)
+        console.log("Updating booking:", bookingId, bookingData);
         toast.success("Cập nhật booking thành công!", {
           description: `Booking ${data.customerName} đã được cập nhật thành công.`,
-        })
+        });
       } else {
-        console.log("Creating booking:", bookingData)
+        console.log("Creating booking:", bookingData);
         toast.success("Tạo booking thành công!", {
           description: `Booking cho ${data.customerName} đã được tạo thành công.`,
-        })
+        });
       }
 
       // Simulate delay
-      await new Promise((resolve) => setTimeout(resolve, 1000))
 
       // Redirect to bookings page
-      router.push("/dashboard/bookings")
-    } catch (error) {
+      router.push("/dashboard/bookings");
+    } catch {
       toast.error("Có lỗi xảy ra", {
         description:
           mode === "edit"
             ? "Không thể cập nhật booking. Vui lòng thử lại."
             : "Không thể tạo booking. Vui lòng thử lại.",
-      })
+      });
     }
-  }
+  };
 
   const handleCancel = () => {
     if (onCancel) {
-      onCancel()
+      onCancel();
     } else {
-      router.back()
+      router.back();
     }
-  }
+  };
 
   // Calculate nights for display
   const calculateNights = () => {
-    if (!checkIn || !checkOut) return 0
-    const checkInDate = new Date(checkIn)
-    const checkOutDate = new Date(checkOut)
-    if (checkOutDate <= checkInDate) return 0
+    if (!checkIn || !checkOut) return 0;
+    const checkInDate = new Date(checkIn);
+    const checkOutDate = new Date(checkOut);
+    if (checkOutDate <= checkInDate) return 0;
     return Math.ceil(
       (checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24)
-    )
-  }
+    );
+  };
 
-  const nights = calculateNights()
+  const nights = calculateNights();
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>
-          {mode === "edit" ? "Chỉnh sửa thông tin booking" : "Thông tin booking"}
+          {mode === "edit"
+            ? "Chỉnh sửa thông tin booking"
+            : "Thông tin booking"}
         </CardTitle>
         <CardDescription>
           {mode === "edit"
@@ -279,16 +267,20 @@ export function BookingForm({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {availableRooms.map((room) => (
-                          <SelectItem key={room.number} value={room.number}>
-                            {room.number} - {room.type}
+                        {rooms.length === 0 ? (
+                          <SelectItem value="no_room" disabled>
+                            Không có phòng
                           </SelectItem>
-                        ))}
+                        ) : (
+                          rooms.map((room) => (
+                            <SelectItem key={room.id} value={room.name}>
+                              {room.name} - {room.room_type}
+                            </SelectItem>
+                          ))
+                        )}
                       </SelectContent>
                     </Select>
-                    <FormDescription>
-                      Chọn phòng muốn đặt
-                    </FormDescription>
+                    <FormDescription>Chọn phòng muốn đặt</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -308,9 +300,7 @@ export function BookingForm({
                         value={field.value ?? ""}
                       />
                     </FormControl>
-                    <FormDescription>
-                      Số lượng khách sẽ ở
-                    </FormDescription>
+                    <FormDescription>Số lượng khách sẽ ở</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -368,11 +358,21 @@ export function BookingForm({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="pending">Chờ xác nhận</SelectItem>
-                        <SelectItem value="confirmed">Đã xác nhận</SelectItem>
-                        <SelectItem value="checked_in">Đã check-in</SelectItem>
-                        <SelectItem value="checked_out">Đã check-out</SelectItem>
-                        <SelectItem value="cancelled">Đã hủy</SelectItem>
+                        <SelectItem value={BOOKING_STATUS.PENDING}>
+                          {bookingStatusLabels[BOOKING_STATUS.PENDING]}
+                        </SelectItem>
+                        <SelectItem value={BOOKING_STATUS.CONFIRMED}>
+                          {bookingStatusLabels[BOOKING_STATUS.CONFIRMED]}
+                        </SelectItem>
+                        <SelectItem value={BOOKING_STATUS.CHECKED_IN}>
+                          {bookingStatusLabels[BOOKING_STATUS.CHECKED_IN]}
+                        </SelectItem>
+                        <SelectItem value={BOOKING_STATUS.CHECKED_OUT}>
+                          {bookingStatusLabels[BOOKING_STATUS.CHECKED_OUT]}
+                        </SelectItem>
+                        <SelectItem value={BOOKING_STATUS.CANCELLED}>
+                          {bookingStatusLabels[BOOKING_STATUS.CANCELLED]}
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                     <FormDescription>
@@ -399,9 +399,13 @@ export function BookingForm({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="Credit Card">Thẻ tín dụng</SelectItem>
+                        <SelectItem value="Credit Card">
+                          Thẻ tín dụng
+                        </SelectItem>
                         <SelectItem value="Cash">Tiền mặt</SelectItem>
-                        <SelectItem value="Bank Transfer">Chuyển khoản</SelectItem>
+                        <SelectItem value="Bank Transfer">
+                          Chuyển khoản
+                        </SelectItem>
                         <SelectItem value="E-Wallet">Ví điện tử</SelectItem>
                       </SelectContent>
                     </Select>
@@ -437,11 +441,7 @@ export function BookingForm({
             </div>
 
             <div className="flex justify-end gap-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleCancel}
-              >
+              <Button type="button" variant="outline" onClick={handleCancel}>
                 Hủy
               </Button>
               <Button type="submit" disabled={form.formState.isSubmitting}>
@@ -450,14 +450,13 @@ export function BookingForm({
                     ? "Đang cập nhật..."
                     : "Đang tạo..."
                   : mode === "edit"
-                    ? "Cập nhật booking"
-                    : "Tạo booking"}
+                  ? "Cập nhật booking"
+                  : "Tạo booking"}
               </Button>
             </div>
           </form>
         </Form>
       </CardContent>
     </Card>
-  )
+  );
 }
-

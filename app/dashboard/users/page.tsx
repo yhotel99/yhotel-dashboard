@@ -3,7 +3,6 @@
 import * as React from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import { IconPlus } from "@tabler/icons-react";
-import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
@@ -27,41 +26,54 @@ const createColumns = (
   {
     accessorKey: "full_name",
     header: "Tên",
+    size: 150,
+    minSize: 130,
   },
   {
     accessorKey: "email",
     header: "Email",
+    size: 180,
+    minSize: 150,
   },
   {
     accessorKey: "phone",
     header: "Số điện thoại",
     cell: ({ row }) => row.original.phone || "-",
+    size: 100,
+    minSize: 80,
   },
   {
     accessorKey: "role",
     header: "Vai trò",
     cell: ({ row }) => <RoleBadge role={row.original.role} />,
+    size: 100,
+    minSize: 80,
   },
   {
     accessorKey: "status",
     header: "Trạng thái",
     cell: ({ row }) => <StatusBadge status={row.original.status} />,
+    size: 100,
+    minSize: 80,
   },
   {
     accessorKey: "created_at",
     header: "Ngày tạo",
     cell: ({ row }) => formatDate(row.original.created_at || ""),
+    size: 150,
+    minSize: 130,
   },
   {
     id: "actions",
     cell: ({ row }) => (
       <UserActionsCell profile={row.original} onEdit={onEdit} />
     ),
+    size: 60,
+    minSize: 40,
   },
 ];
 
 export default function UsersPage() {
-  const router = useRouter();
   const [openUserDialog, setOpenUserDialog] = React.useState(false);
   const [editingProfile, setEditingProfile] = React.useState<
     Profile | undefined

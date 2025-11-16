@@ -11,7 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { Loader2 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import type { BookingRecord } from "@/lib/types";
-import type { RoomWithBooking } from "@/hooks/use-room-map";
+import type { RoomWithBooking } from "@/lib/types";
 import { roomTypeLabels } from "@/lib/constants";
 
 

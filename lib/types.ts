@@ -1,4 +1,5 @@
 // Common types for the application
+import type { RoomMapStatus } from "./constants";
 
 // ============================================================================
 // User & Profile Types
@@ -36,13 +37,7 @@ export type Room = {
   price_per_night: number;
   max_guests: number;
   amenities: string[];
-  status:
-    | "available"
-    | "maintenance"
-    | "occupied"
-    | "not_clean"
-    | "clean"
-    | "blocked";
+  status: "available" | "maintenance" | "not_clean" | "clean";
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
@@ -57,26 +52,14 @@ export type RoomInput = {
   price_per_night: number;
   max_guests: number;
   amenities: string[];
-  status:
-    | "available"
-    | "maintenance"
-    | "occupied"
-    | "not_clean"
-    | "clean"
-    | "blocked";
+  status: "available" | "maintenance" | "not_clean" | "clean";
 };
 
 // Room type enum
 export type RoomType = "standard" | "deluxe" | "superior" | "family";
 
 // Room status type
-export type RoomStatus =
-  | "available"
-  | "maintenance"
-  | "occupied"
-  | "not_clean"
-  | "clean"
-  | "blocked";
+export type RoomStatus = "available" | "maintenance" | "not_clean" | "clean";
 
 // ============================================================================
 // Image Types
@@ -98,6 +81,43 @@ export type GalleryImage = {
 export type RoomWithImages = Room & {
   thumbnail?: ImageValue;
   images?: ImageValue[];
+};
+
+// ============================================================================
+// Room Map Types
+// ============================================================================
+
+// Type từ room_status_view (database view)
+export type RoomStatusViewData = {
+  id: string;
+  name: string;
+  description: string | null;
+  room_type: "standard" | "deluxe" | "superior" | "family";
+  price_per_night: string;
+  max_guests: number;
+  amenities: string[];
+  status: string;
+  deleted_at: string | null;
+  created_at: string;
+  updated_at: string;
+  technical_status: string;
+  check_in: string | null;
+  check_out: string | null;
+  booking_status: string | null;
+  current_status: string;
+  booking_id: string | null;
+};
+
+// Room with booking information for map view
+export type RoomWithBooking = Room & {
+  currentBooking: {
+    id: string;
+    check_in: string;
+    check_out: string;
+    status: string;
+  } | null;
+  mapStatus: RoomMapStatus;
+  isClean: boolean;
 };
 
 // ============================================================================

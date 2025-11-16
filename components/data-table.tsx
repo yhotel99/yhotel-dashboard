@@ -153,11 +153,23 @@ export function DataTable<TData, TValue>({
     pageCount: serverPagination ? serverPagination.totalPages : undefined,
   });
 
-  // Calculate column width once
+  // Calculate column width - use column size if defined, otherwise distribute equally
   const visibleHeaders = table
     .getHeaderGroups()[0]
     .headers.filter((h) => !h.isPlaceholder && h.column.getIsVisible());
-  const columnWidth = `${100 / visibleHeaders.length}%`;
+
+  // Check if any column has a size defined
+  const hasSizedColumns = visibleHeaders.some(
+    (h) => h.column.columnDef.size !== undefined
+  );
+
+  // If columns have sizes, use them; otherwise distribute equally
+  const getColumnWidth = (header: (typeof visibleHeaders)[0]) => {
+    if (hasSizedColumns && header.column.columnDef.size) {
+      return `${header.column.columnDef.size}px`;
+    }
+    return `${100 / visibleHeaders.length}%`;
+  };
 
   return (
     <div className="space-y-4">
@@ -247,7 +259,7 @@ export function DataTable<TData, TValue>({
                   return (
                     <TableHead
                       key={header.id}
-                      style={{ width: columnWidth }}
+                      style={{ width: getColumnWidth(header) }}
                       className="whitespace-nowrap"
                     >
                       {flexRender(
@@ -268,14 +280,20 @@ export function DataTable<TData, TValue>({
                   {table
                     .getAllColumns()
                     .filter((column) => column.getIsVisible())
-                    .map((column, colIndex) => (
-                      <TableCell
-                        key={`skeleton-cell-${index}-${colIndex}`}
-                        style={{ width: columnWidth }}
-                      >
-                        <Skeleton className="h-4 w-full" />
-                      </TableCell>
-                    ))}
+                    .map((column, colIndex) => {
+                      const width =
+                        hasSizedColumns && column.columnDef.size
+                          ? `${column.columnDef.size}px`
+                          : `${100 / visibleHeaders.length}%`;
+                      return (
+                        <TableCell
+                          key={`skeleton-cell-${index}-${colIndex}`}
+                          style={{ width }}
+                        >
+                          <Skeleton className="h-4 w-full" />
+                        </TableCell>
+                      );
+                    })}
                 </TableRow>
               ))
             ) : table.getRowModel().rows?.length ? (
@@ -284,18 +302,24 @@ export function DataTable<TData, TValue>({
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
                 >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell
-                      key={cell.id}
-                      style={{ width: columnWidth }}
-                      className="whitespace-nowrap"
-                    >
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
+                  {row.getVisibleCells().map((cell) => {
+                    const width =
+                      hasSizedColumns && cell.column.columnDef.size
+                        ? `${cell.column.columnDef.size}px`
+                        : `${100 / visibleHeaders.length}%`;
+                    return (
+                      <TableCell
+                        key={cell.id}
+                        style={{ width }}
+                        className="whitespace-nowrap"
+                      >
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </TableCell>
+                    );
+                  })}
                 </TableRow>
               ))
             ) : (

@@ -4,8 +4,14 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import type { RoomWithBooking } from "@/hooks/use-room-map";
-import { roomTypeLabels } from "@/lib/constants";
+import type { RoomWithBooking } from "@/lib/types";
+import {
+  roomTypeLabels,
+  ROOM_MAP_STATUS,
+  ROOM_STATUS,
+  roomStatusLabels,
+  roomMapStatusCardColors,
+} from "@/lib/constants";
 import { IconDotsVertical, IconSparkles, IconSun } from "@tabler/icons-react";
 import {
   DropdownMenu,
@@ -24,14 +30,6 @@ import { useRooms } from "@/hooks/use-rooms";
 import { useBookings } from "@/hooks/use-bookings";
 import { statusOptions } from "@/components/bookings/status";
 import type { BookingStatus } from "@/hooks/use-bookings";
-
-const statusColors: Record<RoomWithBooking["mapStatus"], string> = {
-  vacant: "bg-white border border-gray-200", // vacant: phòng trống
-  upcoming_checkin: "bg-orange-50 border-2 border-orange-300", // upcoming_checkin: phòng sắp nhận
-  occupied: "bg-green-50 border-2 border-green-400", // occupied: phòng đang sử dụng
-  upcoming_checkout: "bg-blue-50 border-2 border-blue-400", // upcoming_checkout: phòng sắp trả
-  overdue_checkout: "bg-red-50 border-2 border-red-500", // overdue_checkout: phòng quá giờ trả
-};
 
 // Kiểm tra booking có đang active không (trong khoảng check-in và check-out)
 function isBookingActive(booking: RoomWithBooking["currentBooking"]): boolean {
@@ -83,7 +81,9 @@ interface RoomCardProps {
 export function RoomCard({ room, onStatusChange }: RoomCardProps) {
   const stayDuration = calculateStayDuration(room.currentBooking);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [newStatus, setNewStatus] = useState<"clean" | "not_clean">("clean");
+  const [newStatus, setNewStatus] = useState<
+    typeof ROOM_STATUS.CLEAN | typeof ROOM_STATUS.NOT_CLEAN
+  >(ROOM_STATUS.CLEAN);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isQuickBookingOpen, setIsQuickBookingOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
@@ -93,7 +93,9 @@ export function RoomCard({ room, onStatusChange }: RoomCardProps) {
   // Tính giá theo giờ (giả sử = giá đêm / 24)
   // const pricePerHour = Math.round(room.price_per_night / 24);
 
-  const handleStatusChange = (status: "clean" | "not_clean") => {
+  const handleStatusChange = (
+    status: typeof ROOM_STATUS.CLEAN | typeof ROOM_STATUS.NOT_CLEAN
+  ) => {
     setNewStatus(status);
     setIsDialogOpen(true);
   };
@@ -105,7 +107,9 @@ export function RoomCard({ room, onStatusChange }: RoomCardProps) {
 
       toast.success("Cập nhật trạng thái thành công", {
         description: `Phòng ${room.name} đã được chuyển thành ${
-          newStatus === "clean" ? "Sạch" : "Chưa dọn"
+          newStatus === ROOM_STATUS.CLEAN
+            ? roomStatusLabels[ROOM_STATUS.CLEAN]
+            : roomStatusLabels[ROOM_STATUS.NOT_CLEAN]
         }.`,
       });
       setIsDialogOpen(false);
@@ -134,12 +138,12 @@ export function RoomCard({ room, onStatusChange }: RoomCardProps) {
     }
 
     // Mở dialog phù hợp dựa trên trạng thái phòng
-    if (room.mapStatus === "vacant") {
+    if (room.mapStatus === ROOM_MAP_STATUS.VACANT) {
       setIsQuickBookingOpen(true);
     } else if (
-      room.mapStatus === "occupied" ||
-      room.mapStatus === "upcoming_checkout" ||
-      room.mapStatus === "overdue_checkout"
+      room.mapStatus === ROOM_MAP_STATUS.OCCUPIED ||
+      room.mapStatus === ROOM_MAP_STATUS.UPCOMING_CHECKOUT ||
+      room.mapStatus === ROOM_MAP_STATUS.OVERDUE_CHECKOUT
     ) {
       setIsCheckoutOpen(true);
     }
@@ -190,7 +194,7 @@ export function RoomCard({ room, onStatusChange }: RoomCardProps) {
         onClick={handleCardClick}
         className={cn(
           "relative p-4 cursor-pointer hover:shadow-lg transition-all duration-200 grid grid-rows-[auto_auto_auto_1fr_auto] gap-3",
-          statusColors[room.mapStatus]
+          roomMapStatusCardColors[room.mapStatus]
         )}
       >
         {/* Header với badge "Sạch" và menu */}
@@ -224,7 +228,7 @@ export function RoomCard({ room, onStatusChange }: RoomCardProps) {
             <DropdownMenuContent align="end">
               {room.isClean ? (
                 <DropdownMenuItem
-                  onClick={() => handleStatusChange("not_clean")}
+                  onClick={() => handleStatusChange(ROOM_STATUS.NOT_CLEAN)}
                   className="cursor-pointer"
                 >
                   <BrushCleaning className="size-4 mr-2" />
@@ -232,7 +236,7 @@ export function RoomCard({ room, onStatusChange }: RoomCardProps) {
                 </DropdownMenuItem>
               ) : (
                 <DropdownMenuItem
-                  onClick={() => handleStatusChange("clean")}
+                  onClick={() => handleStatusChange(ROOM_STATUS.CLEAN)}
                   className="cursor-pointer"
                 >
                   <IconSparkles className="size-4 mr-2" />
@@ -256,7 +260,7 @@ export function RoomCard({ room, onStatusChange }: RoomCardProps) {
         </div>
 
         {/* Giá với icon */}
-        <div className="grid grid-rows-2 gap-2">
+        <div className="gap-2">
           {/* Giá theo đêm */}
           <div className="grid grid-cols-[auto_1fr] items-center gap-2 text-sm">
             <IconSun className="size-4 text-muted-foreground" />
@@ -268,10 +272,10 @@ export function RoomCard({ room, onStatusChange }: RoomCardProps) {
 
         {/* Thông tin booking cho các trạng thái: sắp nhận, đang sử dụng, sắp trả, quá giờ trả */}
         {room.currentBooking &&
-          (room.mapStatus === "upcoming_checkin" ||
-            room.mapStatus === "occupied" ||
-            room.mapStatus === "upcoming_checkout" ||
-            room.mapStatus === "overdue_checkout") && (
+          (room.mapStatus === ROOM_MAP_STATUS.UPCOMING_CHECKIN ||
+            room.mapStatus === ROOM_MAP_STATUS.OCCUPIED ||
+            room.mapStatus === ROOM_MAP_STATUS.UPCOMING_CHECKOUT ||
+            room.mapStatus === ROOM_MAP_STATUS.OVERDUE_CHECKOUT) && (
             <div className="grid gap-2 pt-2 border-t border-gray-200 dark:border-gray-800">
               {/* Hiển thị check-in và check-out */}
               <div className="grid gap-1 text-xs">
@@ -317,7 +321,7 @@ export function RoomCard({ room, onStatusChange }: RoomCardProps) {
       </Card>
 
       {/* Quick Booking Dialog */}
-      {room.mapStatus === "vacant" && (
+      {room.mapStatus === ROOM_MAP_STATUS.VACANT && (
         <QuickBookingDialog
           open={isQuickBookingOpen}
           onOpenChange={setIsQuickBookingOpen}
@@ -327,9 +331,9 @@ export function RoomCard({ room, onStatusChange }: RoomCardProps) {
       )}
 
       {/* Checkout Dialog */}
-      {(room.mapStatus === "occupied" ||
-        room.mapStatus === "upcoming_checkout" ||
-        room.mapStatus === "overdue_checkout") && (
+      {(room.mapStatus === ROOM_MAP_STATUS.OCCUPIED ||
+        room.mapStatus === ROOM_MAP_STATUS.UPCOMING_CHECKOUT ||
+        room.mapStatus === ROOM_MAP_STATUS.OVERDUE_CHECKOUT) && (
         <CheckoutDialog
           open={isCheckoutOpen}
           onOpenChange={setIsCheckoutOpen}
