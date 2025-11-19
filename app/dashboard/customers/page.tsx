@@ -25,6 +25,7 @@ import { CreateCustomerDialog } from "@/components/customers/create-customer-dia
 import { EditCustomerDialog } from "@/components/customers/edit-customer-dialog";
 import { toast } from "sonner";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { translateCustomerError } from "@/lib/functions";
 
 // Status badge
 function StatusBadge({
@@ -194,8 +195,9 @@ export default function CustomersPage() {
           description: "Khách hàng mới đã được thêm vào hệ thống.",
         });
       } catch (error) {
-        const message =
+        const rawMessage =
           error instanceof Error ? error.message : "Không thể tạo khách hàng";
+        const message = translateCustomerError(rawMessage);
         toast.error("Tạo khách hàng thất bại", { description: message });
         throw error;
       }

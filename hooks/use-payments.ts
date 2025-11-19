@@ -1,31 +1,15 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { createClient } from "@/lib/supabase/client";
-import type { Payment, PaginationMeta } from "@/lib/types";
+import type { PaginationMeta } from "@/lib/types";
+import {
+  searchPayments,
+  type PaymentWithBooking,
+} from "@/services/payments";
 
 // Re-export types for backward compatibility
 export type { Payment, PaginationMeta } from "@/lib/types";
-
-// Extended Payment type with booking relation
-export type PaymentWithBooking = Payment & {
-  bookings?: {
-    id: string;
-    customer_id: string | null;
-    room_id: string | null;
-    check_in: string;
-    check_out: string;
-    status: string;
-    customers?: {
-      id: string;
-      full_name: string;
-    } | null;
-    rooms?: {
-      id: string;
-      name: string;
-    } | null;
-  } | null;
-};
+export type { PaymentWithBooking } from "@/services/payments";
 
 export function usePayments(
   page: number = 1,
@@ -51,60 +35,14 @@ export function usePayments(
       try {
         setIsLoading(true);
         setError(null);
-        const supabase = createClient();
 
-        // Calculate offset
-        const from = (pageNum - 1) * limitNum;
-        const to = from + limitNum - 1;
-
-        // Build query with booking relation
-        let query = supabase.from("payments").select(
-          `
-            *,
-            bookings (
-              id,
-              customer_id,
-              room_id,
-              check_in,
-              check_out,
-              status,
-              customers (
-                id,
-                full_name
-              ),
-              rooms (
-                id,
-                name
-              )
-            )
-          `,
-          { count: "exact" }
+        const trimmedSearch = searchTerm?.trim() || null;
+        const { payments: paymentsData, total } = await searchPayments(
+          trimmedSearch,
+          pageNum,
+          limitNum
         );
 
-        // Add search filter if search term exists
-        // Search in payment ID and booking ID
-        if (searchTerm && searchTerm.trim() !== "") {
-          const trimmedSearch = searchTerm.trim();
-          query = query.or(
-            `id.ilike.%${trimmedSearch}%,booking_id.ilike.%${trimmedSearch}%`
-          );
-        }
-
-        // Fetch data with pagination
-        const {
-          data,
-          error: fetchError,
-          count,
-        } = await query
-          .order("created_at", { ascending: false })
-          .range(from, to);
-
-        if (fetchError) {
-          throw new Error(fetchError.message);
-        }
-
-        const paymentsData = (data || []) as PaymentWithBooking[];
-        const total = count || 0;
         const totalPages = Math.ceil(total / limitNum);
 
         setPayments(paymentsData);

@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 import type { Payment, PaymentInput } from "@/lib/types";
-import { PAYMENT_STATUS } from "@/lib/constants";
+import { PAYMENT_STATUS, PAYMENT_METHOD } from "@/lib/constants";
 
 /**
  * Create a payment record for a booking
@@ -17,7 +17,9 @@ export async function createPayment(
       .insert({
         booking_id: paymentData.booking_id,
         amount: paymentData.amount,
-        payment_method: paymentData.payment_method || "bank_transfer",
+        payment_type: paymentData.payment_type,
+        payment_method:
+          paymentData.payment_method || PAYMENT_METHOD.PAY_AT_HOTEL,
         payment_status: paymentData.payment_status || PAYMENT_STATUS.PENDING,
         paid_at: paymentData.paid_at || null,
         verified_at: paymentData.verified_at || null,
@@ -149,7 +151,7 @@ export async function updatePaymentAmount(
 ): Promise<Payment | null> {
   try {
     const supabase = createClient();
-    
+
     // Check current payment status - if already refunded, cannot change
     const { data: currentPayment, error: fetchError } = await supabase
       .from("payments")
@@ -164,7 +166,9 @@ export async function updatePaymentAmount(
 
     // If payment is already refunded, cannot change amount
     if (currentPayment.payment_status === "refunded") {
-      throw new Error("Không thể thay đổi số tiền của payment đã được hoàn tiền");
+      throw new Error(
+        "Không thể thay đổi số tiền của payment đã được hoàn tiền"
+      );
     }
 
     const { data, error } = await supabase
@@ -213,5 +217,101 @@ export async function getPaymentsByBookingId(
   } catch (err) {
     console.error("Error fetching payments:", err);
     return [];
+  }
+}
+
+/**
+ * Extended Payment type with booking relation
+ */
+export type PaymentWithBooking = Payment & {
+  bookings?: {
+    id: string;
+    customer_id: string | null;
+    room_id: string | null;
+    check_in: string;
+    check_out: string;
+    status: string;
+    customers?: {
+      id: string;
+      full_name: string;
+    } | null;
+    rooms?: {
+      id: string;
+      name: string;
+    } | null;
+  } | null;
+};
+
+/**
+ * Search payments with pagination and booking relations
+ * @param search - Search term (searches in payment ID and booking ID)
+ * @param page - Page number
+ * @param limit - Items per page
+ * @returns Object with payments array and total count
+ */
+export async function searchPayments(
+  search: string | null,
+  page: number,
+  limit: number
+): Promise<{ payments: PaymentWithBooking[]; total: number }> {
+  try {
+    const supabase = createClient();
+
+    // Calculate offset
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    // Build query with booking relation
+    let query = supabase.from("payments").select(
+      `
+        *,
+        bookings (
+          id,
+          customer_id,
+          room_id,
+          check_in,
+          check_out,
+          status,
+          customers (
+            id,
+            full_name
+          ),
+          rooms (
+            id,
+            name
+          )
+        )
+      `,
+      { count: "exact" }
+    );
+
+    // Add search filter if search term exists
+    // Search in payment ID and booking ID
+    if (search && search.trim() !== "") {
+      const trimmedSearch = search.trim();
+      query = query.or(
+        `id.ilike.%${trimmedSearch}%,booking_id.ilike.%${trimmedSearch}%`
+      );
+    }
+
+    // Fetch data with pagination
+    const { data, error, count } = await query
+      .order("created_at", { ascending: false })
+      .range(from, to);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    const paymentsData = (data || []) as PaymentWithBooking[];
+    const total = count || 0;
+
+    return {
+      payments: paymentsData,
+      total,
+    };
+  } catch (err) {
+    console.error("Error searching payments:", err);
+    throw err;
   }
 }

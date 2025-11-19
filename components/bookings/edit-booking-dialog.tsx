@@ -8,39 +8,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import type { BookingInput, BookingRecord } from "@/hooks/use-bookings";
-import { useRooms } from "@/hooks/use-rooms";
-import { TimeSelect } from "@/components/ui/time-select";
-import { formatCurrency, getDateTimeISO } from "@/lib/utils";
-import { BOOKING_STATUS } from "@/lib/constants";
+import { formatCurrency } from "@/lib/utils";
 import {
-  calculateNightsValue,
   formatDateForInput,
   formatTimeForInput,
   translateBookingError,
 } from "@/lib/functions";
-
-type EditBookingFormState = {
-  room_id: string;
-  check_in_date: string;
-  check_in_time: string;
-  check_out_date: string;
-  check_out_time: string;
-  total_guests: string;
-  total_amount: string;
-  advance_payment: string;
-  notes: string;
-};
 
 export function EditBookingDialog({
   open,
@@ -53,78 +30,28 @@ export function EditBookingDialog({
   booking: BookingRecord | null;
   onUpdate: (id: string, input: Partial<BookingInput>) => Promise<void>;
 }) {
-  const [formValues, setFormValues] = useState<EditBookingFormState>({
-    room_id: "",
-    check_in_date: "",
-    check_in_time: "14:00",
-    check_out_date: "",
-    check_out_time: "12:00",
+  const [formValues, setFormValues] = useState({
     total_guests: "1",
-    total_amount: "0",
-    advance_payment: "0",
     notes: "",
   });
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { rooms } = useRooms();
 
   // Load booking data into form when booking changes
+  // This is necessary to sync form state with booking prop
+  // Note: This pattern is intentional - we need to sync form state when booking prop changes
   useEffect(() => {
     if (booking) {
       setFormValues({
-        room_id: booking.room_id || "",
-        check_in_date: formatDateForInput(booking.check_in),
-        check_in_time: formatTimeForInput(booking.check_in),
-        check_out_date: formatDateForInput(booking.check_out),
-        check_out_time: formatTimeForInput(booking.check_out),
         total_guests: booking.total_guests.toString(),
-        total_amount: booking.total_amount.toString(),
-        advance_payment: booking.advance_payment.toString(),
         notes: booking.notes || "",
       });
       setError(null);
     }
   }, [booking]);
 
-  // Kết hợp date và time bằng helper function để tính toán
-  const checkInISO = getDateTimeISO(
-    formValues.check_in_date,
-    formValues.check_in_time
-  );
-  const checkOutISO = getDateTimeISO(
-    formValues.check_out_date,
-    formValues.check_out_time
-  );
-
-  const nights = calculateNightsValue(checkInISO || "", checkOutISO || "");
-
-  // Get selected room
-  const selectedRoom = rooms.find((room) => room.id === formValues.room_id);
-
-  // Calculate total amount from room price and nights
-  const calculatedTotalAmount =
-    selectedRoom && nights > 0 ? selectedRoom.price_per_night * nights : 0;
-
-  // Auto-update total amount when room or dates change
-  // In edit mode, always recalculate when room/dates change
-  useEffect(() => {
-    if (calculatedTotalAmount > 0 && booking) {
-      setFormValues((prev) => ({
-        ...prev,
-        total_amount: calculatedTotalAmount.toString(),
-      }));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    formValues.room_id,
-    formValues.check_in_date,
-    formValues.check_in_time,
-    formValues.check_out_date,
-    formValues.check_out_time,
-  ]);
-
   const handleInputChange =
-    (field: keyof EditBookingFormState) =>
+    (field: "total_guests" | "notes") =>
     (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       const { value } = event.target;
       setFormValues((prev) => ({ ...prev, [field]: value }));
@@ -148,92 +75,25 @@ export function EditBookingDialog({
 
     setError(null);
 
-    // Kết hợp date và time bằng helper function
-    // If booking is confirmed or later, only update notes
-    const canEditDetails =
-      booking.status === BOOKING_STATUS.PENDING ||
-      booking.status === BOOKING_STATUS.AWAITING_PAYMENT;
-
-    let payload: Partial<BookingInput>;
-
-    if (canEditDetails) {
-      // Validate and prepare full payload for pending/awaiting_payment
-      const checkInISO = getDateTimeISO(
-        formValues.check_in_date,
-        formValues.check_in_time
-      );
-      const checkOutISO = getDateTimeISO(
-        formValues.check_out_date,
-        formValues.check_out_time
-      );
-
-      if (!checkInISO || !checkOutISO) {
-        setError("Vui lòng nhập đầy đủ ngày và giờ check-in/check-out.");
-        return;
-      }
-
-      const number_of_nights = calculateNightsValue(checkInISO, checkOutISO);
-
-      if (number_of_nights <= 0) {
-        setError("Ngày và giờ check-out phải sau ngày và giờ check-in.");
-        return;
-      }
-
-      if (!formValues.room_id) {
-        setError("Vui lòng chọn phòng.");
-        return;
-      }
-
-      const totalGuests = Number(formValues.total_guests);
-      if (!Number.isFinite(totalGuests) || totalGuests < 1) {
-        setError("Số khách phải là số nguyên dương.");
-        return;
-      }
-
-      // Validate room exists
-      const selectedRoomForSubmit = rooms.find(
-        (room) => room.id === formValues.room_id
-      );
-      if (!selectedRoomForSubmit) {
-        setError("Phòng đã chọn không tồn tại.");
-        return;
-      }
-
-      // Calculate total amount from room price and nights
-      const totalAmount =
-        selectedRoomForSubmit && number_of_nights > 0
-          ? selectedRoomForSubmit.price_per_night * number_of_nights
-          : 0;
-
-      if (!Number.isFinite(totalAmount) || totalAmount <= 0) {
-        setError(
-          "Tổng tiền không hợp lệ. Vui lòng kiểm tra lại phòng và số đêm."
-        );
-        return;
-      }
-
-      const advancePayment = 0; // Đặt cọc luôn là 0
-
-      payload = {
-        room_id: formValues.room_id,
-        check_in: checkInISO,
-        check_out: checkOutISO,
-        number_of_nights,
-        total_guests: totalGuests,
-        notes: formValues.notes.trim() || null,
-        total_amount: totalAmount,
-        advance_payment: advancePayment,
-      };
-    } else {
-      // For confirmed or later, only update notes
-      payload = {
-        notes: formValues.notes.trim() || null,
-      };
+    // Validate total_guests
+    const totalGuests = Number(formValues.total_guests);
+    if (!Number.isFinite(totalGuests) || totalGuests < 1) {
+      setError("Số khách phải là số nguyên dương.");
+      return;
     }
+
+    // Cập nhật notes và total_guests
+    const updateData: {
+      notes?: string | null;
+      total_guests?: number;
+    } = {
+      notes: formValues.notes.trim() || null,
+      total_guests: totalGuests,
+    };
 
     try {
       setIsSubmitting(true);
-      await onUpdate(booking.id, payload);
+      await onUpdate(booking.id, updateData);
       resetForm();
       onOpenChange(false);
     } catch (err) {
@@ -250,177 +110,84 @@ export function EditBookingDialog({
 
   if (!booking) return null;
 
-  // Check if booking status allows editing room, guests, dates
-  const canEditDetails =
-    booking.status === BOOKING_STATUS.PENDING ||
-    booking.status === BOOKING_STATUS.AWAITING_PAYMENT;
-
-  // If confirmed or later, only allow editing notes
-  const canOnlyEditNotes = !canEditDetails;
-
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogContent className="min-w-2xl max-w-6xl">
         <DialogHeader>
           <DialogTitle>Chỉnh sửa booking</DialogTitle>
           <DialogDescription>
-            {canOnlyEditNotes
-              ? "Booking đã được xác nhận. Chỉ có thể cập nhật ghi chú."
-              : "Cập nhật thông tin booking cho khách hàng."}
+            Cập nhật số khách và ghi chú cho booking.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {canEditDetails ? (
+          <div className="space-y-4 rounded-lg border border-muted bg-muted/50 p-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="room_id">Chọn phòng *</Label>
-                <Select
-                  value={formValues.room_id}
-                  onValueChange={(v) =>
-                    setFormValues((prev) => ({ ...prev, room_id: v }))
-                  }
-                >
-                  <SelectTrigger id="room_id" className="w-full">
-                    <SelectValue placeholder="Chọn phòng" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {rooms.length === 0 ? (
-                      <SelectItem value="no_room" disabled>
-                        Không có phòng
-                      </SelectItem>
-                    ) : (
-                      rooms.map((room) => (
-                        <SelectItem key={room.id} value={room.id}>
-                          {room.name} -{" "}
-                          {new Intl.NumberFormat("vi-VN").format(
-                            room.price_per_night
-                          )}{" "}
-                          VNĐ/đêm
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="total_guests">Số khách *</Label>
+                <Label>Phòng</Label>
                 <Input
-                  id="total_guests"
-                  type="number"
-                  min={1}
-                  value={formValues.total_guests}
-                  onChange={handleInputChange("total_guests")}
-                />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label>Ngày và giờ check-in *</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  <Input
-                    id="check_in_date"
-                    type="date"
-                    value={formValues.check_in_date}
-                    onChange={handleInputChange("check_in_date")}
-                    required
-                  />
-                  <TimeSelect
-                    value={formValues.check_in_time}
-                    onValueChange={(value) =>
-                      setFormValues((prev) => ({
-                        ...prev,
-                        check_in_time: value,
-                      }))
-                    }
-                    placeholder="Chọn giờ"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label>
-                  Ngày và giờ check-out * {nights > 0 ? `(${nights} đêm)` : ""}
-                </Label>
-                <div className="grid grid-cols-2 gap-2">
-                  <Input
-                    id="check_out_date"
-                    type="date"
-                    value={formValues.check_out_date}
-                    onChange={handleInputChange("check_out_date")}
-                    required
-                  />
-                  <TimeSelect
-                    value={formValues.check_out_time}
-                    onValueChange={(value) =>
-                      setFormValues((prev) => ({
-                        ...prev,
-                        check_out_time: value,
-                      }))
-                    }
-                    placeholder="Chọn giờ"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2 w-full">
-                <Label htmlFor="total_amount">Tổng tiền (VNĐ)</Label>
-                <Input
-                  id="total_amount"
-                  type="text"
-                  value={formatCurrency(Number(formValues.total_amount || 0))}
+                  value={booking.rooms?.name || booking.room_id || "-"}
                   disabled
-                  className="bg-muted w-full"
+                  className="bg-background"
                 />
-                {selectedRoom && nights > 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    Tự động tính từ: {selectedRoom.name} × {nights} đêm ={" "}
-                    {formatCurrency(calculatedTotalAmount)}
-                  </p>
-                )}
               </div>
-            </div>
-          ) : (
-            <div className="space-y-4 rounded-lg border border-muted bg-muted/50 p-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Phòng</Label>
-                  <Input
-                    value={booking.rooms?.name || "-"}
-                    disabled
-                    className="bg-background"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Số khách</Label>
-                  <Input
-                    value={booking.total_guests}
-                    disabled
-                    className="bg-background"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Check-in</Label>
+              <div className="space-y-2 md:col-span-2">
+                <Label>Check-in</Label>
+                <div className="grid grid-cols-2 gap-2">
                   <Input
                     value={formatDateForInput(booking.check_in)}
                     disabled
                     className="bg-background"
                   />
+                  <Input
+                    value={formatTimeForInput(booking.check_in)}
+                    disabled
+                    className="bg-background"
+                  />
                 </div>
-                <div className="space-y-2">
-                  <Label>Check-out</Label>
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label>Check-out</Label>
+                <div className="grid grid-cols-2 gap-2">
                   <Input
                     value={formatDateForInput(booking.check_out)}
                     disabled
                     className="bg-background"
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label>Tổng tiền</Label>
                   <Input
-                    value={formatCurrency(booking.total_amount)}
+                    value={formatTimeForInput(booking.check_out)}
+                    disabled
                     className="bg-background"
-                    readOnly
                   />
                 </div>
               </div>
+              <div className="space-y-2">
+                <Label>Tổng tiền</Label>
+                <Input
+                  value={formatCurrency(booking.total_amount)}
+                  className="bg-background"
+                  readOnly
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Tiền cọc hiện tại</Label>
+                <Input
+                  value={formatCurrency(booking.advance_payment || 0)}
+                  className="bg-background"
+                  readOnly
+                />
+              </div>
             </div>
-          )}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="total_guests">Số khách *</Label>
+            <Input
+              id="total_guests"
+              type="number"
+              min={1}
+              value={formValues.total_guests}
+              onChange={handleInputChange("total_guests")}
+            />
+          </div>
           <div className="space-y-2">
             <Label htmlFor="notes">Ghi chú</Label>
             <Textarea

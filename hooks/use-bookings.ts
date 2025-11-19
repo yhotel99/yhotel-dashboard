@@ -1,15 +1,34 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { createClient } from "@/lib/supabase/client";
 import type { BookingRecord, BookingInput, PaginationMeta } from "@/lib/types";
 import {
   createPayment,
-  getPaymentByBookingId,
+  getPaymentsByBookingId,
   updatePaymentStatus,
   updatePaymentAmount,
 } from "@/services/payments";
-import { BOOKING_STATUS, PAYMENT_STATUS } from "@/lib/constants";
+import {
+  searchBookings,
+  countBookings,
+  findConflictingBooking as findConflictingBookingService,
+  createBookingSecure,
+  getBookingByIdWithRelations,
+  getBookingById as getBookingByIdService,
+  getBookingByIdWithDetails as getBookingByIdWithDetailsService,
+  getBookingsByCustomerId as getBookingsByCustomerIdService,
+  updateBooking as updateBookingService,
+  getBookingStatusAndAmount,
+  getBookingAmounts,
+  updateBookingStatus as updateBookingStatusService,
+  deleteBooking as deleteBookingService,
+} from "@/services/bookings";
+import {
+  BOOKING_STATUS,
+  PAYMENT_STATUS,
+  PAYMENT_TYPE,
+  PAYMENT_METHOD,
+} from "@/lib/constants";
 
 // Re-export types for backward compatibility
 export type {
@@ -43,33 +62,15 @@ export function useBookings(
       try {
         setIsLoading(true);
         setError(null);
-        const supabase = createClient();
 
         const trimmedSearch = searchTerm?.trim() || null;
 
-        // Call both RPC functions in parallel for better performance
-        const [bookingsResult, countResult] = await Promise.all([
-          supabase.rpc("search_bookings", {
-            p_search: trimmedSearch,
-            p_page: pageNum,
-            p_limit: limitNum,
-          }),
-          supabase.rpc("count_bookings", {
-            p_search: trimmedSearch,
-          }),
+        // Call both service functions in parallel for better performance
+        const [bookingsData, total] = await Promise.all([
+          searchBookings(trimmedSearch, pageNum, limitNum),
+          countBookings(trimmedSearch),
         ]);
 
-        if (bookingsResult.error) {
-          throw new Error(bookingsResult.error.message);
-        }
-
-        if (countResult.error) {
-          throw new Error(countResult.error.message);
-        }
-
-        const bookingsData = (bookingsResult.data || []) as BookingRecord[];
-
-        const total = (countResult.data as number) || 0;
         const totalPages = Math.ceil(total / limitNum);
 
         setBookings(bookingsData);
@@ -105,36 +106,7 @@ export function useBookings(
       checkOut: string
     ): Promise<BookingRecord | null> => {
       if (!roomId) return null;
-
-      try {
-        const supabase = createClient();
-        // Query bookings that overlap with the given time range
-        // Only check active bookings: pending, awaiting_payment, confirmed, checked_in
-        // Overlap condition: (check_in < p_check_out) AND (check_out > p_check_in)
-        const { data, error } = await supabase
-          .from("bookings")
-          .select("*")
-          .eq("room_id", roomId)
-          .in("status", [
-            "pending",
-            "awaiting_payment",
-            "confirmed",
-            "checked_in",
-          ])
-          .is("deleted_at", null)
-          .lt("check_in", checkOut)
-          .gt("check_out", checkIn)
-          .limit(1)
-          .maybeSingle();
-
-        if (error || !data) {
-          return null;
-        }
-
-        return data as BookingRecord;
-      } catch {
-        return null;
-      }
+      return findConflictingBookingService(roomId, checkIn, checkOut);
     },
     []
   );
@@ -142,63 +114,20 @@ export function useBookings(
   const createBooking = useCallback(
     async (input: BookingInput) => {
       try {
-        const supabase = createClient();
+        // Create booking using secure RPC function
+        const bookingId = await createBookingSecure(input);
 
-        // Gọi RPC function để tạo booking (atomic, tránh race condition)
-        // Thứ tự tham số theo function SQL definition
-        const { data: bookingId, error: rpcError } = await supabase.rpc(
-          "create_booking_secure",
-          {
-            p_customer_id: input.customer_id || null,
-            p_room_id: input.room_id || null,
-            p_check_in: input.check_in, // TIMESTAMPTZ
-            p_check_out: input.check_out, // TIMESTAMPTZ
-            p_number_of_nights: input.number_of_nights || 0,
-            p_total_amount: input.total_amount,
-            p_total_guests: input.total_guests ?? 1,
-            p_notes: input.notes || null,
-            p_advance_payment: input.advance_payment ?? 0,
-          }
-        );
+        // Fetch booking with relations
+        const bookingData = await getBookingByIdWithRelations(bookingId);
 
-        if (rpcError) {
-          throw new Error(rpcError.message);
-        }
-
-        if (!bookingId) {
-          throw new Error("Không thể tạo booking");
-        }
-
-        // Fetch lại booking vừa tạo với đầy đủ relations
-        const { data: bookingData, error: fetchError } = await supabase
-          .from("bookings")
-          .select(
-            `
-            *,
-            customers (
-              id,
-              full_name
-            ),
-            rooms (
-              id,
-              name
-            )
-            `
-          )
-          .eq("id", bookingId)
-          .single();
-
-        if (fetchError || !bookingData) {
-          // Nếu không fetch được, vẫn refresh danh sách
+        if (!bookingData) {
+          // If can't fetch, still refresh list
           await fetchBookings(page, limit, search);
-          throw new Error(
-            fetchError?.message || "Không thể lấy thông tin booking vừa tạo"
-          );
+          throw new Error("Không thể lấy thông tin booking vừa tạo");
         }
 
-        const newBooking = bookingData as BookingRecord;
         await fetchBookings(page, limit, search);
-        return newBooking;
+        return bookingData;
       } catch (err) {
         throw err;
       }
@@ -207,39 +136,104 @@ export function useBookings(
   );
 
   const updateBooking = useCallback(
-    async (id: string, input: Partial<BookingInput>) => {
+    async (
+      id: string,
+      input: {
+        notes?: string | null;
+        total_guests?: number;
+      }
+    ) => {
       try {
-        const supabase = createClient();
+        const updatedBooking = await updateBookingService(id, input);
 
+        // Cập nhật state thay vì fetch lại, giữ nguyên relations nếu response không có
+        setBookings((prevBookings) =>
+          prevBookings.map((booking) => {
+            if (booking.id === id) {
+              // Nếu response không có relations, giữ nguyên từ booking cũ
+              return {
+                ...booking,
+                notes: input.notes !== undefined ? input.notes : booking.notes,
+                total_guests: input.total_guests || updatedBooking.total_guests,
+              };
+            }
+            return booking;
+          })
+        );
+
+        return updatedBooking;
+      } catch (err) {
+        throw err;
+      }
+    },
+    []
+  );
+
+  const transferBooking = useCallback(
+    async (
+      id: string,
+      input: {
+        room_id?: string | null;
+        check_in?: string;
+        check_out?: string;
+        number_of_nights?: number;
+        total_amount?: number;
+        advance_payment?: number;
+      }
+    ) => {
+      try {
         // Get current booking to check status
-        const { data: currentBooking } = await supabase
-          .from("bookings")
-          .select("status, total_amount")
-          .eq("id", id)
-          .single();
+        const currentBooking = await getBookingStatusAndAmount(id);
 
-        const { data, error } = await supabase
-          .from("bookings")
-          .update(input)
-          .eq("id", id)
-          .select()
-          .single();
+        const updatedBooking = await updateBookingService(id, input);
 
-        if (error) {
-          throw new Error(error.message);
-        }
-
-        const updatedBooking = data as BookingRecord;
-
-        // If booking status is awaiting_payment and total_amount changed, update payment amount
+        // If booking status is awaiting_payment and total_amount provided, update payments
         if (
           currentBooking?.status === BOOKING_STATUS.AWAITING_PAYMENT &&
-          input.total_amount !== undefined &&
-          input.total_amount !== currentBooking.total_amount
+          input.total_amount !== undefined
         ) {
-          const payment = await getPaymentByBookingId(id);
-          if (payment && payment.payment_status !== PAYMENT_STATUS.REFUNDED) {
-            await updatePaymentAmount(payment.id, input.total_amount);
+          const advancePayment = input.advance_payment || 0;
+          const roomChargeAmount = input.total_amount - advancePayment;
+
+          // Get all payments for this booking
+          const existingPayments = await getPaymentsByBookingId(id);
+
+          if (existingPayments.length > 0) {
+            // Find and update ROOM_CHARGE payment
+            const roomChargePayment = existingPayments.find(
+              (p) =>
+                p.payment_type === PAYMENT_TYPE.ROOM_CHARGE &&
+                p.payment_status !== PAYMENT_STATUS.REFUNDED
+            );
+
+            if (roomChargePayment) {
+              await updatePaymentAmount(roomChargePayment.id, roomChargeAmount);
+            }
+
+            // Update ADVANCE_PAYMENT payment if advance_payment provided
+            if (input.advance_payment !== undefined) {
+              const advancePaymentRecord = existingPayments.find(
+                (p) =>
+                  p.payment_type === PAYMENT_TYPE.ADVANCE_PAYMENT &&
+                  p.payment_status !== PAYMENT_STATUS.REFUNDED
+              );
+
+              if (advancePaymentRecord) {
+                await updatePaymentAmount(
+                  advancePaymentRecord.id,
+                  advancePayment
+                );
+              } else if (advancePayment > 0) {
+                // If advance_payment was added but payment doesn't exist, create it
+                await createPayment({
+                  booking_id: id,
+                  amount: advancePayment,
+                  payment_type: PAYMENT_TYPE.ADVANCE_PAYMENT,
+                  payment_method: PAYMENT_METHOD.PAY_AT_HOTEL,
+                  payment_status: PAYMENT_STATUS.PENDING,
+                });
+              }
+            }
           }
         }
 
@@ -247,7 +241,6 @@ export function useBookings(
         setBookings((prevBookings) =>
           prevBookings.map((booking) => {
             if (booking.id === id) {
-              // Nếu response không có relations, giữ nguyên từ booking cũ
               return {
                 ...updatedBooking,
                 customers: updatedBooking.customers ?? booking.customers,
@@ -269,19 +262,7 @@ export function useBookings(
   const updateBookingNotes = useCallback(
     async (id: string, notes: string | null): Promise<BookingRecord> => {
       try {
-        const supabase = createClient();
-        const { data, error } = await supabase
-          .from("bookings")
-          .update({ notes })
-          .eq("id", id)
-          .select()
-          .single();
-
-        if (error) {
-          throw new Error(error.message);
-        }
-
-        const updatedBooking = data as BookingRecord;
+        const updatedBooking = await updateBookingService(id, { notes });
 
         // Cập nhật state trực tiếp, giữ nguyên relations nếu response không có
         setBookings((prevBookings) =>
@@ -305,79 +286,68 @@ export function useBookings(
     []
   );
 
-  // A. Rollback awaiting_payment → pending
-  const rollbackToPending = useCallback(async (id: string): Promise<void> => {
-    try {
-      const supabase = createClient();
-
-      // Update booking status to pending
-      const { error } = await supabase
-        .from("bookings")
-        .update({ status: BOOKING_STATUS.PENDING })
-        .eq("id", id);
-
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      // Check payment status - only update if payment is pending (not paid or refunded)
-      const payment = await getPaymentByBookingId(id);
-      if (payment && payment.payment_status === PAYMENT_STATUS.PENDING) {
-        // Only update payment to failed if it's still pending
-        // updatePaymentStatus will prevent changes if already refunded
-        await updatePaymentStatus(payment.id, PAYMENT_STATUS.FAILED);
-      }
-      // If payment is already paid or refunded, keep it as is (no change)
-
-      setBookings((prevBookings) =>
-        prevBookings.map((b) =>
-          b.id === id ? { ...b, status: BOOKING_STATUS.PENDING } : b
-        )
-      );
-    } catch (err) {
-      throw err;
-    }
-  }, []);
-
   // B. Chuyển pending → awaiting_payment
   const moveToAwaitingPayment = useCallback(
     async (id: string): Promise<void> => {
       try {
-        const supabase = createClient();
+        // Get booking to get total_amount and advance_payment
+        const bookingAmounts = await getBookingAmounts(id);
 
-        // Get booking to get total_amount
-        const { data: booking, error: fetchError } = await supabase
-          .from("bookings")
-          .select("total_amount")
-          .eq("id", id)
-          .single();
-
-        if (fetchError || !booking) {
-          throw new Error(fetchError?.message || "Không tìm thấy booking");
+        if (!bookingAmounts) {
+          throw new Error("Không tìm thấy booking");
         }
+
+        const { total_amount, advance_payment } = bookingAmounts;
 
         // Update booking status
-        const { error } = await supabase
-          .from("bookings")
-          .update({ status: BOOKING_STATUS.AWAITING_PAYMENT })
-          .eq("id", id);
+        await updateBookingStatusService(id, BOOKING_STATUS.AWAITING_PAYMENT);
 
-        if (error) {
-          throw new Error(error.message);
-        }
+        // Check if payments already exist, if not create new ones
+        const existingPayments = await getPaymentsByBookingId(id);
+        if (existingPayments.length === 0) {
+          // If there's advance_payment, create 2 payments
+          if (advance_payment > 0) {
+            // Payment 1: room_charge (remaining amount to pay)
+            const roomChargeAmount = total_amount - advance_payment;
+            const roomChargePayment = await createPayment({
+              booking_id: id,
+              amount: roomChargeAmount,
+              payment_type: PAYMENT_TYPE.ROOM_CHARGE,
+              payment_method: PAYMENT_METHOD.PAY_AT_HOTEL,
+              payment_status: PAYMENT_STATUS.PENDING,
+            });
 
-        // Check if payment already exists, if not create new one
-        const existingPayment = await getPaymentByBookingId(id);
-        if (!existingPayment) {
-          // Create payment record with payment_status = pending
-          const payment = await createPayment({
-            booking_id: id,
-            amount: booking.total_amount,
-            payment_status: PAYMENT_STATUS.PENDING,
-          });
+            if (!roomChargePayment) {
+              throw new Error("Không thể tạo payment record cho room charge");
+            }
 
-          if (!payment) {
-            throw new Error("Không thể tạo payment record");
+            // Payment 2: advance_payment (deposit amount)
+            const advancePaymentRecord = await createPayment({
+              booking_id: id,
+              amount: advance_payment,
+              payment_type: PAYMENT_TYPE.ADVANCE_PAYMENT,
+              payment_method: PAYMENT_METHOD.PAY_AT_HOTEL,
+              payment_status: PAYMENT_STATUS.PAID,
+            });
+
+            if (!advancePaymentRecord) {
+              throw new Error(
+                "Không thể tạo payment record cho advance payment"
+              );
+            }
+          } else {
+            // No advance_payment, create single room_charge payment
+            const payment = await createPayment({
+              booking_id: id,
+              amount: total_amount,
+              payment_type: PAYMENT_TYPE.ROOM_CHARGE,
+              payment_method: PAYMENT_METHOD.PAY_AT_HOTEL,
+              payment_status: PAYMENT_STATUS.PENDING,
+            });
+
+            if (!payment) {
+              throw new Error("Không thể tạo payment record");
+            }
           }
         }
 
@@ -396,23 +366,20 @@ export function useBookings(
   // C. Chuyển pending/awaiting_payment → confirmed
   const confirmBooking = useCallback(async (id: string): Promise<void> => {
     try {
-      const supabase = createClient();
-
       // Update booking status
-      const { error } = await supabase
-        .from("bookings")
-        .update({ status: BOOKING_STATUS.CONFIRMED })
-        .eq("id", id);
+      await updateBookingStatusService(id, BOOKING_STATUS.CONFIRMED);
 
-      if (error) {
-        throw new Error(error.message);
-      }
+      // Update ROOM_CHARGE payment status to paid
+      const payments = await getPaymentsByBookingId(id);
+      const roomChargePayment = payments.find(
+        (p) =>
+          p.payment_type === PAYMENT_TYPE.ROOM_CHARGE &&
+          p.payment_status !== PAYMENT_STATUS.REFUNDED
+      );
 
-      // Update payment status to paid if payment exists and not refunded
-      const payment = await getPaymentByBookingId(id);
-      if (payment && payment.payment_status !== PAYMENT_STATUS.REFUNDED) {
+      if (roomChargePayment) {
         const now = new Date().toISOString();
-        await updatePaymentStatus(payment.id, PAYMENT_STATUS.PAID, {
+        await updatePaymentStatus(roomChargePayment.id, PAYMENT_STATUS.PAID, {
           paid_at: now,
           verified_at: now,
         });
@@ -433,20 +400,11 @@ export function useBookings(
   // D. Chuyển confirmed → checked_in
   const checkInBooking = useCallback(async (id: string): Promise<void> => {
     try {
-      const supabase = createClient();
       const now = new Date().toISOString();
 
-      const { error } = await supabase
-        .from("bookings")
-        .update({
-          status: BOOKING_STATUS.CHECKED_IN,
-          actual_check_in: now,
-        })
-        .eq("id", id);
-
-      if (error) {
-        throw new Error(error.message);
-      }
+      await updateBookingStatusService(id, BOOKING_STATUS.CHECKED_IN, {
+        actual_check_in: now,
+      });
 
       setBookings((prevBookings) =>
         prevBookings.map((booking) =>
@@ -467,20 +425,11 @@ export function useBookings(
   // E. Chuyển checked_in → checked_out
   const checkoutBooking = useCallback(async (id: string): Promise<void> => {
     try {
-      const supabase = createClient();
       const now = new Date().toISOString();
 
-      const { error } = await supabase
-        .from("bookings")
-        .update({
-          status: BOOKING_STATUS.CHECKED_OUT,
-          actual_check_out: now,
-        })
-        .eq("id", id);
-
-      if (error) {
-        throw new Error(error.message);
-      }
+      await updateBookingStatusService(id, BOOKING_STATUS.CHECKED_OUT, {
+        actual_check_out: now,
+      });
 
       setBookings((prevBookings) =>
         prevBookings.map((booking) =>
@@ -501,15 +450,7 @@ export function useBookings(
   // F. Chuyển checked_out → completed
   const completeBooking = useCallback(async (id: string): Promise<void> => {
     try {
-      const supabase = createClient();
-      const { error } = await supabase
-        .from("bookings")
-        .update({ status: BOOKING_STATUS.COMPLETED })
-        .eq("id", id);
-
-      if (error) {
-        throw new Error(error.message);
-      }
+      await updateBookingStatusService(id, BOOKING_STATUS.COMPLETED);
 
       setBookings((prevBookings) =>
         prevBookings.map((booking) =>
@@ -526,14 +467,18 @@ export function useBookings(
   // G. Chuyển pending/awaiting_payment/confirmed → cancelled
   const cancelBooking = useCallback(async (id: string): Promise<void> => {
     try {
-      const supabase = createClient();
-      const { error } = await supabase
-        .from("bookings")
-        .update({ status: BOOKING_STATUS.CANCELLED })
-        .eq("id", id);
+      await updateBookingStatusService(id, BOOKING_STATUS.CANCELLED);
 
-      if (error) {
-        throw new Error(error.message);
+      // Update pending ROOM_CHARGE payments to cancelled
+      const payments = await getPaymentsByBookingId(id);
+      const pendingRoomChargePayments = payments.filter(
+        (p) =>
+          p.payment_type === PAYMENT_TYPE.ROOM_CHARGE &&
+          p.payment_status === PAYMENT_STATUS.PENDING
+      );
+
+      for (const payment of pendingRoomChargePayments) {
+        await updatePaymentStatus(payment.id, PAYMENT_STATUS.CANCELLED);
       }
 
       setBookings((prevBookings) =>
@@ -551,14 +496,18 @@ export function useBookings(
   // H. Chuyển confirmed → no_show
   const markNoShow = useCallback(async (id: string): Promise<void> => {
     try {
-      const supabase = createClient();
-      const { error } = await supabase
-        .from("bookings")
-        .update({ status: BOOKING_STATUS.NO_SHOW })
-        .eq("id", id);
+      await updateBookingStatusService(id, BOOKING_STATUS.NO_SHOW);
 
-      if (error) {
-        throw new Error(error.message);
+      // Update pending ROOM_CHARGE payments to cancelled
+      const payments = await getPaymentsByBookingId(id);
+      const pendingRoomChargePayments = payments.filter(
+        (p) =>
+          p.payment_type === PAYMENT_TYPE.ROOM_CHARGE &&
+          p.payment_status === PAYMENT_STATUS.PENDING
+      );
+
+      for (const payment of pendingRoomChargePayments) {
+        await updatePaymentStatus(payment.id, PAYMENT_STATUS.CANCELLED);
       }
 
       setBookings((prevBookings) =>
@@ -576,25 +525,41 @@ export function useBookings(
   // I. Chuyển cancelled → refunded
   const refundBooking = useCallback(async (id: string): Promise<void> => {
     try {
-      const supabase = createClient();
-
       // Update booking status
-      const { error } = await supabase
-        .from("bookings")
-        .update({ status: BOOKING_STATUS.REFUNDED })
-        .eq("id", id);
+      await updateBookingStatusService(id, BOOKING_STATUS.REFUNDED);
 
-      if (error) {
-        throw new Error(error.message);
-      }
+      // Update payments
+      const payments = await getPaymentsByBookingId(id);
+      const now = new Date().toISOString();
 
-      // Update payment status to refunded if payment exists
-      const payment = await getPaymentByBookingId(id);
-      if (payment) {
-        const now = new Date().toISOString();
-        await updatePaymentStatus(payment.id, PAYMENT_STATUS.REFUNDED, {
-          refunded_at: now,
-        });
+      for (const payment of payments) {
+        // ADVANCE_PAYMENT: paid -> refunded
+        if (
+          payment.payment_type === PAYMENT_TYPE.ADVANCE_PAYMENT &&
+          payment.payment_status === PAYMENT_STATUS.PAID
+        ) {
+          await updatePaymentStatus(payment.id, PAYMENT_STATUS.REFUNDED, {
+            refunded_at: now,
+          });
+          continue;
+        }
+
+        // ROOM_CHARGE: pending -> cancelled
+        if (
+          payment.payment_type === PAYMENT_TYPE.ROOM_CHARGE &&
+          payment.payment_status === PAYMENT_STATUS.PENDING
+        ) {
+          await updatePaymentStatus(payment.id, PAYMENT_STATUS.CANCELLED);
+        }
+        // ROOM_CHARGE: paid -> refunded
+        else if (
+          payment.payment_type === PAYMENT_TYPE.ROOM_CHARGE &&
+          payment.payment_status === PAYMENT_STATUS.PAID
+        ) {
+          await updatePaymentStatus(payment.id, PAYMENT_STATUS.REFUNDED, {
+            refunded_at: now,
+          });
+        }
       }
 
       setBookings((prevBookings) =>
@@ -612,16 +577,7 @@ export function useBookings(
   const deleteBooking = useCallback(
     async (id: string) => {
       try {
-        const supabase = createClient();
-        const { error } = await supabase
-          .from("bookings")
-          .update({ deleted_at: new Date().toISOString() })
-          .eq("id", id);
-
-        if (error) {
-          throw new Error(error.message);
-        }
-
+        await deleteBookingService(id);
         await fetchBookings(page, limit, search);
       } catch (err) {
         throw err;
@@ -632,56 +588,14 @@ export function useBookings(
 
   const getBookingById = useCallback(
     async (id: string): Promise<BookingRecord | null> => {
-      try {
-        const supabase = createClient();
-        const { data, error } = await supabase
-          .from("bookings")
-          .select("*")
-          .eq("id", id)
-          .is("deleted_at", null)
-          .single();
-
-        if (error || !data) {
-          return null;
-        }
-
-        return data as BookingRecord;
-      } catch {
-        return null;
-      }
+      return getBookingByIdService(id);
     },
     []
   );
 
   const getBookingByIdWithDetails = useCallback(
     async (id: string): Promise<BookingRecord | null> => {
-      try {
-        const supabase = createClient();
-        const { data, error } = await supabase
-          .from("bookings")
-          .select(
-            `
-            *,
-            customers (
-              id,
-              full_name,
-              phone,
-              email
-            )
-          `
-          )
-          .eq("id", id)
-          .is("deleted_at", null)
-          .maybeSingle();
-
-        if (error) {
-          throw new Error(error.message);
-        }
-
-        return (data as BookingRecord) || null;
-      } catch (err) {
-        throw err;
-      }
+      return getBookingByIdWithDetailsService(id);
     },
     []
   );
@@ -689,35 +603,7 @@ export function useBookings(
   // Get bookings by customer ID
   const getBookingsByCustomerId = useCallback(
     async (customerId: string): Promise<BookingRecord[]> => {
-      try {
-        const supabase = createClient();
-        const { data, error } = await supabase
-          .from("bookings")
-          .select(
-            `
-            *,
-            customers (
-              id,
-              full_name
-            ),
-            rooms (
-              id,
-              name
-            )
-            `
-          )
-          .eq("customer_id", customerId)
-          .is("deleted_at", null)
-          .order("created_at", { ascending: false });
-
-        if (error) {
-          throw new Error(error.message);
-        }
-
-        return (data || []) as BookingRecord[];
-      } catch {
-        return [];
-      }
+      return getBookingsByCustomerIdService(customerId);
     },
     []
   );
@@ -730,9 +616,8 @@ export function useBookings(
     fetchBookings,
     createBooking,
     updateBooking,
+    transferBooking,
     updateBookingNotes,
-    // Status transition functions
-    rollbackToPending,
     moveToAwaitingPayment,
     confirmBooking,
     checkInBooking,

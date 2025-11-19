@@ -1,3 +1,5 @@
+import { CUSTOMER_ERROR_PATTERNS } from "@/lib/constants";
+
 /**
  * Utility functions for booking operations
  */
@@ -34,13 +36,15 @@ export function calculateNightsValue(
  * @returns Formatted date string or empty string
  */
 export function formatDateForInput(dateString: string): string {
-  if (!dateString) return "";
+  if (!dateString) return "-";
   const date = new Date(dateString);
-  if (isNaN(date.getTime())) return "";
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  if (isNaN(date.getTime())) return "-";
+  // Format với cả ngày và giờ cho TIMESTAMPTZ
+  return date.toLocaleString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
 }
 
 /**
@@ -94,4 +98,61 @@ export function translateBookingError(rawMessage: string): string {
     return "Số đêm phải lớn hơn 0.";
   }
   return rawMessage;
+}
+
+/**
+ * Translate customer error messages to Vietnamese
+ * @param rawMessage Original error message
+ * @returns Translated error message
+ */
+export function translateCustomerError(rawMessage: string): string {
+  if (
+    rawMessage.includes(CUSTOMER_ERROR_PATTERNS.DUPLICATE_EMAIL_KEY) ||
+    rawMessage.includes(CUSTOMER_ERROR_PATTERNS.DUPLICATE_KEY_GENERAL) ||
+    rawMessage.includes(CUSTOMER_ERROR_PATTERNS.DUPLICATE_EMAIL_KEY_SHORT)
+  ) {
+    return "Email này đã tồn tại trong hệ thống. Vui lòng sử dụng email khác.";
+  }
+  return rawMessage;
+}
+
+/**
+ * Format number with thousand separators (1.000.000)
+ * @param value - Number or string to format
+ * @returns Formatted string with thousand separators
+ */
+export function formatNumberWithSeparators(value: number | string): string {
+  if (value === "" || value === null || value === undefined) return "";
+  
+  // If string, remove all dots first (in case user is typing)
+  let numValue: number;
+  if (typeof value === "string") {
+    // Remove all non-digit characters except for potential decimal point
+    // For now, we only handle integers
+    const cleaned = value.replace(/[^\d]/g, "");
+    numValue = cleaned === "" ? 0 : parseFloat(cleaned);
+  } else {
+    numValue = value;
+  }
+  
+  if (isNaN(numValue) || numValue < 0) return "";
+  
+  // Format with thousand separators (no decimals for VND)
+  return new Intl.NumberFormat("vi-VN", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(numValue);
+}
+
+/**
+ * Parse formatted number string back to number
+ * @param value - Formatted string (e.g., "1.000.000")
+ * @returns Parsed number
+ */
+export function parseFormattedNumber(value: string): number {
+  if (!value) return 0;
+  // Remove all dots (thousand separators)
+  const cleaned = value.replace(/\./g, "");
+  const parsed = parseFloat(cleaned);
+  return isNaN(parsed) ? 0 : parsed;
 }

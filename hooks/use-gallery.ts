@@ -1,9 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { createClient } from "@/lib/supabase/client";
-
 import type { GalleryImage, PaginationMeta } from "@/lib/types";
+import {
+  searchGalleryImages,
+  addGalleryImages,
+  deleteGalleryImage,
+} from "@/services/gallery";
 
 // Re-export types for backward compatibility
 export type { GalleryImage, PaginationMeta } from "@/lib/types";
@@ -26,25 +29,12 @@ export function useGallery(page: number = 1, limit: number = 20) {
       try {
         setIsLoading(true);
         setError(null);
-        const supabase = createClient();
 
-        // Calculate offset
-        const from = (pageNum - 1) * limitNum;
-        const to = from + limitNum - 1;
+        const { images: imagesData, total } = await searchGalleryImages(
+          pageNum,
+          limitNum
+        );
 
-        // Fetch data with pagination from images table
-        const { data, error, count } = await supabase
-          .from("images")
-          .select("id, url, created_at", { count: "exact" })
-          .order("created_at", { ascending: false })
-          .range(from, to);
-
-        if (error) {
-          throw error;
-        }
-
-        const imagesData = (data || []) as GalleryImage[];
-        const total = count || 0;
         const totalPages = Math.ceil(total / limitNum);
 
         setImages(imagesData);
@@ -76,22 +66,7 @@ export function useGallery(page: number = 1, limit: number = 20) {
   const addImages = useCallback(
     async (urls: string[]) => {
       try {
-        const supabase = createClient();
-
-        // Prepare data for insertion
-        const imagesToInsert = urls.map((url) => ({
-          url,
-          created_at: new Date().toISOString(),
-        }));
-
-        // Insert into Supabase images table
-        const { error: insertError } = await supabase
-          .from("images")
-          .insert(imagesToInsert);
-
-        if (insertError) {
-          throw insertError;
-        }
+        await addGalleryImages(urls);
 
         // Refetch to update pagination and show new images
         await fetchImages(1, limit);
@@ -106,17 +81,7 @@ export function useGallery(page: number = 1, limit: number = 20) {
   const deleteImage = useCallback(
     async (id: string) => {
       try {
-        const supabase = createClient();
-
-        // Delete from Supabase images table
-        const { error: deleteError } = await supabase
-          .from("images")
-          .delete()
-          .eq("id", id);
-
-        if (deleteError) {
-          throw new Error(deleteError.message);
-        }
+        await deleteGalleryImage(id);
 
         // Refetch current page
         await fetchImages(page, limit);

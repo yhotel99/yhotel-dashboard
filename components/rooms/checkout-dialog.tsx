@@ -112,10 +112,30 @@ export function CheckoutDialog({
 
   const handleUpdateBooking = async (
     id: string,
-    input: Parameters<typeof updateBooking>[1]
+    input: Partial<{
+      notes?: string | null;
+      total_guests?: number;
+    }>
   ) => {
     try {
-      await updateBooking(id, input);
+      // Chỉ cập nhật notes và total_guests
+      const updateData: {
+        notes?: string | null;
+        total_guests?: number;
+      } = {};
+
+      if (input.notes !== undefined) updateData.notes = input.notes;
+      if (input.total_guests !== undefined)
+        updateData.total_guests = input.total_guests;
+
+      // Gọi updateBooking nếu có dữ liệu
+      if (
+        updateData.notes !== undefined ||
+        updateData.total_guests !== undefined
+      ) {
+        await updateBooking(id, updateData);
+      }
+
       toast.success("Cập nhật booking thành công");
       setIsEditDialogOpen(false);
       await fetchBookingDetails();

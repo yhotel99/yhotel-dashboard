@@ -18,6 +18,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { CustomerInput } from "@/hooks/use-customers";
+import { toast } from "sonner";
+import { translateCustomerError } from "@/lib/functions";
+import { CUSTOMER_ERROR_PATTERNS } from "@/lib/constants";
 
 type CreateCustomerFormState = {
   full_name: string;
@@ -61,12 +64,13 @@ export function CreateCustomerDialog({
       setFormValues((prev) => ({ ...prev, [field]: value }));
     };
 
-  const handleSelectChange = (field: keyof CreateCustomerFormState) => (value: string) => {
-    setFormValues((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
+  const handleSelectChange =
+    (field: keyof CreateCustomerFormState) => (value: string) => {
+      setFormValues((prev) => ({
+        ...prev,
+        [field]: value,
+      }));
+    };
 
   const resetForm = () => {
     setFormValues(initialCreateCustomerState);
@@ -125,10 +129,23 @@ export function CreateCustomerDialog({
       resetForm();
       onOpenChange(false);
     } catch (err) {
-      const errorMessage =
+      const rawMessage =
         err instanceof Error ? err.message : "Không thể tạo khách hàng";
+      const errorMessage = translateCustomerError(rawMessage);
       setError(errorMessage);
       setIsSubmitting(false);
+      // Show toast for duplicate email error
+      if (
+        rawMessage.includes(CUSTOMER_ERROR_PATTERNS.DUPLICATE_EMAIL_KEY) ||
+        rawMessage.includes(
+          CUSTOMER_ERROR_PATTERNS.DUPLICATE_EMAIL_KEY_SHORT
+        ) ||
+        rawMessage.includes(CUSTOMER_ERROR_PATTERNS.DUPLICATE_KEY_GENERAL)
+      ) {
+        toast.error("Tạo khách hàng thất bại", {
+          description: errorMessage,
+        });
+      }
     }
   };
 
@@ -243,4 +260,3 @@ export function CreateCustomerDialog({
     </Dialog>
   );
 }
-

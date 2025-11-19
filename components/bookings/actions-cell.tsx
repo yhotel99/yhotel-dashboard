@@ -17,12 +17,14 @@ export function BookingActionsCell({
   booking,
   customerId,
   onEdit,
+  onTransfer,
   onCancelBooking,
   onChangeStatus,
 }: {
   booking: BookingRecord;
   customerId: string | null;
   onEdit: (booking: BookingRecord) => void;
+  onTransfer: (booking: BookingRecord) => void;
   onCancelBooking: (id: string) => Promise<void>;
   onChangeStatus: (id: string, status: BookingStatus) => Promise<void>;
 }) {
@@ -58,7 +60,9 @@ export function BookingActionsCell({
           <DropdownMenuItem onClick={() => setOpenChangeStatus(true)}>
             Thay đổi trạng thái
           </DropdownMenuItem>
-          <DropdownMenuItem>Chuyển phòng</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => onTransfer(booking)}>
+            Chuyển phòng
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
             variant="destructive"

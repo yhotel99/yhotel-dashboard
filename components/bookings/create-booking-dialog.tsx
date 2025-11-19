@@ -33,7 +33,12 @@ import { CreateCustomerDialog } from "@/components/customers/create-customer-dia
 import type { Customer } from "@/lib/types";
 import { TimeSelect } from "@/components/ui/time-select";
 import { formatCurrency, getDateTimeISO } from "@/lib/utils";
-import { calculateNightsValue, translateBookingError } from "@/lib/functions";
+import {
+  calculateNightsValue,
+  translateBookingError,
+  formatNumberWithSeparators,
+  parseFormattedNumber,
+} from "@/lib/functions";
 
 type CreateBookingFormState = {
   customer_id: string;
@@ -60,6 +65,8 @@ const initialCreateBookingState: CreateBookingFormState = {
   advance_payment: "0",
   notes: "",
 };
+
+const SEARCH_CUSTOMER_MIN_LENGTH = 2;
 
 export function CreateBookingDialog({
   open,
@@ -93,7 +100,9 @@ export function CreateBookingDialog({
   const { customers: searchCustomers, createCustomer } = useCustomers(
     1,
     10,
-    debouncedSearch.trim().length >= 2 ? debouncedSearch : ""
+    debouncedSearch.trim().length >= SEARCH_CUSTOMER_MIN_LENGTH
+      ? debouncedSearch
+      : ""
   );
 
   // Kết hợp date và time bằng helper function để tính toán
@@ -133,16 +142,40 @@ export function CreateBookingDialog({
     formValues.check_out_time,
   ]);
 
-  // Update search results when customers from hook change
+  // Format advance_payment when total_amount changes (to update max value display)
   useEffect(() => {
-    if (debouncedSearch.trim().length >= 2) {
+    if (formValues.advance_payment) {
+      const currentValue = parseFormattedNumber(formValues.advance_payment);
+      const maxValue = Number(formValues.total_amount || 0);
+      // If current value exceeds new max, cap it
+      if (currentValue > maxValue) {
+        setFormValues((prev) => ({
+          ...prev,
+          advance_payment: formatNumberWithSeparators(maxValue),
+        }));
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formValues.total_amount]);
+
+  // Update search results when customers from hook change
+  // Only show results if customerSearch (not debounced) is long enough
+  useEffect(() => {
+    const searchLength = customerSearch.trim().length;
+    const debouncedLength = debouncedSearch.trim().length;
+
+    // Only show results if current search is long enough AND debounced search matches
+    if (
+      searchLength >= SEARCH_CUSTOMER_MIN_LENGTH &&
+      debouncedLength >= SEARCH_CUSTOMER_MIN_LENGTH
+    ) {
       setSearchResults(searchCustomers);
       setShowSearchResults(true);
     } else {
       setSearchResults([]);
       setShowSearchResults(false);
     }
-  }, [searchCustomers, debouncedSearch]);
+  }, [searchCustomers, debouncedSearch, customerSearch]);
 
   // Close search results when clicking outside
   useEffect(() => {
@@ -167,7 +200,13 @@ export function CreateBookingDialog({
     (field: keyof CreateBookingFormState) =>
     (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       const { value } = event.target;
-      setFormValues((prev) => ({ ...prev, [field]: value }));
+      // Format advance_payment with thousand separators
+      if (field === "advance_payment") {
+        const formatted = formatNumberWithSeparators(value);
+        setFormValues((prev) => ({ ...prev, [field]: formatted }));
+      } else {
+        setFormValues((prev) => ({ ...prev, [field]: value }));
+      }
     };
 
   const resetForm = () => {
@@ -268,17 +307,17 @@ export function CreateBookingDialog({
       return;
     }
 
-    // const advancePayment = Number(formValues.advance_payment || 0);
-    // if (!Number.isFinite(advancePayment) || advancePayment < 0) {
-    //   setError("Tiền đặt cọc không hợp lệ.");
-    //   return;
-    // }
+    // Validate advance_payment (parse from formatted string)
+    const advancePayment = parseFormattedNumber(formValues.advance_payment || "0");
+    if (!Number.isFinite(advancePayment) || advancePayment < 0) {
+      setError("Tiền cọc phải là số không âm.");
+      return;
+    }
 
-    // if (advancePayment > totalAmount) {
-    //   setError("Tiền đặt cọc không được vượt quá tổng tiền.");
-    //   return;
-    // }
-    const advancePayment = 0; // Đặt cọc luôn là 0
+    if (advancePayment > totalAmount) {
+      setError("Tiền cọc không được vượt quá tổng tiền.");
+      return;
+    }
 
     if (!formValues.customer_id) {
       setError("Vui lòng chọn khách hàng.");
@@ -386,7 +425,7 @@ export function CreateBookingDialog({
                   )}
                 {!selectedCustomer &&
                   showSearchResults &&
-                  debouncedSearch.trim().length >= 2 &&
+                  debouncedSearch.trim().length >= SEARCH_CUSTOMER_MIN_LENGTH &&
                   searchResults.length === 0 && (
                     <div
                       ref={searchResultsRef}
@@ -503,6 +542,20 @@ export function CreateBookingDialog({
                   {formatCurrency(Number(formValues.total_amount || 0))}
                 </p>
               )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="advance_payment">Tiền cọc (VNĐ)</Label>
+              <Input
+                id="advance_payment"
+                type="text"
+                inputMode="numeric"
+                value={formValues.advance_payment}
+                onChange={handleInputChange("advance_payment")}
+                placeholder="Nhập số tiền cọc (VD: 1.000.000)"
+              />
+              <p className="text-xs text-muted-foreground">
+                Tối đa: {formatCurrency(Number(formValues.total_amount || 0))}
+              </p>
             </div>
           </div>
           <div className="space-y-2">

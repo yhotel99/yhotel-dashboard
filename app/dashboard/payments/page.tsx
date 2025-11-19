@@ -5,11 +5,12 @@ import { ColumnDef } from "@tanstack/react-table";
 
 import { DataTable } from "@/components/data-table";
 import { usePaginationSearchParams } from "@/hooks/use-pagination-search-params";
-import { usePayments, type PaymentWithBooking } from "@/hooks/use-payments";
+import { usePayments } from "@/hooks/use-payments";
+import type { PaymentWithBooking } from "@/services/payments";
 import { PaymentStatusBadge } from "@/components/payments/status";
 import { IdCell } from "@/components/payments/id-cell";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { paymentMethodLabels } from "@/lib/constants";
+import { paymentMethodLabels, paymentTypeLabels } from "@/lib/constants";
 
 const createColumns = (): ColumnDef<PaymentWithBooking>[] => [
   {
@@ -48,6 +49,16 @@ const createColumns = (): ColumnDef<PaymentWithBooking>[] => [
     minSize: 100,
   },
   {
+    accessorKey: "payment_type",
+    header: "Loại thanh toán",
+    cell: ({ row }) =>
+      paymentTypeLabels[
+        row.original.payment_type as keyof typeof paymentTypeLabels
+      ] ?? row.original.payment_type,
+    size: 130,
+    minSize: 120,
+  },
+  {
     accessorKey: "payment_method",
     header: "Phương thức",
     cell: ({ row }) =>
@@ -71,14 +82,6 @@ const createColumns = (): ColumnDef<PaymentWithBooking>[] => [
     header: "Ngày thanh toán",
     cell: ({ row }) =>
       row.original.paid_at ? formatDate(row.original.paid_at) : "-",
-    size: 150,
-    minSize: 130,
-  },
-  {
-    accessorKey: "verified_at",
-    header: "Ngày xác thực",
-    cell: ({ row }) =>
-      row.original.verified_at ? formatDate(row.original.verified_at) : "-",
     size: 150,
     minSize: 130,
   },

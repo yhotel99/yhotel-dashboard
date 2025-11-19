@@ -23,6 +23,10 @@ export const statusStyle: Record<
     label: paymentStatusLabels[PAYMENT_STATUS.REFUNDED],
     className: "text-purple-600 dark:text-purple-400",
   },
+  [PAYMENT_STATUS.CANCELLED]: {
+    label: paymentStatusLabels[PAYMENT_STATUS.CANCELLED],
+    className: "text-gray-600 dark:text-gray-400",
+  },
 };
 
 export function PaymentStatusBadge({ status }: { status: PaymentStatus }) {

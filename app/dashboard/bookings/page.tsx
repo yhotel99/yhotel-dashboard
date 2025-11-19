@@ -19,6 +19,7 @@ import { BookingActionsCell } from "@/components/bookings/actions-cell";
 import { NotesCell } from "@/components/bookings/notes-cell";
 import { CreateBookingDialog } from "@/components/bookings/create-booking-dialog";
 import { EditBookingDialog } from "@/components/bookings/edit-booking-dialog";
+import { TransferRoomDialog } from "@/components/bookings/transfer-room-dialog";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
   translateBookingErrorMessage,
@@ -34,6 +35,7 @@ import {
 const createColumns = (
   onCancelBooking: (id: string) => Promise<void>,
   onEdit: (booking: BookingRecord) => void,
+  onTransfer: (booking: BookingRecord) => void,
   onChangeStatus: (id: string, status: BookingStatus) => Promise<void>
 ): ColumnDef<BookingRecord>[] => [
   {
@@ -86,6 +88,13 @@ const createColumns = (
     minSize: 100,
   },
   {
+    accessorKey: "advance_payment",
+    header: "Tiền cọc",
+    cell: ({ row }) => formatCurrency(row.original.advance_payment || 0),
+    size: 120,
+    minSize: 100,
+  },
+  {
     accessorKey: "status",
     header: "Trạng thái",
     cell: ({ row }) => <StatusBadge status={row.original.status} />,
@@ -106,6 +115,7 @@ const createColumns = (
         booking={row.original}
         customerId={row.original.customer_id}
         onEdit={onEdit}
+        onTransfer={onTransfer}
         onCancelBooking={onCancelBooking}
         onChangeStatus={onChangeStatus}
       />
@@ -136,7 +146,7 @@ export default function BookingsPage() {
     fetchBookings,
     createBooking,
     updateBooking,
-    rollbackToPending,
+    transferBooking,
     moveToAwaitingPayment,
     confirmBooking,
     checkInBooking,
@@ -150,6 +160,7 @@ export default function BookingsPage() {
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isTransferDialogOpen, setIsTransferDialogOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<BookingRecord | null>(
     null
   );
@@ -163,10 +174,31 @@ export default function BookingsPage() {
     setIsEditDialogOpen(true);
   }, []);
 
+  const handleTransfer = useCallback((booking: BookingRecord) => {
+    setSelectedBooking(booking);
+    setIsTransferDialogOpen(true);
+  }, []);
+
   const handleUpdateBooking = useCallback(
     async (id: string, input: Partial<BookingInput>) => {
       try {
-        await updateBooking(id, input);
+        // Cập nhật notes và total_guests
+        const updateData: {
+          notes?: string | null;
+          total_guests?: number;
+        } = {};
+
+        if (input.notes !== undefined) updateData.notes = input.notes;
+        if (input.total_guests !== undefined)
+          updateData.total_guests = input.total_guests;
+
+        // Gọi updateBooking nếu có dữ liệu
+        if (
+          updateData.notes !== undefined ||
+          updateData.total_guests !== undefined
+        ) {
+          await updateBooking(id, updateData);
+        }
 
         toast.success("Cập nhật booking thành công!", {
           description: "Thông tin booking đã được cập nhật.",
@@ -185,6 +217,38 @@ export default function BookingsPage() {
       }
     },
     [updateBooking]
+  );
+
+  const handleTransferBooking = useCallback(
+    async (
+      id: string,
+      input: {
+        room_id?: string | null;
+        check_in?: string;
+        check_out?: string;
+        number_of_nights?: number;
+        total_amount?: number;
+      }
+    ) => {
+      try {
+        await transferBooking(id, input);
+        toast.success("Chuyển phòng thành công!", {
+          description: "Booking đã được chuyển phòng.",
+        });
+      } catch (error) {
+        const rawMessage =
+          error instanceof Error ? error.message : "Không thể chuyển phòng";
+
+        const message = translateBookingErrorMessage(rawMessage);
+
+        toast.error("Chuyển phòng thất bại", {
+          description: message,
+          position: "top-center",
+        });
+        throw error;
+      }
+    },
+    [transferBooking]
   );
 
   const handleCreateBookingSubmit = useCallback(
@@ -265,12 +329,11 @@ export default function BookingsPage() {
             break;
           case BOOKING_STATUS.PENDING:
             // Use rollbackToPending to handle payment logic when rolling back
-            await rollbackToPending(id);
+            // await rollbackToPending(id);
             break;
           default:
-            // Fallback to updateBooking for unknown status
-            await updateBooking(id, { status });
-            break;
+            // This should never happen as all statuses are handled above
+            throw new Error(`Không thể xử lý trạng thái: ${status}`);
         }
         toast.success("Đã cập nhật trạng thái thành công");
       } catch (error) {
@@ -282,7 +345,6 @@ export default function BookingsPage() {
       }
     },
     [
-      rollbackToPending,
       moveToAwaitingPayment,
       confirmBooking,
       checkInBooking,
@@ -291,7 +353,6 @@ export default function BookingsPage() {
       cancelBooking,
       markNoShow,
       refundBooking,
-      updateBooking,
     ]
   );
 
@@ -310,8 +371,14 @@ export default function BookingsPage() {
   );
 
   const columns = useMemo(
-    () => createColumns(handleCancelBooking, handleEdit, handleChangeStatus),
-    [handleCancelBooking, handleEdit, handleChangeStatus]
+    () =>
+      createColumns(
+        handleCancelBooking,
+        handleEdit,
+        handleTransfer,
+        handleChangeStatus
+      ),
+    [handleCancelBooking, handleEdit, handleTransfer, handleChangeStatus]
   );
 
   return (
@@ -364,6 +431,18 @@ export default function BookingsPage() {
         }}
         booking={selectedBooking}
         onUpdate={handleUpdateBooking}
+      />
+
+      <TransferRoomDialog
+        open={isTransferDialogOpen}
+        onOpenChange={(open) => {
+          setIsTransferDialogOpen(open);
+          if (!open) {
+            setSelectedBooking(null);
+          }
+        }}
+        booking={selectedBooking}
+        onTransfer={handleTransferBooking}
       />
     </div>
   );

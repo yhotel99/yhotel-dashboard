@@ -30,6 +30,7 @@ import {
 import { HotelIcon, Images, User2, UserCircle } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/auth-context";
+import { usePermissions } from "@/hooks/use-permissions";
 
 const data = {
   user: {
@@ -148,6 +149,13 @@ const data = {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { currentUser } = useAuth();
+  const { isRouteVisibleInNav } = usePermissions();
+
+  // Filter navigation items based on user permissions
+  const filteredNavMain = React.useMemo(() => {
+    return data.navMain.filter((item) => isRouteVisibleInNav(item.url));
+  }, [isRouteVisibleInNav]);
+
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -166,7 +174,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
+        <NavMain items={filteredNavMain} />
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>

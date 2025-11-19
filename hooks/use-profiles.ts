@@ -1,8 +1,13 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { createClient } from "@/lib/supabase/client";
 import type { Profile, PaginationMeta } from "@/lib/types";
+import {
+  searchProfiles,
+  updateProfile as updateProfileService,
+  deleteProfile as deleteProfileService,
+  getProfileById as getProfileByIdService,
+} from "@/services/profiles";
 
 // Re-export types for backward compatibility
 export type { Profile, PaginationMeta } from "@/lib/types";
@@ -33,42 +38,14 @@ export function useProfiles(
       try {
         setIsLoading(true);
         setError(null);
-        const supabase = createClient();
 
-        // Calculate offset
-        const from = (pageNum - 1) * limitNum;
-        const to = from + limitNum - 1;
+        const trimmedSearch = searchTerm?.trim() || null;
+        const { profiles: profilesData, total } = await searchProfiles(
+          trimmedSearch,
+          pageNum,
+          limitNum
+        );
 
-        // Build query
-        let query = supabase
-          .from("profiles")
-          .select("*", { count: "exact" })
-          .is("deleted_at", null);
-
-        // Add search filter if search term exists
-        // Search in full_name, email, and phone using OR operator
-        if (searchTerm && searchTerm.trim() !== "") {
-          const trimmedSearch = searchTerm.trim();
-          query = query.or(
-            `full_name.ilike.%${trimmedSearch}%,email.ilike.%${trimmedSearch}%,phone.ilike.%${trimmedSearch}%`
-          );
-        }
-
-        // Fetch data with pagination
-        const {
-          data,
-          error: fetchError,
-          count,
-        } = await query
-          .order("created_at", { ascending: false })
-          .range(from, to);
-
-        if (fetchError) {
-          throw new Error(fetchError.message);
-        }
-
-        const profilesData = (data || []) as Profile[];
-        const total = count || 0;
         const totalPages = Math.ceil(total / limitNum);
 
         setProfiles(profilesData);
@@ -131,7 +108,7 @@ export function useProfiles(
 
         // Refetch current page to update total count
         // Wait a bit for trigger to create profile
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        // await new Promise((resolve) => setTimeout(resolve, 500));
         await fetchProfiles(page, limit, search);
 
         return data.user;
@@ -151,19 +128,7 @@ export function useProfiles(
       >
     ) => {
       try {
-        const supabase = createClient();
-        const { data, error } = await supabase
-          .from("profiles")
-          .update({ ...input, updated_at: new Date().toISOString() })
-          .eq("id", id)
-          .select()
-          .single();
-
-        if (error) {
-          throw new Error(error.message);
-        }
-
-        const updatedProfile = data as Profile;
+        const updatedProfile = await updateProfileService(id, input);
 
         // Refetch current page to ensure consistency
         await fetchProfiles(page, limit, search);
@@ -179,15 +144,7 @@ export function useProfiles(
   const deleteProfile = useCallback(
     async (id: string) => {
       try {
-        const supabase = createClient();
-        const { error } = await supabase
-          .from("profiles")
-          .update({ deleted_at: new Date().toISOString() })
-          .eq("id", id);
-
-        if (error) {
-          throw new Error(error.message);
-        }
+        await deleteProfileService(id);
 
         // Refetch current page to ensure consistency
         await fetchProfiles(page, limit, search);
@@ -201,24 +158,7 @@ export function useProfiles(
   // Get profile by ID
   const getProfileById = useCallback(
     async (id: string): Promise<Profile | null> => {
-      try {
-        const supabase = createClient();
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", id)
-          .is("deleted_at", null)
-          .single();
-
-        if (error || !data) {
-          return null;
-        }
-
-        return data as Profile;
-      } catch (err) {
-        console.error("Error getting profile:", err);
-        return null;
-      }
+      return getProfileByIdService(id);
     },
     []
   );

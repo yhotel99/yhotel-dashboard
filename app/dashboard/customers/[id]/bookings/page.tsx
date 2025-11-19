@@ -49,6 +49,11 @@ const createColumns = (): ColumnDef<BookingRecord>[] => [
     cell: ({ row }) => formatCurrency(row.original.total_amount),
   },
   {
+    accessorKey: "advance_payment",
+    header: "Tiền cọc",
+    cell: ({ row }) => formatCurrency(row.original.advance_payment || 0),
+  },
+  {
     accessorKey: "status",
     header: "Trạng thái",
     cell: ({ row }) => <StatusBadge status={row.original.status} />,

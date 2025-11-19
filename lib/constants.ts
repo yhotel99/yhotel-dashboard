@@ -122,6 +122,27 @@ export const bookingStatusLabels: Record<
 };
 
 /**
+ * Payment type values
+ */
+export const PAYMENT_TYPE = {
+  ROOM_CHARGE: "room_charge",
+  ADVANCE_PAYMENT: "advance_payment",
+  EXTRA_SERVICE: "extra_service",
+} as const;
+
+/**
+ * Payment type labels mapping
+ */
+export const paymentTypeLabels: Record<
+  (typeof PAYMENT_TYPE)[keyof typeof PAYMENT_TYPE],
+  string
+> = {
+  [PAYMENT_TYPE.ROOM_CHARGE]: "Tiền phòng",
+  [PAYMENT_TYPE.ADVANCE_PAYMENT]: "Tiền cọc",
+  [PAYMENT_TYPE.EXTRA_SERVICE]: "Dịch vụ thêm",
+};
+
+/**
  * Payment method values
  */
 export const PAYMENT_METHOD = {
@@ -148,6 +169,7 @@ export const PAYMENT_STATUS = {
   PAID: "paid",
   FAILED: "failed",
   REFUNDED: "refunded",
+  CANCELLED: "cancelled",
 } as const;
 
 /**
@@ -161,11 +183,22 @@ export const paymentStatusLabels: Record<
   [PAYMENT_STATUS.PAID]: "Đã thanh toán",
   [PAYMENT_STATUS.FAILED]: "Thanh toán thất bại",
   [PAYMENT_STATUS.REFUNDED]: "Đã hoàn tiền",
+  [PAYMENT_STATUS.CANCELLED]: "Đã hủy",
 };
 
 /**
  * Booking error message patterns constants
  */
+/**
+ * Customer error patterns for database constraint violations
+ */
+export const CUSTOMER_ERROR_PATTERNS = {
+  DUPLICATE_EMAIL_KEY:
+    'duplicate key value violates unique constraint "customers_email_key"',
+  DUPLICATE_EMAIL_KEY_SHORT: "customers_email_key",
+  DUPLICATE_KEY_GENERAL: "duplicate key value violates unique constraint",
+} as const;
+
 export const BOOKING_ERROR_PATTERNS = {
   ROOM_NOT_AVAILABLE: "Room is not available for the selected date/time",
   CONFLICT_EXCLUSION_CONSTRAINT:

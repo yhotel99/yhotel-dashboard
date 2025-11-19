@@ -1,21 +1,21 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useRouter } from "next/navigation"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import * as z from "zod"
-import { createClient } from "@/lib/supabase/client"
-import { toast } from "sonner"
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import * as React from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
+} from "@/components/ui/card";
 import {
   Form,
   FormControl,
@@ -23,26 +23,24 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import {
-  FieldDescription,
-} from "@/components/ui/field"
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { FieldDescription } from "@/components/ui/field";
 
 const loginSchema = z.object({
   email: z.string().email("Email không hợp lệ"),
   password: z.string().min(6, "Mật khẩu phải có ít nhất 6 ký tự"),
-})
+});
 
-type LoginFormValues = z.infer<typeof loginSchema>
+type LoginFormValues = z.infer<typeof loginSchema>;
 
 export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
-  const router = useRouter()
-  const [isLoading, setIsLoading] = React.useState(false)
-  const supabase = createClient()
+  const router = useRouter();
+  const [isLoading, setIsLoading] = React.useState(false);
+  const supabase = createClient();
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -50,42 +48,40 @@ export function LoginForm({
       email: "",
       password: "",
     },
-  })
+  });
 
   const onSubmit = async (values: LoginFormValues) => {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email: values.email,
         password: values.password,
-      })
+      });
 
       if (error) {
-        toast.error(error.message || "Đăng nhập thất bại")
-        return
+        toast.error(error.message || "Đăng nhập thất bại");
+        return;
       }
 
       if (data.user) {
-        toast.success("Đăng nhập thành công!")
-        router.push("/dashboard")
-        router.refresh()
+        toast.success("Đăng nhập thành công!");
+        router.push("/dashboard");
+        router.refresh();
       }
     } catch (error) {
-      toast.error("Đã xảy ra lỗi. Vui lòng thử lại.")
-      console.error("Login error:", error)
+      toast.error("Đã xảy ra lỗi. Vui lòng thử lại.");
+      console.error("Login error:", error);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card>
         <CardHeader className="text-center">
           <CardTitle className="text-xl">Welcome back</CardTitle>
-          <CardDescription>
-            Login with your account
-          </CardDescription>
+          <CardDescription>Login with your account</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -99,7 +95,7 @@ export function LoginForm({
                     <FormControl>
                       <Input
                         type="email"
-                        placeholder="m@example.com"
+                        placeholder="Enter your email"
                         disabled={isLoading}
                         {...field}
                       />
@@ -117,6 +113,7 @@ export function LoginForm({
                     <FormControl>
                       <Input
                         type="password"
+                        placeholder="Enter your password"
                         disabled={isLoading}
                         {...field}
                       />
@@ -126,7 +123,7 @@ export function LoginForm({
                 )}
               />
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Đang đăng nhập..." : "Login"}
+                {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
               </Button>
             </form>
           </Form>
@@ -137,5 +134,5 @@ export function LoginForm({
         and <a href="#">Privacy Policy</a>.
       </FieldDescription>
     </div>
-  )
+  );
 }

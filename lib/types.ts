@@ -211,14 +211,23 @@ export type BookingInput = {
 // Payment method enum
 export type PaymentMethod = "bank_transfer" | "pay_at_hotel";
 
+// Payment type enum
+export type PaymentType = "room_charge" | "advance_payment" | "extra_service";
+
 // Payment status enum
-export type PaymentStatus = "pending" | "paid" | "failed" | "refunded";
+export type PaymentStatus =
+  | "pending"
+  | "paid"
+  | "failed"
+  | "refunded"
+  | "cancelled";
 
 // Payment record matching database schema (payments table)
 export type Payment = {
   id: string;
   booking_id: string;
   amount: number;
+  payment_type: PaymentType;
   payment_method: PaymentMethod;
   payment_status: PaymentStatus;
   paid_at: string | null;
@@ -232,6 +241,7 @@ export type Payment = {
 export type PaymentInput = {
   booking_id: string;
   amount: number;
+  payment_type: PaymentType;
   payment_method?: PaymentMethod;
   payment_status?: PaymentStatus;
   paid_at?: string | null;
