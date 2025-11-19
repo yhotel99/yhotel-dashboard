@@ -210,7 +210,7 @@ export function useBookings(
               await updatePaymentAmount(roomChargePayment.id, roomChargeAmount);
             }
 
-            // Update ADVANCE_PAYMENT payment if advance_payment provided
+            // Handle ADVANCE_PAYMENT payment
             if (input.advance_payment !== undefined) {
               const advancePaymentRecord = existingPayments.find(
                 (p) =>
@@ -219,20 +219,22 @@ export function useBookings(
               );
 
               if (advancePaymentRecord) {
+                // If payment exists, update amount (even if advance_payment = 0)
                 await updatePaymentAmount(
                   advancePaymentRecord.id,
                   advancePayment
                 );
               } else if (advancePayment > 0) {
-                // If advance_payment was added but payment doesn't exist, create it
+                // If payment doesn't exist and advance_payment > 0, create it
                 await createPayment({
                   booking_id: id,
                   amount: advancePayment,
                   payment_type: PAYMENT_TYPE.ADVANCE_PAYMENT,
                   payment_method: PAYMENT_METHOD.PAY_AT_HOTEL,
-                  payment_status: PAYMENT_STATUS.PENDING,
+                  payment_status: PAYMENT_STATUS.PAID,
                 });
               }
+              // If advance_payment = 0 and payment doesn't exist, do nothing
             }
           }
         }

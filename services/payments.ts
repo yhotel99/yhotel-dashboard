@@ -194,6 +194,31 @@ export async function updatePaymentAmount(
 }
 
 /**
+ * Delete a payment record
+ * @param paymentId - The payment ID to delete
+ * @returns True if deleted successfully, false otherwise
+ */
+export async function deletePayment(paymentId: string): Promise<boolean> {
+  try {
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("payments")
+      .delete()
+      .eq("id", paymentId);
+
+    if (error) {
+      console.error("Error deleting payment:", error);
+      return false;
+    }
+
+    return true;
+  } catch (err) {
+    console.error("Error deleting payment:", err);
+    return false;
+  }
+}
+
+/**
  * Get all payments for a booking
  * @param bookingId - The booking ID to fetch payments for
  * @returns Array of payment records
