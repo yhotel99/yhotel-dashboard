@@ -23,7 +23,7 @@ export function useCustomers(
     totalPages: 0,
   });
 
-  // Fetch customers with pagination and search
+  // Fetch customers with pagination and search (includes booking stats)
   const fetchCustomers = useCallback(
     async (
       pageNum: number = page,
@@ -39,10 +39,20 @@ export function useCustomers(
         const from = (pageNum - 1) * limitNum;
         const to = from + limitNum - 1;
 
-        // Build query
+        // Build query with bookings join to calculate stats
         let query = supabase
           .from("customers")
-          .select("*", { count: "exact" })
+          .select(
+            `
+            *,
+            bookings (
+              id,
+              total_amount,
+              deleted_at
+            )
+          `,
+            { count: "exact" }
+          )
           .is("deleted_at", null);
 
         // Add search filter if search term exists
@@ -63,7 +73,42 @@ export function useCustomers(
           throw new Error(error.message);
         }
 
-        const customersData = (data || []) as Customer[];
+        // Process customers data and calculate stats from bookings
+        type CustomerWithBookings = Customer & {
+          bookings?: Array<{
+            id: string;
+            total_amount: number;
+            deleted_at: string | null;
+          }>;
+        };
+
+        const customersData = ((data || []) as CustomerWithBookings[]).map(
+          (customer) => {
+            const bookings = customer.bookings || [];
+
+            // Filter out deleted bookings
+            const activeBookings = bookings.filter((b) => !b.deleted_at);
+
+            // Calculate total bookings count
+            const total_bookings = activeBookings.length;
+
+            // Calculate total spent (sum of total_amount)
+            const total_spent = activeBookings.reduce(
+              (sum, booking) => sum + Number(booking.total_amount || 0),
+              0
+            );
+
+            // Remove bookings from customer object and add computed fields
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { bookings: _, ...customerWithoutBookings } = customer;
+
+            return {
+              ...customerWithoutBookings,
+              total_bookings,
+              total_spent,
+            } as Customer;
+          }
+        );
 
         const total = count || 0;
         const totalPages = Math.ceil(total / limitNum);

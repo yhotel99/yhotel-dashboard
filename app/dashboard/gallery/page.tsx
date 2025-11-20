@@ -382,7 +382,7 @@ export default function GalleryPage() {
                 multiple
                 ref={fileInputRef}
                 onChange={handleFileSelect}
-                className="cursor-pointer"
+                className="cursor-pointer py-1.5"
               />
               <p className="text-muted-foreground text-xs">
                 Bạn có thể chọn nhiều file cùng lúc

@@ -1,164 +1,163 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { ColumnDef } from "@tanstack/react-table"
-import { IconDotsVertical, IconPlus } from "@tabler/icons-react"
-
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { DataTable } from "@/components/data-table"
-import { useRouter } from "next/navigation"
-
-// Customer data type
-type Customer = {
-  id: string
-  name: string
-  phone: string
-  email: string
-  totalBookings: number
-  totalSpent: number
-  createdAt: string
-  status: "active" | "banned"
-}
-
-// Sample data
-const customersData: Customer[] = [
-  {
-    id: "1",
-    name: "Nguyễn Văn A",
-    phone: "0901234567",
-    email: "a@example.com",
-    totalBookings: 5,
-    totalSpent: 6000000,
-    createdAt: "2023-10-10",
-    status: "active",
-  },
-  {
-    id: "2",
-    name: "Trần Thị B",
-    phone: "0902345678",
-    email: "b@example.com",
-    totalBookings: 2,
-    totalSpent: 2000000,
-    createdAt: "2023-11-15",
-    status: "active",
-  },
-  {
-    id: "3",
-    name: "Phạm Văn C",
-    phone: "0903456789",
-    email: "c@example.com",
-    totalBookings: 7,
-    totalSpent: 9000000,
-    createdAt: "2023-12-01",
-    status: "banned",
-  },
-  {
-    id: "4",
-    name: "Lê Thị D",
-    phone: "0904567890",
-    email: "d@example.com",
-    totalBookings: 1,
-    totalSpent: 1000000,
-    createdAt: "2024-01-05",
-    status: "active",
-  },
-]
-
-// Status badge
-function StatusBadge({ status }: { status: Customer["status"] }) {
-  return status === "active" ? (
-    <Badge variant="outline" className="border-green-500 text-green-600">Đang hoạt động</Badge>
-  ) : (
-    <Badge variant="destructive">Đã khóa</Badge>
-  )
-}
-
-// Actions
-function ActionsCell({ customerId }: { customerId: string }) {
-  const router = useRouter()
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          className="data-[state=open]:bg-muted text-muted-foreground flex size-8"
-          size="icon"
-        >
-          <IconDotsVertical />
-          <span className="sr-only">Open menu</span>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-32">
-        <DropdownMenuItem onClick={() => router.push(`/dashboard/customers/${customerId}/bookings`)}>Xem chi tiết</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => router.push(`/dashboard/customers/edit/${customerId}`)}>Chỉnh sửa</DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive">Khóa khách hàng</DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  )
-}
-
-// Columns
-const columns: ColumnDef<Customer>[] = [
-  {
-    accessorKey: "name",
-    header: "Họ tên",
-    enableHiding: false,
-  },
-  {
-    accessorKey: "phone",
-    header: "SĐT",
-  },
-  {
-    accessorKey: "email",
-    header: "Email",
-    cell: ({ row }) => (
-      <span className="text-blue-700 underline cursor-pointer">{row.original.email}</span>
-    )
-  },
-  {
-    accessorKey: "totalBookings",
-    header: "Số đơn",
-    cell: ({ row }) => (
-      <span>{row.original.totalBookings} lần</span>
-    ),
-  },
-  {
-    accessorKey: "totalSpent",
-    header: "Tổng chi tiêu",
-    cell: ({ row }) => (
-      <span>{row.original.totalSpent.toLocaleString("vi-VN") + " ₫"}</span>
-    ),
-  },
-  {
-    accessorKey: "createdAt",
-    header: "Ngày đăng ký",
-    cell: ({ row }) => (
-      <span>{row.original.createdAt}</span>
-    ),
-  },
-  {
-    accessorKey: "status",
-    header: "Trạng thái",
-    cell: ({ row }) => <StatusBadge status={row.original.status} />,
-  },
-  {
-    id: "actions",
-    cell: ({ row }) => <ActionsCell customerId={row.original.id} />,
-  },
-]
+import * as React from "react";
+import { IconPlus } from "@tabler/icons-react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { DataTable } from "@/components/data-table";
+import { useCustomers, type Customer } from "@/hooks/use-customers";
+import { useDebounce } from "@/hooks/use-debounce";
+import { createColumns } from "@/components/customers/columns";
+import { CreateCustomerDialog } from "@/components/customers/create-customer-dialog";
+import { EditCustomerDialog } from "@/components/customers/edit-customer-dialog";
+import { DeleteCustomerDialog } from "@/components/customers/delete-customer-dialog";
+import { toast } from "sonner";
 
 export default function CustomersPage() {
-  const router = useRouter()
-  const [data] = React.useState<Customer[]>(customersData)
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [localSearch, setLocalSearch] = React.useState("");
+  const [openCreateDialog, setOpenCreateDialog] = React.useState(false);
+  const [openEditDialog, setOpenEditDialog] = React.useState(false);
+  const [editingCustomer, setEditingCustomer] = React.useState<Customer | null>(
+    null
+  );
+  const [openDeleteDialog, setOpenDeleteDialog] = React.useState(false);
+  const [customerToDelete, setCustomerToDelete] =
+    React.useState<Customer | null>(null);
+
+  // Get pagination and search from URL params
+  const page = React.useMemo(() => {
+    const pageParam = searchParams.get("page");
+    const pageNum = pageParam ? parseInt(pageParam, 10) : 1;
+    return pageNum > 0 ? pageNum : 1;
+  }, [searchParams]);
+
+  const limit = React.useMemo(() => {
+    const limitParam = searchParams.get("limit");
+    const limitNum = limitParam ? parseInt(limitParam, 10) : 10;
+    return limitNum > 0 ? limitNum : 10;
+  }, [searchParams]);
+
+  const search = React.useMemo(() => {
+    return searchParams.get("search") || "";
+  }, [searchParams]);
+
+  // Update search params
+  const updateSearchParams = React.useCallback(
+    (newPage: number, newLimit: number, newSearch: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (newPage > 1) {
+        params.set("page", newPage.toString());
+      } else {
+        params.delete("page");
+      }
+      if (newLimit !== 10) {
+        params.set("limit", newLimit.toString());
+      } else {
+        params.delete("limit");
+      }
+      if (newSearch) {
+        params.set("search", newSearch);
+      } else {
+        params.delete("search");
+      }
+      router.push(`/dashboard/customers?${params.toString()}`);
+    },
+    [router, searchParams]
+  );
+
+  // Sync local search with URL search
+  React.useEffect(() => {
+    setLocalSearch(search);
+  }, [search]);
+
+  // Debounce search
+  const debouncedSearch = useDebounce(localSearch, 500);
+
+  React.useEffect(() => {
+    if (debouncedSearch !== search) {
+      updateSearchParams(1, limit, debouncedSearch);
+    }
+  }, [debouncedSearch, search, limit, updateSearchParams]);
+
+  const {
+    customers,
+    isLoading,
+    pagination,
+    fetchCustomers,
+    createCustomer,
+    updateCustomer,
+    deleteCustomer,
+  } = useCustomers(page, limit, search);
+
+  const handleEditCustomer = (customer: Customer) => {
+    setEditingCustomer(customer);
+    setOpenEditDialog(true);
+  };
+
+  const handleUpdateCustomer = async (
+    id: string,
+    input: Parameters<typeof updateCustomer>[1]
+  ) => {
+    try {
+      await updateCustomer(id, input);
+      toast.success("Cập nhật khách hàng thành công!", {
+        description: `Khách hàng ${input.full_name} đã được cập nhật thành công.`,
+      });
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Không thể cập nhật khách hàng";
+      toast.error("Cập nhật khách hàng thất bại", {
+        description: errorMessage,
+      });
+      throw err;
+    }
+  };
+
+  const handleDeleteClick = (customer: Customer) => {
+    setCustomerToDelete(customer);
+    setOpenDeleteDialog(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!customerToDelete) return;
+
+    try {
+      await deleteCustomer(customerToDelete.id);
+      toast.success("Khóa khách hàng thành công!", {
+        description: `Khách hàng ${customerToDelete.full_name} đã được khóa thành công.`,
+      });
+      setOpenDeleteDialog(false);
+      setCustomerToDelete(null);
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Không thể khóa khách hàng";
+      toast.error("Khóa khách hàng thất bại", {
+        description: errorMessage,
+      });
+      throw err;
+    }
+  };
+
+  const handleCreateCustomer = async (
+    input: Parameters<typeof createCustomer>[0]
+  ) => {
+    try {
+      await createCustomer(input);
+      toast.success("Tạo khách hàng thành công!", {
+        description: `Khách hàng ${input.full_name} đã được tạo thành công.`,
+      });
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Không thể tạo khách hàng";
+      toast.error("Tạo khách hàng thất bại", {
+        description: errorMessage,
+      });
+      throw err;
+    }
+  };
+
   return (
     <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
       <div className="flex items-center justify-between px-4 lg:px-6">
@@ -168,22 +167,54 @@ export default function CustomersPage() {
             Quản lý và theo dõi thông tin khách hàng sử dụng hệ thống
           </p>
         </div>
-        <Button className="gap-2" onClick={() => router.push("/dashboard/customers/create") }>
+        <Button className="gap-2" onClick={() => setOpenCreateDialog(true)}>
           <IconPlus className="size-4" />
           Thêm khách hàng
         </Button>
       </div>
       <div className="px-4 lg:px-6">
         <DataTable
-          columns={columns}
-          data={data}
-          searchKey="name"
+          columns={createColumns(handleEditCustomer, handleDeleteClick)}
+          data={customers}
+          searchKey="full_name"
           searchPlaceholder="Tìm kiếm theo tên, SĐT hoặc email..."
           emptyMessage="Không tìm thấy khách hàng nào."
           entityName="khách hàng"
           getRowId={(row) => row.id}
+          fetchData={() => fetchCustomers(page, limit, search)}
+          isLoading={isLoading}
+          serverPagination={pagination}
+          onPageChange={(newPage) => updateSearchParams(newPage, limit, search)}
+          onLimitChange={(newLimit) => updateSearchParams(1, newLimit, search)}
+          serverSearch={localSearch}
+          onSearchChange={setLocalSearch}
         />
       </div>
+
+      <CreateCustomerDialog
+        open={openCreateDialog}
+        onOpenChange={setOpenCreateDialog}
+        onCreate={handleCreateCustomer}
+      />
+
+      <EditCustomerDialog
+        open={openEditDialog}
+        onOpenChange={(open) => {
+          setOpenEditDialog(open);
+          if (!open) {
+            setEditingCustomer(null);
+          }
+        }}
+        customer={editingCustomer}
+        onUpdate={handleUpdateCustomer}
+      />
+
+      <DeleteCustomerDialog
+        customer={customerToDelete}
+        open={openDeleteDialog}
+        onOpenChange={setOpenDeleteDialog}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
-  )
+  );
 }
