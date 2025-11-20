@@ -51,8 +51,8 @@ export const roomStatusEnum = [
   ROOM_STATUS.CLEAN,
 ] as const;
 
-// Form validation schema
-export const roomFormSchema = z.object({
+// Base form validation schema
+const baseRoomFormSchema = z.object({
   name: z.string().min(1, "Tên phòng là bắt buộc"),
   description: z.string().optional(),
   room_type: z.enum(roomTypeEnum),
@@ -70,12 +70,6 @@ export const roomFormSchema = z.object({
     }),
   status: z.enum(roomStatusEnum),
   amenities: z.array(z.string()),
-  thumbnail: z
-    .object({
-      id: z.string(),
-      url: z.string(),
-    })
-    .optional(),
   images: z
     .array(
       z.object({
@@ -85,6 +79,34 @@ export const roomFormSchema = z.object({
     )
     .optional(),
 });
+
+// Form validation schema for create (thumbnail required)
+export const createRoomFormSchema = baseRoomFormSchema
+  .extend({
+    thumbnail: z
+      .object({
+        id: z.string(),
+        url: z.string(),
+      })
+      .optional(),
+  })
+  .refine((data) => data.thumbnail !== undefined && data.thumbnail !== null, {
+    message: "Ảnh chính (Thumbnail) là bắt buộc",
+    path: ["thumbnail"],
+  });
+
+// Form validation schema for edit (thumbnail optional)
+export const editRoomFormSchema = baseRoomFormSchema.extend({
+  thumbnail: z
+    .object({
+      id: z.string(),
+      url: z.string(),
+    })
+    .optional(),
+});
+
+// Default schema (for backward compatibility)
+export const roomFormSchema = editRoomFormSchema;
 
 export type RoomFormValues = z.infer<typeof roomFormSchema>;
 
@@ -132,7 +154,9 @@ export function RoomForm({
   };
 
   const form = useForm<RoomFormValues>({
-    resolver: zodResolver(roomFormSchema),
+    resolver: zodResolver(
+      mode === "create" ? createRoomFormSchema : editRoomFormSchema
+    ),
     defaultValues: defaultValues
       ? {
           ...defaultFormValues,
@@ -437,16 +461,32 @@ export function RoomForm({
             <FormField
               control={form.control}
               name="thumbnail"
-              render={({ field }) => (
+              render={({ field, fieldState }) => (
                 <FormItem>
+                  <FormLabel>
+                    Ảnh chính (Thumbnail) {mode === "create" && "*"}
+                  </FormLabel>
                   <FormControl>
                     <ImageSelector
                       value={field.value}
                       onChange={field.onChange}
-                      label="Ảnh chính (Thumbnail)"
-                      description="Chọn ảnh đại diện cho phòng"
+                      label={
+                        mode === "create"
+                          ? "Ảnh chính (Thumbnail) *"
+                          : "Ảnh chính (Thumbnail)"
+                      }
+                      description={
+                        mode === "create"
+                          ? "Chọn ảnh đại diện cho phòng (bắt buộc)"
+                          : "Chọn ảnh đại diện cho phòng"
+                      }
                     />
                   </FormControl>
+                  {fieldState.error && (
+                    <p className="text-sm font-medium text-destructive">
+                      {fieldState.error.message}
+                    </p>
+                  )}
                 </FormItem>
               )}
             />

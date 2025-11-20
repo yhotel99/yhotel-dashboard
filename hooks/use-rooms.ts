@@ -258,56 +258,62 @@ export function useRooms(
           amenities: Array.isArray(data.amenities) ? data.amenities : [],
         } as Room;
 
-        // Delete existing room_images
-        const { error: deleteError } = await supabase
-          .from("room_images")
-          .delete()
-          .eq("room_id", id);
+        // Only update images if thumbnail or imageList is provided
+        const hasThumbnail = thumbnail !== undefined;
+        const hasImageList = imageList !== undefined;
 
-        if (deleteError) {
-          console.warn("Error deleting room_images:", deleteError);
-        }
+        if (hasThumbnail || hasImageList) {
+          // Delete existing room_images only if we're updating images
+          const { error: deleteError } = await supabase
+            .from("room_images")
+            .delete()
+            .eq("room_id", id);
 
-        // Create new room_images records
-        const roomImagesToInsert: Array<{
-          room_id: string;
-          image_id: string;
-          position: number;
-          is_main: boolean;
-        }> = [];
+          if (deleteError) {
+            console.warn("Error deleting room_images:", deleteError);
+          }
 
-        // Handle thumbnail (main image)
-        if (thumbnail?.id) {
-          roomImagesToInsert.push({
-            room_id: id,
-            image_id: thumbnail.id,
-            position: 0,
-            is_main: true,
-          });
-        }
+          // Create new room_images records
+          const roomImagesToInsert: Array<{
+            room_id: string;
+            image_id: string;
+            position: number;
+            is_main: boolean;
+          }> = [];
 
-        // Handle additional images
-        if (imageList && imageList.length > 0) {
-          let positionIndex = 0;
-          imageList.forEach((image) => {
+          // Handle thumbnail (main image) - only if provided
+          if (thumbnail?.id) {
             roomImagesToInsert.push({
               room_id: id,
-              image_id: image.id,
-              position: positionIndex++, // Position increases: 0, 1, 2, 3...
-              is_main: false,
+              image_id: thumbnail.id,
+              position: 0,
+              is_main: true,
             });
-          });
-        }
+          }
 
-        // Insert room_images if any
-        if (roomImagesToInsert.length > 0) {
-          const { error: roomImagesError } = await supabase
-            .from("room_images")
-            .insert(roomImagesToInsert);
+          // Handle additional images - only if provided
+          if (imageList && imageList.length > 0) {
+            let positionIndex = thumbnail?.id ? 1 : 0; // Start from 1 if thumbnail exists
+            imageList.forEach((image) => {
+              roomImagesToInsert.push({
+                room_id: id,
+                image_id: image.id,
+                position: positionIndex++, // Position increases: 0 or 1, 2, 3...
+                is_main: false,
+              });
+            });
+          }
 
-          if (roomImagesError) {
-            console.warn("Failed to insert room_images:", roomImagesError);
-            // Don't throw error, room is already updated
+          // Insert room_images if any
+          if (roomImagesToInsert.length > 0) {
+            const { error: roomImagesError } = await supabase
+              .from("room_images")
+              .insert(roomImagesToInsert);
+
+            if (roomImagesError) {
+              console.warn("Failed to insert room_images:", roomImagesError);
+              // Don't throw error, room is already updated
+            }
           }
         }
 
@@ -319,6 +325,44 @@ export function useRooms(
       }
     },
     [fetchRooms, page, limit, search]
+  );
+
+  // Update room status only
+  const updateRoomStatus = useCallback(
+    async (id: string, status: Room["status"]) => {
+      try {
+        const supabase = createClient();
+
+        // Update only room status
+        const { data, error } = await supabase
+          .from("rooms")
+          .update({ status })
+          .eq("id", id)
+          .select()
+          .single();
+
+        if (error) {
+          throw new Error(error.message);
+        }
+
+        const updatedRoom = {
+          ...data,
+          amenities: Array.isArray(data.amenities) ? data.amenities : [],
+        } as Room;
+
+        // Update local state instead of refetching
+        setRooms((prevRooms) =>
+          prevRooms.map((room) =>
+            room.id === id ? { ...room, status: updatedRoom.status } : room
+          )
+        );
+
+        return updatedRoom;
+      } catch (err) {
+        throw err;
+      }
+    },
+    []
   );
 
   // Delete room
@@ -442,6 +486,7 @@ export function useRooms(
     fetchRooms,
     createRoom,
     updateRoom,
+    updateRoomStatus,
     deleteRoom,
     getRoomById,
   };
