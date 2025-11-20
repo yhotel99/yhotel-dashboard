@@ -48,10 +48,14 @@ const StatusBadge = ({ status }: { status: Room["status"] }) => {
   const statusConfig = {
     available: { label: "Có sẵn", variant: "default" as const },
     maintenance: { label: "Bảo trì", variant: "outline" as const },
-    inactive: { label: "Không hoạt động", variant: "secondary" as const },
+    not_clean: { label: "Chưa dọn", variant: "secondary" as const },
+    clean: { label: "Đã dọn", variant: "default" as const },
   };
 
   const config = statusConfig[status];
+  if (!config) {
+    return <Badge variant="outline">{status}</Badge>;
+  }
   return <Badge variant={config.variant}>{config.label}</Badge>;
 };
 
