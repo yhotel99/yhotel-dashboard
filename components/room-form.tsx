@@ -35,6 +35,7 @@ import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
 import { ImageSelector, ImageListSelector } from "@/components/image-selector";
 import { formatCurrency } from "@/lib/utils";
+import { ROOM_STATUS, roomStatusLabels } from "@/lib/constants";
 
 // Room type enum matching database
 export const roomTypeEnum = [
@@ -43,7 +44,12 @@ export const roomTypeEnum = [
   "superior",
   "family",
 ] as const;
-export const roomStatusEnum = ["available", "maintenance", "inactive"] as const;
+export const roomStatusEnum = [
+  ROOM_STATUS.AVAILABLE,
+  ROOM_STATUS.MAINTENANCE,
+  ROOM_STATUS.NOT_CLEAN,
+  ROOM_STATUS.CLEAN,
+] as const;
 
 // Form validation schema
 export const roomFormSchema = z.object({
@@ -119,7 +125,7 @@ export function RoomForm({
     room_type: "standard",
     price_per_night: "0",
     max_guests: "2",
-    status: "available",
+    status: ROOM_STATUS.AVAILABLE,
     amenities: [],
     thumbnail: undefined,
     images: undefined,
@@ -333,10 +339,17 @@ export function RoomForm({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="available">Có sẵn</SelectItem>
-                        <SelectItem value="maintenance">Bảo trì</SelectItem>
-                        <SelectItem value="inactive">
-                          Không hoạt động
+                        <SelectItem value={ROOM_STATUS.AVAILABLE}>
+                          {roomStatusLabels[ROOM_STATUS.AVAILABLE]}
+                        </SelectItem>
+                        <SelectItem value={ROOM_STATUS.MAINTENANCE}>
+                          {roomStatusLabels[ROOM_STATUS.MAINTENANCE]}
+                        </SelectItem>
+                        <SelectItem value={ROOM_STATUS.NOT_CLEAN}>
+                          {roomStatusLabels[ROOM_STATUS.NOT_CLEAN]}
+                        </SelectItem>
+                        <SelectItem value={ROOM_STATUS.CLEAN}>
+                          {roomStatusLabels[ROOM_STATUS.CLEAN]}
                         </SelectItem>
                       </SelectContent>
                     </Select>

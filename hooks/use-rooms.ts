@@ -51,13 +51,13 @@ export function useRooms(
         const from = (pageNum - 1) * limitNum;
         const to = from + limitNum - 1;
 
-        // Build query with room_images join to get thumbnails
+        // Build query with room_images join - only fetch thumbnail (is_main = true)
         let query = supabase
           .from("rooms")
           .select(
             `
             *,
-            room_images (
+            room_images!inner (
               image_id,
               is_main,
               images (
@@ -68,7 +68,8 @@ export function useRooms(
           `,
             { count: "exact" }
           )
-          .is("deleted_at", null);
+          .is("deleted_at", null)
+          .eq("room_images.is_main", true);
 
         // Add search filter if search term exists
         if (searchTerm && searchTerm.trim() !== "") {
@@ -100,10 +101,8 @@ export function useRooms(
         const roomsData = (data || []).map((room: RoomWithImagesData) => {
           const roomImages = room.room_images || [];
 
-          // Find thumbnail (is_main = true)
-          const thumbnailRoomImage = roomImages.find(
-            (ri) => ri.is_main === true
-          );
+          // Get thumbnail - query already filtered for is_main = true, so take first item
+          const thumbnailRoomImage = roomImages[0];
           const thumbnail =
             thumbnailRoomImage && thumbnailRoomImage.images
               ? {

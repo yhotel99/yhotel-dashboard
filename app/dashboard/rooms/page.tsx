@@ -34,30 +34,8 @@ import { Label } from "@/components/ui/label";
 import { DataTable } from "@/components/data-table";
 import { useRooms, type Room } from "@/hooks/use-rooms";
 import { toast } from "sonner";
-
-// Room type labels
-const roomTypeLabels: Record<Room["room_type"], string> = {
-  standard: "Standard",
-  deluxe: "Deluxe",
-  superior: "Superior",
-  family: "Family",
-};
-
-// Status badge component
-const StatusBadge = ({ status }: { status: Room["status"] }) => {
-  const statusConfig = {
-    available: { label: "Có sẵn", variant: "default" as const },
-    maintenance: { label: "Bảo trì", variant: "outline" as const },
-    not_clean: { label: "Chưa dọn", variant: "secondary" as const },
-    clean: { label: "Đã dọn", variant: "default" as const },
-  };
-
-  const config = statusConfig[status];
-  if (!config) {
-    return <Badge variant="outline">{status}</Badge>;
-  }
-  return <Badge variant={config.variant}>{config.label}</Badge>;
-};
+import { roomTypeLabels } from "@/lib/constants";
+import { StatusBadge } from "@/components/rooms/status-badge";
 
 // Actions cell component
 function ActionsCell({
