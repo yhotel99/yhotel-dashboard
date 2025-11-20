@@ -34,7 +34,7 @@ import {
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
 import { ImageSelector, ImageListSelector } from "@/components/image-selector";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency } from "@/lib/functions";
 import { ROOM_STATUS, roomStatusLabels } from "@/lib/constants";
 
 // Room type enum matching database
@@ -470,11 +470,6 @@ export function RoomForm({
                     <ImageSelector
                       value={field.value}
                       onChange={field.onChange}
-                      label={
-                        mode === "create"
-                          ? "Ảnh chính (Thumbnail) *"
-                          : "Ảnh chính (Thumbnail)"
-                      }
                       description={
                         mode === "create"
                           ? "Chọn ảnh đại diện cho phòng (bắt buộc)"
