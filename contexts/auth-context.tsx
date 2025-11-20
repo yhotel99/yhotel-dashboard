@@ -10,7 +10,6 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
 import type { Profile } from "@/lib/types";
-import { fetchProfileById } from "@/services/profiles";
 
 const supabase = createClient();
 
@@ -30,10 +29,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Fetch profile when user changes
+  // Fetch profile when user changes - directly from Supabase
   const fetchProfile = async (userId: string) => {
-    const profile = await fetchProfileById(userId);
-    setProfile(profile);
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .is("deleted_at", null)
+        .single();
+
+      if (error || !data) {
+        setProfile(null);
+        return;
+      }
+
+      setProfile(data as Profile);
+    } catch (err) {
+      console.error("Error fetching profile:", err);
+      setProfile(null);
+    }
   };
 
   const handleSetProfile = (profile: Profile) => {
