@@ -1,4 +1,5 @@
 // Common types for the application
+import type { RoomMapStatus } from "@/lib/constants";
 
 // ============================================================================
 // User & Profile Types
@@ -10,8 +11,8 @@ export type Profile = {
   full_name: string;
   email: string;
   phone: string | null;
-  role: "admin" | "manager" | "staff";
-  status: "active" | "inactive" | "suspended";
+  role: UserRole;
+  status: UserStatus;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -36,7 +37,7 @@ export type Room = {
   price_per_night: number;
   max_guests: number;
   amenities: string[];
-  status: "available" | "maintenance" | "inactive";
+  status: "available" | "maintenance" | "not_clean" | "clean";
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
@@ -51,14 +52,14 @@ export type RoomInput = {
   price_per_night: number;
   max_guests: number;
   amenities: string[];
-  status: "available" | "maintenance" | "inactive";
+  status: "available" | "maintenance" | "not_clean" | "clean";
 };
 
 // Room type enum
 export type RoomType = "standard" | "deluxe" | "superior" | "family";
 
 // Room status type
-export type RoomStatus = "available" | "maintenance" | "inactive";
+export type RoomStatus = "available" | "maintenance" | "not_clean" | "clean";
 
 // ============================================================================
 // Image Types
@@ -80,6 +81,43 @@ export type GalleryImage = {
 export type RoomWithImages = Room & {
   thumbnail?: ImageValue;
   images?: ImageValue[];
+};
+
+// ============================================================================
+// Room Map Types
+// ============================================================================
+
+// Type từ room_status_view (database view)
+export type RoomStatusViewData = {
+  id: string;
+  name: string;
+  description: string | null;
+  room_type: "standard" | "deluxe" | "superior" | "family";
+  price_per_night: string;
+  max_guests: number;
+  amenities: string[];
+  status: string;
+  deleted_at: string | null;
+  created_at: string;
+  updated_at: string;
+  technical_status: string;
+  check_in: string | null;
+  check_out: string | null;
+  booking_status: string | null;
+  current_status: string;
+  booking_id: string | null;
+};
+
+// Room with booking information for map view
+export type RoomWithBooking = Room & {
+  currentBooking: {
+    id: string;
+    check_in: string;
+    check_out: string;
+    status: string;
+  } | null;
+  mapStatus: RoomMapStatus;
+  isClean: boolean;
 };
 
 // ============================================================================
@@ -123,21 +161,92 @@ export type BookingStatus =
   | "no_show"
   | "refunded";
 
-// Booking type
-export type Booking = {
+// Booking record matching database schema (bookings table)
+export type BookingRecord = {
   id: string;
-  bookingCode: string;
-  customerName: string;
-  customerPhone: string;
-  roomNumber: string;
-  checkIn: string;
-  checkOut: string;
-  nights: number;
-  guests: number;
-  totalAmount: number;
+  customer_id: string | null;
+  room_id: string | null;
+  check_in: string;
+  check_out: string;
+  number_of_nights: number;
+  total_guests: number;
   status: BookingStatus;
-  paymentMethod: string;
-  createdAt: string;
+  notes: string | null;
+  total_amount: number;
+  advance_payment: number;
+  actual_check_in: string | null;
+  actual_check_out: string | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+  // Relations (from join queries)
+  customers?: {
+    full_name: string;
+  } | null;
+  rooms?: {
+    name: string;
+  } | null;
+};
+
+// Booking input type for create/update operations
+export type BookingInput = {
+  customer_id?: string | null;
+  room_id?: string | null;
+  check_in: string;
+  check_out: string;
+  number_of_nights?: number;
+  total_guests?: number;
+  status?: BookingStatus;
+  notes?: string | null;
+  total_amount: number;
+  advance_payment?: number;
+  actual_check_in?: string | null;
+  actual_check_out?: string | null;
+};
+
+// ============================================================================
+// Payment Types
+// ============================================================================
+
+// Payment method enum
+export type PaymentMethod = "bank_transfer" | "pay_at_hotel";
+
+// Payment type enum
+export type PaymentType = "room_charge" | "advance_payment" | "extra_service";
+
+// Payment status enum
+export type PaymentStatus =
+  | "pending"
+  | "paid"
+  | "failed"
+  | "refunded"
+  | "cancelled";
+
+// Payment record matching database schema (payments table)
+export type Payment = {
+  id: string;
+  booking_id: string;
+  amount: number;
+  payment_type: PaymentType;
+  payment_method: PaymentMethod;
+  payment_status: PaymentStatus;
+  paid_at: string | null;
+  verified_at: string | null;
+  refunded_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+// Payment input type for create/update operations
+export type PaymentInput = {
+  booking_id: string;
+  amount: number;
+  payment_type: PaymentType;
+  payment_method?: PaymentMethod;
+  payment_status?: PaymentStatus;
+  paid_at?: string | null;
+  verified_at?: string | null;
+  refunded_at?: string | null;
 };
 
 // ============================================================================
@@ -157,6 +266,9 @@ export type Customer = {
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
+  // Computed fields from bookings
+  total_bookings?: number;
+  total_spent?: number;
 };
 
 // Customer input type for create/update
