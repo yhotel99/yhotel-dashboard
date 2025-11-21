@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import type { Customer } from "@/lib/types";
 
-export function CustomerStatusBadge({
+export function StatusBadge({
   customerType,
 }: {
   customerType: Customer["customer_type"];

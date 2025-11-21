@@ -174,7 +174,7 @@ export default function CustomersPage() {
       </div>
       <div className="px-4 lg:px-6">
         <DataTable
-          columns={createColumns(handleEditCustomer, handleDeleteClick)}
+          columns={createColumns(handleEditCustomer)}
           data={customers}
           searchKey="full_name"
           searchPlaceholder="Tìm kiếm theo tên, SĐT hoặc email..."

@@ -12,17 +12,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { Customer } from "@/lib/types";
 
-interface CustomerActionsCellProps {
-  customer: Customer;
-  onEdit: (customer: Customer) => void;
-  onDelete?: (customer: Customer) => void;
-}
-
-export function CustomerActionsCell({
+export function ActionsCell({
   customer,
   onEdit,
-  onDelete,
-}: CustomerActionsCellProps) {
+}: {
+  customer: Customer;
+  onEdit: (customer: Customer) => void;
+}) {
   const router = useRouter();
 
   return (
@@ -48,17 +44,10 @@ export function CustomerActionsCell({
         <DropdownMenuItem onClick={() => onEdit(customer)}>
           Chỉnh sửa
         </DropdownMenuItem>
-        {onDelete && (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              variant="destructive"
-              onClick={() => onDelete(customer)}
-            >
-              Khóa khách hàng
-            </DropdownMenuItem>
-          </>
-        )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem variant="destructive">
+          Khóa khách hàng
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

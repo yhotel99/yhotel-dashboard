@@ -1,12 +1,11 @@
 import { ColumnDef } from "@tanstack/react-table";
 import type { Customer } from "@/lib/types";
-import { formatCurrency, formatDate } from "@/lib/functions";
-import { CustomerStatusBadge } from "./status-badge";
-import { CustomerActionsCell } from "./actions-cell";
+import { formatCurrency, formatDate } from "@/lib/utils";
+import { StatusBadge } from "./status-badge";
+import { ActionsCell } from "./actions-cell";
 
 export function createColumns(
-  onEdit: (customer: Customer) => void,
-  onDelete?: (customer: Customer) => void
+  onEdit: (customer: Customer) => void
 ): ColumnDef<Customer>[] {
   return [
     {
@@ -37,9 +36,7 @@ export function createColumns(
     {
       accessorKey: "total_bookings",
       header: "Số đơn",
-      cell: ({ row }) => (
-        <span>{row.original.total_bookings ?? 0} lần</span>
-      ),
+      cell: ({ row }) => <span>{row.original.total_bookings ?? 0} lần</span>,
       size: 80,
       minSize: 60,
     },
@@ -64,7 +61,7 @@ export function createColumns(
       accessorKey: "customer_type",
       header: "Loại khách hàng",
       cell: ({ row }) => (
-        <CustomerStatusBadge customerType={row.original.customer_type} />
+        <StatusBadge customerType={row.original.customer_type} />
       ),
       size: 100,
       minSize: 80,
@@ -72,15 +69,10 @@ export function createColumns(
     {
       id: "actions",
       cell: ({ row }) => (
-        <CustomerActionsCell
-          customer={row.original}
-          onEdit={onEdit}
-          onDelete={onDelete}
-        />
+        <ActionsCell customer={row.original} onEdit={onEdit} />
       ),
       size: 60,
       minSize: 40,
     },
   ];
 }
-

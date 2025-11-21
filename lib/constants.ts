@@ -93,14 +93,10 @@ export const roomStatusLabels: Record<
  */
 export const BOOKING_STATUS = {
   PENDING: "pending",
-  AWAITING_PAYMENT: "awaiting_payment",
   CONFIRMED: "confirmed",
   CHECKED_IN: "checked_in",
   CHECKED_OUT: "checked_out",
-  COMPLETED: "completed",
   CANCELLED: "cancelled",
-  NO_SHOW: "no_show",
-  REFUNDED: "refunded",
 } as const;
 
 /**
@@ -111,14 +107,10 @@ export const bookingStatusLabels: Record<
   string
 > = {
   [BOOKING_STATUS.PENDING]: "Chờ xác nhận",
-  [BOOKING_STATUS.AWAITING_PAYMENT]: "Chờ thanh toán",
   [BOOKING_STATUS.CONFIRMED]: "Đã xác nhận",
   [BOOKING_STATUS.CHECKED_IN]: "Đã check-in",
   [BOOKING_STATUS.CHECKED_OUT]: "Đã check-out",
-  [BOOKING_STATUS.COMPLETED]: "Hoàn tất",
   [BOOKING_STATUS.CANCELLED]: "Đã hủy",
-  [BOOKING_STATUS.NO_SHOW]: "Không đến",
-  [BOOKING_STATUS.REFUNDED]: "Đã hoàn tiền",
 };
 
 /**

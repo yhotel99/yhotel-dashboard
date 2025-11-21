@@ -1,19 +1,23 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
-import type { BookingRecord, PaginationMeta } from "@/lib/types";
+import type { BookingInput, BookingRecord, PaginationMeta } from "@/lib/types";
+import { BOOKING_STATUS } from "@/lib/constants";
 
 // Re-export types for backward compatibility
 export type { BookingRecord, PaginationMeta } from "@/lib/types";
 
-// Hook for managing bookings by customer ID
-export function useBookingsByCustomer(
-  customerId: string,
-  page: number = 1,
-  limit: number = 10,
-  search: string = ""
-) {
+// Hook for managing bookings
+export function useBookings(options?: {
+  page?: number;
+  limit?: number;
+  search?: string;
+}) {
+  const page = options?.page ?? 1;
+  const limit = options?.limit ?? 10;
+  const search = options?.search ?? "";
+
   const [bookings, setBookings] = useState<BookingRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -24,13 +28,215 @@ export function useBookingsByCustomer(
     totalPages: 0,
   });
 
-  // Fetch bookings with pagination and search
+  // Fetch all bookings with pagination and search (no customer filter)
   const fetchBookings = useCallback(
+    async (pageNum?: number, limitNum?: number, searchTerm?: string) => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const supabase = createClient();
+
+        const currentPage = pageNum ?? page;
+        const currentLimit = limitNum ?? limit;
+        const currentSearch = searchTerm ?? search;
+
+        // Calculate offset
+        const from = (currentPage - 1) * currentLimit;
+        const to = from + currentLimit - 1;
+
+        // Build query for all bookings
+        let query = supabase
+          .from("bookings")
+          .select(
+            `
+            *,
+            rooms:room_id (
+              name
+            ),
+            customers:customer_id (
+              full_name,
+              phone
+            )
+          `,
+            { count: "exact" }
+          )
+          .is("deleted_at", null);
+
+        // Add search filter if search term exists
+        if (currentSearch && currentSearch.trim() !== "") {
+          const trimmedSearch = currentSearch.trim();
+          query = query.ilike("id", `%${trimmedSearch}%`);
+        }
+
+        // Fetch data with pagination
+        const { data, error, count } = await query
+          .order("created_at", { ascending: false })
+          .range(from, to);
+
+        if (error) {
+          throw new Error(error.message);
+        }
+
+        let bookingsData = (data || []) as BookingRecord[];
+
+        // Post-process to filter by room name, customer name, phone if search term exists
+        if (currentSearch && currentSearch.trim() !== "") {
+          const trimmedSearch = currentSearch.trim().toLowerCase();
+          bookingsData = bookingsData.filter((booking) => {
+            const roomName = booking.rooms?.name?.toLowerCase() || "";
+            const bookingId = booking.id.toLowerCase();
+            const customerName =
+              booking.customers?.full_name?.toLowerCase() || "";
+            const customerPhone = booking.customers?.phone?.toLowerCase() || "";
+
+            return (
+              roomName.includes(trimmedSearch) ||
+              customerName.includes(trimmedSearch) ||
+              customerPhone.includes(trimmedSearch) ||
+              bookingId.includes(trimmedSearch)
+            );
+          });
+        }
+
+        const total = count || 0;
+        const totalPages = Math.ceil(total / currentLimit);
+
+        setBookings(bookingsData);
+        setPagination({
+          total,
+          page: currentPage,
+          limit: currentLimit,
+          totalPages,
+        });
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error
+            ? err.message
+            : "Không thể tải danh sách bookings";
+        setError(errorMessage);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [page, limit, search]
+  );
+
+  // Helper function to update booking status
+  const updateBookingStatusInternal = useCallback(
+    async (bookingId: string, status: BookingRecord["status"]) => {
+      try {
+        const supabase = createClient();
+        const { error } = await supabase
+          .from("bookings")
+          .update({ status })
+          .eq("id", bookingId);
+
+        if (error) {
+          throw new Error(error.message);
+        }
+        setBookings((prev) =>
+          prev.map((booking) =>
+            booking.id === bookingId ? { ...booking, status } : booking
+          )
+        );
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error
+            ? err.message
+            : "Không thể cập nhật trạng thái booking";
+        throw new Error(errorMessage);
+      }
+    },
+    []
+  );
+
+  // Update booking status to pending
+  const pendingBooking = useCallback(
+    async (bookingId: string) => {
+      await updateBookingStatusInternal(bookingId, BOOKING_STATUS.PENDING);
+    },
+    [updateBookingStatusInternal]
+  );
+
+  // Update booking status to confirmed
+  const confirmedBooking = useCallback(
+    async (bookingId: string) => {
+      await updateBookingStatusInternal(bookingId, BOOKING_STATUS.CONFIRMED);
+    },
+    [updateBookingStatusInternal]
+  );
+
+  // Update booking status to checked_in
+  const checkedInBooking = useCallback(
+    async (bookingId: string) => {
+      await updateBookingStatusInternal(bookingId, BOOKING_STATUS.CHECKED_IN);
+    },
+    [updateBookingStatusInternal]
+  );
+
+  // Update booking status to checked_out
+  const checkedOutBooking = useCallback(
+    async (bookingId: string) => {
+      await updateBookingStatusInternal(bookingId, BOOKING_STATUS.CHECKED_OUT);
+    },
+    [updateBookingStatusInternal]
+  );
+
+  // Update booking status to cancelled
+  const cancelledBooking = useCallback(
+    async (bookingId: string) => {
+      await updateBookingStatusInternal(bookingId, BOOKING_STATUS.CANCELLED);
+    },
+    [updateBookingStatusInternal]
+  );
+
+  // Generic update booking status (for backward compatibility)
+  const updateBookingStatus = useCallback(
+    async (bookingId: string, status: BookingRecord["status"]) => {
+      await updateBookingStatusInternal(bookingId, status);
+    },
+    [updateBookingStatusInternal]
+  );
+
+  // Get bookings by customer ID (simple version - all bookings without pagination)
+  const getBookingsByCustomerId = useCallback(
+    async (customerIdParam: string): Promise<BookingRecord[]> => {
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from("bookings")
+          .select(
+            `
+            *,
+            rooms:room_id (
+              name
+            )
+          `
+          )
+          .eq("customer_id", customerIdParam)
+          .is("deleted_at", null)
+          .order("created_at", { ascending: false });
+
+        if (error) {
+          throw new Error(error.message);
+        }
+
+        return (data || []) as BookingRecord[];
+      } catch (err) {
+        console.error("Error fetching bookings:", err);
+        return [];
+      }
+    },
+    []
+  );
+
+  // Fetch bookings by customer ID with pagination and search
+  const fetchBookingsByCustomerId = useCallback(
     async (
-      customerIdParam: string = customerId,
-      pageNum: number = page,
-      limitNum: number = limit,
-      searchTerm: string = search
+      customerIdParam: string,
+      pageNum: number = 1,
+      limitNum: number = 10,
+      searchTerm: string | null = null
     ) => {
       try {
         setIsLoading(true);
@@ -57,7 +263,6 @@ export function useBookingsByCustomer(
           .is("deleted_at", null);
 
         // Add search filter if search term exists
-        // Search by booking id (first 8 chars) or room name
         if (searchTerm && searchTerm.trim() !== "") {
           const trimmedSearch = searchTerm.trim();
           query = query.ilike("id", `%${trimmedSearch}%`);
@@ -74,7 +279,7 @@ export function useBookingsByCustomer(
 
         let bookingsData = (data || []) as BookingRecord[];
 
-        // Post-process to filter by room name if search term exists
+        // Post-process to filter by room name and booking ID if search term exists
         if (searchTerm && searchTerm.trim() !== "") {
           const trimmedSearch = searchTerm.trim().toLowerCase();
           bookingsData = bookingsData.filter((booking) => {
@@ -107,31 +312,12 @@ export function useBookingsByCustomer(
         setIsLoading(false);
       }
     },
-    [customerId, page, limit, search]
+    []
   );
 
-  // Load bookings on mount or when page/limit/search/customerId changes
-  useEffect(() => {
-    if (customerId) {
-      fetchBookings(customerId, page, limit, search);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [customerId, page, limit, search]);
-
-  return {
-    bookings,
-    isLoading,
-    error,
-    pagination,
-    fetchBookings,
-  };
-}
-
-// Hook for managing bookings
-export function useBookings() {
-  // Get bookings by customer ID (simple version - all bookings)
-  const getBookingsByCustomerId = useCallback(
-    async (customerId: string): Promise<BookingRecord[]> => {
+  // Get booking by ID
+  const getBookingById = useCallback(
+    async (bookingId: string): Promise<BookingRecord | null> => {
       try {
         const supabase = createClient();
         const { data, error } = await supabase
@@ -141,107 +327,123 @@ export function useBookings() {
             *,
             rooms:room_id (
               name
+            ),
+            customers:customer_id (
+              full_name,
+              phone
             )
           `
           )
-          .eq("customer_id", customerId)
+          .eq("id", bookingId)
           .is("deleted_at", null)
-          .order("created_at", { ascending: false });
+          .single();
 
         if (error) {
+          if (error.code === "PGRST116") {
+            // No rows returned
+            return null;
+          }
           throw new Error(error.message);
         }
 
-        return (data || []) as BookingRecord[];
+        return (data || null) as BookingRecord | null;
       } catch (err) {
-        console.error("Error fetching bookings:", err);
-        return [];
-      }
-    },
-    []
-  );
-
-  // Fetch bookings by customer ID with pagination and search
-  const fetchBookingsByCustomerId = useCallback(
-    async (
-      customerId: string,
-      page: number = 1,
-      limit: number = 10,
-      search: string | null = null
-    ): Promise<{ bookings: BookingRecord[]; pagination: PaginationMeta }> => {
-      try {
-        const supabase = createClient();
-
-        // Calculate offset
-        const from = (page - 1) * limit;
-        const to = from + limit - 1;
-
-        // Build query with rooms join
-        let query = supabase
-          .from("bookings")
-          .select(
-            `
-            *,
-            rooms:room_id (
-              name
-            )
-          `,
-            { count: "exact" }
-          )
-          .eq("customer_id", customerId)
-          .is("deleted_at", null);
-
-        // Add search filter if search term exists
-        // Search by booking id (first 8 chars) or room name
-        if (search && search.trim() !== "") {
-          const trimmedSearch = search.trim();
-          // Note: Supabase doesn't support searching in joined tables directly
-          // So we search by booking id only, room name search would need post-processing
-          query = query.ilike("id", `%${trimmedSearch}%`);
-        }
-
-        // Fetch data with pagination
-        const { data, error, count } = await query
-          .order("created_at", { ascending: false })
-          .range(from, to);
-
-        if (error) {
-          throw new Error(error.message);
-        }
-
-        let bookingsData = (data || []) as BookingRecord[];
-
-        // Post-process to filter by room name if search term exists
-        if (search && search.trim() !== "") {
-          const trimmedSearch = search.trim().toLowerCase();
-          bookingsData = bookingsData.filter((booking) => {
-            const roomName = booking.rooms?.name?.toLowerCase() || "";
-            return roomName.includes(trimmedSearch);
-          });
-        }
-
-        const total = count || 0;
-        const totalPages = Math.ceil(total / limit);
-
-        return {
-          bookings: bookingsData,
-          pagination: {
-            total,
-            page,
-            limit,
-            totalPages,
-          },
-        };
-      } catch (err) {
-        console.error("Error fetching bookings:", err);
+        console.error("Error fetching booking:", err);
         throw err;
       }
     },
     []
   );
 
+  // Create booking
+  const createBooking = useCallback(
+    async (input: BookingInput): Promise<BookingRecord> => {
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from("bookings")
+          .insert(input)
+          .select(
+            `
+            *,
+            rooms:room_id (
+              name
+            ),
+            customers:customer_id (
+              full_name,
+              phone
+            )
+          `
+          )
+          .single();
+
+        if (error) {
+          throw new Error(error.message);
+        }
+
+        return data as BookingRecord;
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Không thể tạo booking";
+        throw new Error(errorMessage);
+      }
+    },
+    []
+  );
+
+  // Update booking
+  const updateBooking = useCallback(
+    async (bookingId: string, input: BookingInput): Promise<BookingRecord> => {
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from("bookings")
+          .update(input)
+          .eq("id", bookingId)
+          .select(
+            `
+            *,
+            rooms:room_id (
+              name
+            ),
+            customers:customer_id (
+              full_name,
+              phone
+            )
+          `
+          )
+          .single();
+
+        if (error) {
+          throw new Error(error.message);
+        }
+
+        return data as BookingRecord;
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Không thể cập nhật booking";
+        throw new Error(errorMessage);
+      }
+    },
+    []
+  );
+
   return {
+    bookings,
+    isLoading,
+    error,
+    pagination,
+    fetchBookings,
+    updateBookingStatus,
+    pendingBooking,
+    confirmedBooking,
+    checkedInBooking,
+    checkedOutBooking,
+    cancelledBooking,
     getBookingsByCustomerId,
     fetchBookingsByCustomerId,
+    getBookingById,
+    createBooking,
+    updateBooking,
   };
 }

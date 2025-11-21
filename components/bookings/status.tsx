@@ -6,14 +6,10 @@ import type { BookingStatus } from "@/lib/types";
 
 const statusLabels: Record<BookingStatus, string> = {
   pending: "Chờ xác nhận",
-  awaiting_payment: "Chờ thanh toán",
   confirmed: "Đã xác nhận",
   checked_in: "Đã check-in",
   checked_out: "Đã check-out",
-  completed: "Hoàn tất",
   cancelled: "Đã hủy",
-  no_show: "Không đến",
-  refunded: "Đã hoàn tiền",
 };
 
 const statusConfig: Record<
@@ -23,10 +19,6 @@ const statusConfig: Record<
   pending: {
     variant: "outline",
     className: "border-amber-500 text-amber-600 dark:border-amber-500/70 dark:text-amber-400",
-  },
-  awaiting_payment: {
-    variant: "outline",
-    className: "border-amber-600 text-amber-700 dark:border-amber-600/70 dark:text-amber-300",
   },
   confirmed: {
     variant: "outline",
@@ -40,19 +32,8 @@ const statusConfig: Record<
     variant: "outline",
     className: "border-emerald-500 text-emerald-600 dark:border-emerald-500/70 dark:text-emerald-400",
   },
-  completed: {
-    variant: "default",
-  },
   cancelled: {
     variant: "destructive",
-  },
-  no_show: {
-    variant: "outline",
-    className: "border-zinc-500 text-zinc-500 dark:border-zinc-400 dark:text-zinc-400",
-  },
-  refunded: {
-    variant: "outline",
-    className: "border-purple-500 text-purple-600 dark:border-purple-500/70 dark:text-purple-400",
   },
 };
 

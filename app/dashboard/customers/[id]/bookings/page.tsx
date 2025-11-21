@@ -8,10 +8,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
 import { useCustomers } from "@/hooks/use-customers";
-import {
-  useBookingsByCustomer,
-  type BookingRecord,
-} from "@/hooks/use-bookings";
+import { useBookings, type BookingRecord } from "@/hooks/use-bookings";
 import { useDebounce } from "@/hooks/use-debounce";
 import { StatusBadge } from "@/components/bookings/status";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -41,11 +38,6 @@ const createColumns = (): ColumnDef<BookingRecord>[] => [
     accessorKey: "number_of_nights",
     header: "Số đêm",
     cell: ({ row }) => `${row.original.number_of_nights} đêm`,
-  },
-  {
-    accessorKey: "total_guests",
-    header: "Số khách",
-    cell: ({ row }) => `${row.original.total_guests} người`,
   },
   {
     accessorKey: "total_amount",
@@ -132,8 +124,20 @@ export default function CustomerBookingsPage() {
   }, [debouncedSearch, search, limit, updateSearchParams]);
 
   const { getCustomerById } = useCustomers();
-  const { bookings, isLoading, pagination, fetchBookings } =
-    useBookingsByCustomer(customerId, page, limit, search);
+  const { bookings, isLoading, pagination, fetchBookingsByCustomerId } =
+    useBookings({
+      page,
+      limit,
+      search,
+    });
+
+  // Fetch bookings when component mounts or params change
+  useEffect(() => {
+    if (customerId) {
+      fetchBookingsByCustomerId(customerId, page, limit, search || null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customerId, page, limit, search]);
 
   // Fetch customer info
   useEffect(() => {
@@ -185,7 +189,9 @@ export default function CustomerBookingsPage() {
           emptyMessage="Khách hàng chưa có booking."
           entityName="booking"
           getRowId={(row) => row.id}
-          fetchData={() => fetchBookings(customerId, page, limit, search)}
+          fetchData={() =>
+            fetchBookingsByCustomerId(customerId, page, limit, search || null)
+          }
           isLoading={isLoading}
           serverPagination={pagination}
           onPageChange={(newPage) => updateSearchParams(newPage, limit, search)}

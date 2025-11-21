@@ -152,14 +152,10 @@ export type UseStorageOptions = {
 // Booking status type
 export type BookingStatus =
   | "pending"
-  | "awaiting_payment"
   | "confirmed"
   | "checked_in"
   | "checked_out"
-  | "completed"
-  | "cancelled"
-  | "no_show"
-  | "refunded";
+  | "cancelled";
 
 // Booking record matching database schema (bookings table)
 export type BookingRecord = {
@@ -182,6 +178,7 @@ export type BookingRecord = {
   // Relations (from join queries)
   customers?: {
     full_name: string;
+    phone: string | null;
   } | null;
   rooms?: {
     name: string;
