@@ -12,8 +12,8 @@ export function createColumns(
   handlers?: {
     onEdit?: (booking: BookingRecord) => void;
     onTransfer?: (id: string, input: BookingInput) => Promise<void>;
-    onCancelBooking?: (id: string) => Promise<void>;
     onMarkAdvancePayment?: (bookingId: string) => Promise<void>;
+    onCancelBooking?: (id: string) => Promise<void>;
     checkAdvancePaymentStatus?: (bookingId: string) => Promise<{
       hasAdvancePayment: boolean;
       isPaid: boolean;
@@ -36,11 +36,6 @@ export function createColumns(
       accessorKey: "customers",
       header: "Khách hàng",
       cell: ({ row }) => row.original.customers?.full_name ?? "-",
-    },
-    {
-      accessorKey: "customers.phone",
-      header: "Số điện thoại",
-      cell: ({ row }) => row.original.customers?.phone ?? "-",
     },
     {
       accessorKey: "rooms",
@@ -92,7 +87,6 @@ export function createColumns(
     {
       id: "actions",
       cell: ({ row }) => {
-        const bookingId = row.original.id;
         const defaultCancelledBooking =
           handlers?.cancelledBooking ||
           (async (id: string) => await updateStatus(id, "cancelled"));
@@ -105,10 +99,13 @@ export function createColumns(
             (async (_id: string, _input: BookingInput) => {
               // Fallback: do nothing
             }),
-          onCancelBooking:
-            handlers?.onCancelBooking ||
-            (async () => await defaultCancelledBooking(bookingId)),
-          onMarkAdvancePayment: handlers?.onMarkAdvancePayment,
+          onMarkAdvancePayment:
+            handlers?.onMarkAdvancePayment ||
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            (async (_bookingId: string) => {
+              // Fallback: do nothing
+            }),
+          onCancelBooking: handlers?.onCancelBooking || defaultCancelledBooking,
           checkAdvancePaymentStatus: handlers?.checkAdvancePaymentStatus,
           pendingBooking:
             handlers?.pendingBooking ||

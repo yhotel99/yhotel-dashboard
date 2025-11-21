@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { IconPlus } from "@tabler/icons-react";
+import { IconPlus, IconSearch } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
@@ -13,12 +13,16 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { createColumns } from "@/components/bookings/columns";
 import { CreateBookingDialog } from "@/components/bookings/create-booking-dialog";
 import { EditBookingDialog } from "@/components/bookings/edit-booking-dialog";
+import { CheckAvailableRoomsDialog } from "@/components/bookings/check-available-rooms-dialog";
 import { toast } from "sonner";
+import { translateBookingError } from "@/lib/functions";
 
 export default function BookingsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [localSearch, setLocalSearch] = React.useState("");
+  const [isCheckAvailableRoomsDialogOpen, setIsCheckAvailableRoomsDialogOpen] =
+    React.useState(false);
 
   // Get pagination and search from URL params
   const page = React.useMemo(() => {
@@ -113,9 +117,19 @@ export default function BookingsPage() {
 
   const handleCreate = React.useCallback(
     async (input: BookingInput) => {
-      await createBooking(input);
-      toast.success("Đã tạo booking thành công");
-      await fetchBookings();
+      try {
+        await createBooking(input);
+        toast.success("Đã tạo booking thành công");
+        await fetchBookings();
+      } catch (err) {
+        const rawMessage =
+          err instanceof Error ? err.message : "Không thể tạo booking";
+        // Translate error message for toast
+        const translatedMessage = translateBookingError(rawMessage);
+        toast.error(translatedMessage, {
+          position: "top-center",
+        });
+      }
     },
     [createBooking, fetchBookings]
   );
@@ -145,12 +159,12 @@ export default function BookingsPage() {
       try {
         await cancelledBooking(id);
         toast.success("Đã hủy booking thành công");
-        await fetchBookings();
+        // State is already updated by cancelledBooking, no need to fetch
       } catch {
         toast.error("Không thể hủy booking");
       }
     },
-    [cancelledBooking, fetchBookings]
+    [cancelledBooking]
   );
 
   const handleUpdate = React.useCallback(
@@ -165,9 +179,9 @@ export default function BookingsPage() {
   const handleUpdateStatus = React.useCallback(
     async (id: string, status: BookingStatus) => {
       await updateBookingStatus(id, status);
-      await fetchBookings();
+      // State is already updated by updateBookingStatus, no need to fetch
     },
-    [updateBookingStatus, fetchBookings]
+    [updateBookingStatus]
   );
 
   const handleMarkAdvancePayment = React.useCallback(
@@ -175,13 +189,13 @@ export default function BookingsPage() {
       try {
         await markAdvancePaymentAsPaid(bookingId);
         toast.success("Đã đánh dấu đặt cọc thành công");
-        await fetchBookings();
+        // Note: Payment status update doesn't affect booking list, no need to fetch
       } catch (error) {
         toast.error("Không thể đánh dấu đặt cọc");
         throw error;
       }
     },
-    [markAdvancePaymentAsPaid, fetchBookings]
+    [markAdvancePaymentAsPaid]
   );
 
   const columns = React.useMemo(
@@ -189,8 +203,8 @@ export default function BookingsPage() {
       createColumns(handleUpdateStatus, {
         onEdit: handleEdit,
         onTransfer: handleTransfer,
-        onCancelBooking: handleCancelBooking,
         onMarkAdvancePayment: handleMarkAdvancePayment,
+        onCancelBooking: handleCancelBooking,
         checkAdvancePaymentStatus,
         pendingBooking,
         confirmedBooking,
@@ -202,8 +216,8 @@ export default function BookingsPage() {
       handleUpdateStatus,
       handleEdit,
       handleTransfer,
-      handleCancelBooking,
       handleMarkAdvancePayment,
+      handleCancelBooking,
       checkAdvancePaymentStatus,
       pendingBooking,
       confirmedBooking,
@@ -222,10 +236,20 @@ export default function BookingsPage() {
             Quản lý và theo dõi các đặt phòng trong khách sạn
           </p>
         </div>
-        <Button onClick={handleCreateBooking} className="gap-2">
-          <IconPlus className="size-4" />
-          Tạo booking mới
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setIsCheckAvailableRoomsDialogOpen(true)}
+            className="gap-2"
+          >
+            <IconSearch className="size-4" />
+            Kiểm tra
+          </Button>
+          <Button onClick={handleCreateBooking} className="gap-2">
+            <IconPlus className="size-4" />
+            Tạo booking mới
+          </Button>
+        </div>
       </div>
 
       <div className="px-4 lg:px-6">
@@ -268,6 +292,11 @@ export default function BookingsPage() {
           onUpdate={handleUpdate}
         />
       )}
+
+      <CheckAvailableRoomsDialog
+        open={isCheckAvailableRoomsDialogOpen}
+        onOpenChange={setIsCheckAvailableRoomsDialogOpen}
+      />
     </div>
   );
 }

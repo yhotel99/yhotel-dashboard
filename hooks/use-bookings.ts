@@ -9,7 +9,12 @@ import {
   PAYMENT_STATUS,
   PAYMENT_TYPE,
 } from "@/lib/constants";
-import { searchBookings, countBookings } from "@/services/bookings";
+import {
+  searchBookings,
+  countBookings,
+  createBookingSecure,
+  getBookingByIdWithRelations,
+} from "@/services/bookings";
 
 // Re-export types for backward compatibility
 export type { BookingRecord, PaginationMeta } from "@/lib/types";
@@ -336,43 +341,27 @@ export function useBookings(options?: {
   const createBooking = useCallback(
     async (input: BookingInput): Promise<BookingRecord> => {
       try {
-        const supabase = createClient();
+        // Create booking using secure RPC function
+        const bookingId = await createBookingSecure(input);
 
-        // Create booking with status = pending
-        const bookingData = {
-          ...input,
-          status: BOOKING_STATUS.PENDING,
-        };
+        // Fetch booking with relations
+        const bookingData = await getBookingByIdWithRelations(bookingId);
 
-        const { data: booking, error: bookingError } = await supabase
-          .from("bookings")
-          .insert(bookingData)
-          .select(
-            `
-            *,
-            rooms:room_id (
-              name
-            ),
-            customers:customer_id (
-              full_name,
-              phone
-            )
-          `
-          )
-          .single();
-
-        if (bookingError) {
-          throw new Error(bookingError.message);
+        if (!bookingData) {
+          // If can't fetch, still refresh list
+          await fetchBookings(page, limit, search);
+          throw new Error("Không thể lấy thông tin booking vừa tạo");
         }
 
         // Create payments for the booking
+        const supabase = createClient();
         const paymentsToCreate = [];
 
         // Payment 1: advance_payment (only if advance_payment > 0)
-        if (booking.advance_payment > 0) {
+        if (bookingData.advance_payment > 0) {
           paymentsToCreate.push({
-            booking_id: booking.id,
-            amount: booking.advance_payment,
+            booking_id: bookingData.id,
+            amount: bookingData.advance_payment,
             payment_type: PAYMENT_TYPE.ADVANCE_PAYMENT,
             payment_method: PAYMENT_METHOD.PAY_AT_HOTEL,
             payment_status: PAYMENT_STATUS.PENDING,
@@ -380,10 +369,11 @@ export function useBookings(options?: {
         }
 
         // Payment 2: room_charge (remaining amount after advance_payment)
-        const roomChargeAmount = booking.total_amount - booking.advance_payment;
+        const roomChargeAmount =
+          bookingData.total_amount - bookingData.advance_payment;
         if (roomChargeAmount > 0) {
           paymentsToCreate.push({
-            booking_id: booking.id,
+            booking_id: bookingData.id,
             amount: roomChargeAmount,
             payment_type: PAYMENT_TYPE.ROOM_CHARGE,
             payment_method: PAYMENT_METHOD.PAY_AT_HOTEL,
@@ -398,25 +388,19 @@ export function useBookings(options?: {
             .insert(paymentsToCreate);
 
           if (paymentsError) {
-            // If payment creation fails, we should rollback the booking
-            // But for now, just log the error
             console.error("Error creating payments:", paymentsError);
-            // Optionally, you could delete the booking here if payment creation fails
-            // await supabase.from("bookings").delete().eq("id", booking.id);
             throw new Error(
               `Đã tạo booking nhưng không thể tạo payments: ${paymentsError.message}`
             );
           }
         }
 
-        return booking as BookingRecord;
+        return bookingData;
       } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "Không thể tạo booking";
-        throw new Error(errorMessage);
+        throw err;
       }
     },
-    []
+    [fetchBookings, page, limit, search]
   );
 
   // Update booking (simple fields only: total_guests, notes, etc.)

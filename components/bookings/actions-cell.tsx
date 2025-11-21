@@ -79,8 +79,8 @@ export function BookingActionsCell({
   booking,
   onEdit,
   onTransfer,
-  onCancelBooking,
   onMarkAdvancePayment,
+  onCancelBooking,
   checkAdvancePaymentStatus,
   pendingBooking,
   confirmedBooking,
@@ -92,8 +92,8 @@ export function BookingActionsCell({
   customerId: string | null;
   onEdit: (booking: BookingRecord) => void;
   onTransfer: (id: string, input: BookingInput) => Promise<void>;
-  onCancelBooking: (id: string) => Promise<void>;
   onMarkAdvancePayment: (bookingId: string) => Promise<void>;
+  onCancelBooking?: (id: string) => Promise<void>;
   checkAdvancePaymentStatus?: (bookingId: string) => Promise<{
     hasAdvancePayment: boolean;
     isPaid: boolean;
@@ -114,7 +114,8 @@ export function BookingActionsCell({
     hasAdvancePayment: boolean;
     isPaid: boolean;
   } | null>(null);
-  const [isCheckingAdvancePayment, setIsCheckingAdvancePayment] = useState(false);
+  const [isCheckingAdvancePayment, setIsCheckingAdvancePayment] =
+    useState(false);
 
   // Check advance payment status on mount
   React.useEffect(() => {
@@ -216,7 +217,11 @@ export function BookingActionsCell({
         open={openCancel}
         onOpenChange={setOpenCancel}
         onConfirm={async () => {
-          await onCancelBooking(booking.id);
+          if (onCancelBooking) {
+            await onCancelBooking(booking.id);
+          } else {
+            await cancelledBooking(booking.id);
+          }
         }}
       />
 

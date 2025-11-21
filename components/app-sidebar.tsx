@@ -53,6 +53,11 @@ const data = {
       icon: IconChartBar,
     },
     {
+      title: "Reservation",
+      url: "/dashboard/reservation",
+      icon: IconInnerShadowTop,
+    },
+    {
       title: "Customers",
       url: "/dashboard/customers",
       icon: UserCircle,

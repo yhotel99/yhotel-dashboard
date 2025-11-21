@@ -311,6 +311,30 @@ export function usePayments(
     }
   }, []);
 
+  // Get payments by booking ID
+  const getPaymentsByBookingId = useCallback(
+    async (bookingId: string) => {
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from("payments")
+          .select("*")
+          .eq("booking_id", bookingId)
+          .order("created_at", { ascending: false });
+
+        if (error) {
+          throw new Error(error.message);
+        }
+
+        return (data || []) as PaymentWithBooking[];
+      } catch (err) {
+        console.error("Error fetching payments by booking ID:", err);
+        throw err;
+      }
+    },
+    []
+  );
+
   return {
     payments,
     isLoading,
@@ -322,5 +346,6 @@ export function usePayments(
     updatePaymentStatusByBookingId,
     checkAdvancePaymentStatus,
     markAdvancePaymentAsPaid,
+    getPaymentsByBookingId,
   };
 }
