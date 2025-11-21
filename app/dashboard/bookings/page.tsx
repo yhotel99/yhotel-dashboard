@@ -7,6 +7,7 @@ import { IconPlus } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
 import { useBookings } from "@/hooks/use-bookings";
+import { usePayments } from "@/hooks/use-payments";
 import type { BookingStatus, BookingInput, BookingRecord } from "@/lib/types";
 import { useDebounce } from "@/hooks/use-debounce";
 import { createColumns } from "@/components/bookings/columns";
@@ -87,7 +88,10 @@ export default function BookingsPage() {
     cancelledBooking,
     createBooking,
     updateBooking,
+    transferBooking,
   } = useBookings({ page, limit, search });
+
+  const { checkAdvancePaymentStatus, markAdvancePaymentAsPaid } = usePayments();
 
   // Fetch bookings when component mounts or params change
   React.useEffect(() => {
@@ -125,14 +129,15 @@ export default function BookingsPage() {
   const handleTransfer = React.useCallback(
     async (id: string, input: BookingInput) => {
       try {
-        await updateBooking(id, input);
+        await transferBooking(id, input);
         toast.success("Đã chuyển phòng thành công");
         await fetchBookings();
-      } catch {
+      } catch (error) {
+        console.error(error);
         toast.error("Không thể chuyển phòng");
       }
     },
-    [updateBooking, fetchBookings]
+    [transferBooking, fetchBookings]
   );
 
   const handleCancelBooking = React.useCallback(
@@ -165,12 +170,28 @@ export default function BookingsPage() {
     [updateBookingStatus, fetchBookings]
   );
 
+  const handleMarkAdvancePayment = React.useCallback(
+    async (bookingId: string) => {
+      try {
+        await markAdvancePaymentAsPaid(bookingId);
+        toast.success("Đã đánh dấu đặt cọc thành công");
+        await fetchBookings();
+      } catch (error) {
+        toast.error("Không thể đánh dấu đặt cọc");
+        throw error;
+      }
+    },
+    [markAdvancePaymentAsPaid, fetchBookings]
+  );
+
   const columns = React.useMemo(
     () =>
       createColumns(handleUpdateStatus, {
         onEdit: handleEdit,
         onTransfer: handleTransfer,
         onCancelBooking: handleCancelBooking,
+        onMarkAdvancePayment: handleMarkAdvancePayment,
+        checkAdvancePaymentStatus,
         pendingBooking,
         confirmedBooking,
         checkedInBooking,
@@ -182,6 +203,8 @@ export default function BookingsPage() {
       handleEdit,
       handleTransfer,
       handleCancelBooking,
+      handleMarkAdvancePayment,
+      checkAdvancePaymentStatus,
       pendingBooking,
       confirmedBooking,
       checkedInBooking,

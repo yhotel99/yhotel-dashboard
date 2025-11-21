@@ -13,6 +13,12 @@ export function createColumns(
     onEdit?: (booking: BookingRecord) => void;
     onTransfer?: (id: string, input: BookingInput) => Promise<void>;
     onCancelBooking?: (id: string) => Promise<void>;
+    onMarkAdvancePayment?: (bookingId: string) => Promise<void>;
+    checkAdvancePaymentStatus?: (bookingId: string) => Promise<{
+      hasAdvancePayment: boolean;
+      isPaid: boolean;
+      paymentId: string | null;
+    }>;
     pendingBooking?: (bookingId: string) => Promise<void>;
     confirmedBooking?: (bookingId: string) => Promise<void>;
     checkedInBooking?: (bookingId: string) => Promise<void>;
@@ -67,6 +73,11 @@ export function createColumns(
       cell: ({ row }) => formatCurrency(row.original.total_amount),
     },
     {
+      accessorKey: "advance_payment",
+      header: "Tiền đặt cọc",
+      cell: ({ row }) => formatCurrency(row.original.advance_payment),
+    },
+    {
       accessorKey: "status",
       header: "Trạng thái",
       cell: ({ row }) => <StatusBadge status={row.original.status} />,
@@ -97,6 +108,8 @@ export function createColumns(
           onCancelBooking:
             handlers?.onCancelBooking ||
             (async () => await defaultCancelledBooking(bookingId)),
+          onMarkAdvancePayment: handlers?.onMarkAdvancePayment,
+          checkAdvancePaymentStatus: handlers?.checkAdvancePaymentStatus,
           pendingBooking:
             handlers?.pendingBooking ||
             (async (id: string) => await updateStatus(id, "pending")),

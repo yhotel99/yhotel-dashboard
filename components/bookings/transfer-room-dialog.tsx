@@ -21,13 +21,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { BookingInput, BookingRecord } from "@/lib/types";
 import { useRooms } from "@/hooks/use-rooms";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { usePayments } from "@/hooks/use-payments";
+import { formatCurrency, getDateISO, formatDateForInput } from "@/lib/utils";
 import {
   calculateNightsValue,
   translateBookingError,
   formatNumberWithSeparators,
   parseFormattedNumber,
 } from "@/lib/functions";
+import { BOOKING_STATUS } from "@/lib/constants";
 
 type TransferRoomFormState = {
   room_id: string;
@@ -35,28 +37,6 @@ type TransferRoomFormState = {
   check_out_date: string;
   advance_payment: string;
 };
-
-// Helper function to convert date string to ISO string (with default time)
-// Check-in default: 14:00, Check-out default: 12:00
-function getDateISO(date: string, isCheckOut: boolean = false): string | null {
-  if (!date) return null;
-  // Format: yyyy-MM-dd
-  // Add default time: 14:00 for check-in, 12:00 for check-out
-  const time = isCheckOut ? "12:00" : "14:00";
-  const dateTimeString = `${date} ${time}`;
-  const dateObj = new Date(dateTimeString);
-  if (isNaN(dateObj.getTime())) return null;
-  return dateObj.toISOString();
-}
-
-// Helper to convert ISO date to YYYY-MM-DD format
-function formatDateForInput(isoDate: string): string {
-  const date = new Date(isoDate);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
 
 export function TransferRoomDialog({
   open,
@@ -78,9 +58,41 @@ export function TransferRoomDialog({
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { rooms } = useRooms();
+  const { checkAdvancePaymentStatus } = usePayments();
+  const [advancePaymentIsPaid, setAdvancePaymentIsPaid] = useState(false);
+  const [isCheckingAdvancePayment, setIsCheckingAdvancePayment] =
+    useState(false);
 
   // Check if booking is in pending status
-  const isPending = booking?.status === "pending";
+  const isPending = booking?.status === BOOKING_STATUS.PENDING;
+
+  // Check advance payment status when dialog opens
+  useEffect(() => {
+    const checkStatus = async () => {
+      if (
+        !open ||
+        !booking ||
+        !booking.advance_payment ||
+        booking.advance_payment <= 0
+      ) {
+        setAdvancePaymentIsPaid(false);
+        return;
+      }
+
+      try {
+        setIsCheckingAdvancePayment(true);
+        const status = await checkAdvancePaymentStatus(booking.id);
+        setAdvancePaymentIsPaid(status.isPaid);
+      } catch (error) {
+        console.error("Error checking advance payment status:", error);
+        setAdvancePaymentIsPaid(false);
+      } finally {
+        setIsCheckingAdvancePayment(false);
+      }
+    };
+
+    checkStatus();
+  }, [open, booking, checkAdvancePaymentStatus]);
 
   // Load booking data when dialog opens
   useEffect(() => {
@@ -211,18 +223,24 @@ export function TransferRoomDialog({
     // Use calculated total amount or booking's total amount
     const totalAmount = calculatedTotalAmount || booking.total_amount;
 
-    // Validate advance_payment (parse from formatted string)
-    const advancePayment = parseFormattedNumber(
-      formValues.advance_payment || "0"
-    );
-    if (!Number.isFinite(advancePayment) || advancePayment < 0) {
-      setError("Tiền cọc phải là số không âm.");
-      return;
-    }
+    // Validate advance_payment only if it hasn't been paid
+    let advancePayment = booking.advance_payment; // Default to current value
+    if (!advancePaymentIsPaid) {
+      // Only validate and update if not paid
+      const parsedAdvancePayment = parseFormattedNumber(
+        formValues.advance_payment || "0"
+      );
+      if (!Number.isFinite(parsedAdvancePayment) || parsedAdvancePayment < 0) {
+        setError("Tiền cọc phải là số không âm.");
+        return;
+      }
 
-    if (advancePayment > totalAmount) {
-      setError("Tiền cọc không được vượt quá tổng tiền.");
-      return;
+      if (parsedAdvancePayment > totalAmount) {
+        setError("Tiền cọc không được vượt quá tổng tiền.");
+        return;
+      }
+
+      advancePayment = parsedAdvancePayment;
     }
 
     const payload: BookingInput = {
@@ -388,18 +406,38 @@ export function TransferRoomDialog({
 
             <div className="space-y-2">
               <Label htmlFor="advance_payment">Tiền cọc (VNĐ)</Label>
-              <Input
-                id="advance_payment"
-                type="text"
-                inputMode="numeric"
-                value={formValues.advance_payment}
-                onChange={handleInputChange("advance_payment")}
-                placeholder="Nhập số tiền cọc (VD: 1.000.000)"
-              />
-              <p className="text-xs text-muted-foreground">
-                Tối đa:{" "}
-                {formatCurrency(calculatedTotalAmount || booking.total_amount)}
-              </p>
+              {advancePaymentIsPaid ? (
+                <div className="space-y-2">
+                  <div className="rounded-md border bg-muted px-3 py-2">
+                    <p className="text-sm font-medium">
+                      {formatCurrency(
+                        parseFormattedNumber(formValues.advance_payment || "0")
+                      )}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Đã đánh dấu đặt cọc - Không thể chỉnh sửa
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <Input
+                    id="advance_payment"
+                    type="text"
+                    inputMode="numeric"
+                    value={formValues.advance_payment}
+                    onChange={handleInputChange("advance_payment")}
+                    placeholder="Nhập số tiền cọc (VD: 1.000.000)"
+                    disabled={isCheckingAdvancePayment}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Tối đa:{" "}
+                    {formatCurrency(
+                      calculatedTotalAmount || booking.total_amount
+                    )}
+                  </p>
+                </>
+              )}
             </div>
           </div>
 

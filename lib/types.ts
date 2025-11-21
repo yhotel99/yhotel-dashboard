@@ -246,6 +246,19 @@ export type PaymentInput = {
   refunded_at?: string | null;
 };
 
+// Payment with booking and related data (from join queries)
+export type PaymentWithBooking = Payment & {
+  bookings?: {
+    customers?: {
+      full_name: string;
+      phone: string | null;
+    } | null;
+    rooms?: {
+      name: string;
+    } | null;
+  } | null;
+};
+
 // ============================================================================
 // Customer Types
 // ============================================================================

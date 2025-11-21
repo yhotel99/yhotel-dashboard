@@ -33,7 +33,7 @@ import { useCustomers } from "@/hooks/use-customers";
 import { useDebounce } from "@/hooks/use-debounce";
 import { CreateCustomerDialog } from "@/components/customers/create-customer-dialog";
 import type { Customer } from "@/lib/types";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, getDateISO } from "@/lib/utils";
 import {
   calculateNightsValue,
   translateBookingError,
@@ -64,19 +64,6 @@ const initialCreateBookingState: CreateBookingFormState = {
 };
 
 const SEARCH_CUSTOMER_MIN_LENGTH = 2;
-
-// Helper function to convert date string to ISO string (with default time)
-// Check-in default: 14:00, Check-out default: 12:00
-function getDateISO(date: string, isCheckOut: boolean = false): string | null {
-  if (!date) return null;
-  // Format: yyyy-MM-dd
-  // Add default time: 14:00 for check-in, 12:00 for check-out
-  const time = isCheckOut ? "12:00" : "14:00";
-  const dateTimeString = `${date} ${time}`;
-  const dateObj = new Date(dateTimeString);
-  if (isNaN(dateObj.getTime())) return null;
-  return dateObj.toISOString();
-}
 
 export function CreateBookingDialog({
   open,

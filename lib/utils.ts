@@ -22,3 +22,25 @@ export function formatDate(dateString: string): string {
     year: "numeric",
   });
 }
+
+// Helper function to convert date string to ISO string (with default time)
+// Check-in default: 14:00, Check-out default: 12:00
+export function getDateISO(date: string, isCheckOut: boolean = false): string | null {
+  if (!date) return null;
+  // Format: yyyy-MM-dd
+  // Add default time: 14:00 for check-in, 12:00 for check-out
+  const time = isCheckOut ? "12:00" : "14:00";
+  const dateTimeString = `${date} ${time}`;
+  const dateObj = new Date(dateTimeString);
+  if (isNaN(dateObj.getTime())) return null;
+  return dateObj.toISOString();
+}
+
+// Helper to convert ISO date to YYYY-MM-DD format
+export function formatDateForInput(isoDate: string): string {
+  const date = new Date(isoDate);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}

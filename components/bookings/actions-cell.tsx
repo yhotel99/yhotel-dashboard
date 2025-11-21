@@ -25,6 +25,7 @@ import type { BookingStatus, BookingRecord, BookingInput } from "@/lib/types";
 import { CancelBookingConfirmDialog } from "./cancel-booking-confirm-dialog";
 import { ChangeBookingStatusDialog } from "./change-booking-status-dialog";
 import { TransferRoomDialog } from "./transfer-room-dialog";
+import { MarkAdvancePaymentDialog } from "./mark-advance-payment-dialog";
 
 // Context to update booking status from action cells
 export const UpdateBookingStatusContext = React.createContext<
@@ -79,6 +80,8 @@ export function BookingActionsCell({
   onEdit,
   onTransfer,
   onCancelBooking,
+  onMarkAdvancePayment,
+  checkAdvancePaymentStatus,
   pendingBooking,
   confirmedBooking,
   checkedInBooking,
@@ -90,6 +93,12 @@ export function BookingActionsCell({
   onEdit: (booking: BookingRecord) => void;
   onTransfer: (id: string, input: BookingInput) => Promise<void>;
   onCancelBooking: (id: string) => Promise<void>;
+  onMarkAdvancePayment: (bookingId: string) => Promise<void>;
+  checkAdvancePaymentStatus?: (bookingId: string) => Promise<{
+    hasAdvancePayment: boolean;
+    isPaid: boolean;
+    paymentId: string | null;
+  }>;
   pendingBooking: (bookingId: string) => Promise<void>;
   confirmedBooking: (bookingId: string) => Promise<void>;
   checkedInBooking: (bookingId: string) => Promise<void>;
@@ -100,6 +109,59 @@ export function BookingActionsCell({
   const [openCancel, setOpenCancel] = useState(false);
   const [openChangeStatus, setOpenChangeStatus] = useState(false);
   const [openTransfer, setOpenTransfer] = useState(false);
+  const [openMarkAdvancePayment, setOpenMarkAdvancePayment] = useState(false);
+  const [advancePaymentStatus, setAdvancePaymentStatus] = useState<{
+    hasAdvancePayment: boolean;
+    isPaid: boolean;
+  } | null>(null);
+  const [isCheckingAdvancePayment, setIsCheckingAdvancePayment] = useState(false);
+
+  // Check advance payment status on mount
+  React.useEffect(() => {
+    const checkStatus = async () => {
+      if (!booking.advance_payment || booking.advance_payment <= 0) {
+        setAdvancePaymentStatus({ hasAdvancePayment: false, isPaid: false });
+        return;
+      }
+
+      if (!checkAdvancePaymentStatus) {
+        return;
+      }
+
+      try {
+        setIsCheckingAdvancePayment(true);
+        const status = await checkAdvancePaymentStatus(booking.id);
+        setAdvancePaymentStatus({
+          hasAdvancePayment: status.hasAdvancePayment,
+          isPaid: status.isPaid,
+        });
+      } catch (error) {
+        console.error("Error checking advance payment status:", error);
+        setAdvancePaymentStatus({ hasAdvancePayment: false, isPaid: false });
+      } finally {
+        setIsCheckingAdvancePayment(false);
+      }
+    };
+
+    checkStatus();
+  }, [booking.id, booking.advance_payment, checkAdvancePaymentStatus]);
+
+  const handleMarkAdvancePayment = async () => {
+    try {
+      await onMarkAdvancePayment(booking.id);
+      toast.success("Đã đánh dấu đặt cọc thành công");
+      // Refresh status
+      if (checkAdvancePaymentStatus) {
+        const status = await checkAdvancePaymentStatus(booking.id);
+        setAdvancePaymentStatus({
+          hasAdvancePayment: status.hasAdvancePayment,
+          isPaid: status.isPaid,
+        });
+      }
+    } catch (error) {
+      toast.error("Không thể đánh dấu đặt cọc");
+    }
+  };
 
   return (
     <>
@@ -126,6 +188,19 @@ export function BookingActionsCell({
             disabled={booking.status !== "pending"}
           >
             Chuyển phòng
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => setOpenMarkAdvancePayment(true)}
+            disabled={
+              !booking.advance_payment ||
+              booking.advance_payment <= 0 ||
+              advancePaymentStatus?.isPaid ||
+              isCheckingAdvancePayment
+            }
+          >
+            {advancePaymentStatus?.isPaid
+              ? "Đã đánh dấu đặt cọc"
+              : "Đánh dấu đặt cọc"}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
@@ -162,6 +237,13 @@ export function BookingActionsCell({
         onOpenChange={setOpenTransfer}
         booking={booking}
         onTransfer={onTransfer}
+      />
+
+      <MarkAdvancePaymentDialog
+        open={openMarkAdvancePayment}
+        onOpenChange={setOpenMarkAdvancePayment}
+        onConfirm={handleMarkAdvancePayment}
+        amount={booking.advance_payment || undefined}
       />
     </>
   );

@@ -3,7 +3,13 @@
 import { useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { BookingInput, BookingRecord, PaginationMeta } from "@/lib/types";
-import { BOOKING_STATUS } from "@/lib/constants";
+import {
+  BOOKING_STATUS,
+  PAYMENT_METHOD,
+  PAYMENT_STATUS,
+  PAYMENT_TYPE,
+} from "@/lib/constants";
+import { searchBookings, countBookings } from "@/services/bookings";
 
 // Re-export types for backward compatibility
 export type { BookingRecord, PaginationMeta } from "@/lib/types";
@@ -30,89 +36,37 @@ export function useBookings(options?: {
 
   // Fetch all bookings with pagination and search (no customer filter)
   const fetchBookings = useCallback(
-    async (pageNum?: number, limitNum?: number, searchTerm?: string) => {
+    async (
+      pageNum: number = page,
+      limitNum: number = limit,
+      searchTerm: string = search
+    ) => {
       try {
         setIsLoading(true);
         setError(null);
-        const supabase = createClient();
 
-        const currentPage = pageNum ?? page;
-        const currentLimit = limitNum ?? limit;
-        const currentSearch = searchTerm ?? search;
+        const trimmedSearch = searchTerm?.trim() || null;
 
-        // Calculate offset
-        const from = (currentPage - 1) * currentLimit;
-        const to = from + currentLimit - 1;
+        // Call both service functions in parallel for better performance
+        const [bookingsData, total] = await Promise.all([
+          searchBookings(trimmedSearch, pageNum, limitNum),
+          countBookings(trimmedSearch),
+        ]);
 
-        // Build query for all bookings
-        let query = supabase
-          .from("bookings")
-          .select(
-            `
-            *,
-            rooms:room_id (
-              name
-            ),
-            customers:customer_id (
-              full_name,
-              phone
-            )
-          `,
-            { count: "exact" }
-          )
-          .is("deleted_at", null);
-
-        // Add search filter if search term exists
-        if (currentSearch && currentSearch.trim() !== "") {
-          const trimmedSearch = currentSearch.trim();
-          query = query.ilike("id", `%${trimmedSearch}%`);
-        }
-
-        // Fetch data with pagination
-        const { data, error, count } = await query
-          .order("created_at", { ascending: false })
-          .range(from, to);
-
-        if (error) {
-          throw new Error(error.message);
-        }
-
-        let bookingsData = (data || []) as BookingRecord[];
-
-        // Post-process to filter by room name, customer name, phone if search term exists
-        if (currentSearch && currentSearch.trim() !== "") {
-          const trimmedSearch = currentSearch.trim().toLowerCase();
-          bookingsData = bookingsData.filter((booking) => {
-            const roomName = booking.rooms?.name?.toLowerCase() || "";
-            const bookingId = booking.id.toLowerCase();
-            const customerName =
-              booking.customers?.full_name?.toLowerCase() || "";
-            const customerPhone = booking.customers?.phone?.toLowerCase() || "";
-
-            return (
-              roomName.includes(trimmedSearch) ||
-              customerName.includes(trimmedSearch) ||
-              customerPhone.includes(trimmedSearch) ||
-              bookingId.includes(trimmedSearch)
-            );
-          });
-        }
-
-        const total = count || 0;
-        const totalPages = Math.ceil(total / currentLimit);
+        const totalPages = Math.ceil(total / limitNum);
 
         setBookings(bookingsData);
         setPagination({
           total,
-          page: currentPage,
-          limit: currentLimit,
+          page: pageNum,
+          limit: limitNum,
           totalPages,
         });
       } catch (err) {
         const errorMessage =
           err instanceof Error
             ? err.message
-            : "Không thể tải danh sách bookings";
+            : "Không thể tải danh sách booking";
         setError(errorMessage);
       } finally {
         setIsLoading(false);
@@ -161,7 +115,30 @@ export function useBookings(options?: {
   // Update booking status to confirmed
   const confirmedBooking = useCallback(
     async (bookingId: string) => {
-      await updateBookingStatusInternal(bookingId, BOOKING_STATUS.CONFIRMED);
+      try {
+        // Update booking status
+        await updateBookingStatusInternal(bookingId, BOOKING_STATUS.CONFIRMED);
+
+        // Update payment status to paid for all payments of this booking
+        const supabase = createClient();
+        const now = new Date().toISOString();
+        const { error } = await supabase
+          .from("payments")
+          .update({
+            payment_status: PAYMENT_STATUS.PAID,
+            paid_at: now,
+          })
+          .eq("booking_id", bookingId);
+
+        if (error) {
+          console.error("Error updating payment status:", error);
+          // Don't throw error here, booking is already confirmed
+          // Just log the error
+        }
+      } catch (err) {
+        // Re-throw booking status update errors
+        throw err;
+      }
     },
     [updateBookingStatusInternal]
   );
@@ -360,9 +337,16 @@ export function useBookings(options?: {
     async (input: BookingInput): Promise<BookingRecord> => {
       try {
         const supabase = createClient();
-        const { data, error } = await supabase
+
+        // Create booking with status = pending
+        const bookingData = {
+          ...input,
+          status: BOOKING_STATUS.PENDING,
+        };
+
+        const { data: booking, error: bookingError } = await supabase
           .from("bookings")
-          .insert(input)
+          .insert(bookingData)
           .select(
             `
             *,
@@ -377,11 +361,55 @@ export function useBookings(options?: {
           )
           .single();
 
-        if (error) {
-          throw new Error(error.message);
+        if (bookingError) {
+          throw new Error(bookingError.message);
         }
 
-        return data as BookingRecord;
+        // Create payments for the booking
+        const paymentsToCreate = [];
+
+        // Payment 1: advance_payment (only if advance_payment > 0)
+        if (booking.advance_payment > 0) {
+          paymentsToCreate.push({
+            booking_id: booking.id,
+            amount: booking.advance_payment,
+            payment_type: PAYMENT_TYPE.ADVANCE_PAYMENT,
+            payment_method: PAYMENT_METHOD.PAY_AT_HOTEL,
+            payment_status: PAYMENT_STATUS.PENDING,
+          });
+        }
+
+        // Payment 2: room_charge (remaining amount after advance_payment)
+        const roomChargeAmount = booking.total_amount - booking.advance_payment;
+        if (roomChargeAmount > 0) {
+          paymentsToCreate.push({
+            booking_id: booking.id,
+            amount: roomChargeAmount,
+            payment_type: PAYMENT_TYPE.ROOM_CHARGE,
+            payment_method: PAYMENT_METHOD.PAY_AT_HOTEL,
+            payment_status: PAYMENT_STATUS.PENDING,
+          });
+        }
+
+        // Insert payments
+        if (paymentsToCreate.length > 0) {
+          const { error: paymentsError } = await supabase
+            .from("payments")
+            .insert(paymentsToCreate);
+
+          if (paymentsError) {
+            // If payment creation fails, we should rollback the booking
+            // But for now, just log the error
+            console.error("Error creating payments:", paymentsError);
+            // Optionally, you could delete the booking here if payment creation fails
+            // await supabase.from("bookings").delete().eq("id", booking.id);
+            throw new Error(
+              `Đã tạo booking nhưng không thể tạo payments: ${paymentsError.message}`
+            );
+          }
+        }
+
+        return booking as BookingRecord;
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : "Không thể tạo booking";
@@ -391,7 +419,7 @@ export function useBookings(options?: {
     []
   );
 
-  // Update booking
+  // Update booking (simple fields only: total_guests, notes, etc.)
   const updateBooking = useCallback(
     async (bookingId: string, input: BookingInput): Promise<BookingRecord> => {
       try {
@@ -428,6 +456,245 @@ export function useBookings(options?: {
     []
   );
 
+  // Transfer booking (update room, check-in, check-out, advance_payment and handle payments)
+  const transferBooking = useCallback(
+    async (
+      bookingId: string,
+      input: {
+        room_id?: string | null;
+        check_in?: string;
+        check_out?: string;
+        number_of_nights?: number;
+        total_amount?: number;
+        advance_payment?: number;
+      }
+    ): Promise<BookingRecord> => {
+      try {
+        const supabase = createClient();
+
+        // Step 1: Get current booking to check status
+        const { data: currentBooking, error: fetchError } = await supabase
+          .from("bookings")
+          .select("status, advance_payment, total_amount")
+          .eq("id", bookingId)
+          .single();
+
+        if (fetchError) {
+          throw new Error(fetchError.message);
+        }
+
+        if (!currentBooking) {
+          throw new Error("Không tìm thấy booking");
+        }
+
+        // Step 2: Check if booking is pending (only allow transfer for pending bookings)
+        if (currentBooking.status !== BOOKING_STATUS.PENDING) {
+          throw new Error(
+            "Chỉ có thể chuyển phòng khi booking ở trạng thái pending"
+          );
+        }
+
+        // Step 3: Update booking
+        const { error: updateError } = await supabase
+          .from("bookings")
+          .update(input)
+          .eq("id", bookingId);
+
+        if (updateError) {
+          throw new Error(updateError.message);
+        }
+
+        // Step 4: Fetch updated booking with relations
+        const { data: updatedBooking, error: fetchUpdatedError } =
+          await supabase
+            .from("bookings")
+            .select(
+              `
+            *,
+            rooms:room_id (
+              name
+            ),
+            customers:customer_id (
+              full_name,
+              phone
+            )
+          `
+            )
+            .eq("id", bookingId)
+            .single();
+
+        if (fetchUpdatedError) {
+          throw new Error(fetchUpdatedError.message);
+        }
+
+        if (!updatedBooking) {
+          throw new Error("Không tìm thấy booking sau khi cập nhật");
+        }
+
+        // Step 5: Calculate payment amounts from updated booking
+        const finalTotalAmount = updatedBooking.total_amount ?? 0;
+        const finalAdvancePayment = updatedBooking.advance_payment ?? 0;
+        const finalRoomChargeAmount = finalTotalAmount - finalAdvancePayment;
+
+        // Step 6: Get existing payments (only pending payments can be updated)
+        const { data: existingPayments, error: paymentsError } = await supabase
+          .from("payments")
+          .select("id, payment_type, payment_status")
+          .eq("booking_id", bookingId)
+          .eq("payment_status", PAYMENT_STATUS.PENDING);
+
+        if (paymentsError) {
+          console.error("Error fetching payments:", paymentsError);
+          // Continue anyway - we'll try to create/update payments
+        }
+
+        // Step 7: Handle ADVANCE_PAYMENT
+        const existingAdvancePayment = existingPayments?.find(
+          (p) => p.payment_type === PAYMENT_TYPE.ADVANCE_PAYMENT
+        );
+
+        if (existingAdvancePayment) {
+          // Payment exists - update or delete
+          if (finalAdvancePayment > 0) {
+            const { error: updateError } = await supabase
+              .from("payments")
+              .update({ amount: finalAdvancePayment })
+              .eq("id", existingAdvancePayment.id);
+
+            if (updateError) {
+              throw new Error(
+                `Không thể cập nhật advance payment: ${updateError.message}`
+              );
+            }
+          } else {
+            // Delete if advance_payment is 0
+            const { error: deleteError } = await supabase
+              .from("payments")
+              .delete()
+              .eq("id", existingAdvancePayment.id);
+
+            if (deleteError) {
+              throw new Error(
+                `Không thể xóa advance payment: ${deleteError.message}`
+              );
+            }
+          }
+        } else {
+          // Payment doesn't exist - create if needed
+          if (finalAdvancePayment > 0) {
+            const { error: createError } = await supabase
+              .from("payments")
+              .insert({
+                booking_id: bookingId,
+                amount: finalAdvancePayment,
+                payment_type: PAYMENT_TYPE.ADVANCE_PAYMENT,
+                payment_method: PAYMENT_METHOD.PAY_AT_HOTEL,
+                payment_status: PAYMENT_STATUS.PENDING,
+              });
+
+            if (createError) {
+              throw new Error(
+                `Không thể tạo advance payment: ${createError.message}`
+              );
+            }
+          }
+        }
+
+        // Step 8: Handle ROOM_CHARGE
+        const existingRoomCharge = existingPayments?.find(
+          (p) => p.payment_type === PAYMENT_TYPE.ROOM_CHARGE
+        );
+
+        if (existingRoomCharge) {
+          // Payment exists - update or delete
+          if (finalRoomChargeAmount > 0) {
+            const { error: updateError } = await supabase
+              .from("payments")
+              .update({ amount: finalRoomChargeAmount })
+              .eq("id", existingRoomCharge.id);
+
+            if (updateError) {
+              throw new Error(
+                `Không thể cập nhật room charge: ${updateError.message}`
+              );
+            }
+          } else {
+            // Delete if room_charge is 0 or negative
+            const { error: deleteError } = await supabase
+              .from("payments")
+              .delete()
+              .eq("id", existingRoomCharge.id);
+
+            if (deleteError) {
+              throw new Error(
+                `Không thể xóa room charge: ${deleteError.message}`
+              );
+            }
+          }
+        } else {
+          // Payment doesn't exist - create if needed
+          if (finalRoomChargeAmount > 0) {
+            const { error: createError } = await supabase
+              .from("payments")
+              .insert({
+                booking_id: bookingId,
+                amount: finalRoomChargeAmount,
+                payment_type: PAYMENT_TYPE.ROOM_CHARGE,
+                payment_method: PAYMENT_METHOD.PAY_AT_HOTEL,
+                payment_status: PAYMENT_STATUS.PENDING,
+              });
+
+            if (createError) {
+              throw new Error(
+                `Không thể tạo room charge: ${createError.message}`
+              );
+            }
+          }
+        }
+
+        // Step 9: Update local state with new values
+        let updatedBookingRecord: BookingRecord | null = null;
+
+        setBookings((prevBookings) =>
+          prevBookings.map((booking) => {
+            if (booking.id === bookingId) {
+              const updated = {
+                ...booking,
+                ...input,
+                total_amount: finalTotalAmount,
+                advance_payment: finalAdvancePayment,
+                // Keep existing relations
+                customers: booking.customers,
+                rooms: booking.rooms,
+              };
+              updatedBookingRecord = updated;
+              return updated;
+            }
+            return booking;
+          })
+        );
+
+        // Return updated booking record
+        if (updatedBookingRecord) {
+          return updatedBookingRecord;
+        }
+
+        // Fallback: return a constructed booking record (should not happen)
+        return {
+          ...currentBooking,
+          ...input,
+          total_amount: finalTotalAmount,
+          advance_payment: finalAdvancePayment,
+        } as BookingRecord;
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Không thể chuyển phòng";
+        throw new Error(errorMessage);
+      }
+    },
+    []
+  );
+
   return {
     bookings,
     isLoading,
@@ -445,5 +712,6 @@ export function useBookings(options?: {
     getBookingById,
     createBooking,
     updateBooking,
+    transferBooking,
   };
 }
