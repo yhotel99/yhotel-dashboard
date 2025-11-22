@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { IconDotsVertical } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,12 +14,12 @@ import type { Customer } from "@/lib/types";
 export function ActionsCell({
   customer,
   onEdit,
+  onViewDetail,
 }: {
   customer: Customer;
   onEdit: (customer: Customer) => void;
+  onViewDetail?: (customer: Customer) => void;
 }) {
-  const router = useRouter();
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -34,13 +33,11 @@ export function ActionsCell({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-44">
-        <DropdownMenuItem
-          onClick={() =>
-            router.push(`/dashboard/customers/${customer.id}/bookings`)
-          }
-        >
-          Xem chi tiết
-        </DropdownMenuItem>
+        {onViewDetail && (
+          <DropdownMenuItem onClick={() => onViewDetail(customer)}>
+            Xem chi tiết
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem onClick={() => onEdit(customer)}>
           Chỉnh sửa
         </DropdownMenuItem>

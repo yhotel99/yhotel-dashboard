@@ -5,7 +5,8 @@ import { StatusBadge } from "./status-badge";
 import { ActionsCell } from "./actions-cell";
 
 export function createColumns(
-  onEdit: (customer: Customer) => void
+  onEdit: (customer: Customer) => void,
+  onViewDetail?: (customer: Customer) => void
 ): ColumnDef<Customer>[] {
   return [
     {
@@ -69,7 +70,11 @@ export function createColumns(
     {
       id: "actions",
       cell: ({ row }) => (
-        <ActionsCell customer={row.original} onEdit={onEdit} />
+        <ActionsCell
+          customer={row.original}
+          onEdit={onEdit}
+          onViewDetail={onViewDetail}
+        />
       ),
       size: 60,
       minSize: 40,

@@ -11,6 +11,7 @@ import { createColumns } from "@/components/customers/columns";
 import { CreateCustomerDialog } from "@/components/customers/create-customer-dialog";
 import { EditCustomerDialog } from "@/components/customers/edit-customer-dialog";
 import { DeleteCustomerDialog } from "@/components/customers/delete-customer-dialog";
+import { CustomerDetailDialog } from "@/components/customers/customer-detail-dialog";
 import { toast } from "sonner";
 
 export default function CustomersPage() {
@@ -20,6 +21,10 @@ export default function CustomersPage() {
   const [openCreateDialog, setOpenCreateDialog] = React.useState(false);
   const [openEditDialog, setOpenEditDialog] = React.useState(false);
   const [editingCustomer, setEditingCustomer] = React.useState<Customer | null>(
+    null
+  );
+  const [openDetailDialog, setOpenDetailDialog] = React.useState(false);
+  const [viewingCustomer, setViewingCustomer] = React.useState<Customer | null>(
     null
   );
   const [openDeleteDialog, setOpenDeleteDialog] = React.useState(false);
@@ -94,6 +99,11 @@ export default function CustomersPage() {
   const handleEditCustomer = (customer: Customer) => {
     setEditingCustomer(customer);
     setOpenEditDialog(true);
+  };
+
+  const handleViewDetail = (customer: Customer) => {
+    setViewingCustomer(customer);
+    setOpenDetailDialog(true);
   };
 
   const handleUpdateCustomer = async (
@@ -174,7 +184,7 @@ export default function CustomersPage() {
       </div>
       <div className="px-4 lg:px-6">
         <DataTable
-          columns={createColumns(handleEditCustomer)}
+          columns={createColumns(handleEditCustomer, handleViewDetail)}
           data={customers}
           searchKey="full_name"
           searchPlaceholder="Tìm kiếm theo tên, SĐT hoặc email..."
@@ -207,6 +217,17 @@ export default function CustomersPage() {
         }}
         customer={editingCustomer}
         onUpdate={handleUpdateCustomer}
+      />
+
+      <CustomerDetailDialog
+        open={openDetailDialog}
+        onOpenChange={(open) => {
+          setOpenDetailDialog(open);
+          if (!open) {
+            setViewingCustomer(null);
+          }
+        }}
+        customer={viewingCustomer}
       />
 
       <DeleteCustomerDialog

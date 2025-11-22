@@ -186,14 +186,27 @@ export function useCustomers(
 
         const updatedCustomer = data as Customer;
 
-        // Refetch current page to ensure consistency
-        await fetchCustomers(page, limit, search);
+        // Update state directly without refetching
+        setCustomers((prevCustomers) => {
+          return prevCustomers.map((customer) => {
+            if (customer.id === id) {
+              // Merge updated data with existing customer to preserve computed fields
+              return {
+                ...updatedCustomer,
+                total_bookings: customer.total_bookings,
+                total_spent: customer.total_spent,
+              } as Customer;
+            }
+            return customer;
+          });
+        });
+
         return updatedCustomer;
       } catch (err) {
         throw err;
       }
     },
-    [fetchCustomers, page, limit, search]
+    []
   );
 
   // Delete customer (soft delete)
