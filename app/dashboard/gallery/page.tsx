@@ -264,7 +264,7 @@ export default function GalleryPage() {
   ]);
 
   return (
-    <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+    <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6 h-full">
       <div className="flex items-center justify-between px-4 lg:px-6">
         <div>
           <h1 className="text-2xl font-bold">Gallery</h1>
@@ -278,7 +278,7 @@ export default function GalleryPage() {
         </Button>
       </div>
 
-      <div className="px-4 lg:px-6">
+      <div className="px-4 lg:px-6 flex flex-col h-full">
         {/* Image Count */}
         <div className="mb-4 text-muted-foreground text-sm">
           Hiển thị {images.length} trong tổng số {pagination.total} hình ảnh
@@ -286,14 +286,14 @@ export default function GalleryPage() {
 
         {/* Image Grid */}
         {isLoading ? (
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 mb-4">
             {Array.from({ length: limit }).map((_, i) => (
               <div key={i} className="aspect-square bg-muted rounded-lg" />
             ))}
           </div>
         ) : images.length > 0 ? (
           <>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 mb-4">
               {images.map((image) => (
                 <div
                   key={image.id}
@@ -325,7 +325,7 @@ export default function GalleryPage() {
 
             {/* Pagination */}
             {pagination.totalPages > 1 && (
-              <div className="flex items-center justify-between mt-6">
+              <div className="flex items-center justify-between mt-auto">
                 <div className="text-muted-foreground text-sm">
                   Trang {pagination.page} / {pagination.totalPages}
                 </div>
