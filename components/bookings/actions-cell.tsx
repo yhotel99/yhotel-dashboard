@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { IconDotsVertical } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
@@ -26,6 +25,7 @@ import { CancelBookingConfirmDialog } from "./cancel-booking-confirm-dialog";
 import { ChangeBookingStatusDialog } from "./change-booking-status-dialog";
 import { TransferRoomDialog } from "./transfer-room-dialog";
 import { MarkAdvancePaymentDialog } from "./mark-advance-payment-dialog";
+import { BOOKING_STATUS } from "@/lib/constants";
 
 // Context to update booking status from action cells
 export const UpdateBookingStatusContext = React.createContext<
@@ -105,7 +105,6 @@ export function BookingActionsCell({
   checkedOutBooking: (bookingId: string) => Promise<void>;
   cancelledBooking: (bookingId: string) => Promise<void>;
 }) {
-  const router = useRouter();
   const [openCancel, setOpenCancel] = useState(false);
   const [openChangeStatus, setOpenChangeStatus] = useState(false);
   const [openTransfer, setOpenTransfer] = useState(false);
@@ -186,13 +185,14 @@ export function BookingActionsCell({
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => setOpenTransfer(true)}
-            disabled={booking.status !== "pending"}
+            disabled={booking.status !== BOOKING_STATUS.PENDING}
           >
             Chuyển phòng
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => setOpenMarkAdvancePayment(true)}
             disabled={
+              booking.status !== BOOKING_STATUS.PENDING ||
               !booking.advance_payment ||
               booking.advance_payment <= 0 ||
               advancePaymentStatus?.isPaid ||

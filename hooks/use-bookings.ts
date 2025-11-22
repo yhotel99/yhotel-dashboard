@@ -167,7 +167,50 @@ export function useBookings(options?: {
   // Update booking status to cancelled
   const cancelledBooking = useCallback(
     async (bookingId: string) => {
-      await updateBookingStatusInternal(bookingId, BOOKING_STATUS.CANCELLED);
+      try {
+        // Update booking status
+        await updateBookingStatusInternal(bookingId, BOOKING_STATUS.CANCELLED);
+
+        // Get all payments for this booking
+        const supabase = createClient();
+        const { data: payments, error: fetchError } = await supabase
+          .from("payments")
+          .select("id, payment_status")
+          .eq("booking_id", bookingId);
+
+        if (fetchError) {
+          console.error("Error fetching payments:", fetchError);
+          // Don't throw error here, booking is already cancelled
+          // Just log the error
+          return;
+        }
+
+        if (!payments || payments.length === 0) {
+          // No payments to update
+          return;
+        }
+
+        // Update payments: if pending -> cancelled, if paid -> keep paid
+        const paymentsToUpdate = payments
+          .filter((p) => p.payment_status === PAYMENT_STATUS.PENDING)
+          .map((p) => p.id);
+
+        if (paymentsToUpdate.length > 0) {
+          const { error: updateError } = await supabase
+            .from("payments")
+            .update({ payment_status: PAYMENT_STATUS.CANCELLED })
+            .in("id", paymentsToUpdate);
+
+          if (updateError) {
+            console.error("Error updating payment status:", updateError);
+            // Don't throw error here, booking is already cancelled
+            // Just log the error
+          }
+        }
+      } catch (err) {
+        // Re-throw booking status update errors
+        throw err;
+      }
     },
     [updateBookingStatusInternal]
   );

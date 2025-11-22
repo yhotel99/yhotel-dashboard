@@ -148,7 +148,9 @@ export default function BookingsPage() {
         await fetchBookings();
       } catch (error) {
         console.error(error);
-        toast.error("Không thể chuyển phòng");
+        toast.error("Không thể chuyển phòng", {
+          position: "top-center",
+        });
       }
     },
     [transferBooking, fetchBookings]

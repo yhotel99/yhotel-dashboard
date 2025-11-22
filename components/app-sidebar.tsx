@@ -29,6 +29,7 @@ import {
 import { HotelIcon, Images, User2, UserCircle } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/auth-context";
+import { SIDEBAR_URLS } from "@/lib/constants";
 
 const data = {
   user: {
@@ -39,42 +40,42 @@ const data = {
   navMain: [
     {
       title: "Dashboard",
-      url: "/dashboard",
+      url: SIDEBAR_URLS.DASHBOARD,
       icon: IconDashboard,
     },
     {
       title: "Rooms",
-      url: "/dashboard/rooms",
+      url: SIDEBAR_URLS.ROOMS,
       icon: HotelIcon,
     },
     {
       title: "Bookings",
-      url: "/dashboard/bookings",
+      url: SIDEBAR_URLS.BOOKINGS,
       icon: IconChartBar,
     },
     {
       title: "Reservation",
-      url: "/dashboard/reservation",
+      url: SIDEBAR_URLS.RESERVATION,
       icon: IconInnerShadowTop,
     },
     {
       title: "Customers",
-      url: "/dashboard/customers",
+      url: SIDEBAR_URLS.CUSTOMERS,
       icon: UserCircle,
     },
     {
       title: "Payments",
-      url: "/dashboard/payments",
+      url: SIDEBAR_URLS.PAYMENTS,
       icon: IconCreditCard,
     },
     {
       title: "Gallery",
-      url: "/dashboard/gallery",
+      url: SIDEBAR_URLS.GALLERY,
       icon: Images,
     },
     {
       title: "Users",
-      url: "/dashboard/users",
+      url: SIDEBAR_URLS.USERS,
       icon: User2,
     },
   ],
@@ -156,7 +157,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               asChild
               className="data-[slot=sidebar-menu-button]:p-1.5!"
             >
-              <Link href="/dashboard">
+              <Link href={SIDEBAR_URLS.DASHBOARD}>
                 <IconInnerShadowTop className="size-5!" />
                 <span className="text-base font-semibold">YHotel</span>
               </Link>

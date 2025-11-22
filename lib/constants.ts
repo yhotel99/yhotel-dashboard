@@ -184,6 +184,20 @@ export const paymentStatusLabels: Record<
 /**
  * Customer error patterns for database constraint violations
  */
+/**
+ * Sidebar navigation URLs
+ */
+export const SIDEBAR_URLS = {
+  DASHBOARD: "/dashboard",
+  ROOMS: "/dashboard/rooms",
+  BOOKINGS: "/dashboard/bookings",
+  RESERVATION: "/dashboard/reservation",
+  CUSTOMERS: "/dashboard/customers",
+  PAYMENTS: "/dashboard/payments",
+  GALLERY: "/dashboard/gallery",
+  USERS: "/dashboard/users",
+} as const;
+
 export const CUSTOMER_ERROR_PATTERNS = {
   DUPLICATE_EMAIL_KEY:
     'duplicate key value violates unique constraint "customers_email_key"',
