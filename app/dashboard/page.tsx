@@ -1,36 +1,37 @@
-"use client"
+"use client";
 
-import { ColumnDef } from "@tanstack/react-table"
+import { ColumnDef } from "@tanstack/react-table";
 import {
   IconCircleCheckFilled,
   IconDotsVertical,
   IconLoader,
-} from "@tabler/icons-react"
+} from "@tabler/icons-react";
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { DataTable } from "@/components/data-table"
-import { ChartAreaInteractive } from "@/components/chart-area-interactive"
-import { SectionCards } from "@/components/section-cards"
+} from "@/components/ui/dropdown-menu";
+import { DataTable } from "@/components/data-table";
+import { ChartAreaInteractive } from "@/components/chart-area-interactive";
+import { SectionCards } from "@/components/section-cards";
+import { SystemReports } from "@/components/system-reports";
 
-import data from "./data.json"
+import data from "./data.json";
 
 type DashboardItem = {
-  id: number
-  header: string
-  type: string
-  status: string
-  target: string
-  limit: string
-  reviewer: string
-}
+  id: number;
+  header: string;
+  type: string;
+  status: string;
+  target: string;
+  limit: string;
+  reviewer: string;
+};
 
 // Table columns
 const columns: ColumnDef<DashboardItem>[] = [
@@ -66,27 +67,23 @@ const columns: ColumnDef<DashboardItem>[] = [
   {
     accessorKey: "target",
     header: () => <div className="w-full text-right">Target</div>,
-    cell: ({ row }) => (
-      <div className="text-right">{row.original.target}</div>
-    ),
+    cell: ({ row }) => <div className="text-right">{row.original.target}</div>,
   },
   {
     accessorKey: "limit",
     header: () => <div className="w-full text-right">Limit</div>,
-    cell: ({ row }) => (
-      <div className="text-right">{row.original.limit}</div>
-    ),
+    cell: ({ row }) => <div className="text-right">{row.original.limit}</div>,
   },
   {
     accessorKey: "reviewer",
     header: "Reviewer",
     cell: ({ row }) => {
-      const isAssigned = row.original.reviewer !== "Assign reviewer"
+      const isAssigned = row.original.reviewer !== "Assign reviewer";
       return isAssigned ? (
         row.original.reviewer
       ) : (
         <span className="text-muted-foreground">Assign reviewer</span>
-      )
+      );
     },
   },
   {
@@ -113,26 +110,12 @@ const columns: ColumnDef<DashboardItem>[] = [
       </DropdownMenu>
     ),
   },
-]
+];
 
 export default function Page() {
   return (
-    <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-      <SectionCards />
-      <div className="px-4 lg:px-6">
-        <ChartAreaInteractive />
-      </div>
-      <div className="px-4 lg:px-6">
-        <DataTable
-          columns={columns}
-          data={data as DashboardItem[]}
-          searchKey="header"
-          searchPlaceholder="Tìm kiếm theo header..."
-          emptyMessage="No results."
-          entityName="row(s)"
-          getRowId={(row) => row.id.toString()}
-        />
-      </div>
+    <div className="flex flex-col gap-4">
+      <SystemReports />
     </div>
-  )
+  );
 }
