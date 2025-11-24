@@ -32,6 +32,7 @@ type CreateCustomerFormState = {
   id_card: string;
   customer_type: "regular" | "vip" | "blacklist";
   date_of_birth: string;
+  source: string;
 };
 
 const initialCreateCustomerState: CreateCustomerFormState = {
@@ -42,6 +43,7 @@ const initialCreateCustomerState: CreateCustomerFormState = {
   id_card: "",
   customer_type: "regular",
   date_of_birth: "",
+  source: "",
 };
 
 interface CreateCustomerDialogProps {
@@ -125,6 +127,7 @@ export function CreateCustomerDialog({
       id_card: formValues.id_card.trim() || null,
       customer_type: formValues.customer_type,
       date_of_birth: formValues.date_of_birth || null,
+      source: formValues.source.trim() || null,
     };
 
     try {
@@ -241,6 +244,16 @@ export function CreateCustomerDialog({
                 type="date"
                 value={formValues.date_of_birth}
                 onChange={handleInputChange("date_of_birth")}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="source">Nguồn</Label>
+              <Input
+                id="source"
+                type="text"
+                placeholder="Nhập nguồn khách hàng"
+                value={formValues.source}
+                onChange={handleInputChange("source")}
               />
             </div>
           </div>

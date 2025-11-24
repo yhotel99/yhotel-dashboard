@@ -1,5 +1,3 @@
-"use client";
-
 import { Suspense } from "react";
 import { RoomsContent } from "@/components/rooms/rooms-content";
 
@@ -21,7 +19,10 @@ export default function RoomsPage() {
               <div className="h-10 bg-muted rounded animate-pulse" />
               <div className="space-y-2">
                 {Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="h-16 bg-muted rounded animate-pulse" />
+                  <div
+                    key={i}
+                    className="h-16 bg-muted rounded animate-pulse"
+                  />
                 ))}
               </div>
             </div>

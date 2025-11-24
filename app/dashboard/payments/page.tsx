@@ -1,5 +1,3 @@
-"use client";
-
 import { Suspense } from "react";
 import { PaymentsContent } from "@/components/payments/payments-content";
 
@@ -21,7 +19,10 @@ export default function PaymentsPage() {
               <div className="h-10 bg-muted rounded animate-pulse" />
               <div className="space-y-2">
                 {Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="h-16 bg-muted rounded animate-pulse" />
+                  <div
+                    key={i}
+                    className="h-16 bg-muted rounded animate-pulse"
+                  />
                 ))}
               </div>
             </div>
@@ -33,4 +34,3 @@ export default function PaymentsPage() {
     </Suspense>
   );
 }
-

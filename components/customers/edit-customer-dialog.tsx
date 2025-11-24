@@ -1,6 +1,13 @@
 "use client";
 
-import { useState, useEffect, type ChangeEvent, type FormEvent } from "react";
+import {
+  useState,
+  useEffect,
+  useRef,
+  startTransition,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -29,6 +36,7 @@ type EditCustomerFormState = {
   id_card: string;
   customer_type: "regular" | "vip" | "blacklist";
   date_of_birth: string;
+  source: string;
 };
 
 interface EditCustomerDialogProps {
@@ -44,40 +52,65 @@ export function EditCustomerDialog({
   customer,
   onUpdate,
 }: EditCustomerDialogProps) {
-  const [formValues, setFormValues] = useState<EditCustomerFormState>({
-    full_name: "",
-    email: "",
-    phone: "",
-    nationality: "",
-    id_card: "",
-    customer_type: "regular",
-    date_of_birth: "",
-  });
+  // Format date for input (YYYY-MM-DD)
+  const formatDateForInput = (dateString: string | null) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toISOString().split("T")[0];
+  };
+
+  // Initialize form values from customer (lazy initialization)
+  const getInitialFormValues = (): EditCustomerFormState => {
+    if (!customer) {
+      return {
+        full_name: "",
+        email: "",
+        phone: "",
+        nationality: "",
+        id_card: "",
+        customer_type: "regular",
+        date_of_birth: "",
+        source: "",
+      };
+    }
+    return {
+      full_name: customer.full_name,
+      email: customer.email,
+      phone: customer.phone || "",
+      nationality: customer.nationality || "",
+      id_card: customer.id_card || "",
+      customer_type: customer.customer_type,
+      date_of_birth: formatDateForInput(customer.date_of_birth),
+      source: customer.source || "",
+    };
+  };
+
+  const [formValues, setFormValues] =
+    useState<EditCustomerFormState>(getInitialFormValues);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const prevCustomerIdRef = useRef<string | null>(null);
 
-  // Load customer data into form when customer changes
+  // Update form values when dialog opens with a different customer
   useEffect(() => {
-    if (customer && open) {
-      // Format date for input (YYYY-MM-DD)
-      const formatDateForInput = (dateString: string | null) => {
-        if (!dateString) return "";
-        const date = new Date(dateString);
-        return date.toISOString().split("T")[0];
-      };
-
-      setFormValues({
-        full_name: customer.full_name,
-        email: customer.email,
-        phone: customer.phone || "",
-        nationality: customer.nationality || "",
-        id_card: customer.id_card || "",
-        customer_type: customer.customer_type,
-        date_of_birth: formatDateForInput(customer.date_of_birth),
+    if (open && customer && customer.id !== prevCustomerIdRef.current) {
+      prevCustomerIdRef.current = customer.id;
+      // Use startTransition to defer state update and avoid synchronous setState
+      startTransition(() => {
+        setFormValues({
+          full_name: customer.full_name,
+          email: customer.email,
+          phone: customer.phone || "",
+          nationality: customer.nationality || "",
+          id_card: customer.id_card || "",
+          customer_type: customer.customer_type,
+          date_of_birth: formatDateForInput(customer.date_of_birth),
+          source: customer.source || "",
+        });
+        setError(null);
       });
-      setError(null);
     }
-  }, [customer, open]);
+  }, [open, customer]);
 
   const handleInputChange =
     (field: keyof EditCustomerFormState) =>
@@ -102,6 +135,7 @@ export function EditCustomerDialog({
   const handleDialogOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
       resetForm();
+      prevCustomerIdRef.current = null; // Reset ref when dialog closes
     }
     onOpenChange(nextOpen);
   };
@@ -144,6 +178,7 @@ export function EditCustomerDialog({
       id_card: formValues.id_card.trim() || null,
       customer_type: formValues.customer_type,
       date_of_birth: formValues.date_of_birth || null,
+      source: formValues.source.trim() || null,
     };
 
     try {
@@ -163,12 +198,10 @@ export function EditCustomerDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
-      <DialogContent className="min-w-2xl max-w-4xl">
+      <DialogContent className="min-w-2xl max-w-4xl" key={customer?.id}>
         <DialogHeader>
           <DialogTitle>Chỉnh sửa khách hàng</DialogTitle>
-          <DialogDescription>
-            Cập nhật thông tin khách hàng.
-          </DialogDescription>
+          <DialogDescription>Cập nhật thông tin khách hàng.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
@@ -249,6 +282,16 @@ export function EditCustomerDialog({
                 onChange={handleInputChange("date_of_birth")}
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="source">Nguồn</Label>
+              <Input
+                id="source"
+                type="text"
+                placeholder="Nhập nguồn khách hàng"
+                value={formValues.source}
+                onChange={handleInputChange("source")}
+              />
+            </div>
           </div>
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
           <DialogFooter>
@@ -272,4 +315,3 @@ export function EditCustomerDialog({
     </Dialog>
   );
 }
-

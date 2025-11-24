@@ -1,5 +1,3 @@
-"use client";
-
 import { Suspense } from "react";
 import { GalleryContent } from "@/components/gallery/gallery-content";
 import { Skeleton } from "@/components/ui/skeleton";

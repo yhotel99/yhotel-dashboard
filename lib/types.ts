@@ -289,6 +289,7 @@ export type Customer = {
   id_card: string | null;
   customer_type: "regular" | "vip" | "blacklist";
   date_of_birth: string | null;
+  source: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -306,6 +307,7 @@ export type CustomerInput = {
   id_card?: string | null;
   customer_type?: "regular" | "vip" | "blacklist";
   date_of_birth?: string | null;
+  source?: string | null;
 };
 
 // Customer type enum

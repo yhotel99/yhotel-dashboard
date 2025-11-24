@@ -68,6 +68,13 @@ export function createColumns(
       minSize: 80,
     },
     {
+      accessorKey: "source",
+      header: "Nguồn",
+      cell: ({ row }) => row.original.source ?? "-",
+      size: 120,
+      minSize: 100,
+    },
+    {
       id: "actions",
       cell: ({ row }) => (
         <ActionsCell

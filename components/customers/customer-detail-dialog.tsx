@@ -119,6 +119,13 @@ export function CustomerDetailDialog({
                   <StatusBadge customerType={customer.customer_type} />
                 </div>
               </div>
+
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-muted-foreground">
+                  Nguồn
+                </label>
+                <p className="text-base">{customer.source || "-"}</p>
+              </div>
             </div>
           </div>
 

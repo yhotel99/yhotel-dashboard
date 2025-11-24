@@ -1,5 +1,3 @@
-"use client";
-
 import { Suspense } from "react";
 import { UsersContent } from "@/components/users/users-content";
 
