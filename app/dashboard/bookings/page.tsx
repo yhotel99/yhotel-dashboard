@@ -1,5 +1,3 @@
-"use client";
-
 import { Suspense } from "react";
 import { BookingsContent } from "@/components/bookings/bookings-content";
 
