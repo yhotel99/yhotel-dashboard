@@ -273,7 +273,7 @@ export function DataTable<TData, TValue>({
                         key={`skeleton-cell-${index}-${colIndex}`}
                         style={{ width: columnWidth }}
                       >
-                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-8 w-full" />
                       </TableCell>
                     ))}
                 </TableRow>
