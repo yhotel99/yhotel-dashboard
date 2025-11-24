@@ -276,7 +276,7 @@ export function SystemReports() {
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-card">
+        <Card className="border-primary/20 bg-linear-to-br from-primary/5 to-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0">
             <CardTitle className="text-sm font-medium">
               Tổng doanh thu
@@ -309,7 +309,7 @@ export function SystemReports() {
           </CardContent>
         </Card>
 
-        <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-card">
+        <Card className="border-primary/20 bg-linear-to-br from-primary/5 to-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0">
             <CardTitle className="text-sm font-medium">
               Tổng đặt phòng
@@ -342,7 +342,7 @@ export function SystemReports() {
           </CardContent>
         </Card>
 
-        <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-card">
+        <Card className="border-primary/20 bg-linear-to-br from-primary/5 to-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0">
             <CardTitle className="text-sm font-medium">Tỷ lệ lấp đầy</CardTitle>
             <div className="rounded-full bg-primary/10 p-2">
@@ -373,7 +373,7 @@ export function SystemReports() {
           </CardContent>
         </Card>
 
-        <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-card">
+        <Card className="border-primary/20 bg-linear-to-br from-primary/5 to-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0">
             <CardTitle className="text-sm font-medium">Tổng khách</CardTitle>
             <div className="rounded-full bg-primary/10 p-2">
@@ -407,7 +407,7 @@ export function SystemReports() {
 
       {/* Charts Section */}
       <div className="flex flex-col gap-4">
-        <Card className="border-primary/20 bg-gradient-to-br from-primary/5 via-card to-card">
+        <Card className="border-primary/20 bg-linear-to-br from-primary/5 via-card to-card">
           <CardHeader>
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
@@ -532,7 +532,7 @@ export function SystemReports() {
         </Card>
 
         {/* Room Statistics Chart */}
-        <Card className="border-primary/20 bg-gradient-to-br from-primary/5 via-card to-card">
+        <Card className="border-primary/20 bg-linear-to-br from-primary/5 via-card to-card">
           <CardHeader>
             <CardTitle className="text-2xl">
               Thống kê số lượng theo loại phòng
@@ -739,7 +739,7 @@ export function SystemReports() {
                         }}
                       />
                       <Legend
-                        formatter={(value, entry) => (
+                        formatter={(value) => (
                           <span className="text-xs text-muted-foreground">
                             {value}
                           </span>
@@ -753,7 +753,7 @@ export function SystemReports() {
           </CardContent>
         </Card>
 
-        <Card className="border-primary/20 bg-gradient-to-br from-primary/5 via-card to-card">
+        <Card className="border-primary/20 bg-linear-to-br from-primary/5 via-card to-card">
           <CardHeader>
             <CardTitle className="text-2xl">Thống kê hoạt động</CardTitle>
             <CardDescription className="text-base mt-1">
@@ -837,7 +837,7 @@ export function SystemReports() {
       </div>
 
       {/* Daily Report Table */}
-      <Card className="border-primary/20 bg-gradient-to-br from-primary/5 via-card to-card">
+      <Card className="border-primary/20 bg-linear-to-br from-primary/5 via-card to-card">
         <CardHeader>
           <CardTitle className="text-2xl">Báo cáo chi tiết theo ngày</CardTitle>
           <CardDescription className="text-base mt-1">
@@ -912,4 +912,3 @@ export function SystemReports() {
     </div>
   );
 }
-
