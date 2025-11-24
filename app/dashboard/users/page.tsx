@@ -1,196 +1,38 @@
 "use client";
 
-import * as React from "react";
-import { IconPlus } from "@tabler/icons-react";
-import { useSearchParams, useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { DataTable } from "@/components/data-table";
-import { toast } from "sonner";
-import { useProfiles } from "@/hooks/use-profiles";
-import type { Profile } from "@/lib/types";
-import { createColumns } from "@/components/users/columns";
-import { UserFormDialog, type CreateUserFormValues, type EditUserFormValues } from "@/components/users/user-form-dialog";
+import { Suspense } from "react";
+import { UsersContent } from "@/components/users/users-content";
 
 export default function UsersPage() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const [localSearch, setLocalSearch] = React.useState("");
-  const [openUserDialog, setOpenUserDialog] = React.useState(false);
-  const [editingProfile, setEditingProfile] = React.useState<
-    Profile | undefined
-  >();
-
-  // Get pagination and search from URL params
-  const page = React.useMemo(() => {
-    const pageParam = searchParams.get("page");
-    const pageNum = pageParam ? parseInt(pageParam, 10) : 1;
-    return pageNum > 0 ? pageNum : 1;
-  }, [searchParams]);
-
-  const limit = React.useMemo(() => {
-    const limitParam = searchParams.get("limit");
-    const limitNum = limitParam ? parseInt(limitParam, 10) : 10;
-    return limitNum > 0 ? limitNum : 10;
-  }, [searchParams]);
-
-  const search = React.useMemo(() => {
-    return searchParams.get("search") || "";
-  }, [searchParams]);
-
-  // Update search params
-  const updateSearchParams = React.useCallback(
-    (newPage: number, newLimit: number, newSearch: string) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (newPage > 1) {
-        params.set("page", newPage.toString());
-      } else {
-        params.delete("page");
-      }
-      if (newLimit !== 10) {
-        params.set("limit", newLimit.toString());
-      } else {
-        params.delete("limit");
-      }
-      if (newSearch) {
-        params.set("search", newSearch);
-      } else {
-        params.delete("search");
-      }
-      router.push(`?${params.toString()}`);
-    },
-    [router, searchParams]
-  );
-
-  // Sync local search with URL search
-  React.useEffect(() => {
-    setLocalSearch(search);
-  }, [search]);
-
-  // Debounce search
-  React.useEffect(() => {
-    const timer = setTimeout(() => {
-      if (localSearch !== search) {
-        updateSearchParams(1, limit, localSearch);
-      }
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [localSearch, limit, search, updateSearchParams]);
-
-  const {
-    profiles,
-    isLoading,
-    pagination,
-    fetchProfiles,
-    createProfile,
-    updateProfile,
-  } = useProfiles(page, limit, search);
-
-  const handleCreateUser = () => {
-    setEditingProfile(undefined);
-    setOpenUserDialog(true);
-  };
-
-  const handleEditUser = (profile: Profile) => {
-    setEditingProfile(profile);
-    setOpenUserDialog(true);
-  };
-
-  const handleCloseUserDialog = () => {
-    setOpenUserDialog(false);
-    setEditingProfile(undefined);
-  };
-
-  const handleCreate = async (data: CreateUserFormValues) => {
-    try {
-      await createProfile({
-        full_name: data.full_name,
-        email: data.email,
-        password: data.password,
-        phone: data.phone || null,
-        role: data.role,
-        status: data.status,
-      });
-      toast.success("Tạo người dùng thành công!", {
-        description: `Người dùng ${data.full_name} đã được tạo thành công.`,
-      });
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Không thể tạo người dùng";
-      toast.error("Tạo người dùng thất bại", {
-        description: errorMessage,
-      });
-      throw err;
-    }
-  };
-
-  const handleUpdate = async (id: string, data: EditUserFormValues) => {
-    try {
-      const updatedProfile = await updateProfile(id, {
-        full_name: data.full_name,
-        email: data.email,
-        phone: data.phone || null,
-        role: data.role,
-        status: data.status,
-      });
-      toast.success("Cập nhật người dùng thành công!", {
-        description: `Người dùng ${updatedProfile.full_name} đã được cập nhật thành công.`,
-      });
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Không thể cập nhật người dùng";
-      toast.error("Cập nhật người dùng thất bại", {
-        description: errorMessage,
-      });
-      throw err;
-    }
-  };
-
   return (
-    <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-      <div className="flex items-center justify-between px-4 lg:px-6">
-        <div>
-          <h1 className="text-2xl font-bold">Quản lý người dùng</h1>
-          <p className="text-muted-foreground text-sm">
-            Quản lý và theo dõi người dùng trong hệ thống
-          </p>
+    <Suspense
+      fallback={
+        <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+          <div className="flex items-center justify-between px-4 lg:px-6">
+            <div>
+              <h1 className="text-2xl font-bold">Quản lý người dùng</h1>
+              <p className="text-muted-foreground text-sm">
+                Quản lý và theo dõi người dùng trong hệ thống
+              </p>
+            </div>
+          </div>
+          <div className="px-4 lg:px-6">
+            <div className="space-y-4">
+              <div className="h-10 bg-muted rounded animate-pulse" />
+              <div className="space-y-2">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="h-16 bg-muted rounded animate-pulse"
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
-        <Button onClick={handleCreateUser} className="gap-2">
-          <IconPlus className="size-4" />
-          Tạo người dùng mới
-        </Button>
-      </div>
-
-      <div className="px-4 lg:px-6">
-        <DataTable
-          columns={createColumns(handleEditUser)}
-          data={profiles}
-          searchKey="full_name"
-          searchPlaceholder="Tìm kiếm theo tên, email, số điện thoại..."
-          emptyMessage="Không tìm thấy kết quả."
-          entityName="người dùng"
-          getRowId={(row) => row.id}
-          fetchData={() => fetchProfiles(page, limit, search)}
-          isLoading={isLoading}
-          serverPagination={pagination}
-          onPageChange={(newPage) => updateSearchParams(newPage, limit, search)}
-          onLimitChange={(newLimit) => updateSearchParams(1, newLimit, search)}
-          serverSearch={localSearch}
-          onSearchChange={setLocalSearch}
-        />
-      </div>
-
-      <UserFormDialog
-        profile={editingProfile}
-        open={openUserDialog}
-        onOpenChange={(open) => {
-          if (!open) {
-            handleCloseUserDialog();
-          }
-        }}
-        onCreate={handleCreate}
-        onUpdate={handleUpdate}
-      />
-    </div>
+      }
+    >
+      <UsersContent />
+    </Suspense>
   );
 }

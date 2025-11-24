@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { BookingInput, BookingRecord } from "@/lib/types";
+import type { BookingRecord, TransferBookingInput } from "@/lib/types";
 import { useRooms } from "@/hooks/use-rooms";
 import { usePayments } from "@/hooks/use-payments";
 import { formatCurrency, getDateISO, formatDateForInput } from "@/lib/utils";
@@ -47,7 +47,7 @@ export function TransferRoomDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   booking: BookingRecord | null;
-  onTransfer: (id: string, input: BookingInput) => Promise<void>;
+  onTransfer: (id: string, input: TransferBookingInput) => Promise<void>;
 }) {
   const [formValues, setFormValues] = useState<TransferRoomFormState>({
     room_id: "",
@@ -243,13 +243,11 @@ export function TransferRoomDialog({
       advancePayment = parsedAdvancePayment;
     }
 
-    const payload: BookingInput = {
+    const payload: TransferBookingInput = {
       room_id: formValues.room_id,
       check_in: checkInISO,
       check_out: checkOutISO,
       number_of_nights,
-      total_guests: booking.total_guests,
-      notes: booking.notes,
       total_amount: totalAmount,
       advance_payment: advancePayment,
     };

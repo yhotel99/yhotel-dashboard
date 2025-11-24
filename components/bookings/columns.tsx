@@ -2,7 +2,11 @@
 
 import { ColumnDef } from "@tanstack/react-table";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import type { BookingRecord, BookingStatus, BookingInput } from "@/lib/types";
+import type {
+  BookingRecord,
+  BookingStatus,
+  TransferBookingInput,
+} from "@/lib/types";
 import { BookingActionsCell } from "@/components/bookings/actions-cell";
 import { StatusBadge } from "@/components/bookings/status";
 import { NotesCell } from "@/components/bookings/notes-cell";
@@ -11,7 +15,7 @@ export function createColumns(
   updateStatus: (id: string, status: BookingStatus) => Promise<void>,
   handlers?: {
     onEdit?: (booking: BookingRecord) => void;
-    onTransfer?: (id: string, input: BookingInput) => Promise<void>;
+    onTransfer?: (id: string, input: TransferBookingInput) => Promise<void>;
     onMarkAdvancePayment?: (bookingId: string) => Promise<void>;
     onCancelBooking?: (id: string) => Promise<void>;
     checkAdvancePaymentStatus?: (bookingId: string) => Promise<{
@@ -96,7 +100,7 @@ export function createColumns(
           onTransfer:
             handlers?.onTransfer ||
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            (async (_id: string, _input: BookingInput) => {
+            (async (_id: string, _input: TransferBookingInput) => {
               // Fallback: do nothing
             }),
           onMarkAdvancePayment:

@@ -52,8 +52,7 @@ export function BookingNotesDialog({
       onOpenChange(false);
     } catch (error) {
       toast.error("Không thể lưu ghi chú", {
-        description:
-          error instanceof Error ? error.message : "Có lỗi xảy ra",
+        description: error instanceof Error ? error.message : "Có lỗi xảy ra",
       });
     } finally {
       setIsSaving(false);
@@ -97,4 +96,3 @@ export function BookingNotesDialog({
     </Dialog>
   );
 }
-

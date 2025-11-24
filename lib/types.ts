@@ -201,6 +201,22 @@ export type BookingInput = {
   actual_check_out?: string | null;
 };
 
+// Partial booking input for simple updates (only total_guests and notes)
+export type UpdateBookingInput = {
+  total_guests?: number;
+  notes?: string | null;
+};
+
+// Transfer booking input (for changing room, dates, and payments)
+export type TransferBookingInput = {
+  room_id?: string | null;
+  check_in?: string;
+  check_out?: string;
+  number_of_nights?: number;
+  total_amount?: number;
+  advance_payment?: number;
+};
+
 // ============================================================================
 // Payment Types
 // ============================================================================

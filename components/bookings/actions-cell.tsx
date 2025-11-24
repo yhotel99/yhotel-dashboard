@@ -20,7 +20,7 @@ import {
   SelectTrigger,
 } from "@/components/ui/select";
 import { StatusBadge } from "@/components/bookings/status";
-import type { BookingStatus, BookingRecord, BookingInput } from "@/lib/types";
+import type { BookingStatus, BookingRecord, TransferBookingInput } from "@/lib/types";
 import { CancelBookingConfirmDialog } from "./cancel-booking-confirm-dialog";
 import { ChangeBookingStatusDialog } from "./change-booking-status-dialog";
 import { TransferRoomDialog } from "./transfer-room-dialog";
@@ -91,7 +91,7 @@ export function BookingActionsCell({
   booking: BookingRecord;
   customerId: string | null;
   onEdit: (booking: BookingRecord) => void;
-  onTransfer: (id: string, input: BookingInput) => Promise<void>;
+  onTransfer: (id: string, input: TransferBookingInput) => Promise<void>;
   onMarkAdvancePayment: (bookingId: string) => Promise<void>;
   onCancelBooking?: (id: string) => Promise<void>;
   checkAdvancePaymentStatus?: (bookingId: string) => Promise<{

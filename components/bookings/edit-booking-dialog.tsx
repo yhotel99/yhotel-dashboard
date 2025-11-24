@@ -13,9 +13,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import type { BookingInput, BookingRecord } from "@/lib/types";
+import type { BookingRecord, UpdateBookingInput } from "@/lib/types";
 import { useRooms } from "@/hooks/use-rooms";
-import { formatCurrency, formatDate, getDateISO, formatDateForInput } from "@/lib/utils";
+import {
+  formatCurrency,
+  formatDate,
+  getDateISO,
+  formatDateForInput,
+} from "@/lib/utils";
 import { calculateNightsValue, translateBookingError } from "@/lib/functions";
 
 type EditBookingFormState = {
@@ -39,7 +44,7 @@ export function EditBookingDialog({
   onOpenChange: (open: boolean) => void;
   bookingId: string;
   booking: BookingRecord | null;
-  onUpdate: (id: string, input: BookingInput) => Promise<void>;
+  onUpdate: (id: string, input: UpdateBookingInput) => Promise<void>;
 }) {
   const { rooms } = useRooms();
 
@@ -138,16 +143,10 @@ export function EditBookingDialog({
       return;
     }
 
-    // Only update total_guests and notes, keep other fields from original booking
-    const payload: BookingInput = {
-      room_id: booking.room_id || "",
-      check_in: booking.check_in,
-      check_out: booking.check_out,
-      number_of_nights: booking.number_of_nights,
+    // Only update total_guests and notes
+    const payload: UpdateBookingInput = {
       total_guests: totalGuests,
       notes: formValues.notes.trim() || null,
-      total_amount: booking.total_amount,
-      advance_payment: booking.advance_payment,
     };
 
     try {

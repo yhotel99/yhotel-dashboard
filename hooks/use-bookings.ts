@@ -2,7 +2,13 @@
 
 import { useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
-import type { BookingInput, BookingRecord, PaginationMeta } from "@/lib/types";
+import type {
+  BookingInput,
+  BookingRecord,
+  PaginationMeta,
+  UpdateBookingInput,
+  TransferBookingInput,
+} from "@/lib/types";
 import {
   BOOKING_STATUS,
   PAYMENT_METHOD,
@@ -448,7 +454,10 @@ export function useBookings(options?: {
 
   // Update booking (simple fields only: total_guests, notes, etc.)
   const updateBooking = useCallback(
-    async (bookingId: string, input: BookingInput): Promise<BookingRecord> => {
+    async (
+      bookingId: string,
+      input: UpdateBookingInput
+    ): Promise<BookingRecord> => {
       try {
         const supabase = createClient();
         const { data, error } = await supabase
@@ -487,14 +496,7 @@ export function useBookings(options?: {
   const transferBooking = useCallback(
     async (
       bookingId: string,
-      input: {
-        room_id?: string | null;
-        check_in?: string;
-        check_out?: string;
-        number_of_nights?: number;
-        total_amount?: number;
-        advance_payment?: number;
-      }
+      input: TransferBookingInput
     ): Promise<BookingRecord> => {
       try {
         const supabase = createClient();

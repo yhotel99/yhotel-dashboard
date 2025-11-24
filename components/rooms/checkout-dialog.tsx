@@ -258,12 +258,7 @@ export function CheckoutDialog({
           bookingId={booking.id}
           booking={booking}
           onUpdate={async (id, input) => {
-            // Convert to BookingInput format
-            const updateInput: any = {};
-            if (input.notes !== undefined) updateInput.notes = input.notes;
-            if (input.total_guests !== undefined)
-              updateInput.total_guests = input.total_guests;
-            await updateBooking(id, updateInput);
+            await updateBooking(id, input);
             await fetchBookingDetails();
           }}
         />
