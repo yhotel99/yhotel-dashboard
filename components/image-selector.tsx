@@ -376,7 +376,7 @@ export function ImageListSelector({
       </Button>
 
       {value.length > 0 && (
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-6 gap-2 sm:grid-cols-6 md:grid-cols-6">
           {value.map((imageValue) => (
             <div
               key={imageValue.id || imageValue.url}
@@ -392,7 +392,7 @@ export function ImageListSelector({
                 type="button"
                 variant="destructive"
                 size="icon"
-                className="absolute top-1 right-1 opacity-0 group-hover:opacity-100"
+                className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 h-5 w-5"
                 onClick={() => handleRemove(imageValue.id || imageValue.url)}
               >
                 <IconX className="size-3" />
