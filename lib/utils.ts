@@ -25,7 +25,10 @@ export function formatDate(dateString: string): string {
 
 // Helper function to convert date string to ISO string (with default time)
 // Check-in default: 14:00, Check-out default: 12:00
-export function getDateISO(date: string, isCheckOut: boolean = false): string | null {
+export function getDateISO(
+  date: string,
+  isCheckOut: boolean = false
+): string | null {
   if (!date) return null;
   // Format: yyyy-MM-dd
   // Add default time: 14:00 for check-in, 12:00 for check-out

@@ -286,14 +286,14 @@ export default function GalleryPage() {
 
         {/* Image Grid */}
         {isLoading ? (
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 mb-4">
+          <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-8 xl:grid-cols-10 mb-4">
             {Array.from({ length: limit }).map((_, i) => (
               <div key={i} className="aspect-square bg-muted rounded-lg" />
             ))}
           </div>
         ) : images.length > 0 ? (
           <>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 mb-4">
+            <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-8 xl:grid-cols-10 mb-4">
               {images.map((image) => (
                 <div
                   key={image.id}
@@ -329,26 +329,25 @@ export default function GalleryPage() {
                 <div className="text-muted-foreground text-sm">
                   Trang {pagination.page} / {pagination.totalPages}
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => updateSearchParams(page - 1, limit)}
-                    disabled={page <= 1}
-                  >
-                    <IconChevronLeft className="size-4" />
-                    Trước
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => updateSearchParams(page + 1, limit)}
-                    disabled={page >= pagination.totalPages}
-                  >
-                    Sau
-                    <IconChevronRight className="size-4" />
-                  </Button>
-                </div>
+                <div className="flex items-center gap-2"></div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => updateSearchParams(page - 1, limit)}
+                  disabled={page <= 1}
+                >
+                  <IconChevronLeft className="size-4" />
+                  Trước
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => updateSearchParams(page + 1, limit)}
+                  disabled={page >= pagination.totalPages}
+                >
+                  Sau
+                  <IconChevronRight className="size-4" />
+                </Button>
               </div>
             )}
           </>
