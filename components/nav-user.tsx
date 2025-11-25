@@ -8,7 +8,7 @@ import {
   IconNotification,
   IconUserCircle,
 } from "@tabler/icons-react";
-import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/contexts/auth-context";
 import { toast } from "sonner";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -33,11 +33,11 @@ import { generateGradient, getInitials } from "@/lib/functions";
 export function NavUser({ user }: { user: User }) {
   const router = useRouter();
   const { isMobile } = useSidebar();
-  const supabase = createClient();
+  const { logout } = useAuth();
 
   const handleLogout = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
+      const { error } = await logout();
 
       if (error) {
         toast.error(error.message || "Đăng xuất thất bại");

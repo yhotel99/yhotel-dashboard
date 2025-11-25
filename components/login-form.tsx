@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/contexts/auth-context";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -39,8 +39,8 @@ export function LoginForm({
   ...props
 }: React.ComponentProps<"div">) {
   const router = useRouter();
+  const { login } = useAuth();
   const [isLoading, setIsLoading] = React.useState(false);
-  const supabase = createClient();
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -53,7 +53,7 @@ export function LoginForm({
   const onSubmit = async (values: LoginFormValues) => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await login({
         email: values.email,
         password: values.password,
       });
@@ -63,11 +63,9 @@ export function LoginForm({
         return;
       }
 
-      if (data.user) {
-        toast.success("Đăng nhập thành công!");
-        router.push("/dashboard");
-        router.refresh();
-      }
+      toast.success("Đăng nhập thành công!");
+      router.push("/dashboard");
+      router.refresh();
     } catch (error) {
       toast.error("Đã xảy ra lỗi. Vui lòng thử lại.");
       console.error("Login error:", error);
