@@ -106,6 +106,10 @@ export function CustomersContent() {
     setOpenDetailDialog(true);
   };
 
+  const handleViewBookings = (customer: Customer) => {
+    router.push(`/dashboard/customers/${customer.id}/bookings`);
+  };
+
   const handleUpdateCustomer = async (
     id: string,
     input: Parameters<typeof updateCustomer>[1]
@@ -123,11 +127,6 @@ export function CustomersContent() {
       });
       throw err;
     }
-  };
-
-  const handleDeleteClick = (customer: Customer) => {
-    setCustomerToDelete(customer);
-    setOpenDeleteDialog(true);
   };
 
   const handleConfirmDelete = async () => {
@@ -184,7 +183,11 @@ export function CustomersContent() {
       </div>
       <div className="px-4 lg:px-6">
         <DataTable
-          columns={createColumns(handleEditCustomer, handleViewDetail)}
+          columns={createColumns(
+            handleEditCustomer,
+            handleViewDetail,
+            handleViewBookings
+          )}
           data={customers}
           searchKey="full_name"
           searchPlaceholder="Tìm kiếm theo tên, SĐT hoặc email..."

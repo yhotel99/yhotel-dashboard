@@ -60,8 +60,13 @@ export function useBookings(options?: {
 
         // Call both service functions in parallel for better performance
         const [bookingsData, total] = await Promise.all([
-          searchBookings(trimmedSearch, pageNum, limitNum),
-          countBookings(trimmedSearch),
+          searchBookings({
+            search: trimmedSearch,
+            page: pageNum,
+            limit: limitNum,
+            customerId: null,
+          }),
+          countBookings({ search: trimmedSearch, customerId: null }),
         ]);
 
         const totalPages = Math.ceil(total / limitNum);
@@ -272,58 +277,20 @@ export function useBookings(options?: {
       try {
         setIsLoading(true);
         setError(null);
-        const supabase = createClient();
 
-        // Calculate offset
-        const from = (pageNum - 1) * limitNum;
-        const to = from + limitNum - 1;
+        const trimmedSearch = searchTerm?.trim() || null;
 
-        // Build query with rooms join
-        let query = supabase
-          .from("bookings")
-          .select(
-            `
-            *,
-            rooms:room_id (
-              name
-            )
-          `,
-            { count: "exact" }
-          )
-          .eq("customer_id", customerIdParam)
-          .is("deleted_at", null);
+        // Call both service functions in parallel for better performance
+        const [bookingsData, total] = await Promise.all([
+          searchBookings({
+            search: trimmedSearch,
+            page: pageNum,
+            limit: limitNum,
+            customerId: customerIdParam,
+          }),
+          countBookings({ search: trimmedSearch, customerId: customerIdParam }),
+        ]);
 
-        // Add search filter if search term exists
-        if (searchTerm && searchTerm.trim() !== "") {
-          const trimmedSearch = searchTerm.trim();
-          query = query.ilike("id", `%${trimmedSearch}%`);
-        }
-
-        // Fetch data with pagination
-        const { data, error, count } = await query
-          .order("created_at", { ascending: false })
-          .range(from, to);
-
-        if (error) {
-          throw new Error(error.message);
-        }
-
-        let bookingsData = (data || []) as BookingRecord[];
-
-        // Post-process to filter by room name and booking ID if search term exists
-        if (searchTerm && searchTerm.trim() !== "") {
-          const trimmedSearch = searchTerm.trim().toLowerCase();
-          bookingsData = bookingsData.filter((booking) => {
-            const roomName = booking.rooms?.name?.toLowerCase() || "";
-            const bookingId = booking.id.toLowerCase();
-            return (
-              roomName.includes(trimmedSearch) ||
-              bookingId.includes(trimmedSearch)
-            );
-          });
-        }
-
-        const total = count || 0;
         const totalPages = Math.ceil(total / limitNum);
 
         setBookings(bookingsData);

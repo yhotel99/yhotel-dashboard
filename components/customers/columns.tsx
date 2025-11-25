@@ -6,7 +6,8 @@ import { ActionsCell } from "./actions-cell";
 
 export function createColumns(
   onEdit: (customer: Customer) => void,
-  onViewDetail?: (customer: Customer) => void
+  onViewDetail?: (customer: Customer) => void,
+  onViewBookings?: (customer: Customer) => void
 ): ColumnDef<Customer>[] {
   return [
     {
@@ -81,6 +82,7 @@ export function createColumns(
           customer={row.original}
           onEdit={onEdit}
           onViewDetail={onViewDetail}
+          onViewBookings={onViewBookings}
         />
       ),
       size: 60,

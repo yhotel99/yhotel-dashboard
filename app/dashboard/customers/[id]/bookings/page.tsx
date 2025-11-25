@@ -4,10 +4,8 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { IconArrowLeft } from "@tabler/icons-react";
 import { ColumnDef } from "@tanstack/react-table";
-
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
-import { useCustomers } from "@/hooks/use-customers";
 import { useBookings, type BookingRecord } from "@/hooks/use-bookings";
 import { useDebounce } from "@/hooks/use-debounce";
 import { StatusBadge } from "@/components/bookings/status";
@@ -123,7 +121,6 @@ export default function CustomerBookingsPage() {
     }
   }, [debouncedSearch, search, limit, updateSearchParams]);
 
-  const { getCustomerById } = useCustomers();
   const { bookings, isLoading, pagination, fetchBookingsByCustomerId } =
     useBookings({
       page,
@@ -139,24 +136,13 @@ export default function CustomerBookingsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customerId, page, limit, search]);
 
-  // Fetch customer info
+  // Get customer info from bookings (all bookings have same customer)
   useEffect(() => {
-    const fetchCustomerInfo = async () => {
-      if (!customerId) return;
-
-      try {
-        const customerData = await getCustomerById(customerId);
-        if (customerData) {
-          setCustomerName(customerData.full_name);
-          setPhone(customerData.phone || "");
-        }
-      } catch (error) {
-        console.error("Error fetching customer:", error);
-      }
-    };
-
-    fetchCustomerInfo();
-  }, [customerId, getCustomerById]);
+    if (bookings.length > 0 && bookings[0].customers) {
+      setCustomerName(bookings[0].customers.full_name);
+      setPhone(bookings[0].customers.phone || "");
+    }
+  }, [bookings]);
 
   const columns = useMemo(() => createColumns(), []);
 
@@ -166,7 +152,7 @@ export default function CustomerBookingsPage() {
         <Button
           variant="outline"
           size="icon"
-          onClick={() => router.back()}
+          onClick={() => router.push(`/dashboard/customers`)}
           className="h-10 w-10 cursor-pointer"
         >
           <IconArrowLeft className="size-4" />

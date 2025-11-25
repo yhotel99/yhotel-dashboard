@@ -9,17 +9,24 @@ import { BOOKING_STATUS } from "@/lib/constants";
  * @param limit - Items per page
  * @returns Array of booking records
  */
-export async function searchBookings(
-  search: string | null,
-  page: number,
-  limit: number
-): Promise<BookingRecord[]> {
+export async function searchBookings({
+  search,
+  page,
+  limit,
+  customerId,
+}: {
+  search: string | null;
+  page: number;
+  limit: number;
+  customerId: string | null;
+}): Promise<BookingRecord[]> {
   try {
     const supabase = createClient();
     const { data, error } = await supabase.rpc("search_bookings", {
       p_search: search,
       p_page: page,
       p_limit: limit,
+      p_customer_id: customerId,
     });
 
     if (error) {
@@ -38,11 +45,18 @@ export async function searchBookings(
  * @param search - Search term
  * @returns Total count
  */
-export async function countBookings(search: string | null): Promise<number> {
+export async function countBookings({
+  search,
+  customerId,
+}: {
+  search: string | null;
+  customerId: string | null;
+}): Promise<number> {
   try {
     const supabase = createClient();
     const { data, error } = await supabase.rpc("count_bookings", {
       p_search: search,
+      p_customer_id: customerId,
     });
 
     if (error) {

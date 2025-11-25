@@ -15,10 +15,12 @@ export function ActionsCell({
   customer,
   onEdit,
   onViewDetail,
+  onViewBookings,
 }: {
   customer: Customer;
   onEdit: (customer: Customer) => void;
   onViewDetail?: (customer: Customer) => void;
+  onViewBookings?: (customer: Customer) => void;
 }) {
   return (
     <DropdownMenu>
@@ -36,6 +38,11 @@ export function ActionsCell({
         {onViewDetail && (
           <DropdownMenuItem onClick={() => onViewDetail(customer)}>
             Xem chi tiết
+          </DropdownMenuItem>
+        )}
+        {onViewBookings && (
+          <DropdownMenuItem onClick={() => onViewBookings(customer)}>
+            Xem đặt phòng
           </DropdownMenuItem>
         )}
         <DropdownMenuItem onClick={() => onEdit(customer)}>
