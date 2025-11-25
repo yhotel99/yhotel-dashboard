@@ -20,11 +20,16 @@ import {
   SelectTrigger,
 } from "@/components/ui/select";
 import { StatusBadge } from "@/components/bookings/status";
-import type { BookingStatus, BookingRecord, TransferBookingInput } from "@/lib/types";
+import type {
+  BookingStatus,
+  BookingRecord,
+  TransferBookingInput,
+} from "@/lib/types";
 import { CancelBookingConfirmDialog } from "./cancel-booking-confirm-dialog";
 import { ChangeBookingStatusDialog } from "./change-booking-status-dialog";
 import { TransferRoomDialog } from "./transfer-room-dialog";
 import { MarkAdvancePaymentDialog } from "./mark-advance-payment-dialog";
+import { CreateRefundRequestDialog } from "./create-refund-request-dialog";
 import { BOOKING_STATUS } from "@/lib/constants";
 
 // Context to update booking status from action cells
@@ -109,6 +114,7 @@ export function BookingActionsCell({
   const [openChangeStatus, setOpenChangeStatus] = useState(false);
   const [openTransfer, setOpenTransfer] = useState(false);
   const [openMarkAdvancePayment, setOpenMarkAdvancePayment] = useState(false);
+  const [openRefundRequest, setOpenRefundRequest] = useState(false);
   const [advancePaymentStatus, setAdvancePaymentStatus] = useState<{
     hasAdvancePayment: boolean;
     isPaid: boolean;
@@ -203,6 +209,9 @@ export function BookingActionsCell({
               ? "Đã đánh dấu đặt cọc"
               : "Đánh dấu đặt cọc"}
           </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setOpenRefundRequest(true)}>
+            Yêu cầu hoàn tiền
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
             variant="destructive"
@@ -249,6 +258,12 @@ export function BookingActionsCell({
         onOpenChange={setOpenMarkAdvancePayment}
         onConfirm={handleMarkAdvancePayment}
         amount={booking.advance_payment || undefined}
+      />
+
+      <CreateRefundRequestDialog
+        open={openRefundRequest}
+        onOpenChange={setOpenRefundRequest}
+        booking={booking}
       />
     </>
   );

@@ -5,7 +5,7 @@ import { IconPlus } from "@tabler/icons-react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
-import { useCustomers, type Customer } from "@/hooks/use-customers";
+// import { type Customer } from "@/hooks/use-customers";
 import { useDebounce } from "@/hooks/use-debounce";
 import { createColumns } from "@/components/customers/columns";
 import { CreateCustomerDialog } from "@/components/customers/create-customer-dialog";
@@ -13,6 +13,8 @@ import { EditCustomerDialog } from "@/components/customers/edit-customer-dialog"
 import { DeleteCustomerDialog } from "@/components/customers/delete-customer-dialog";
 import { CustomerDetailDialog } from "@/components/customers/customer-detail-dialog";
 import { toast } from "sonner";
+import { useCustomersQuery } from "@/hooks/use-customers-query";
+import { type Customer } from "@/lib/types";
 
 export function CustomersContent() {
   const router = useRouter();
@@ -90,11 +92,11 @@ export function CustomersContent() {
     customers,
     isLoading,
     pagination,
-    fetchCustomers,
     createCustomer,
     updateCustomer,
     deleteCustomer,
-  } = useCustomers(page, limit, search);
+    refetch,
+  } = useCustomersQuery(page, limit, search);
 
   const handleEditCustomer = (customer: Customer) => {
     setEditingCustomer(customer);
@@ -194,7 +196,7 @@ export function CustomersContent() {
           emptyMessage="Không tìm thấy khách hàng nào."
           entityName="khách hàng"
           getRowId={(row) => row.id}
-          fetchData={() => fetchCustomers(page, limit, search)}
+          fetchData={refetch}
           isLoading={isLoading}
           serverPagination={pagination}
           onPageChange={(newPage) => updateSearchParams(newPage, limit, search)}

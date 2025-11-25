@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { CustomerInput } from "@/hooks/use-customers";
+import type { CustomerInput } from "@/lib/types";
 import { toast } from "sonner";
 import { translateCustomerError } from "@/lib/functions";
 import { CUSTOMER_ERROR_PATTERNS } from "@/lib/constants";

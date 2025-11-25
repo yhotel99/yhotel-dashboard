@@ -317,6 +317,48 @@ export type CustomerType = "regular" | "vip" | "blacklist";
 // Pagination Types
 // ============================================================================
 
+// ============================================================================
+// Refund Request Types
+// ============================================================================
+
+// Refund request status type
+export type RefundRequestStatus =
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "refunded";
+
+// Refund request type matching database schema (refund_requests table)
+export type RefundRequest = {
+  id: string;
+  booking_id: string;
+  payment_id: string | null;
+  customer_id: string | null;
+  request_by: string;
+  approved_by: string | null;
+  refunded_by: string | null;
+  reason: string | null;
+  note: string | null;
+  amount: number;
+  status: RefundRequestStatus;
+  created_at: string;
+  updated_at: string;
+};
+
+// Refund request input type for create operations
+export type RefundRequestInput = {
+  booking_id: string;
+  payment_id: string | null;
+  customer_id: string | null;
+  reason?: string | null;
+  note?: string | null;
+  amount: number;
+};
+
+// ============================================================================
+// Pagination Types
+// ============================================================================
+
 // Pagination metadata type
 export type PaginationMeta = {
   total: number;

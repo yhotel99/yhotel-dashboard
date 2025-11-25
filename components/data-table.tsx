@@ -223,7 +223,7 @@ export function DataTable<TData, TValue>({
             <Button
               variant="outline"
               size="sm"
-              onClick={fetchData}
+              onClick={() => fetchData()}
               disabled={isLoading}
             >
               <IconRefresh

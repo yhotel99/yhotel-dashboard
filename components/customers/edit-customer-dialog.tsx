@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { Customer, CustomerInput } from "@/hooks/use-customers";
+import type { Customer, CustomerInput } from "@/lib/types";
 
 type EditCustomerFormState = {
   full_name: string;
