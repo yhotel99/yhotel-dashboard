@@ -9,6 +9,8 @@ import {
 } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
+import { getProfileById } from "@/services/profiles";
+import { USER_STATUS } from "@/lib/constants";
 
 const supabase = createClient();
 
@@ -64,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             console.log("Initial user found:", user.id);
             setCurrentUser(user);
           }
-        } catch (error) {
+        } catch {
           // Silently ignore auth errors during initialization
           console.log("No valid session found during initialization");
         }
@@ -98,15 +100,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (error) {
-        return { error: new Error(error.message) };
+        return { error: new Error("Email hoặc mật khẩu không đúng") };
       }
 
-      if (data.user) {
-        // Auth state change listener will update currentUser automatically
-        return { error: null };
+      if (!data.user) {
+        return { error: new Error("Đăng nhập thất bại") };
       }
 
-      return { error: new Error("Đăng nhập thất bại") };
+      // Check profile status - only allow active users to login
+      const profile = await getProfileById(data.user.id);
+
+      if (!profile) {
+        // Profile not found, sign out and return error
+        await supabase.auth.signOut();
+        return { error: new Error("Không tìm thấy thông tin người dùng") };
+      }
+
+      if (profile.status !== USER_STATUS.ACTIVE) {
+        // User is not active, sign out and return error
+        await supabase.auth.signOut();
+        const statusMessage =
+          profile.status === USER_STATUS.INACTIVE
+            ? "Tài khoản của bạn đã bị vô hiệu hóa"
+            : profile.status === USER_STATUS.SUSPENDED
+            ? "Tài khoản của bạn đã bị tạm khóa"
+            : "Tài khoản của bạn không được phép đăng nhập";
+        return { error: new Error(statusMessage) };
+      }
+
+      // Auth state change listener will update currentUser automatically
+      return { error: null };
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Đã xảy ra lỗi. Vui lòng thử lại.";

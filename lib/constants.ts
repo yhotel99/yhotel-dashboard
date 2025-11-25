@@ -179,6 +179,27 @@ export const paymentStatusLabels: Record<
 };
 
 /**
+ * User status values
+ */
+export const USER_STATUS = {
+  ACTIVE: "active",
+  INACTIVE: "inactive",
+  SUSPENDED: "suspended",
+} as const;
+
+/**
+ * User status labels mapping
+ */
+export const userStatusLabels: Record<
+  (typeof USER_STATUS)[keyof typeof USER_STATUS],
+  string
+> = {
+  [USER_STATUS.ACTIVE]: "Hoạt động",
+  [USER_STATUS.INACTIVE]: "Vô hiệu hóa",
+  [USER_STATUS.SUSPENDED]: "Tạm khóa",
+};
+
+/**
  * Booking error message patterns constants
  */
 /**
