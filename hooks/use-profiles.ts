@@ -10,9 +10,6 @@ import {
   deleteProfile as deleteProfileService,
 } from "@/services/profiles";
 
-// Re-export types for backward compatibility
-export type { Profile, PaginationMeta } from "@/lib/types";
-
 // Hook for managing profiles
 export function useProfiles(
   page: number = 1,

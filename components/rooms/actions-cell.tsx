@@ -8,7 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { Room } from "@/hooks/use-rooms";
+import { Room } from "@/lib/types";
 
 export function RoomActionsCell({
   room,
@@ -52,4 +52,3 @@ export function RoomActionsCell({
     </DropdownMenu>
   );
 }
-

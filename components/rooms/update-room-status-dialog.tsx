@@ -18,9 +18,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import type { Room } from "@/hooks/use-rooms";
 import { ROOM_STATUS, roomStatusLabels } from "@/lib/constants";
 import { StatusBadge } from "./status-badge";
+import { Room } from "@/lib/types";
 
 interface UpdateRoomStatusDialogProps {
   room: Room | null;

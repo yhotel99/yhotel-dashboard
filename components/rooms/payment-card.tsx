@@ -2,7 +2,11 @@
 
 import { Card } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
-import type { BookingRecord, RoomWithBooking } from "@/lib/types";
+import type {
+  BookingRecord,
+  PaymentWithBooking,
+  RoomWithBooking,
+} from "@/lib/types";
 import { usePayments } from "@/hooks/use-payments";
 import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,7 +19,7 @@ interface PaymentCardProps {
 
 export function PaymentCard({ booking, room }: PaymentCardProps) {
   const { getPaymentsByBookingId } = usePayments();
-  const [payments, setPayments] = useState<any[]>([]);
+  const [payments, setPayments] = useState<PaymentWithBooking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -90,4 +94,3 @@ export function PaymentCard({ booking, room }: PaymentCardProps) {
     </Card>
   );
 }
-

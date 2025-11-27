@@ -6,10 +6,11 @@ import { IconArrowLeft } from "@tabler/icons-react";
 import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
-import { useBookings, type BookingRecord } from "@/hooks/use-bookings";
+import { useBookings } from "@/hooks/use-bookings";
 import { useDebounce } from "@/hooks/use-debounce";
 import { StatusBadge } from "@/components/bookings/status";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { BookingRecord } from "@/lib/types";
 
 const createColumns = (): ColumnDef<BookingRecord>[] => [
   {

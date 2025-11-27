@@ -6,7 +6,8 @@ import { IconArrowLeft } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
 import { RoomForm, type RoomFormValues } from "@/components/room-form";
-import { useRooms, type RoomWithImages } from "@/hooks/use-rooms";
+import { useRooms } from "@/hooks/use-rooms";
+import { RoomWithImages } from "@/lib/types";
 
 export default function EditRoomPage() {
   const router = useRouter();

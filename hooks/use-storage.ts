@@ -9,13 +9,6 @@ import type {
   UseStorageOptions,
 } from "@/lib/types";
 
-// Re-export types for backward compatibility
-export type {
-  UploadProgress,
-  UploadResult,
-  UseStorageOptions,
-} from "@/lib/types";
-
 // Hook for uploading files to Supabase Storage
 export function useStorage(options: UseStorageOptions = {}) {
   const { bucket = "yhotel", folder = "gallery", onProgress } = options;

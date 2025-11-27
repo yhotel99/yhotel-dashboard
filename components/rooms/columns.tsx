@@ -1,11 +1,11 @@
 import { ColumnDef } from "@tanstack/react-table";
-import type { Room } from "@/hooks/use-rooms";
 import { roomTypeLabels } from "@/lib/constants";
 import { StatusBadge } from "./status-badge";
 import { ThumbnailCell } from "./thumbnail-cell";
 import { AmenitiesCell } from "./amenities-cell";
 import { RoomActionsCell } from "./actions-cell";
 import { formatCurrency } from "@/lib/functions";
+import { Room } from "@/lib/types";
 
 export function createColumns(
   onDelete: (room: Room) => void,

@@ -7,11 +7,12 @@ import { useDebounce } from "@/hooks/use-debounce";
 
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
-import { useRooms, type Room } from "@/hooks/use-rooms";
+import { useRooms } from "@/hooks/use-rooms";
 import { toast } from "sonner";
 import { createColumns } from "@/components/rooms/columns";
 import { DeleteRoomDialog } from "@/components/rooms/delete-room-dialog";
 import { UpdateRoomStatusDialog } from "@/components/rooms/update-room-status-dialog";
+import { Room } from "@/lib/types";
 
 export function RoomsContent() {
   const router = useRouter();
@@ -234,4 +235,3 @@ export function RoomsContent() {
     </div>
   );
 }
-

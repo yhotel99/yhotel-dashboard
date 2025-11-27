@@ -5,9 +5,6 @@ import { createClient } from "@/lib/supabase/client";
 
 import type { GalleryImage, PaginationMeta } from "@/lib/types";
 
-// Re-export types for backward compatibility
-export type { GalleryImage, PaginationMeta } from "@/lib/types";
-
 // Hook for managing gallery images
 export function useGallery(page: number = 1, limit: number = 20) {
   const [images, setImages] = useState<GalleryImage[]>([]);

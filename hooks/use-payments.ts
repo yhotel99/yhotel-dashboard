@@ -11,9 +11,6 @@ import type {
 } from "@/lib/types";
 import { PAYMENT_STATUS, PAYMENT_TYPE } from "@/lib/constants";
 
-// Re-export types for backward compatibility
-export type { PaymentWithBooking, PaginationMeta } from "@/lib/types";
-
 // Hook for managing payments
 export function usePayments(
   page: number = 1,

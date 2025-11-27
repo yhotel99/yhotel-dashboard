@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import type { ComponentProps } from "react";
-import type { Room } from "@/hooks/use-rooms";
 import { ROOM_STATUS, roomStatusLabels } from "@/lib/constants";
+import { Room } from "@/lib/types";
 
 // Status badge component
 export function StatusBadge({ status }: { status: Room["status"] | string }) {
@@ -49,4 +49,3 @@ export function StatusBadge({ status }: { status: Room["status"] | string }) {
     </Badge>
   );
 }
-

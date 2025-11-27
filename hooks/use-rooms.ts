@@ -10,15 +10,6 @@ import type {
   ImageValue,
 } from "@/lib/types";
 
-// Re-export types for backward compatibility
-export type {
-  Room,
-  RoomInput,
-  RoomWithImages,
-  PaginationMeta,
-  ImageValue,
-} from "@/lib/types";
-
 // Hook for managing rooms
 export function useRooms(
   page: number = 1,

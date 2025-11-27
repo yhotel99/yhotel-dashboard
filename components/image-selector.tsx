@@ -15,14 +15,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useGallery, GalleryImage } from "@/hooks/use-gallery";
+import { useGallery } from "@/hooks/use-gallery";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 
-import type { ImageValue } from "@/lib/types";
-
-// Re-export type for backward compatibility
-export type { ImageValue } from "@/lib/types";
+import type { ImageValue, GalleryImage } from "@/lib/types";
 
 interface ImageSelectorProps {
   value?: ImageValue | string;

@@ -22,9 +22,6 @@ import {
   getBookingByIdWithRelations,
 } from "@/services/bookings";
 
-// Re-export types for backward compatibility
-export type { BookingRecord, PaginationMeta } from "@/lib/types";
-
 // Hook for managing bookings
 export function useBookings(options?: {
   page?: number;
