@@ -9,7 +9,7 @@ import { usePayments } from "@/hooks/use-payments";
 import type { PaymentWithBooking } from "@/lib/types";
 import { PaymentStatusBadge } from "@/components/payments/status";
 import { IdCell } from "@/components/payments/id-cell";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDateOnly } from "@/lib/functions";
 import { paymentMethodLabels, paymentTypeLabels } from "@/lib/constants";
 import { useDebounce } from "@/hooks/use-debounce";
 
@@ -82,7 +82,7 @@ const createColumns = (): ColumnDef<PaymentWithBooking>[] => [
     accessorKey: "paid_at",
     header: "Ngày thanh toán",
     cell: ({ row }) =>
-      row.original.paid_at ? formatDate(row.original.paid_at) : "-",
+      row.original.paid_at ? formatDateOnly(row.original.paid_at) : "-",
     size: 150,
     minSize: 130,
   },
@@ -90,14 +90,14 @@ const createColumns = (): ColumnDef<PaymentWithBooking>[] => [
     accessorKey: "refunded_at",
     header: "Ngày hoàn tiền",
     cell: ({ row }) =>
-      row.original.refunded_at ? formatDate(row.original.refunded_at) : "-",
+      row.original.refunded_at ? formatDateOnly(row.original.refunded_at) : "-",
     size: 150,
     minSize: 130,
   },
   {
     accessorKey: "created_at",
     header: "Ngày tạo",
-    cell: ({ row }) => formatDate(row.original.created_at),
+    cell: ({ row }) => formatDateOnly(row.original.created_at),
     size: 150,
     minSize: 130,
   },

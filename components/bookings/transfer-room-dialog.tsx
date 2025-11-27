@@ -22,7 +22,11 @@ import { Label } from "@/components/ui/label";
 import type { BookingRecord, TransferBookingInput } from "@/lib/types";
 import { useRooms } from "@/hooks/use-rooms";
 import { usePayments } from "@/hooks/use-payments";
-import { formatCurrency, getDateISO, formatDateForInput } from "@/lib/utils";
+import {
+  formatCurrency,
+  getDateISO,
+  formatDateForInput,
+} from "@/lib/functions";
 import {
   calculateNightsValue,
   translateBookingError,

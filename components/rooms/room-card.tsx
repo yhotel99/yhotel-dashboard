@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDateOnly } from "@/lib/functions";
 import type { RoomWithBooking, Room } from "@/lib/types";
 import {
   roomTypeLabels,
@@ -267,13 +267,13 @@ export function RoomCard({ room, onStatusChange }: RoomCardProps) {
                 <div className="flex items-center gap-1.5">
                   <span className="text-muted-foreground">Check-in:</span>
                   <span className="font-medium">
-                    {formatDate(room.currentBooking.check_in)}
+                    {formatDateOnly(room.currentBooking.check_in)}
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <span className="text-muted-foreground">Check-out:</span>
                   <span className="font-medium">
-                    {formatDate(room.currentBooking.check_out)}
+                    {formatDateOnly(room.currentBooking.check_out)}
                   </span>
                 </div>
                 <div className="flex items-center gap-1.5">

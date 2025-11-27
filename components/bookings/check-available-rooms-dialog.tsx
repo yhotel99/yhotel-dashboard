@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getAvailableRooms } from "@/services/rooms";
 import type { Room } from "@/lib/types";
-import { formatCurrency, formatDate, getDateISO } from "@/lib/utils";
+import { formatCurrency, formatDateOnly, getDateISO } from "@/lib/functions";
 import { roomTypeLabels } from "@/lib/constants";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -146,7 +146,8 @@ export function CheckAvailableRoomsDialog({
                 </h3>
                 {checkInDate && checkOutDate && (
                   <p className="text-sm text-muted-foreground">
-                    {formatDate(checkInDate)} - {formatDate(checkOutDate)}
+                    {formatDateOnly(checkInDate)} -{" "}
+                    {formatDateOnly(checkOutDate)}
                   </p>
                 )}
               </div>

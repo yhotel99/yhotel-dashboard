@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { IconSearch, IconPlus } from "@tabler/icons-react";
 import type { BookingInput, Customer } from "@/lib/types";
 import type { RoomWithBooking } from "@/lib/types";
-import { getDateISO } from "@/lib/utils";
+import { getDateISO } from "@/lib/functions";
 import { calculateNightsValue } from "@/lib/functions";
 import { useCustomers } from "@/hooks/use-customers";
 import { useDebounce } from "@/hooks/use-debounce";

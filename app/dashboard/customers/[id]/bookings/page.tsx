@@ -9,7 +9,7 @@ import { DataTable } from "@/components/data-table";
 import { useBookings } from "@/hooks/use-bookings";
 import { useDebounce } from "@/hooks/use-debounce";
 import { StatusBadge } from "@/components/bookings/status";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDateOnly } from "@/lib/functions";
 import { BookingRecord } from "@/lib/types";
 
 const createColumns = (): ColumnDef<BookingRecord>[] => [
@@ -26,12 +26,12 @@ const createColumns = (): ColumnDef<BookingRecord>[] => [
   {
     accessorKey: "check_in",
     header: "Check-in",
-    cell: ({ row }) => formatDate(row.original.check_in),
+    cell: ({ row }) => formatDateOnly(row.original.check_in),
   },
   {
     accessorKey: "check_out",
     header: "Check-out",
-    cell: ({ row }) => formatDate(row.original.check_out),
+    cell: ({ row }) => formatDateOnly(row.original.check_out),
   },
   {
     accessorKey: "number_of_nights",

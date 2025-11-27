@@ -17,10 +17,10 @@ import type { BookingRecord, UpdateBookingInput } from "@/lib/types";
 import { useRooms } from "@/hooks/use-rooms";
 import {
   formatCurrency,
-  formatDate,
+  formatDateOnly,
   getDateISO,
   formatDateForInput,
-} from "@/lib/utils";
+} from "@/lib/functions";
 import { calculateNightsValue, translateBookingError } from "@/lib/functions";
 
 type EditBookingFormState = {
@@ -227,7 +227,7 @@ export function EditBookingDialog({
               <Label>Ngày check-in</Label>
               <div className="rounded-md border bg-muted px-3 py-2">
                 <p className="text-sm font-medium">
-                  {booking && checkInISO ? formatDate(checkInISO) : "-"}
+                  {booking && checkInISO ? formatDateOnly(checkInISO) : "-"}
                 </p>
               </div>
             </div>
@@ -238,7 +238,7 @@ export function EditBookingDialog({
               </Label>
               <div className="rounded-md border bg-muted px-3 py-2">
                 <p className="text-sm font-medium">
-                  {booking && checkOutISO ? formatDate(checkOutISO) : "-"}
+                  {booking && checkOutISO ? formatDateOnly(checkOutISO) : "-"}
                 </p>
               </div>
             </div>

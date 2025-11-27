@@ -1,7 +1,7 @@
 "use client";
 
 import { ColumnDef } from "@tanstack/react-table";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDateOnly } from "@/lib/functions";
 import type {
   BookingRecord,
   BookingStatus,
@@ -49,12 +49,12 @@ export function createColumns(
     {
       accessorKey: "check_in",
       header: "Check-in",
-      cell: ({ row }) => formatDate(row.original.check_in),
+      cell: ({ row }) => formatDateOnly(row.original.check_in),
     },
     {
       accessorKey: "check_out",
       header: "Check-out",
-      cell: ({ row }) => formatDate(row.original.check_out),
+      cell: ({ row }) => formatDateOnly(row.original.check_out),
     },
     {
       accessorKey: "number_of_nights",

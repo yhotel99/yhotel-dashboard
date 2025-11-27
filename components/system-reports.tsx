@@ -57,7 +57,7 @@ import {
   Legend,
 } from "recharts";
 
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency } from "@/lib/functions";
 
 import { createClient } from "@/lib/supabase/client";
 

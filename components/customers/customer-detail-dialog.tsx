@@ -19,7 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import type { Customer } from "@/lib/types";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDateOnly } from "@/lib/functions";
 import { StatusBadge } from "./status-badge";
 
 interface CustomerDetailDialogProps {
@@ -98,7 +98,7 @@ export function CustomerDetailDialog({
                 </label>
                 <p className="text-base">
                   {customer.date_of_birth
-                    ? formatDate(customer.date_of_birth)
+                    ? formatDateOnly(customer.date_of_birth)
                     : "-"}
                 </p>
               </div>
@@ -165,14 +165,18 @@ export function CustomerDetailDialog({
                 <label className="text-sm font-medium text-muted-foreground">
                   Ngày đăng ký
                 </label>
-                <p className="text-base">{formatDate(customer.created_at)}</p>
+                <p className="text-base">
+                  {formatDateOnly(customer.created_at)}
+                </p>
               </div>
 
               <div className="space-y-1">
                 <label className="text-sm font-medium text-muted-foreground">
                   Cập nhật lần cuối
                 </label>
-                <p className="text-base">{formatDate(customer.updated_at)}</p>
+                <p className="text-base">
+                  {formatDateOnly(customer.updated_at)}
+                </p>
               </div>
             </div>
           </div>

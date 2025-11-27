@@ -1,7 +1,7 @@
 "use client";
 
 import { Card } from "@/components/ui/card";
-import { formatDate } from "@/lib/utils";
+import { formatDateOnly } from "@/lib/functions";
 import type { BookingRecord } from "@/lib/types";
 import { StatusBadge } from "@/components/bookings/status";
 
@@ -12,7 +12,9 @@ interface BookingInfoCardProps {
 export function BookingInfoCard({ booking }: BookingInfoCardProps) {
   return (
     <Card className="p-3 sm:p-4 space-y-3">
-      <h3 className="text-sm sm:text-base font-semibold">Thông tin đặt phòng</h3>
+      <h3 className="text-sm sm:text-base font-semibold">
+        Thông tin đặt phòng
+      </h3>
       <div className="space-y-2 text-xs sm:text-sm">
         <div className="flex justify-between items-center">
           <span className="text-muted-foreground">Mã booking:</span>
@@ -34,11 +36,15 @@ export function BookingInfoCard({ booking }: BookingInfoCardProps) {
         )}
         <div className="flex justify-between items-center">
           <span className="text-muted-foreground">Check-in:</span>
-          <span className="font-medium">{formatDate(booking.check_in)}</span>
+          <span className="font-medium">
+            {formatDateOnly(booking.check_in)}
+          </span>
         </div>
         <div className="flex justify-between items-center">
           <span className="text-muted-foreground">Check-out:</span>
-          <span className="font-medium">{formatDate(booking.check_out)}</span>
+          <span className="font-medium">
+            {formatDateOnly(booking.check_out)}
+          </span>
         </div>
         <div className="flex justify-between items-center">
           <span className="text-muted-foreground">Số đêm:</span>
@@ -56,4 +62,3 @@ export function BookingInfoCard({ booking }: BookingInfoCardProps) {
     </Card>
   );
 }
-

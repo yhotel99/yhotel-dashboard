@@ -1,6 +1,6 @@
 import { ColumnDef } from "@tanstack/react-table";
 import type { Customer } from "@/lib/types";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDateOnly } from "@/lib/functions";
 import { StatusBadge } from "./status-badge";
 import { ActionsCell } from "./actions-cell";
 
@@ -55,7 +55,7 @@ export function createColumns(
     {
       accessorKey: "created_at",
       header: "Ngày đăng ký",
-      cell: ({ row }) => formatDate(row.original.created_at),
+      cell: ({ row }) => formatDateOnly(row.original.created_at),
       size: 150,
       minSize: 130,
     },

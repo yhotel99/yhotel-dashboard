@@ -22,14 +22,24 @@ export function getInitials(name?: string | null) {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-export function formatCurrency(amount: number) {
+/**
+ * Format currency to VND
+ * @param amount - Amount to format
+ * @returns Formatted currency string
+ */
+export function formatCurrency(amount: number): string {
   return new Intl.NumberFormat("vi-VN", {
     style: "currency",
     currency: "VND",
   }).format(amount);
 }
 
-export function formatDate(dateString: string) {
+/**
+ * Format date with time (for TIMESTAMPTZ)
+ * @param dateString - ISO date string
+ * @returns Formatted date string with time or "-" if invalid
+ */
+export function formatDate(dateString: string): string {
   if (!dateString) return "-";
   const date = new Date(dateString);
   if (isNaN(date.getTime())) return "-";
@@ -40,6 +50,22 @@ export function formatDate(dateString: string) {
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+  });
+}
+
+/**
+ * Format date only (without time)
+ * @param dateString - ISO date string
+ * @returns Formatted date string (DD/MM/YYYY) or "-" if invalid
+ */
+export function formatDateOnly(dateString: string): string {
+  if (!dateString) return "-";
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return "-";
+  return date.toLocaleDateString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
   });
 }
 
@@ -83,20 +109,39 @@ export function calculateNightsValue(
 }
 
 /**
- * Format date string for HTML date input (YYYY-MM-DD)
- * @param dateString ISO date string
- * @returns Formatted date string or empty string
+ * Convert ISO date string to YYYY-MM-DD format for HTML date input
+ * @param isoDate - ISO date string
+ * @returns Formatted date string (YYYY-MM-DD) or empty string if invalid
  */
-export function formatDateForInput(dateString: string): string {
-  if (!dateString) return "-";
-  const date = new Date(dateString);
-  if (isNaN(date.getTime())) return "-";
-  // Format với cả ngày và giờ cho TIMESTAMPTZ
-  return date.toLocaleString("vi-VN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
+export function formatDateForInput(isoDate: string): string {
+  if (!isoDate) return "";
+  const date = new Date(isoDate);
+  if (isNaN(date.getTime())) return "";
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Helper function to convert date string to ISO string (with default time)
+ * Check-in default: 14:00, Check-out default: 12:00
+ * @param date - Date string in YYYY-MM-DD format
+ * @param isCheckOut - Whether this is a check-out date
+ * @returns ISO date string or null if invalid
+ */
+export function getDateISO(
+  date: string,
+  isCheckOut: boolean = false
+): string | null {
+  if (!date) return null;
+  // Format: yyyy-MM-dd
+  // Add default time: 14:00 for check-in, 12:00 for check-out
+  const time = isCheckOut ? "12:00" : "14:00";
+  const dateTimeString = `${date} ${time}`;
+  const dateObj = new Date(dateTimeString);
+  if (isNaN(dateObj.getTime())) return null;
+  return dateObj.toISOString();
 }
 
 /**

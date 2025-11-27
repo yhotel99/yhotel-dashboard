@@ -33,7 +33,7 @@ import { useCustomers } from "@/hooks/use-customers";
 import { useDebounce } from "@/hooks/use-debounce";
 import { CreateCustomerDialog } from "@/components/customers/create-customer-dialog";
 import type { Customer } from "@/lib/types";
-import { formatCurrency, getDateISO } from "@/lib/utils";
+import { formatCurrency, getDateISO } from "@/lib/functions";
 import {
   calculateNightsValue,
   translateBookingError,
