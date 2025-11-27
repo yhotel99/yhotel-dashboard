@@ -11,6 +11,7 @@ import { usePayments } from "@/hooks/use-payments";
 import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PaymentStatusBadge } from "@/components/payments/status";
+import { PAYMENT_TYPE } from "@/lib/constants";
 
 interface PaymentCardProps {
   booking: BookingRecord;
@@ -42,9 +43,11 @@ export function PaymentCard({ booking, room }: PaymentCardProps) {
   }, [booking.id, getPaymentsByBookingId]);
 
   const advancePayment = payments.find(
-    (p) => p.payment_type === "advance_payment"
+    (p) => p.payment_type === PAYMENT_TYPE.ADVANCE_PAYMENT
   );
-  const roomCharge = payments.find((p) => p.payment_type === "room_charge");
+  const roomCharge = payments.find(
+    (p) => p.payment_type === PAYMENT_TYPE.ROOM_CHARGE
+  );
 
   return (
     <Card className="p-3 sm:p-4 space-y-3">

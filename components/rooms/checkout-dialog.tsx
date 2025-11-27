@@ -16,6 +16,7 @@ import type { BookingRecord } from "@/lib/types";
 import { EditBookingDialog } from "@/components/bookings/edit-booking-dialog";
 import { useBookings } from "@/hooks/use-bookings";
 import { cn } from "@/lib/utils";
+import { getBookingByIdForCheckout } from "@/services/bookings";
 import {
   roomTypeLabels,
   ROOM_MAP_STATUS,
@@ -47,41 +48,19 @@ export function CheckoutDialog({
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const [isNotesDialogOpen, setIsNotesDialogOpen] = useState(false);
-  const { updateBooking, getBookingById, checkedOutBooking } = useBookings();
+  const { updateBooking, checkedOutBooking } = useBookings();
 
   const fetchBookingDetails = async () => {
     if (!room.currentBooking?.id) return;
 
     try {
       setIsLoading(true);
-      // Fetch booking with customer and room relations
-      const supabase = (await import("@/lib/supabase/client")).createClient();
-      const { data, error } = await supabase
-        .from("bookings")
-        .select(
-          `
-          *,
-          customers:customer_id (
-            id,
-            full_name,
-            phone,
-            email
-          ),
-          rooms:room_id (
-            id,
-            name
-          )
-        `
-        )
-        .eq("id", room.currentBooking.id)
-        .single();
+      const bookingData = await getBookingByIdForCheckout(
+        room.currentBooking.id
+      );
 
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      if (data) {
-        setBooking(data as BookingRecord);
+      if (bookingData) {
+        setBooking(bookingData);
       } else {
         setBooking(null);
       }
@@ -135,7 +114,6 @@ export function CheckoutDialog({
       setIsCheckingOut(false);
     }
   };
-
 
   const handleNotesClick = () => {
     setIsNotesDialogOpen(true);

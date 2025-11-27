@@ -190,6 +190,47 @@ export async function getBookingByIdWithRelations(
 }
 
 /**
+ * Get booking by ID with full customer and room details for checkout
+ * @param bookingId - Booking ID
+ * @returns Booking record with full customer and room relations
+ */
+export async function getBookingByIdForCheckout(
+  bookingId: string
+): Promise<BookingRecord | null> {
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("bookings")
+      .select(
+        `
+        *,
+        customers:customer_id (
+          id,
+          full_name,
+          phone,
+          email
+        ),
+        rooms:room_id (
+          id,
+          name
+        )
+      `
+      )
+      .eq("id", bookingId)
+      .single();
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return (data as BookingRecord) || null;
+  } catch (err) {
+    console.error("Error fetching booking for checkout:", err);
+    throw err;
+  }
+}
+
+/**
  * Get booking by ID
  * @param bookingId - Booking ID
  * @returns Booking record or null
