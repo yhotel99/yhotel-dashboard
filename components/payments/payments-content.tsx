@@ -8,26 +8,11 @@ import { DataTable } from "@/components/data-table";
 import { usePayments } from "@/hooks/use-payments";
 import type { PaymentWithBooking } from "@/lib/types";
 import { PaymentStatusBadge } from "@/components/payments/status";
-import { IdCell } from "@/components/payments/id-cell";
 import { formatCurrency, formatDateOnly } from "@/lib/functions";
-import { paymentMethodLabels, paymentTypeLabels } from "@/lib/constants";
+import { paymentTypeLabels } from "@/lib/constants";
 import { useDebounce } from "@/hooks/use-debounce";
 
 const createColumns = (): ColumnDef<PaymentWithBooking>[] => [
-  {
-    accessorKey: "id",
-    header: "Mã thanh toán",
-    cell: ({ row }) => <IdCell id={row.original.id} />,
-    size: 150,
-    minSize: 130,
-  },
-  {
-    accessorKey: "booking_id",
-    header: "Mã booking",
-    cell: ({ row }) => <IdCell id={row.original.booking_id} />,
-    size: 150,
-    minSize: 130,
-  },
   {
     accessorKey: "customer",
     header: "Khách hàng",
@@ -58,16 +43,6 @@ const createColumns = (): ColumnDef<PaymentWithBooking>[] => [
       ] ?? row.original.payment_type,
     size: 130,
     minSize: 120,
-  },
-  {
-    accessorKey: "payment_method",
-    header: "Phương thức",
-    cell: ({ row }) =>
-      paymentMethodLabels[
-        row.original.payment_method as keyof typeof paymentMethodLabels
-      ] ?? row.original.payment_method,
-    size: 150,
-    minSize: 130,
   },
   {
     accessorKey: "payment_status",

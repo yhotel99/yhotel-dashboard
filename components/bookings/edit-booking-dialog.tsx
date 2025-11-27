@@ -203,10 +203,7 @@ export function EditBookingDialog({
                 </p>
                 {selectedRoom && (
                   <p className="text-xs text-muted-foreground">
-                    {new Intl.NumberFormat("vi-VN").format(
-                      selectedRoom.price_per_night
-                    )}{" "}
-                    VNĐ/đêm
+                    {formatCurrency(selectedRoom.price_per_night)} VNĐ/đêm
                   </p>
                 )}
               </div>

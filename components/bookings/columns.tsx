@@ -32,11 +32,6 @@ export function createColumns(
 ): ColumnDef<BookingRecord>[] {
   return [
     {
-      accessorKey: "id",
-      header: "Mã booking",
-      cell: ({ row }) => row.original.id.slice(0, 8).toUpperCase(),
-    },
-    {
       accessorKey: "customers",
       header: "Khách hàng",
       cell: ({ row }) => row.original.customers?.full_name ?? "-",
@@ -85,8 +80,6 @@ export function createColumns(
       accessorKey: "notes",
       header: "Ghi chú",
       cell: ({ row }) => <NotesCell notes={row.original.notes} />,
-      size: 60,
-      minSize: 40,
     },
     {
       id: "actions",
@@ -134,6 +127,9 @@ export function createColumns(
           />
         );
       },
+      size: 80,
+      minSize: 40,
+      maxSize: 100,
     },
   ];
 }

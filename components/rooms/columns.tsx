@@ -76,6 +76,9 @@ export function createColumns(
           onChangeStatus={onChangeStatus}
         />
       ),
+      size: 40,
+      minSize: 40,
+      maxSize: 50,
     },
   ];
 }

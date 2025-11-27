@@ -46,6 +46,9 @@ export function createColumns(
           onEdit={onEdit}
         />
       ),
+      size: 40,
+      minSize: 40,
+      maxSize: 50,
     },
   ];
 }

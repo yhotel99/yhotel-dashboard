@@ -153,11 +153,20 @@ export function DataTable<TData, TValue>({
     pageCount: serverPagination ? serverPagination.totalPages : undefined,
   });
 
-  // Calculate column width once
+  // Calculate column widths based on size definitions
   const visibleHeaders = table
     .getHeaderGroups()[0]
     .headers.filter((h) => !h.isPlaceholder && h.column.getIsVisible());
-  const columnWidth = `${100 / visibleHeaders.length}%`;
+  
+  // Calculate total size of all visible columns
+  const totalSize = visibleHeaders.reduce((sum, header) => {
+    return sum + (header.column.getSize() || 100);
+  }, 0);
+  
+  // Calculate width for each column based on its size
+  const getColumnWidth = (columnSize: number) => {
+    return `${(columnSize / totalSize) * 100}%`;
+  };
 
   return (
     <div className="space-y-4">
@@ -244,10 +253,11 @@ export function DataTable<TData, TValue>({
                     return null;
                   }
 
+                  const columnSize = header.column.getSize() || 100;
                   return (
                     <TableHead
                       key={header.id}
-                      style={{ width: columnWidth }}
+                      style={{ width: getColumnWidth(columnSize) }}
                       className="whitespace-nowrap"
                     >
                       {flexRender(
@@ -268,14 +278,17 @@ export function DataTable<TData, TValue>({
                   {table
                     .getAllColumns()
                     .filter((column) => column.getIsVisible())
-                    .map((column, colIndex) => (
-                      <TableCell
-                        key={`skeleton-cell-${index}-${colIndex}`}
-                        style={{ width: columnWidth }}
-                      >
-                        <Skeleton className="h-8 w-full" />
-                      </TableCell>
-                    ))}
+                    .map((column, colIndex) => {
+                      const columnSize = column.getSize() || 100;
+                      return (
+                        <TableCell
+                          key={`skeleton-cell-${index}-${colIndex}`}
+                          style={{ width: getColumnWidth(columnSize) }}
+                        >
+                          <Skeleton className="h-8 w-full" />
+                        </TableCell>
+                      );
+                    })}
                 </TableRow>
               ))
             ) : table.getRowModel().rows?.length ? (
@@ -284,18 +297,21 @@ export function DataTable<TData, TValue>({
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
                 >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell
-                      key={cell.id}
-                      style={{ width: columnWidth }}
-                      className="whitespace-nowrap"
-                    >
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </TableCell>
-                  ))}
+                  {row.getVisibleCells().map((cell) => {
+                    const columnSize = cell.column.getSize() || 100;
+                    return (
+                      <TableCell
+                        key={cell.id}
+                        style={{ width: getColumnWidth(columnSize) }}
+                        className="whitespace-nowrap"
+                      >
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </TableCell>
+                    );
+                  })}
                 </TableRow>
               ))
             ) : (
