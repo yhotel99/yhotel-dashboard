@@ -238,6 +238,7 @@ export const SIDEBAR_URLS = {
   RESERVATION: "/dashboard/reservation",
   CUSTOMERS: "/dashboard/customers",
   PAYMENTS: "/dashboard/payments",
+  REFUND_REQUESTS: "/dashboard/refund-requests",
   GALLERY: "/dashboard/gallery",
   USERS: "/dashboard/users",
 } as const;

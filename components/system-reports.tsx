@@ -65,6 +65,7 @@ import { createClient } from "@/lib/supabase/client";
 import { roomTypeLabels } from "@/lib/constants";
 
 import type { Room } from "@/lib/types";
+import { Download } from "lucide-react";
 
 // Mock data for reports
 
@@ -281,7 +282,7 @@ export function SystemReports() {
             locale="vi-VN"
           />
           <Button variant="outline" size="icon" title="Xuất báo cáo">
-            <IconFileDownload className="h-4 w-4" />
+            <Download className="h-4 w-4" />
           </Button>
         </div>
       </div>

@@ -8,14 +8,11 @@ import {
   IconDashboard,
   IconFileAi,
   IconFileDescription,
-  IconHelp,
   IconInnerShadowTop,
-  IconSearch,
-  IconSettings,
+  IconReceiptRefund,
 } from "@tabler/icons-react";
 
 import { NavMain } from "@/components/nav-main";
-import { NavSecondary } from "@/components/nav-secondary";
 import { NavUser } from "@/components/nav-user";
 import {
   Sidebar,
@@ -67,6 +64,11 @@ const data = {
       title: "Payments",
       url: SIDEBAR_URLS.PAYMENTS,
       icon: IconCreditCard,
+    },
+    {
+      title: "Refund Requests",
+      url: SIDEBAR_URLS.REFUND_REQUESTS,
+      icon: IconReceiptRefund,
     },
     {
       title: "Gallery",
@@ -127,23 +129,6 @@ const data = {
       ],
     },
   ],
-  navSecondary: [
-    {
-      title: "Settings",
-      url: "#",
-      icon: IconSettings,
-    },
-    {
-      title: "Get Help",
-      url: "#",
-      icon: IconHelp,
-    },
-    {
-      title: "Search",
-      url: "#",
-      icon: IconSearch,
-    },
-  ],
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -167,7 +152,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
         {currentUser && <NavUser user={currentUser} />}
