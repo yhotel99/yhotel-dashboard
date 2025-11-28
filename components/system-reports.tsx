@@ -5,7 +5,6 @@ import { useState, useEffect, useCallback } from "react";
 import {
   IconTrendingUp,
   IconTrendingDown,
-  IconCalendar,
   IconFileDownload,
   IconChartBar,
   IconUsers,
@@ -32,6 +31,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
+import { DateRangePicker } from "@/components/date-range/date-range-picker";
 
 import {
   Table,
@@ -172,7 +173,17 @@ const ROOM_TYPE_COLORS = [
 ];
 
 export function SystemReports() {
-  const [timeRange, setTimeRange] = useState("month");
+  // Initialize date range to current month
+  const getCurrentMonthRange = () => {
+    const now = new Date();
+    const from = new Date(now.getFullYear(), now.getMonth(), 1);
+    const to = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    from.setHours(0, 0, 0, 0);
+    to.setHours(23, 59, 59, 999);
+    return { from, to };
+  };
+
+  const [dateRange, setDateRange] = useState(getCurrentMonthRange());
   const [reportType, setReportType] = useState("revenue");
   const [roomStats, setRoomStats] = useState<
     { type: string; label: string; count: number }[]
@@ -255,19 +266,20 @@ export function SystemReports() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Select value={timeRange} onValueChange={setTimeRange}>
-            <SelectTrigger className="w-[180px]">
-              <IconCalendar className="mr-2 h-4 w-4" />
-              <SelectValue placeholder="Chọn khoảng thời gian" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="day">Hôm nay</SelectItem>
-              <SelectItem value="week">Tuần này</SelectItem>
-              <SelectItem value="month">Tháng này</SelectItem>
-              <SelectItem value="quarter">Quý này</SelectItem>
-              <SelectItem value="year">Năm nay</SelectItem>
-            </SelectContent>
-          </Select>
+          <DateRangePicker
+            initialDateFrom={dateRange.from}
+            initialDateTo={dateRange.to}
+            onUpdate={(values) => {
+              if (values.range.from && values.range.to) {
+                setDateRange({
+                  from: values.range.from,
+                  to: values.range.to,
+                });
+              }
+            }}
+            showCompare={false}
+            locale="vi-VN"
+          />
           <Button variant="outline" size="icon" title="Xuất báo cáo">
             <IconFileDownload className="h-4 w-4" />
           </Button>
