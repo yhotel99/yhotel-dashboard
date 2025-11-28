@@ -296,7 +296,7 @@ export const DateRangePicker: FC<DateRangePickerProps> = ({
     isSelected: boolean;
   }): JSX.Element => (
     <Button
-      className={cn(isSelected && "pointer-events-none")}
+      className={cn(isSelected && "pointer-events-none", "px-2")}
       variant="ghost"
       onClick={() => {
         setPreset(preset);
@@ -522,8 +522,8 @@ export const DateRangePicker: FC<DateRangePickerProps> = ({
             </div>
           </div>
           {!isSmallScreen && (
-            <div className="flex flex-col items-end gap-1 pr-2 pl-6 pb-6">
-              <div className="flex w-full flex-col items-end gap-1 pr-2 pl-6 pb-6">
+            <div className="flex flex-col items-end gap-1 pr-2 pl-2 pb-6">
+              <div className="flex w-full flex-col items-end gap-1 pr-2 pb-6">
                 {PRESETS.map((preset) => (
                   <PresetButton
                     key={preset.name}
@@ -536,7 +536,7 @@ export const DateRangePicker: FC<DateRangePickerProps> = ({
             </div>
           )}
         </div>
-        <div className="flex justify-end gap-2 py-2 pr-4">
+        <div className="flex justify-end gap-2 pr-4">
           <Button
             onClick={() => {
               setIsOpen(false);
