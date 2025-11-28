@@ -200,6 +200,29 @@ export const userStatusLabels: Record<
 };
 
 /**
+ * Refund request status values
+ */
+export const REFUND_REQUEST_STATUS = {
+  PENDING: "pending",
+  APPROVED: "approved",
+  REJECTED: "rejected",
+  REFUNDED: "refunded",
+} as const;
+
+/**
+ * Refund request status labels mapping
+ */
+export const refundRequestStatusLabels: Record<
+  (typeof REFUND_REQUEST_STATUS)[keyof typeof REFUND_REQUEST_STATUS],
+  string
+> = {
+  [REFUND_REQUEST_STATUS.PENDING]: "Chờ duyệt",
+  [REFUND_REQUEST_STATUS.APPROVED]: "Đã duyệt",
+  [REFUND_REQUEST_STATUS.REJECTED]: "Từ chối",
+  [REFUND_REQUEST_STATUS.REFUNDED]: "Đã hoàn tiền",
+};
+
+/**
  * Booking error message patterns constants
  */
 /**

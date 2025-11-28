@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  useState,
-  useRef,
-  useCallback,
-  useMemo,
-  useEffect,
-} from "react";
+import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   IconPlus,
@@ -317,7 +311,7 @@ export function GalleryContent() {
                   <Button
                     variant="destructive"
                     size="icon"
-                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 z-10 shadow-lg pointer-events-auto"
+                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 z-10 shadow-lg pointer-events-auto w-8 h-8"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleDeleteClick(image.id);
@@ -512,4 +506,3 @@ export function GalleryContent() {
     </div>
   );
 }
-
