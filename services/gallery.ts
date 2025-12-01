@@ -30,6 +30,7 @@ export async function searchGalleryImages({
     const { data, error, count } = await supabase
       .from("images")
       .select("id, url, created_at", { count: "exact" })
+      .is("deleted_at", null)
       .order("created_at", { ascending: false })
       .range(from, to);
 
@@ -52,9 +53,7 @@ export async function searchGalleryImages({
     };
   } catch (err) {
     const errorMessage =
-      err instanceof Error
-        ? err.message
-        : "Không thể tải danh sách hình ảnh";
+      err instanceof Error ? err.message : "Không thể tải danh sách hình ảnh";
     throw new Error(errorMessage);
   }
 }
@@ -89,9 +88,7 @@ export async function addGalleryImages(
     return (data || []) as GalleryImage[];
   } catch (err) {
     const errorMessage =
-      err instanceof Error
-        ? err.message
-        : "Không thể thêm hình ảnh";
+      err instanceof Error ? err.message : "Không thể thêm hình ảnh";
     throw new Error(errorMessage);
   }
 }
@@ -105,17 +102,17 @@ export async function deleteGalleryImage(id: string): Promise<void> {
     const supabase = await createClient();
 
     // Delete from Supabase images table
-    const { error } = await supabase.from("images").delete().eq("id", id);
+    const { error } = await supabase
+      .from("images")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", id);
 
     if (error) {
       throw new Error(error.message);
     }
   } catch (err) {
     const errorMessage =
-      err instanceof Error
-        ? err.message
-        : "Không thể xóa hình ảnh";
+      err instanceof Error ? err.message : "Không thể xóa hình ảnh";
     throw new Error(errorMessage);
   }
 }
-
