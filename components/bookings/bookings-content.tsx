@@ -6,8 +6,8 @@ import { IconPlus, IconSearch } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
-import { useBookings } from "@/hooks/use-bookings";
-import { usePayments } from "@/hooks/use-payments";
+import { useBookingsQuery } from "@/hooks/use-bookings-query";
+import { usePaymentsQuery } from "@/hooks/use-payments-query";
 import type {
   BookingStatus,
   BookingInput,
@@ -89,7 +89,6 @@ export function BookingsContent() {
     bookings,
     isLoading,
     pagination,
-    fetchBookings,
     updateBookingStatus,
     pendingBooking,
     confirmedBooking,
@@ -99,15 +98,11 @@ export function BookingsContent() {
     createBooking,
     updateBooking,
     transferBooking,
-  } = useBookings({ page, limit, search });
+    refetch,
+  } = useBookingsQuery(page, limit, search);
 
-  const { checkAdvancePaymentStatus, markAdvancePaymentAsPaid } = usePayments();
-
-  // Fetch bookings when component mounts or params change
-  React.useEffect(() => {
-    fetchBookings(page, limit, search);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, limit, search]);
+  const { checkAdvancePaymentStatus, markAdvancePaymentAsPaid } =
+    usePaymentsQuery(1, 10, "", false);
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = React.useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
@@ -126,7 +121,7 @@ export function BookingsContent() {
       try {
         await createBooking(input);
         toast.success("Đã tạo booking thành công");
-        await fetchBookings();
+        await refetch();
       } catch (err) {
         const rawMessage =
           err instanceof Error ? err.message : "Không thể tạo booking";
@@ -137,7 +132,7 @@ export function BookingsContent() {
         });
       }
     },
-    [createBooking, fetchBookings]
+    [createBooking, refetch]
   );
 
   const handleEdit = React.useCallback(async (booking: BookingRecord) => {
@@ -151,7 +146,7 @@ export function BookingsContent() {
       try {
         await transferBooking(id, input);
         toast.success("Đã chuyển phòng thành công");
-        await fetchBookings();
+        await refetch();
       } catch (error) {
         console.error(error);
         toast.error("Không thể chuyển phòng", {
@@ -159,7 +154,7 @@ export function BookingsContent() {
         });
       }
     },
-    [transferBooking, fetchBookings]
+    [transferBooking, refetch]
   );
 
   const handleCancelBooking = React.useCallback(
@@ -179,9 +174,9 @@ export function BookingsContent() {
     async (id: string, input: UpdateBookingInput) => {
       await updateBooking(id, input);
       toast.success("Đã cập nhật booking thành công");
-      await fetchBookings();
+      await refetch();
     },
-    [updateBooking, fetchBookings]
+    [updateBooking, refetch]
   );
 
   const handleUpdateStatus = React.useCallback(
@@ -269,7 +264,7 @@ export function BookingsContent() {
           emptyMessage="Không tìm thấy kết quả."
           entityName="booking"
           getRowId={(row) => row.id}
-          fetchData={() => fetchBookings()}
+          fetchData={() => refetch()}
           isLoading={isLoading}
           serverPagination={pagination}
           onPageChange={(newPage) => updateSearchParams(newPage, limit, search)}
@@ -279,13 +274,15 @@ export function BookingsContent() {
         />
       </div>
 
-      <CreateBookingDialog
-        open={isCreateDialogOpen}
-        onOpenChange={setIsCreateDialogOpen}
-        onCreate={handleCreate}
-      />
+      {isCreateDialogOpen && (
+        <CreateBookingDialog
+          open={isCreateDialogOpen}
+          onOpenChange={setIsCreateDialogOpen}
+          onCreate={handleCreate}
+        />
+      )}
 
-      {editingBookingId && (
+      {editingBookingId && isEditDialogOpen && (
         <EditBookingDialog
           open={isEditDialogOpen}
           onOpenChange={(open) => {
@@ -301,10 +298,12 @@ export function BookingsContent() {
         />
       )}
 
-      <CheckAvailableRoomsDialog
-        open={isCheckAvailableRoomsDialogOpen}
-        onOpenChange={setIsCheckAvailableRoomsDialogOpen}
-      />
+      {isCheckAvailableRoomsDialogOpen && (
+        <CheckAvailableRoomsDialog
+          open={isCheckAvailableRoomsDialogOpen}
+          onOpenChange={setIsCheckAvailableRoomsDialogOpen}
+        />
+      )}
     </div>
   );
 }

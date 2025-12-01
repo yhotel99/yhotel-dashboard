@@ -25,8 +25,8 @@ import { UpdateRoomStatusDialog } from "@/components/rooms/update-room-status-di
 import { QuickBookingDialog } from "@/components/rooms/quick-booking-dialog";
 import { CheckoutDialog } from "@/components/rooms/checkout-dialog";
 import { toast } from "sonner";
-import { useRooms } from "@/hooks/use-rooms";
-import { useBookings } from "@/hooks/use-bookings";
+import { useRoomsQuery } from "@/hooks/use-rooms-query";
+import { useBookingsQuery } from "@/hooks/use-bookings-query";
 import { StatusBadge as BookingStatusBadge } from "@/components/bookings/status";
 import type { BookingStatus } from "@/lib/types";
 import { translateBookingError } from "@/lib/functions";
@@ -83,8 +83,8 @@ export function RoomCard({ room, onStatusChange }: RoomCardProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isQuickBookingOpen, setIsQuickBookingOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
-  const { updateRoomStatus } = useRooms();
-  const { createBooking } = useBookings();
+  const { updateRoomStatus } = useRoomsQuery(1, 10, "", false);
+  const { createBooking } = useBookingsQuery(1, 10, "", null, false);
 
   const handleConfirmStatusChange = async (
     roomId: string,

@@ -6,14 +6,14 @@ import { IconArrowLeft } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
 import { RoomForm, type RoomFormValues } from "@/components/room-form";
-import { useRooms } from "@/hooks/use-rooms";
+import { useRoomsQuery } from "@/hooks/use-rooms-query";
 import { RoomWithImages } from "@/lib/types";
 
 export default function EditRoomPage() {
   const router = useRouter();
   const params = useParams();
   const roomId = params.id as string;
-  const { getRoomById } = useRooms();
+  const { getRoomById } = useRoomsQuery(1, 10, "", false);
   const [room, setRoom] = useState<RoomWithImages | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 

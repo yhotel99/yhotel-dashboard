@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
-import { useRooms } from "@/hooks/use-rooms";
+import { useRoomsQuery } from "@/hooks/use-rooms-query";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -139,7 +139,7 @@ export function RoomForm({
   onCancel,
 }: RoomFormProps) {
   const router = useRouter();
-  const { createRoom, updateRoom } = useRooms();
+  const { createRoom, updateRoom } = useRoomsQuery(1, 10, "", false);
 
   const defaultFormValues: RoomFormValues = {
     name: "",

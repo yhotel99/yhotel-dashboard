@@ -4,11 +4,12 @@ import { Suspense, useMemo, useEffect, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/data-table";
-import type { PaginationMeta, RefundRequestStatus } from "@/lib/types";
-import {
-  searchRefundRequests,
-  type RefundRequestWithRelations,
-} from "@/services/refund-requests";
+import type {
+  RefundRequestStatus,
+  RefundRequest,
+  RefundRequestWithRelations,
+} from "@/lib/types";
+import { useRefundRequestsQuery } from "@/hooks/use-refund-requests-query";
 import { formatCurrency, formatDateOnly } from "@/lib/functions";
 import { useDebounce } from "@/hooks/use-debounce";
 import { Badge } from "@/components/ui/badge";
@@ -29,7 +30,6 @@ import {
 } from "@/components/ui/dialog";
 import { IconDotsVertical } from "@tabler/icons-react";
 import { toast } from "sonner";
-import { updateRefundRequestStatus } from "@/services/refund-requests";
 import {
   REFUND_REQUEST_STATUS,
   refundRequestStatusLabels,
@@ -61,9 +61,14 @@ function RefundRequestStatusBadge({ status }: { status: RefundRequestStatus }) {
 function RefundRequestActionsCell({
   refundRequest,
   onStatusChange,
+  updateRefundRequestStatus,
 }: {
   refundRequest: RefundRequestWithRelations;
   onStatusChange: () => void;
+  updateRefundRequestStatus: (
+    id: string,
+    status: RefundRequestStatus
+  ) => Promise<RefundRequest>;
 }) {
   const [openApprove, setOpenApprove] = useState(false);
   const [openReject, setOpenReject] = useState(false);
@@ -228,7 +233,11 @@ function RefundRequestActionsCell({
 
 // Create columns
 const createColumns = (
-  onStatusChange: () => void
+  onStatusChange: () => void,
+  updateRefundRequestStatus: (
+    id: string,
+    status: RefundRequestStatus
+  ) => Promise<RefundRequest>
 ): ColumnDef<RefundRequestWithRelations>[] => [
   {
     accessorKey: "id",
@@ -302,6 +311,7 @@ const createColumns = (
       <RefundRequestActionsCell
         refundRequest={row.original}
         onStatusChange={onStatusChange}
+        updateRefundRequestStatus={updateRefundRequestStatus}
       />
     ),
     size: 40,
@@ -315,16 +325,6 @@ function RefundRequestsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [localSearch, setLocalSearch] = useState("");
-  const [refundRequests, setRefundRequests] = useState<
-    RefundRequestWithRelations[]
-  >([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [pagination, setPagination] = useState<PaginationMeta>({
-    total: 0,
-    page: 1,
-    limit: 10,
-    totalPages: 0,
-  });
 
   // Get pagination and search from URL params
   const page = useMemo(() => {
@@ -381,46 +381,14 @@ function RefundRequestsContent() {
     }
   }, [debouncedSearch, search, limit, updateSearchParams]);
 
-  // Fetch refund requests
-  const fetchRefundRequests = useCallback(
-    async (pageNum?: number, limitNum?: number, searchTerm?: string) => {
-      try {
-        setIsLoading(true);
-
-        const currentPage = pageNum ?? page;
-        const currentLimit = limitNum ?? limit;
-        const currentSearch = searchTerm ?? search;
-
-        const { data, count } = await searchRefundRequests({
-          search: currentSearch || null,
-          page: currentPage,
-          limit: currentLimit,
-        });
-
-        const total = count || 0;
-        const totalPages = Math.ceil(total / currentLimit);
-
-        setRefundRequests(data);
-        setPagination({
-          total,
-          page: currentPage,
-          limit: currentLimit,
-          totalPages,
-        });
-      } catch (err) {
-        console.error("Error fetching refund requests:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [page, limit, search]
-  );
-
-  // Fetch refund requests when component mounts or params change
-  useEffect(() => {
-    fetchRefundRequests(page, limit, search);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, limit, search]);
+  // Use SWR hook for refund requests
+  const {
+    refundRequests,
+    isLoading,
+    pagination,
+    updateRefundRequestStatus,
+    refetch,
+  } = useRefundRequestsQuery(page, limit, search);
 
   // Handle empty page after deletion or invalid page number
   useEffect(() => {
@@ -447,8 +415,8 @@ function RefundRequestsContent() {
   ]);
 
   const columns = useMemo(
-    () => createColumns(() => fetchRefundRequests(page, limit, search)),
-    [page, limit, search, fetchRefundRequests]
+    () => createColumns(() => refetch(), updateRefundRequestStatus),
+    [refetch, updateRefundRequestStatus]
   );
 
   return (
@@ -471,7 +439,7 @@ function RefundRequestsContent() {
           emptyMessage="Không tìm thấy kết quả."
           entityName="yêu cầu hoàn tiền"
           getRowId={(row) => row.id}
-          fetchData={() => fetchRefundRequests(page, limit, search)}
+          fetchData={() => refetch()}
           isLoading={isLoading}
           serverPagination={pagination}
           onPageChange={(newPage) => updateSearchParams(newPage, limit, search)}

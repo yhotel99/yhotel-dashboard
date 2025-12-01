@@ -6,7 +6,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
 import { toast } from "sonner";
-import { useProfiles } from "@/hooks/use-profiles";
+import { useProfilesQuery } from "@/hooks/use-profiles-query";
 import type { Profile } from "@/lib/types";
 import { createColumns } from "@/components/users/columns";
 import {
@@ -85,10 +85,10 @@ export function UsersContent() {
     profiles,
     isLoading,
     pagination,
-    fetchProfiles,
     createProfile,
     updateProfile,
-  } = useProfiles(page, limit, search);
+    refetch,
+  } = useProfilesQuery(page, limit, search);
 
   const handleCreateUser = () => {
     setEditingProfile(undefined);
@@ -174,7 +174,7 @@ export function UsersContent() {
           emptyMessage="Không tìm thấy kết quả."
           entityName="người dùng"
           getRowId={(row) => row.id}
-          fetchData={() => fetchProfiles(page, limit, search)}
+          fetchData={() => refetch()}
           isLoading={isLoading}
           serverPagination={pagination}
           onPageChange={(newPage) => updateSearchParams(newPage, limit, search)}

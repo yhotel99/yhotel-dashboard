@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import type { BookingRecord, UpdateBookingInput } from "@/lib/types";
-import { useRooms } from "@/hooks/use-rooms";
+import { useRoomsQuery } from "@/hooks/use-rooms-query";
 import {
   formatCurrency,
   formatDateOnly,
@@ -46,7 +46,14 @@ export function EditBookingDialog({
   booking: BookingRecord | null;
   onUpdate: (id: string, input: UpdateBookingInput) => Promise<void>;
 }) {
-  const { rooms } = useRooms();
+  const { rooms, refetch } = useRoomsQuery(1, 100, "", !open);
+
+  // Fetch rooms when dialog opens
+  useEffect(() => {
+    if (open) {
+      refetch();
+    }
+  }, [open, refetch]);
 
   // Calculate initial form values from booking
   const getInitialFormValues = (): EditBookingFormState => {

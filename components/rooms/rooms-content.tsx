@@ -7,7 +7,7 @@ import { useDebounce } from "@/hooks/use-debounce";
 
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
-import { useRooms } from "@/hooks/use-rooms";
+import { useRoomsQuery } from "@/hooks/use-rooms-query";
 import { toast } from "sonner";
 import { createColumns } from "@/components/rooms/columns";
 import { DeleteRoomDialog } from "@/components/rooms/delete-room-dialog";
@@ -83,10 +83,10 @@ export function RoomsContent() {
     rooms,
     isLoading,
     pagination,
-    fetchRooms,
     deleteRoom,
     updateRoomStatus,
-  } = useRooms(page, limit, search);
+    refetch,
+  } = useRoomsQuery(page, limit, search);
 
   // Delete room dialog state
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -209,7 +209,7 @@ export function RoomsContent() {
           emptyMessage="Không tìm thấy kết quả."
           entityName="phòng"
           getRowId={(row) => row.id}
-          fetchData={() => fetchRooms(page, limit, search)}
+          fetchData={() => refetch()}
           isLoading={isLoading}
           serverPagination={pagination}
           onPageChange={(newPage) => updateSearchParams(newPage, limit, search)}

@@ -28,7 +28,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { IconSearch, IconPlus } from "@tabler/icons-react";
 import type { BookingInput } from "@/lib/types";
-import { useRooms } from "@/hooks/use-rooms";
+import { useRoomsQuery } from "@/hooks/use-rooms-query";
 import { useCustomers } from "@/hooks/use-customers";
 import { useDebounce } from "@/hooks/use-debounce";
 import { CreateCustomerDialog } from "@/components/customers/create-customer-dialog";
@@ -91,8 +91,15 @@ export function CreateBookingDialog({
     useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchResultsRef = useRef<HTMLDivElement>(null);
-  const { rooms } = useRooms();
+  const { rooms, refetch } = useRoomsQuery(1, 100, "", open);
   const debouncedSearch = useDebounce(customerSearch, 300);
+
+  // Fetch rooms when dialog opens
+  useEffect(() => {
+    if (open) {
+      refetch();
+    }
+  }, [open, refetch]);
 
   // Use separate hook for search results
   const { customers: searchCustomers, createCustomer } = useCustomers(

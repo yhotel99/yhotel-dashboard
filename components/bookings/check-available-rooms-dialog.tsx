@@ -88,7 +88,7 @@ export function CheckAvailableRoomsDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-6xl sm:max-w-6xl max-h-[60vh] flex flex-col">
+      <DialogContent className="min-w-2xl max-w-6xl max-h-[60vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Kiểm tra phòng trống</DialogTitle>
           <DialogDescription>

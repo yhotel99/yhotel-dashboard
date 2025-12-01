@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { ColumnDef } from "@tanstack/react-table";
 
 import { DataTable } from "@/components/data-table";
-import { usePayments } from "@/hooks/use-payments";
+import { usePaymentsQuery } from "@/hooks/use-payments-query";
 import type { PaymentWithBooking } from "@/lib/types";
 import { PaymentStatusBadge } from "@/components/payments/status";
 import { formatCurrency, formatDateOnly } from "@/lib/functions";
@@ -138,17 +138,11 @@ export function PaymentsContent() {
     }
   }, [debouncedSearch, search, limit, updateSearchParams]);
 
-  const { payments, isLoading, pagination, fetchPayments } = usePayments(
+  const { payments, isLoading, pagination, refetch } = usePaymentsQuery(
     page,
     limit,
     search
   );
-
-  // Fetch payments when component mounts or params change
-  useEffect(() => {
-    fetchPayments(page, limit, search);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, limit, search]);
 
   // Handle empty page after deletion or invalid page number
   useEffect(() => {
@@ -196,7 +190,7 @@ export function PaymentsContent() {
           emptyMessage="Không tìm thấy kết quả."
           entityName="thanh toán"
           getRowId={(row) => row.id}
-          fetchData={() => fetchPayments(page, limit, search)}
+          fetchData={() => refetch()}
           isLoading={isLoading}
           serverPagination={pagination}
           onPageChange={(newPage) => updateSearchParams(newPage, limit, search)}

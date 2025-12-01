@@ -121,36 +121,45 @@ export function BookingActionsCell({
   } | null>(null);
   const [isCheckingAdvancePayment, setIsCheckingAdvancePayment] =
     useState(false);
+  const [hasCheckedStatus, setHasCheckedStatus] = useState(false);
 
-  // Check advance payment status on mount
-  React.useEffect(() => {
-    const checkStatus = async () => {
-      if (!booking.advance_payment || booking.advance_payment <= 0) {
+  // Check advance payment status only when dropdown opens (lazy check)
+  const handleDropdownOpenChange = React.useCallback(
+    async (open: boolean) => {
+      if (
+        open &&
+        !hasCheckedStatus &&
+        booking.advance_payment &&
+        booking.advance_payment > 0 &&
+        checkAdvancePaymentStatus
+      ) {
+        try {
+          setIsCheckingAdvancePayment(true);
+          const status = await checkAdvancePaymentStatus(booking.id);
+          setAdvancePaymentStatus({
+            hasAdvancePayment: status.hasAdvancePayment,
+            isPaid: status.isPaid,
+          });
+          setHasCheckedStatus(true);
+        } catch (error) {
+          console.error("Error checking advance payment status:", error);
+          setAdvancePaymentStatus({ hasAdvancePayment: false, isPaid: false });
+          setHasCheckedStatus(true);
+        } finally {
+          setIsCheckingAdvancePayment(false);
+        }
+      } else if (!booking.advance_payment || booking.advance_payment <= 0) {
         setAdvancePaymentStatus({ hasAdvancePayment: false, isPaid: false });
-        return;
+        setHasCheckedStatus(true);
       }
-
-      if (!checkAdvancePaymentStatus) {
-        return;
-      }
-
-      try {
-        setIsCheckingAdvancePayment(true);
-        const status = await checkAdvancePaymentStatus(booking.id);
-        setAdvancePaymentStatus({
-          hasAdvancePayment: status.hasAdvancePayment,
-          isPaid: status.isPaid,
-        });
-      } catch (error) {
-        console.error("Error checking advance payment status:", error);
-        setAdvancePaymentStatus({ hasAdvancePayment: false, isPaid: false });
-      } finally {
-        setIsCheckingAdvancePayment(false);
-      }
-    };
-
-    checkStatus();
-  }, [booking.id, booking.advance_payment, checkAdvancePaymentStatus]);
+    },
+    [
+      booking.id,
+      booking.advance_payment,
+      checkAdvancePaymentStatus,
+      hasCheckedStatus,
+    ]
+  );
 
   const handleMarkAdvancePayment = async () => {
     try {
@@ -171,7 +180,7 @@ export function BookingActionsCell({
 
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu onOpenChange={handleDropdownOpenChange}>
         <DropdownMenuTrigger asChild>
           <Button
             variant="ghost"
@@ -222,49 +231,59 @@ export function BookingActionsCell({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <CancelBookingConfirmDialog
-        open={openCancel}
-        onOpenChange={setOpenCancel}
-        onConfirm={async () => {
-          if (onCancelBooking) {
-            await onCancelBooking(booking.id);
-          } else {
-            await cancelledBooking(booking.id);
-          }
-        }}
-      />
+      {openCancel && (
+        <CancelBookingConfirmDialog
+          open={openCancel}
+          onOpenChange={setOpenCancel}
+          onConfirm={async () => {
+            if (onCancelBooking) {
+              await onCancelBooking(booking.id);
+            } else {
+              await cancelledBooking(booking.id);
+            }
+          }}
+        />
+      )}
 
-      <ChangeBookingStatusDialog
-        open={openChangeStatus}
-        onOpenChange={setOpenChangeStatus}
-        currentStatus={booking.status}
-        bookingId={booking.id}
-        pendingBooking={pendingBooking}
-        confirmedBooking={confirmedBooking}
-        checkedInBooking={checkedInBooking}
-        checkedOutBooking={checkedOutBooking}
-        cancelledBooking={cancelledBooking}
-      />
+      {openChangeStatus && (
+        <ChangeBookingStatusDialog
+          open={openChangeStatus}
+          onOpenChange={setOpenChangeStatus}
+          currentStatus={booking.status}
+          bookingId={booking.id}
+          pendingBooking={pendingBooking}
+          confirmedBooking={confirmedBooking}
+          checkedInBooking={checkedInBooking}
+          checkedOutBooking={checkedOutBooking}
+          cancelledBooking={cancelledBooking}
+        />
+      )}
 
-      <TransferRoomDialog
-        open={openTransfer}
-        onOpenChange={setOpenTransfer}
-        booking={booking}
-        onTransfer={onTransfer}
-      />
+      {openTransfer && (
+        <TransferRoomDialog
+          open={openTransfer}
+          onOpenChange={setOpenTransfer}
+          booking={booking}
+          onTransfer={onTransfer}
+        />
+      )}
 
-      <MarkAdvancePaymentDialog
-        open={openMarkAdvancePayment}
-        onOpenChange={setOpenMarkAdvancePayment}
-        onConfirm={handleMarkAdvancePayment}
-        amount={booking.advance_payment || undefined}
-      />
+      {openMarkAdvancePayment && (
+        <MarkAdvancePaymentDialog
+          open={openMarkAdvancePayment}
+          onOpenChange={setOpenMarkAdvancePayment}
+          onConfirm={handleMarkAdvancePayment}
+          amount={booking.advance_payment || undefined}
+        />
+      )}
 
-      <CreateRefundRequestDialog
-        open={openRefundRequest}
-        onOpenChange={setOpenRefundRequest}
-        booking={booking}
-      />
+      {openRefundRequest && (
+        <CreateRefundRequestDialog
+          open={openRefundRequest}
+          onOpenChange={setOpenRefundRequest}
+          booking={booking}
+        />
+      )}
     </>
   );
 }

@@ -20,8 +20,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { BookingRecord, TransferBookingInput } from "@/lib/types";
-import { useRooms } from "@/hooks/use-rooms";
-import { usePayments } from "@/hooks/use-payments";
+import { useRoomsQuery } from "@/hooks/use-rooms-query";
+import { usePaymentsQuery } from "@/hooks/use-payments-query";
 import {
   formatCurrency,
   getDateISO,
@@ -61,8 +61,8 @@ export function TransferRoomDialog({
   });
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { rooms } = useRooms();
-  const { checkAdvancePaymentStatus } = usePayments();
+  const { rooms } = useRoomsQuery(1, 100, "", open);
+  const { checkAdvancePaymentStatus } = usePaymentsQuery(1, 10, "", false);
   const [advancePaymentIsPaid, setAdvancePaymentIsPaid] = useState(false);
   const [isCheckingAdvancePayment, setIsCheckingAdvancePayment] =
     useState(false);

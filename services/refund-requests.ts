@@ -3,24 +3,9 @@ import type {
   RefundRequestInput,
   RefundRequest,
   RefundRequestStatus,
+  RefundRequestWithRelations,
 } from "@/lib/types";
 import { REFUND_REQUEST_STATUS } from "@/lib/constants";
-
-/**
- * Type for refund request with relations
- */
-export type RefundRequestWithRelations = RefundRequest & {
-  bookings?: {
-    id: string;
-    customers?: {
-      full_name: string;
-      phone: string | null;
-    } | null;
-    rooms?: {
-      name: string;
-    } | null;
-  } | null;
-};
 
 /**
  * Search refund requests with pagination and search (Client-side)
@@ -66,11 +51,11 @@ export async function searchRefundRequests({
       { count: "exact" }
     );
 
-    // Add search filter if search term exists
+    // Add search filter if search term exists (only on text fields)
     if (search && search.trim() !== "") {
       const trimmedSearch = search.trim();
       query = query.or(
-        `id.ilike.%${trimmedSearch}%,booking_id.ilike.%${trimmedSearch}%`
+        `reason.ilike.%${trimmedSearch}%,note.ilike.%${trimmedSearch}%`
       );
     }
 
@@ -83,26 +68,7 @@ export async function searchRefundRequests({
       throw new Error(error.message);
     }
 
-    let refundRequestsData = (data || []) as RefundRequestWithRelations[];
-
-    // Post-process to filter by customer name, room name if search term exists
-    if (search && search.trim() !== "") {
-      const trimmedSearch = search.trim().toLowerCase();
-      refundRequestsData = refundRequestsData.filter((request) => {
-        const requestId = request.id.toLowerCase();
-        const bookingId = request.booking_id.toLowerCase();
-        const customerName =
-          request.bookings?.customers?.full_name?.toLowerCase() || "";
-        const roomName = request.bookings?.rooms?.name?.toLowerCase() || "";
-
-        return (
-          requestId.includes(trimmedSearch) ||
-          bookingId.includes(trimmedSearch) ||
-          customerName.includes(trimmedSearch) ||
-          roomName.includes(trimmedSearch)
-        );
-      });
-    }
+    const refundRequestsData = (data || []) as RefundRequestWithRelations[];
 
     return {
       data: refundRequestsData,

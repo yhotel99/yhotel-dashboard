@@ -1,7 +1,15 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { createClient } from "@/lib/supabase/client";
+import {
+  searchPayments,
+  createPayment as createPaymentService,
+  updatePaymentStatus as updatePaymentStatusService,
+  updatePaymentStatusByBookingId as updatePaymentStatusByBookingIdService,
+  checkAdvancePaymentStatus as checkAdvancePaymentStatusService,
+  markAdvancePaymentAsPaid as markAdvancePaymentAsPaidService,
+  getPaymentsByBookingId as getPaymentsByBookingIdService,
+} from "@/services/payments";
 import type {
   PaymentWithBooking,
   PaginationMeta,
@@ -9,7 +17,6 @@ import type {
   PaymentMethod,
   PaymentStatus,
 } from "@/lib/types";
-import { PAYMENT_STATUS, PAYMENT_TYPE } from "@/lib/constants";
 
 // Hook for managing payments
 export function usePayments(
@@ -33,79 +40,19 @@ export function usePayments(
       try {
         setIsLoading(true);
         setError(null);
-        const supabase = createClient();
 
         const currentPage = pageNum ?? page;
         const currentLimit = limitNum ?? limit;
         const currentSearch = searchTerm ?? search;
 
-        // Calculate offset
-        const from = (currentPage - 1) * currentLimit;
-        const to = from + currentLimit - 1;
-
-        // Build query with bookings join
-        let query = supabase.from("payments").select(
-          `
-            *,
-            bookings:booking_id (
-              customers:customer_id (
-                full_name,
-                phone
-              ),
-              rooms:room_id (
-                name
-              )
-            )
-          `,
-          { count: "exact" }
-        );
-
-        // Add search filter if search term exists
-        if (currentSearch && currentSearch.trim() !== "") {
-          const trimmedSearch = currentSearch.trim();
-          query = query.ilike("id", `%${trimmedSearch}%`);
-        }
-
-        // Fetch data with pagination
-        const { data, error, count } = await query
-          .order("created_at", { ascending: false })
-          .range(from, to);
-
-        if (error) {
-          throw new Error(error.message);
-        }
-
-        let paymentsData = (data || []) as PaymentWithBooking[];
-
-        // Post-process to filter by booking ID, customer name, room name if search term exists
-        if (currentSearch && currentSearch.trim() !== "") {
-          const trimmedSearch = currentSearch.trim().toLowerCase();
-          paymentsData = paymentsData.filter((payment) => {
-            const paymentId = payment.id.toLowerCase();
-            const bookingId = payment.booking_id.toLowerCase();
-            const customerName =
-              payment.bookings?.customers?.full_name?.toLowerCase() || "";
-            const roomName = payment.bookings?.rooms?.name?.toLowerCase() || "";
-
-            return (
-              paymentId.includes(trimmedSearch) ||
-              bookingId.includes(trimmedSearch) ||
-              customerName.includes(trimmedSearch) ||
-              roomName.includes(trimmedSearch)
-            );
-          });
-        }
-
-        const total = count || 0;
-        const totalPages = Math.ceil(total / currentLimit);
-
-        setPayments(paymentsData);
-        setPagination({
-          total,
+        const { data, pagination: paginationData } = await searchPayments({
+          search: currentSearch || null,
           page: currentPage,
           limit: currentLimit,
-          totalPages,
         });
+
+        setPayments(data);
+        setPagination(paginationData);
       } catch (err) {
         const errorMessage =
           err instanceof Error
@@ -129,28 +76,9 @@ export function usePayments(
       payment_status?: PaymentStatus;
     }) => {
       try {
-        const supabase = createClient();
-        const { data, error } = await supabase
-          .from("payments")
-          .insert({
-            booking_id: input.booking_id,
-            amount: input.amount,
-            payment_type: input.payment_type,
-            payment_method: input.payment_method || "pay_at_hotel",
-            payment_status: input.payment_status || "pending",
-          })
-          .select()
-          .single();
-
-        if (error) {
-          throw new Error(error.message);
-        }
-
-        return data;
+        return await createPaymentService(input);
       } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "Không thể tạo payment";
-        throw new Error(errorMessage);
+        throw err;
       }
     },
     []
@@ -164,34 +92,9 @@ export function usePayments(
       paidAt?: string | null
     ) => {
       try {
-        const supabase = createClient();
-        const updateData: {
-          payment_status: string;
-          paid_at?: string | null;
-        } = {
-          payment_status: status,
-        };
-
-        if (status === "paid" && paidAt) {
-          updateData.paid_at = paidAt;
-        } else if (status !== "paid") {
-          updateData.paid_at = null;
-        }
-
-        const { error } = await supabase
-          .from("payments")
-          .update(updateData)
-          .eq("id", paymentId);
-
-        if (error) {
-          throw new Error(error.message);
-        }
+        await updatePaymentStatusService(paymentId, status, paidAt);
       } catch (err) {
-        const errorMessage =
-          err instanceof Error
-            ? err.message
-            : "Không thể cập nhật trạng thái payment";
-        throw new Error(errorMessage);
+        throw err;
       }
     },
     []
@@ -205,34 +108,9 @@ export function usePayments(
       paidAt?: string | null
     ) => {
       try {
-        const supabase = createClient();
-        const updateData: {
-          payment_status: string;
-          paid_at?: string | null;
-        } = {
-          payment_status: status,
-        };
-
-        if (status === "paid" && paidAt) {
-          updateData.paid_at = paidAt;
-        } else if (status !== "paid") {
-          updateData.paid_at = null;
-        }
-
-        const { error } = await supabase
-          .from("payments")
-          .update(updateData)
-          .eq("booking_id", bookingId);
-
-        if (error) {
-          throw new Error(error.message);
-        }
+        await updatePaymentStatusByBookingIdService(bookingId, status, paidAt);
       } catch (err) {
-        const errorMessage =
-          err instanceof Error
-            ? err.message
-            : "Không thể cập nhật trạng thái payment";
-        throw new Error(errorMessage);
+        throw err;
       }
     },
     []
@@ -248,37 +126,9 @@ export function usePayments(
       paymentId: string | null;
     }> => {
       try {
-        const supabase = createClient();
-        const { data, error } = await supabase
-          .from("payments")
-          .select("id, payment_status")
-          .eq("booking_id", bookingId)
-          .eq("payment_type", PAYMENT_TYPE.ADVANCE_PAYMENT)
-          .maybeSingle();
-
-        if (error) {
-          throw new Error(error.message);
-        }
-
-        if (!data) {
-          return {
-            hasAdvancePayment: false,
-            isPaid: false,
-            paymentId: null,
-          };
-        }
-
-        return {
-          hasAdvancePayment: true,
-          isPaid: data.payment_status === PAYMENT_STATUS.PAID,
-          paymentId: data.id,
-        };
+        return await checkAdvancePaymentStatusService(bookingId);
       } catch (err) {
-        const errorMessage =
-          err instanceof Error
-            ? err.message
-            : "Không thể kiểm tra trạng thái đặt cọc";
-        throw new Error(errorMessage);
+        throw err;
       }
     },
     []
@@ -287,44 +137,17 @@ export function usePayments(
   // Mark advance payment as paid
   const markAdvancePaymentAsPaid = useCallback(async (bookingId: string) => {
     try {
-      const supabase = createClient();
-      const now = new Date().toISOString();
-      const { error } = await supabase
-        .from("payments")
-        .update({
-          payment_status: PAYMENT_STATUS.PAID,
-          paid_at: now,
-        })
-        .eq("booking_id", bookingId)
-        .eq("payment_type", PAYMENT_TYPE.ADVANCE_PAYMENT);
-
-      if (error) {
-        throw new Error(error.message);
-      }
+      await markAdvancePaymentAsPaidService(bookingId);
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Không thể đánh dấu đặt cọc";
-      throw new Error(errorMessage);
+      throw err;
     }
   }, []);
 
   // Get payments by booking ID
   const getPaymentsByBookingId = useCallback(async (bookingId: string) => {
     try {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from("payments")
-        .select("*")
-        .eq("booking_id", bookingId)
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      return (data || []) as PaymentWithBooking[];
+      return await getPaymentsByBookingIdService(bookingId);
     } catch (err) {
-      console.error("Error fetching payments by booking ID:", err);
       throw err;
     }
   }, []);

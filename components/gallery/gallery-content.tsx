@@ -8,6 +8,7 @@ import {
   IconUpload,
   IconChevronLeft,
   IconChevronRight,
+  IconRefresh,
 } from "@tabler/icons-react";
 import {
   Dialog,
@@ -21,10 +22,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { useGallery } from "@/hooks/use-gallery";
+import { useGalleryQuery } from "@/hooks/use-gallery-query";
 import { useStorage } from "@/hooks/use-storage";
 import { ImageZoom } from "@/components/ui/shadcn-io/image-zoom";
 import Image from "next/image";
+import type { PreviewItem } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 export function GalleryContent() {
   const router = useRouter();
@@ -39,14 +42,12 @@ export function GalleryContent() {
 
   const limit = useMemo(() => {
     const limitParam = searchParams.get("limit");
-    const limitNum = limitParam ? parseInt(limitParam, 10) : 18;
-    return limitNum > 0 ? limitNum : 18;
+    const limitNum = limitParam ? parseInt(limitParam, 10) : 100;
+    return limitNum > 0 ? limitNum : 100;
   }, [searchParams]);
 
-  const { images, isLoading, pagination, addImages, deleteImage } = useGallery(
-    page,
-    limit
-  );
+  const { images, isLoading, pagination, addImages, deleteImage, refetch } =
+    useGalleryQuery(page, limit);
 
   // Storage upload hook
   const {
@@ -85,12 +86,6 @@ export function GalleryContent() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [imageIdToDelete, setImageIdToDelete] = useState<string | null>(null);
 
-  // Store preview items with unique IDs
-  type PreviewItem = {
-    id: string;
-    file: File;
-    url: string;
-  };
   const [previewItems, setPreviewItems] = useState<PreviewItem[]>([]);
 
   // Store all URLs that need cleanup on unmount
@@ -272,10 +267,20 @@ export function GalleryContent() {
             Quản lý và xem hình ảnh trong hệ thống
           </p>
         </div>
-        <Button onClick={() => setIsUploadDialogOpen(true)} className="gap-2">
-          <IconPlus className="size-4" />
-          Tải ảnh lên
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={() => setIsUploadDialogOpen(true)} className="gap-2">
+            <IconPlus className="size-4" />
+            Tải ảnh lên
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => refetch()}
+            disabled={isLoading}
+            className={cn("gap-2", isLoading && "animate-spin")}
+          >
+            <IconRefresh className="size-4" />
+          </Button>
+        </div>
       </div>
 
       <div className="px-4 lg:px-6 flex flex-col h-full">

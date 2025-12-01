@@ -366,3 +366,22 @@ export type PaginationMeta = {
   limit: number;
   totalPages: number;
 };
+
+export type PreviewItem = {
+  id: string;
+  file: File;
+  url: string;
+};
+
+export type RefundRequestWithRelations = RefundRequest & {
+  bookings?: {
+    id: string;
+    customers?: {
+      full_name: string;
+      phone: string | null;
+    } | null;
+    rooms?: {
+      name: string;
+    } | null;
+  } | null;
+};

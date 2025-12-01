@@ -6,7 +6,7 @@ import { IconArrowLeft } from "@tabler/icons-react";
 import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
-import { useBookings } from "@/hooks/use-bookings";
+import { useBookingsQuery } from "@/hooks/use-bookings-query";
 import { useDebounce } from "@/hooks/use-debounce";
 import { StatusBadge } from "@/components/bookings/status";
 import { formatCurrency, formatDateOnly } from "@/lib/functions";
@@ -122,20 +122,12 @@ export default function CustomerBookingsPage() {
     }
   }, [debouncedSearch, search, limit, updateSearchParams]);
 
-  const { bookings, isLoading, pagination, fetchBookingsByCustomerId } =
-    useBookings({
-      page,
-      limit,
-      search,
-    });
-
-  // Fetch bookings when component mounts or params change
-  useEffect(() => {
-    if (customerId) {
-      fetchBookingsByCustomerId(customerId, page, limit, search || null);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [customerId, page, limit, search]);
+  const { bookings, isLoading, pagination, refetch } = useBookingsQuery(
+    page,
+    limit,
+    search,
+    customerId || null
+  );
 
   // Get customer info from bookings (all bookings have same customer)
   useEffect(() => {
@@ -176,9 +168,7 @@ export default function CustomerBookingsPage() {
           emptyMessage="Khách hàng chưa có booking."
           entityName="booking"
           getRowId={(row) => row.id}
-          fetchData={() =>
-            fetchBookingsByCustomerId(customerId, page, limit, search || null)
-          }
+          fetchData={() => refetch()}
           isLoading={isLoading}
           serverPagination={pagination}
           onPageChange={(newPage) => updateSearchParams(newPage, limit, search)}

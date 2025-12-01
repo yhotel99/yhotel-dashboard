@@ -2,13 +2,8 @@
 
 import { Card } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/functions";
-import type {
-  BookingRecord,
-  PaymentWithBooking,
-  RoomWithBooking,
-} from "@/lib/types";
-import { usePayments } from "@/hooks/use-payments";
-import { useEffect, useState } from "react";
+import type { BookingRecord, RoomWithBooking } from "@/lib/types";
+import { usePaymentsByBookingIdQuery } from "@/hooks/use-payments-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PaymentStatusBadge } from "@/components/payments/status";
 import { PAYMENT_TYPE } from "@/lib/constants";
@@ -18,29 +13,10 @@ interface PaymentCardProps {
   room: RoomWithBooking;
 }
 
-export function PaymentCard({ booking, room }: PaymentCardProps) {
-  const { getPaymentsByBookingId } = usePayments();
-  const [payments, setPayments] = useState<PaymentWithBooking[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchPayments = async () => {
-      try {
-        setIsLoading(true);
-        const data = await getPaymentsByBookingId(booking.id);
-        setPayments(data || []);
-      } catch (error) {
-        console.error("Error fetching payments:", error);
-        setPayments([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (booking.id) {
-      fetchPayments();
-    }
-  }, [booking.id, getPaymentsByBookingId]);
+export function PaymentCard({ booking }: PaymentCardProps) {
+  const { payments, isLoading } = usePaymentsByBookingIdQuery(
+    booking.id || null
+  );
 
   const advancePayment = payments.find(
     (p) => p.payment_type === PAYMENT_TYPE.ADVANCE_PAYMENT

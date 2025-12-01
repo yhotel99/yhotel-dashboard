@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { IconEdit } from "@tabler/icons-react";
 import type { BookingRecord } from "@/lib/types";
 import { EditBookingDialog } from "@/components/bookings/edit-booking-dialog";
-import { useBookings } from "@/hooks/use-bookings";
+import { useBookingsQuery } from "@/hooks/use-bookings-query";
 import { cn } from "@/lib/utils";
 import { getBookingByIdForCheckout } from "@/services/bookings";
 import {
@@ -48,7 +48,13 @@ export function CheckoutDialog({
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const [isNotesDialogOpen, setIsNotesDialogOpen] = useState(false);
-  const { updateBooking, checkedOutBooking } = useBookings();
+  const { updateBooking, checkedOutBooking } = useBookingsQuery(
+    1,
+    10,
+    "",
+    null,
+    false
+  );
 
   const fetchBookingDetails = async () => {
     if (!room.currentBooking?.id) return;
