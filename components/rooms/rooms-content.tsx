@@ -11,7 +11,6 @@ import { useRoomsQuery } from "@/hooks/use-rooms-query";
 import { toast } from "sonner";
 import { createColumns } from "@/components/rooms/columns";
 import { DeleteRoomDialog } from "@/components/rooms/delete-room-dialog";
-import { UpdateRoomStatusDialog } from "@/components/rooms/update-room-status-dialog";
 import { Room } from "@/lib/types";
 
 export function RoomsContent() {
@@ -92,13 +91,6 @@ export function RoomsContent() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [roomToDelete, setRoomToDelete] = useState<Room | null>(null);
 
-  // Update status dialog state
-  const [isUpdateStatusDialogOpen, setIsUpdateStatusDialogOpen] =
-    useState(false);
-  const [roomToUpdateStatus, setRoomToUpdateStatus] = useState<Room | null>(
-    null
-  );
-
   // Handle empty page after deletion or invalid page number
   useEffect(() => {
     if (!isLoading && pagination.totalPages > 0) {
@@ -151,20 +143,13 @@ export function RoomsContent() {
     }
   }, [roomToDelete, deleteRoom]);
 
-  const handleChangeStatusClick = useCallback((room: Room) => {
-    setRoomToUpdateStatus(room);
-    setIsUpdateStatusDialogOpen(true);
-  }, []);
-
-  const handleConfirmUpdateStatus = useCallback(
+  const handleInlineStatusChange = useCallback(
     async (roomId: string, newStatus: Room["status"]) => {
       try {
         await updateRoomStatus(roomId, newStatus);
         toast.success("Cập nhật trạng thái thành công!", {
           description: `Trạng thái phòng đã được cập nhật thành công.`,
         });
-        setIsUpdateStatusDialogOpen(false);
-        setRoomToUpdateStatus(null);
       } catch (err) {
         const errorMessage =
           err instanceof Error
@@ -181,8 +166,8 @@ export function RoomsContent() {
 
   // Create columns with delete and change status handlers
   const columns = useMemo(
-    () => createColumns(handleDeleteClick, handleChangeStatusClick),
-    [handleDeleteClick, handleChangeStatusClick]
+    () => createColumns(handleDeleteClick, handleInlineStatusChange),
+    [handleDeleteClick, handleInlineStatusChange]
   );
 
   return (
@@ -224,13 +209,6 @@ export function RoomsContent() {
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
         onConfirm={handleConfirmDelete}
-      />
-
-      <UpdateRoomStatusDialog
-        room={roomToUpdateStatus}
-        open={isUpdateStatusDialogOpen}
-        onOpenChange={setIsUpdateStatusDialogOpen}
-        onConfirm={handleConfirmUpdateStatus}
       />
     </div>
   );

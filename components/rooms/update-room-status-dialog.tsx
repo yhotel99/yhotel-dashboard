@@ -35,27 +35,45 @@ export function UpdateRoomStatusDialog({
   onOpenChange,
   onConfirm,
 }: UpdateRoomStatusDialogProps) {
+  const currentEffectiveStatus =
+    room?.status === ROOM_STATUS.AVAILABLE
+      ? ROOM_STATUS.CLEAN
+      : room?.status || "";
+
   const [selectedStatus, setSelectedStatus] = useState<Room["status"] | "">(
-    room?.status || ""
+    currentEffectiveStatus
   );
   const [isUpdating, setIsUpdating] = useState(false);
 
   // Update selected status when room changes
   useEffect(() => {
     if (room) {
-      setSelectedStatus(room.status);
+      setSelectedStatus(
+        room.status === ROOM_STATUS.AVAILABLE ? ROOM_STATUS.CLEAN : room.status
+      );
     }
   }, [room]);
 
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
-      setSelectedStatus(room?.status || "");
+      setSelectedStatus(
+        room
+          ? room.status === ROOM_STATUS.AVAILABLE
+            ? ROOM_STATUS.CLEAN
+            : room.status
+          : ""
+      );
     }
     onOpenChange(newOpen);
   };
 
   const handleConfirm = async () => {
-    if (!room || !selectedStatus || selectedStatus === room.status) {
+    if (!room) return;
+
+    const effectiveStatus =
+      room.status === ROOM_STATUS.AVAILABLE ? ROOM_STATUS.CLEAN : room.status;
+
+    if (!selectedStatus || selectedStatus === effectiveStatus) {
       return;
     }
 
@@ -71,7 +89,8 @@ export function UpdateRoomStatusDialog({
     }
   };
 
-  if (!room) return null;
+  // Không cho hiển thị popup nếu trạng thái là BẢO TRÌ
+  if (!room || room.status === ROOM_STATUS.MAINTENANCE) return null;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -86,7 +105,13 @@ export function UpdateRoomStatusDialog({
           <div className="space-y-2">
             <Label>Trạng thái hiện tại</Label>
             <div>
-              <StatusBadge status={room.status} />
+              <StatusBadge
+                status={
+                  room.status === ROOM_STATUS.AVAILABLE
+                    ? ROOM_STATUS.CLEAN
+                    : room.status
+                }
+              />
             </div>
           </div>
           <div className="space-y-2">
@@ -101,12 +126,6 @@ export function UpdateRoomStatusDialog({
                 <SelectValue placeholder="Chọn trạng thái" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={ROOM_STATUS.AVAILABLE}>
-                  {roomStatusLabels[ROOM_STATUS.AVAILABLE]}
-                </SelectItem>
-                <SelectItem value={ROOM_STATUS.MAINTENANCE}>
-                  {roomStatusLabels[ROOM_STATUS.MAINTENANCE]}
-                </SelectItem>
                 <SelectItem value={ROOM_STATUS.NOT_CLEAN}>
                   {roomStatusLabels[ROOM_STATUS.NOT_CLEAN]}
                 </SelectItem>
@@ -128,7 +147,9 @@ export function UpdateRoomStatusDialog({
           <Button
             onClick={handleConfirm}
             disabled={
-              isUpdating || !selectedStatus || selectedStatus === room.status
+              isUpdating ||
+              !selectedStatus ||
+              selectedStatus === currentEffectiveStatus
             }
           >
             {isUpdating ? "Đang cập nhật..." : "Cập nhật trạng thái"}
