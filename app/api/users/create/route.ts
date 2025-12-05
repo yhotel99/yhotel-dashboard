@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin/server";
+import { createClient } from "@/lib/supabase/server";
+import { USER_ROLE } from "@/lib/constants";
+import { UserRole } from "@/lib/types";
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,6 +29,23 @@ export async function POST(request: NextRequest) {
     }
 
     const adminSupabase = createAdminClient();
+    const supabase = await createClient();
+
+    const { data } = await supabase.auth.getUser();
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", data.user?.id)
+      .single();
+
+    console.log(profileData);
+
+    if (
+      ![USER_ROLE.ADMIN, USER_ROLE.MANAGER].includes(profileData?.role) ||
+      !profileData
+    ) {
+      return NextResponse.json({ error: "Permission denied" }, { status: 400 });
+    }
 
     // Create user in Supabase Auth using admin API
     const { data: authData, error: authError } =

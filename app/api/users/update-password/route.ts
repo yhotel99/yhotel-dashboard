@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin/server";
 import { z } from "zod";
+import { createClient } from "@/lib/supabase/server";
+import { USER_ROLE } from "@/lib/constants";
 
 const updatePasswordSchema = z.object({
   userId: z.string(),
@@ -13,6 +15,23 @@ export async function POST(request: NextRequest) {
     const validatedData = updatePasswordSchema.parse(body);
 
     const adminSupabase = createAdminClient();
+    const supabase = await createClient();
+
+    const { data: currentUser } = await supabase.auth.getUser();
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", currentUser.user?.id)
+      .single();
+
+    console.log(profileData);
+
+    if (
+      ![USER_ROLE.ADMIN, USER_ROLE.MANAGER].includes(profileData?.role) ||
+      !profileData
+    ) {
+      return NextResponse.json({ error: "Permission denied" }, { status: 400 });
+    }
 
     // Update user password using admin API
     const { data, error } = await adminSupabase.auth.admin.updateUserById(

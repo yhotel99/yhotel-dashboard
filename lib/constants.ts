@@ -188,6 +188,15 @@ export const USER_STATUS = {
 } as const;
 
 /**
+ * User role values
+ */
+export const USER_ROLE = {
+  ADMIN: "admin",
+  MANAGER: "manager",
+  STAFF: "staff",
+} as const;
+
+/**
  * User status labels mapping
  */
 export const userStatusLabels: Record<
