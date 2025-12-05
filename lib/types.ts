@@ -28,16 +28,22 @@ export type UserStatus = "active" | "inactive" | "suspended";
 // Room Types
 // ============================================================================
 
+// Room type enum
+export type RoomType = "standard" | "deluxe" | "superior" | "family";
+
+// Room status type
+export type RoomStatus = "available" | "maintenance" | "not_clean" | "clean";
+
 // Room type matching database schema (rooms table)
 export type Room = {
   id: string;
   name: string;
   description: string | null;
-  room_type: "standard" | "deluxe" | "superior" | "family";
+  room_type: RoomType;
   price_per_night: number;
   max_guests: number;
   amenities: string[];
-  status: "available" | "maintenance" | "not_clean" | "clean";
+  status: RoomStatus;
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
@@ -48,18 +54,12 @@ export type Room = {
 export type RoomInput = {
   name: string;
   description?: string | null;
-  room_type: "standard" | "deluxe" | "superior" | "family";
+  room_type: RoomType;
   price_per_night: number;
   max_guests: number;
   amenities: string[];
-  status: "available" | "maintenance" | "not_clean" | "clean";
+  status: RoomStatus;
 };
-
-// Room type enum
-export type RoomType = "standard" | "deluxe" | "superior" | "family";
-
-// Room status type
-export type RoomStatus = "available" | "maintenance" | "not_clean" | "clean";
 
 // ============================================================================
 // Image Types
@@ -92,7 +92,7 @@ export type RoomStatusViewData = {
   id: string;
   name: string;
   description: string | null;
-  room_type: "standard" | "deluxe" | "superior" | "family";
+  room_type: RoomType;
   price_per_night: string;
   max_guests: number;
   amenities: string[];
@@ -279,6 +279,9 @@ export type PaymentWithBooking = Payment & {
 // Customer Types
 // ============================================================================
 
+// Customer type enum
+export type CustomerType = "regular" | "vip" | "blacklist";
+
 // Customer type matching database schema (customers table)
 export type Customer = {
   id: string;
@@ -287,7 +290,7 @@ export type Customer = {
   phone: string | null;
   nationality: string | null;
   id_card: string | null;
-  customer_type: "regular" | "vip" | "blacklist";
+  customer_type: CustomerType;
   date_of_birth: string | null;
   source: string | null;
   created_at: string;
@@ -305,13 +308,10 @@ export type CustomerInput = {
   phone?: string | null;
   nationality?: string | null;
   id_card?: string | null;
-  customer_type?: "regular" | "vip" | "blacklist";
+  customer_type?: CustomerType;
   date_of_birth?: string | null;
   source?: string | null;
 };
-
-// Customer type enum
-export type CustomerType = "regular" | "vip" | "blacklist";
 
 // ============================================================================
 // Pagination Types
