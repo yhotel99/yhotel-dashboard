@@ -385,3 +385,42 @@ export type RefundRequestWithRelations = RefundRequest & {
     } | null;
   } | null;
 };
+
+// ============================================================================
+// Blog Types
+// ============================================================================
+
+// Blog status type
+export type BlogStatus = "draft" | "published" | "archived";
+
+// Blog type matching database schema (blogs table)
+export type Blog = {
+  id: string;
+  title: string;
+  slug: string;
+  content: string;
+  excerpt: string | null;
+  status: BlogStatus;
+  featured_image: string | null;
+  author_id: string;
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+  // Relations (from join queries)
+  author?: {
+    full_name: string;
+    email: string;
+  } | null;
+};
+
+// Blog input type for create/update
+export type BlogInput = {
+  title: string;
+  slug: string;
+  content: string;
+  excerpt?: string | null;
+  status: BlogStatus;
+  featured_image?: string | null;
+  published_at?: string | null;
+};

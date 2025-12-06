@@ -10,6 +10,7 @@ import {
   IconFileDescription,
   IconInnerShadowTop,
   IconReceiptRefund,
+  IconNews,
 } from "@tabler/icons-react";
 
 import { NavMain } from "@/components/nav-main";
@@ -74,6 +75,11 @@ const data = {
       title: "Gallery",
       url: SIDEBAR_URLS.GALLERY,
       icon: Images,
+    },
+    {
+      title: "Blogs",
+      url: "/dashboard/blogs",
+      icon: IconNews,
     },
     {
       title: "Users",
