@@ -250,6 +250,7 @@ export const SIDEBAR_URLS = {
   REFUND_REQUESTS: "/dashboard/refund-requests",
   GALLERY: "/dashboard/gallery",
   USERS: "/dashboard/users",
+  BLOGS: "/dashboard/blogs",
 } as const;
 
 export const CUSTOMER_ERROR_PATTERNS = {

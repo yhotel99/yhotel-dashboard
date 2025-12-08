@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   IconChartBar,
@@ -8,6 +8,7 @@ import {
   IconDashboard,
   IconInnerShadowTop,
   IconReceiptRefund,
+  IconNews,
 } from "@tabler/icons-react";
 import { Search, HotelIcon, Images, User2, UserCircle } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
@@ -22,58 +23,88 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { SIDEBAR_URLS } from "@/lib/constants";
+import { hasViewPermission } from "@/lib/permissions";
+import { useAuth } from "@/contexts/auth-context";
 
-const navigationItems = [
+const allNavigationItems = [
   {
     title: "Dashboard",
     url: SIDEBAR_URLS.DASHBOARD,
     icon: IconDashboard,
+    resource: "dashboard",
   },
   {
     title: "Rooms",
     url: SIDEBAR_URLS.ROOMS,
     icon: HotelIcon,
+    resource: "rooms",
   },
   {
     title: "Bookings",
     url: SIDEBAR_URLS.BOOKINGS,
     icon: IconChartBar,
+    resource: "bookings",
   },
   {
     title: "Reservation",
     url: SIDEBAR_URLS.RESERVATION,
     icon: IconInnerShadowTop,
+    resource: "reservations",
   },
   {
     title: "Customers",
     url: SIDEBAR_URLS.CUSTOMERS,
     icon: UserCircle,
+    resource: "customers",
   },
   {
     title: "Payments",
     url: SIDEBAR_URLS.PAYMENTS,
     icon: IconCreditCard,
+    resource: "payments",
   },
   {
     title: "Refund Requests",
     url: SIDEBAR_URLS.REFUND_REQUESTS,
     icon: IconReceiptRefund,
+    resource: "refund-requests",
   },
   {
     title: "Gallery",
     url: SIDEBAR_URLS.GALLERY,
     icon: Images,
+    resource: "gallery",
+  },
+  {
+    title: "Blogs",
+    url: "/dashboard/blogs",
+    icon: IconNews,
+    resource: "blogs",
   },
   {
     title: "Users",
     url: SIDEBAR_URLS.USERS,
     icon: User2,
+    resource: "users",
   },
 ];
 
 export function SiteHeader() {
   const router = useRouter();
+  const { profile, isLoading } = useAuth();
   const [open, setOpen] = useState(false);
+
+  // Filter navigation items based on permissions
+  const navigationItems = useMemo(() => {
+    if (!profile || isLoading) {
+      return [];
+    }
+
+    // Filter all items including dashboard based on permissions
+    return allNavigationItems.filter((item) =>
+      hasViewPermission(profile.role, item.resource)
+    );
+  }, [profile, isLoading]);
 
   // Handle Command + K keyboard shortcut
   useEffect(() => {

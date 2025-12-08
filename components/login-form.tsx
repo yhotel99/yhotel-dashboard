@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { FieldDescription } from "@/components/ui/field";
+import { hasViewPermission } from "@/lib/permissions";
 
 const loginSchema = z.object({
   email: z.string().email("Email không hợp lệ"),
@@ -39,7 +40,7 @@ export function LoginForm({
   ...props
 }: React.ComponentProps<"div">) {
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, currentUser } = useAuth();
   const [isLoading, setIsLoading] = React.useState(false);
 
   const form = useForm<LoginFormValues>({
@@ -64,7 +65,11 @@ export function LoginForm({
       }
 
       toast.success("Đăng nhập thành công!");
-      router.push("/dashboard");
+      router.push(
+        hasViewPermission(currentUser?.role as string, "dashboard")
+          ? "/dashboard"
+          : "/dashboard/reservation"
+      );
       router.refresh();
     } catch (error) {
       toast.error("Đã xảy ra lỗi. Vui lòng thử lại.");

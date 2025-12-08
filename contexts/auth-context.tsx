@@ -11,11 +11,13 @@ import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
 import { getProfileById } from "@/services/profiles";
 import { USER_STATUS } from "@/lib/constants";
+import { Profile } from "@/lib/types";
 
 const supabase = createClient();
 
 interface AuthContextType {
   currentUser: User | null;
+  profile: Profile | null;
   isLoading: boolean;
   isInitialized: boolean;
   login: ({
@@ -34,6 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [profile, setProfile] = useState<Profile | null>(null);
 
   useEffect(() => {
     // Set up auth state change listener (outside initializeAuth for better performance)
@@ -47,10 +50,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // User exists - update user state
         console.log(`${event} for user:`, session.user.id);
         setCurrentUser(session.user);
+
+        // Fetch and set profile
+        try {
+          const profileData = await getProfileById(session.user.id);
+          setProfile(profileData);
+        } catch (error) {
+          console.error("Error fetching profile:", error);
+          setProfile(null);
+        }
       } else {
         // No user - clear user state (session expired, user signed out, etc.)
         console.log(`${event} - clearing user state`);
         setCurrentUser(null);
+        setProfile(null);
       }
     });
 
@@ -65,6 +78,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (user) {
             console.log("Initial user found:", user.id);
             setCurrentUser(user);
+
+            // Fetch and set profile
+            try {
+              const profileData = await getProfileById(user.id);
+              setProfile(profileData);
+            } catch (error) {
+              console.error("Error fetching profile:", error);
+              setProfile(null);
+            }
           }
         } catch {
           // Silently ignore auth errors during initialization
@@ -128,6 +150,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error: new Error(statusMessage) };
       }
 
+      // Set profile after successful login
+      setProfile(profile);
+
       // Auth state change listener will update currentUser automatically
       return { error: null };
     } catch (err) {
@@ -156,6 +181,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const value = {
     currentUser,
+    profile,
     isLoading,
     isInitialized,
     login,
