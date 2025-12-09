@@ -26,7 +26,7 @@ interface AuthContextType {
   }: {
     email: string;
     password: string;
-  }) => Promise<{ error: Error | null }>;
+  }) => Promise<{ error: Error | null; profile?: Profile | null }>;
   logout: () => Promise<{ error: Error | null }>;
 }
 
@@ -51,13 +51,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.log(`${event} for user:`, session.user.id);
         setCurrentUser(session.user);
 
-        // Fetch and set profile
-        try {
-          const profileData = await getProfileByIdAction(session.user.id);
-          setProfile(profileData);
-        } catch (error) {
-          console.error("Error fetching profile:", error);
-          setProfile(null);
+        // Only fetch profile if we don't already have it (to avoid duplicate calls)
+        // The login function already fetches and sets the profile
+        if (event === "SIGNED_IN") {
+          // Profile will be set by login function, skip fetching here
+          // This prevents duplicate API calls
+        } else {
+          // For other events (TOKEN_REFRESHED, etc.), fetch profile
+          try {
+            const profileData = await getProfileByIdAction(session.user.id);
+            setProfile(profileData);
+          } catch (error) {
+            console.error("Error fetching profile:", error);
+            setProfile(null);
+          }
         }
       } else {
         // No user - clear user state (session expired, user signed out, etc.)
@@ -152,9 +159,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Set profile after successful login
       setProfile(profile);
+      setCurrentUser(data.user);
 
       // Auth state change listener will update currentUser automatically
-      return { error: null };
+      return { error: null, profile };
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Đã xảy ra lỗi. Vui lòng thử lại.";
