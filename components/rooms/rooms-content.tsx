@@ -7,7 +7,11 @@ import { useDebounce } from "@/hooks/use-debounce";
 
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
-import { useRoomsQuery } from "@/hooks/use-rooms-query";
+import { useRooms } from "@/hooks/use-rooms";
+import {
+  updateRoomStatus as updateRoomStatusAction,
+  deleteRoom as deleteRoomAction,
+} from "@/actions/rooms";
 import { toast } from "sonner";
 import { createColumns } from "@/components/rooms/columns";
 import { DeleteRoomDialog } from "@/components/rooms/delete-room-dialog";
@@ -78,14 +82,11 @@ export function RoomsContent() {
     }
   }, [debouncedSearch, search, limit, updateSearchParams]);
 
-  const {
-    rooms,
-    isLoading,
-    pagination,
-    deleteRoom,
-    updateRoomStatus,
-    refetch,
-  } = useRoomsQuery(page, limit, search);
+  const { rooms, isLoading, pagination, mutate } = useRooms({
+    search,
+    page,
+    limit,
+  });
 
   // Delete room dialog state
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -127,12 +128,14 @@ export function RoomsContent() {
     if (!roomToDelete) return;
 
     try {
-      await deleteRoom(roomToDelete.id);
+      await deleteRoomAction(roomToDelete.id);
       toast.success("Xóa phòng thành công!", {
         description: `Phòng ${roomToDelete.name} đã được xóa thành công.`,
       });
       setIsDeleteDialogOpen(false);
       setRoomToDelete(null);
+      // Refresh SWR cache
+      await mutate();
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Không thể xóa phòng";
@@ -141,15 +144,17 @@ export function RoomsContent() {
       });
       throw err;
     }
-  }, [roomToDelete, deleteRoom]);
+  }, [roomToDelete, mutate]);
 
   const handleInlineStatusChange = useCallback(
     async (roomId: string, newStatus: Room["status"]) => {
       try {
-        await updateRoomStatus(roomId, newStatus);
+        await updateRoomStatusAction(roomId, newStatus);
         toast.success("Cập nhật trạng thái thành công!", {
           description: `Trạng thái phòng đã được cập nhật thành công.`,
         });
+        // Refresh SWR cache
+        await mutate();
       } catch (err) {
         const errorMessage =
           err instanceof Error
@@ -161,7 +166,7 @@ export function RoomsContent() {
         throw err;
       }
     },
-    [updateRoomStatus]
+    [mutate]
   );
 
   // Create columns with delete and change status handlers
@@ -194,7 +199,9 @@ export function RoomsContent() {
           emptyMessage="Không tìm thấy kết quả."
           entityName="phòng"
           getRowId={(row) => row.id}
-          fetchData={() => refetch()}
+          fetchData={async () => {
+            await mutate();
+          }}
           isLoading={isLoading}
           serverPagination={pagination}
           onPageChange={(newPage) => updateSearchParams(newPage, limit, search)}
@@ -204,12 +211,14 @@ export function RoomsContent() {
         ></DataTable>
       </div>
 
-      <DeleteRoomDialog
-        room={roomToDelete}
-        open={isDeleteDialogOpen}
-        onOpenChange={setIsDeleteDialogOpen}
-        onConfirm={handleConfirmDelete}
-      />
+      {isDeleteDialogOpen && (
+        <DeleteRoomDialog
+          room={roomToDelete}
+          open={isDeleteDialogOpen}
+          onOpenChange={setIsDeleteDialogOpen}
+          onConfirm={handleConfirmDelete}
+        />
+      )}
     </div>
   );
 }

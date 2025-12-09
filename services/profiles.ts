@@ -1,4 +1,6 @@
-import { createClient } from "@/lib/supabase/client";
+"use server";
+
+import { createClient } from "@/lib/supabase/server";
 import type { Profile } from "@/lib/types";
 
 /**
@@ -18,7 +20,7 @@ export async function searchProfiles({
   limit: number;
 }): Promise<Profile[]> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Calculate offset
     const from = (page - 1) * limit;
@@ -63,7 +65,7 @@ export async function countProfiles({
   search: string | null;
 }): Promise<number> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Build query
     let query = supabase
@@ -99,7 +101,7 @@ export async function countProfiles({
  */
 export async function getProfileById(id: string): Promise<Profile | null> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data, error } = await supabase
       .from("profiles")
       .select("*")
@@ -131,7 +133,7 @@ export async function updateProfile(
   >
 ): Promise<Profile> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data, error } = await supabase
       .from("profiles")
       .update({ ...input, updated_at: new Date().toISOString() })
@@ -156,7 +158,7 @@ export async function updateProfile(
  */
 export async function deleteProfile(id: string): Promise<void> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { error } = await supabase
       .from("profiles")
       .update({ deleted_at: new Date().toISOString() })

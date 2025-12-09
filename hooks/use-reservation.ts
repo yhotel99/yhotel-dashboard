@@ -1,39 +1,36 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { fetchReservationData } from "@/services/reservation";
+import useSWR from "swr";
+import { fetcher } from "@/lib/fetcher";
 import type { RoomWithBooking } from "@/lib/types";
 
+// Type for API response
+type ReservationsResponse = {
+  data: RoomWithBooking[];
+};
+
 export function useReservation() {
-  const [rooms, setRooms] = useState<RoomWithBooking[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Use a static key for reservation data
+  const swrKey = "/api/reservations";
 
-  const fetchReservation = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
+  // Use SWR to fetch reservation data with caching and deduplication
+  const { data, error, isLoading, mutate } = useSWR<ReservationsResponse>(
+    swrKey,
+    fetcher
+  );
 
-      const roomsWithBookings = await fetchReservationData();
-      setRooms(roomsWithBookings);
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Không thể tải sơ đồ phòng";
-      setError(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchReservation();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const rooms = data?.data || [];
+  const errorMessage = error
+    ? error instanceof Error
+      ? error.message
+      : "Không thể tải sơ đồ phòng"
+    : null;
 
   return {
     rooms,
     isLoading,
-    error,
-    refetch: fetchReservation,
+    error: errorMessage,
+    refetch: mutate,
+    mutate,
   };
 }

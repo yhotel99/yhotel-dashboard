@@ -22,8 +22,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { useGalleryQuery } from "@/hooks/use-gallery-query";
+import { useGallery } from "@/hooks/use-gallery";
 import { useStorage } from "@/hooks/use-storage";
+import {
+  addGalleryImagesAction,
+  deleteGalleryImageAction,
+} from "@/actions/gallery";
 import { ImageZoom } from "@/components/ui/shadcn-io/image-zoom";
 import Image from "next/image";
 import type { PreviewItem } from "@/lib/types";
@@ -46,8 +50,10 @@ export function GalleryContent() {
     return limitNum > 0 ? limitNum : 100;
   }, [searchParams]);
 
-  const { images, isLoading, pagination, addImages, deleteImage, refetch } =
-    useGalleryQuery(page, limit);
+  const { images, isLoading, pagination, refetch, mutate } = useGallery(
+    page,
+    limit
+  );
 
   // Storage upload hook
   const {
@@ -137,7 +143,10 @@ export function GalleryContent() {
       const uploadedUrls = results.map((result) => result.url);
 
       // Add to gallery
-      await addImages(uploadedUrls);
+      await addGalleryImagesAction(uploadedUrls);
+
+      // Refresh gallery data
+      await mutate();
 
       // Clean up preview URLs
       previewItems.forEach((item) => {
@@ -163,7 +172,7 @@ export function GalleryContent() {
         description: errorMessage,
       });
     }
-  }, [previewItems, upload, addImages]);
+  }, [previewItems, upload, mutate]);
 
   // Handle delete image click - open confirmation dialog
   const handleDeleteClick = useCallback((id: string) => {
@@ -176,7 +185,11 @@ export function GalleryContent() {
     if (!imageIdToDelete) return;
 
     try {
-      await deleteImage(imageIdToDelete);
+      await deleteGalleryImageAction(imageIdToDelete);
+
+      // Refresh gallery data
+      await mutate();
+
       setIsDeleteDialogOpen(false);
       setImageIdToDelete(null);
       toast.success("Đã xóa hình ảnh");
@@ -187,7 +200,7 @@ export function GalleryContent() {
         description: errorMessage,
       });
     }
-  }, [imageIdToDelete, deleteImage]);
+  }, [imageIdToDelete, mutate]);
 
   // Remove preview image
   const handleRemovePreview = useCallback((id: string) => {

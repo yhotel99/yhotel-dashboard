@@ -6,7 +6,7 @@ import { IconArrowLeft } from "@tabler/icons-react";
 import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
-import { useBookingsQuery } from "@/hooks/use-bookings-query";
+import { useBookings } from "@/hooks/use-bookings";
 import { useDebounce } from "@/hooks/use-debounce";
 import { StatusBadge } from "@/components/bookings/status";
 import { formatCurrency, formatDateOnly } from "@/lib/functions";
@@ -122,12 +122,12 @@ export default function CustomerBookingsPage() {
     }
   }, [debouncedSearch, search, limit, updateSearchParams]);
 
-  const { bookings, isLoading, pagination, refetch } = useBookingsQuery(
+  const { bookings, isLoading, pagination, mutate } = useBookings({
     page,
     limit,
     search,
-    customerId || null
-  );
+    customerId: customerId || null,
+  });
 
   // Get customer info from bookings (all bookings have same customer)
   useEffect(() => {
@@ -168,7 +168,9 @@ export default function CustomerBookingsPage() {
           emptyMessage="Khách hàng chưa có booking."
           entityName="booking"
           getRowId={(row) => row.id}
-          fetchData={() => refetch()}
+          fetchData={async () => {
+            await mutate();
+          }}
           isLoading={isLoading}
           serverPagination={pagination}
           onPageChange={(newPage) => updateSearchParams(newPage, limit, search)}

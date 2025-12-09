@@ -20,8 +20,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { BookingRecord, TransferBookingInput } from "@/lib/types";
-import { useRoomsQuery } from "@/hooks/use-rooms-query";
-import { usePaymentsQuery } from "@/hooks/use-payments-query";
+import { useRooms } from "@/hooks/use-rooms";
+import { checkAdvancePaymentStatusAction } from "@/actions/payments";
 import {
   formatCurrency,
   getDateISO,
@@ -61,8 +61,8 @@ export function TransferRoomDialog({
   });
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { rooms } = useRoomsQuery(1, 100, "", open);
-  const { checkAdvancePaymentStatus } = usePaymentsQuery(1, 10, "", false);
+  const { rooms } = useRooms({ page: 1, limit: 100, search: "" });
+  // checkAdvancePaymentStatus is now imported directly from services
   const [advancePaymentIsPaid, setAdvancePaymentIsPaid] = useState(false);
   const [isCheckingAdvancePayment, setIsCheckingAdvancePayment] =
     useState(false);
@@ -85,7 +85,7 @@ export function TransferRoomDialog({
 
       try {
         setIsCheckingAdvancePayment(true);
-        const status = await checkAdvancePaymentStatus(booking.id);
+        const status = await checkAdvancePaymentStatusAction(booking.id);
         setAdvancePaymentIsPaid(status.isPaid);
       } catch (error) {
         console.error("Error checking advance payment status:", error);
@@ -96,7 +96,7 @@ export function TransferRoomDialog({
     };
 
     checkStatus();
-  }, [open, booking, checkAdvancePaymentStatus]);
+  }, [open, booking]);
 
   // Load booking data when dialog opens
   useEffect(() => {

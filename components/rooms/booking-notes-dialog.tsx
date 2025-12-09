@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import type { BookingRecord } from "@/lib/types";
-import { useBookingsQuery } from "@/hooks/use-bookings-query";
+import { updateBooking as updateBookingAction } from "@/actions/bookings";
 import { toast } from "sonner";
 
 interface BookingNotesDialogProps {
@@ -31,7 +31,6 @@ export function BookingNotesDialog({
 }: BookingNotesDialogProps) {
   const [notes, setNotes] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-  const { updateBooking } = useBookingsQuery(1, 10, "", null, false);
 
   useEffect(() => {
     if (booking) {
@@ -44,7 +43,7 @@ export function BookingNotesDialog({
 
     try {
       setIsSaving(true);
-      const updated = await updateBooking(booking.id, {
+      const updated = await updateBookingAction(booking.id, {
         notes: notes.trim() || null,
       });
       onSave(updated);

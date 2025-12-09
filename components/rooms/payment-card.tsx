@@ -3,7 +3,7 @@
 import { Card } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/functions";
 import type { BookingRecord, RoomWithBooking } from "@/lib/types";
-import { usePaymentsByBookingIdQuery } from "@/hooks/use-payments-query";
+import { usePayments } from "@/hooks/use-payments";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PaymentStatusBadge } from "@/components/payments/status";
 import { PAYMENT_TYPE } from "@/lib/constants";
@@ -14,9 +14,11 @@ interface PaymentCardProps {
 }
 
 export function PaymentCard({ booking }: PaymentCardProps) {
-  const { payments, isLoading } = usePaymentsByBookingIdQuery(
-    booking.id || null
-  );
+  const { payments, isLoading } = usePayments({
+    bookingId: booking.id || null,
+    page: 1,
+    limit: 100, // Get all payments for the booking
+  });
 
   const advancePayment = payments.find(
     (p) => p.payment_type === PAYMENT_TYPE.ADVANCE_PAYMENT

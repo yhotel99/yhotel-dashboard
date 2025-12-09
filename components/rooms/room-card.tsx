@@ -25,8 +25,8 @@ import { UpdateRoomStatusDialog } from "@/components/rooms/update-room-status-di
 import { QuickBookingDialog } from "@/components/rooms/quick-booking-dialog";
 import { CheckoutDialog } from "@/components/rooms/checkout-dialog";
 import { toast } from "sonner";
-import { useRoomsQuery } from "@/hooks/use-rooms-query";
-import { useBookingsQuery } from "@/hooks/use-bookings-query";
+import { updateRoomStatus as updateRoomStatusAction } from "@/actions/rooms";
+import { createBooking as createBookingAction } from "@/actions/bookings";
 import { StatusBadge as BookingStatusBadge } from "@/components/bookings/status";
 import type { BookingStatus } from "@/lib/types";
 import { translateBookingError } from "@/lib/functions";
@@ -83,15 +83,14 @@ export function RoomCard({ room, onStatusChange }: RoomCardProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isQuickBookingOpen, setIsQuickBookingOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
-  const { updateRoomStatus } = useRoomsQuery(1, 10, "", false);
-  const { createBooking } = useBookingsQuery(1, 10, "", null, false);
+  // createBooking is now a server action
 
   const handleConfirmStatusChange = async (
     roomId: string,
     status: Room["status"]
   ) => {
     try {
-      await updateRoomStatus(roomId, status);
+      await updateRoomStatusAction(roomId, status);
 
       toast.success("Cập nhật trạng thái thành công", {
         description: `Phòng ${room.name} đã được chuyển thành ${
@@ -137,10 +136,10 @@ export function RoomCard({ room, onStatusChange }: RoomCardProps) {
   };
 
   const handleCreateBooking = async (
-    input: Parameters<typeof createBooking>[0]
+    input: Parameters<typeof createBookingAction>[0]
   ) => {
     try {
-      await createBooking(input);
+      await createBookingAction(input);
       toast.success("Đặt phòng thành công", {
         description: `Phòng ${room.name} đã được đặt thành công.`,
       });
@@ -294,14 +293,16 @@ export function RoomCard({ room, onStatusChange }: RoomCardProps) {
           )}
       </Card>
 
-      <UpdateRoomStatusDialog
-        open={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
-        room={room}
-        onConfirm={handleConfirmStatusChange}
-      />
+      {isDialogOpen && (
+        <UpdateRoomStatusDialog
+          open={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
+          room={room}
+          onConfirm={handleConfirmStatusChange}
+        />
+      )}
       {/* Quick Booking Dialog */}
-      {room.mapStatus === ROOM_MAP_STATUS.VACANT && (
+      {room.mapStatus === ROOM_MAP_STATUS.VACANT && isQuickBookingOpen && (
         <QuickBookingDialog
           open={isQuickBookingOpen}
           onOpenChange={setIsQuickBookingOpen}
@@ -313,14 +314,15 @@ export function RoomCard({ room, onStatusChange }: RoomCardProps) {
       {/* Checkout Dialog */}
       {(room.mapStatus === ROOM_MAP_STATUS.OCCUPIED ||
         room.mapStatus === ROOM_MAP_STATUS.UPCOMING_CHECKOUT ||
-        room.mapStatus === ROOM_MAP_STATUS.OVERDUE_CHECKOUT) && (
-        <CheckoutDialog
-          open={isCheckoutOpen}
-          onOpenChange={setIsCheckoutOpen}
-          room={room}
-          onCheckout={handleCheckout}
-        />
-      )}
+        room.mapStatus === ROOM_MAP_STATUS.OVERDUE_CHECKOUT) &&
+        isCheckoutOpen && (
+          <CheckoutDialog
+            open={isCheckoutOpen}
+            onOpenChange={setIsCheckoutOpen}
+            room={room}
+            onCheckout={handleCheckout}
+          />
+        )}
     </>
   );
 }

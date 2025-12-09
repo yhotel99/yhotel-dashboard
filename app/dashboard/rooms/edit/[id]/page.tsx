@@ -6,14 +6,13 @@ import { IconArrowLeft } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
 import { RoomForm, type RoomFormValues } from "@/components/room-form";
-import { useRoomsQuery } from "@/hooks/use-rooms-query";
+import { getRoomById } from "@/actions/rooms";
 import { RoomWithImages } from "@/lib/types";
 
 export default function EditRoomPage() {
   const router = useRouter();
   const params = useParams();
   const roomId = params.id as string;
-  const { getRoomById } = useRoomsQuery(1, 10, "", false);
   const [room, setRoom] = useState<RoomWithImages | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -27,7 +26,7 @@ export default function EditRoomPage() {
     };
 
     fetchRoom();
-  }, [roomId, getRoomById]);
+  }, [roomId]);
 
   const defaultValues: Partial<RoomFormValues> | undefined = room
     ? {

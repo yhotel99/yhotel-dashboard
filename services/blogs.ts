@@ -1,9 +1,7 @@
-import { createClient } from "@/lib/supabase/client";
-import type {
-  Blog,
-  BlogInput,
-  PaginationMeta,
-} from "@/lib/types";
+"use server";
+
+import { createClient } from "@/lib/supabase/server";
+import type { Blog, BlogInput, PaginationMeta } from "@/lib/types";
 
 /**
  * Search blogs with pagination and search
@@ -25,7 +23,7 @@ export async function searchBlogs({
   pagination: PaginationMeta;
 }> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Calculate offset
     const from = (page - 1) * limit;
@@ -112,10 +110,12 @@ export async function searchBlogs({
  */
 export async function createBlog(input: BlogInput): Promise<Blog> {
   try {
-    const supabase = createClient();
-    
+    const supabase = await createClient();
+
     // Get current user for author_id
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) {
       throw new Error("Người dùng chưa đăng nhập");
     }
@@ -183,7 +183,7 @@ export async function updateBlog(
   input: Partial<BlogInput>
 ): Promise<Blog> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Update blog data
     const { data, error } = await supabase
@@ -245,7 +245,7 @@ export async function updateBlogStatus(
   status: Blog["status"]
 ): Promise<Blog> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Update only blog status
     const { data, error } = await supabase
@@ -302,7 +302,7 @@ export async function updateBlogStatus(
  */
 export async function deleteBlog(id: string): Promise<void> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { error } = await supabase
       .from("blogs")
       .update({ deleted_at: new Date().toISOString() })
@@ -325,7 +325,7 @@ export async function deleteBlog(id: string): Promise<void> {
  */
 export async function getBlogById(id: string): Promise<Blog | null> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Fetch blog data with author info
     const { data, error } = await supabase
@@ -372,4 +372,3 @@ export async function getBlogById(id: string): Promise<Blog | null> {
     return null;
   }
 }
-

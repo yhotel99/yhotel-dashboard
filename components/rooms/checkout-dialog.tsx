@@ -14,9 +14,13 @@ import { toast } from "sonner";
 import { IconEdit } from "@tabler/icons-react";
 import type { BookingRecord } from "@/lib/types";
 import { EditBookingDialog } from "@/components/bookings/edit-booking-dialog";
-import { useBookingsQuery } from "@/hooks/use-bookings-query";
+import {
+  updateBooking as updateBookingAction,
+  updateBookingStatusAction,
+} from "@/actions/bookings";
+import { BOOKING_STATUS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
-import { getBookingByIdForCheckout } from "@/services/bookings";
+import { getBookingByIdForCheckoutAction } from "@/actions/bookings";
 import {
   roomTypeLabels,
   ROOM_MAP_STATUS,
@@ -48,20 +52,18 @@ export function CheckoutDialog({
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const [isNotesDialogOpen, setIsNotesDialogOpen] = useState(false);
-  const { updateBooking, checkedOutBooking } = useBookingsQuery(
-    1,
-    10,
-    "",
-    null,
-    false
-  );
+
+  // Wrapper function for checkout
+  const checkedOutBooking = async (id: string) => {
+    await updateBookingStatusAction(id, BOOKING_STATUS.CHECKED_OUT);
+  };
 
   const fetchBookingDetails = async () => {
     if (!room.currentBooking?.id) return;
 
     try {
       setIsLoading(true);
-      const bookingData = await getBookingByIdForCheckout(
+      const bookingData = await getBookingByIdForCheckoutAction(
         room.currentBooking.id
       );
 
@@ -242,7 +244,7 @@ export function CheckoutDialog({
           bookingId={booking.id}
           booking={booking}
           onUpdate={async (id, input) => {
-            await updateBooking(id, input);
+            await updateBookingAction(id, input);
             await fetchBookingDetails();
           }}
         />

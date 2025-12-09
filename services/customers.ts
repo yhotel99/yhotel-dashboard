@@ -1,4 +1,6 @@
-import { createClient } from "@/lib/supabase/client";
+"use server";
+
+import { createClient } from "@/lib/supabase/server";
 import type { Customer, CustomerInput } from "@/lib/types";
 
 // Type for customer with bookings (internal use)
@@ -13,9 +15,7 @@ type CustomerWithBookings = Customer & {
 /**
  * Process customer data and calculate stats from bookings
  */
-function processCustomerData(
-  customer: CustomerWithBookings
-): Customer {
+function processCustomerData(customer: CustomerWithBookings): Customer {
   const bookings = customer.bookings || [];
 
   // Filter out deleted bookings
@@ -58,7 +58,7 @@ export async function searchCustomers({
   limit: number;
 }): Promise<Customer[]> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Calculate offset
     const from = (page - 1) * limit;
@@ -121,7 +121,7 @@ export async function countCustomers({
   search: string | null;
 }): Promise<number> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Build query
     let query = supabase
@@ -155,11 +155,9 @@ export async function countCustomers({
  * @param id - Customer ID
  * @returns Customer record or null
  */
-export async function getCustomerById(
-  id: string
-): Promise<Customer | null> {
+export async function getCustomerById(id: string): Promise<Customer | null> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data, error } = await supabase
       .from("customers")
       .select("*")
@@ -187,7 +185,7 @@ export async function getCustomerByPhone(
   phone: string
 ): Promise<Customer | null> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data, error } = await supabase
       .from("customers")
       .select("*")
@@ -211,11 +209,9 @@ export async function getCustomerByPhone(
  * @param input - Customer input data
  * @returns Created customer record
  */
-export async function createCustomer(
-  input: CustomerInput
-): Promise<Customer> {
+export async function createCustomer(input: CustomerInput): Promise<Customer> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data, error } = await supabase
       .from("customers")
       .insert([input])
@@ -229,9 +225,7 @@ export async function createCustomer(
     return data as Customer;
   } catch (err) {
     const errorMessage =
-      err instanceof Error
-        ? err.message
-        : "Không thể tạo khách hàng";
+      err instanceof Error ? err.message : "Không thể tạo khách hàng";
     throw new Error(errorMessage);
   }
 }
@@ -247,7 +241,7 @@ export async function updateCustomer(
   input: Partial<CustomerInput>
 ): Promise<Customer> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Update customer data
     const { data, error } = await supabase
@@ -264,9 +258,7 @@ export async function updateCustomer(
     return data as Customer;
   } catch (err) {
     const errorMessage =
-      err instanceof Error
-        ? err.message
-        : "Không thể cập nhật khách hàng";
+      err instanceof Error ? err.message : "Không thể cập nhật khách hàng";
     throw new Error(errorMessage);
   }
 }
@@ -277,7 +269,7 @@ export async function updateCustomer(
  */
 export async function deleteCustomer(id: string): Promise<void> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { error } = await supabase
       .from("customers")
       .update({ deleted_at: new Date().toISOString() })
@@ -288,10 +280,7 @@ export async function deleteCustomer(id: string): Promise<void> {
     }
   } catch (err) {
     const errorMessage =
-      err instanceof Error
-        ? err.message
-        : "Không thể xóa khách hàng";
+      err instanceof Error ? err.message : "Không thể xóa khách hàng";
     throw new Error(errorMessage);
   }
 }
-

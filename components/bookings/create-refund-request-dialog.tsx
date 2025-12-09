@@ -30,8 +30,8 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { usePaymentsByBookingIdQuery } from "@/hooks/use-payments-query";
-import { createRefundRequest } from "@/services/refund-requests";
+import { usePayments } from "@/hooks/use-payments";
+import { createRefundRequestAction } from "@/actions/refund-requests";
 import type { BookingRecord } from "@/lib/types";
 import { PAYMENT_STATUS, paymentTypeLabels } from "@/lib/constants";
 import { toast } from "sonner";
@@ -62,8 +62,11 @@ export function CreateRefundRequestDialog({
   booking,
   onSuccess,
 }: CreateRefundRequestDialogProps) {
-  const { payments: allPayments, isLoading: isLoadingPayments } =
-    usePaymentsByBookingIdQuery(open ? booking.id : null);
+  const { payments: allPayments, isLoading: isLoadingPayments } = usePayments({
+    bookingId: open ? booking.id : null,
+    page: 1,
+    limit: 100, // Get all payments for the booking
+  });
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const form = useForm<RefundRequestFormValues>({
@@ -131,7 +134,7 @@ export function CreateRefundRequestDialog({
         }
       }
 
-      await createRefundRequest({
+      await createRefundRequestAction({
         booking_id: booking.id,
         payment_id: values.payment_id,
         customer_id: booking.customer_id,

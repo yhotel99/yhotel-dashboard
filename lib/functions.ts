@@ -253,3 +253,28 @@ export function parseFormattedNumber(value: string): number {
   const parsed = parseFloat(cleaned);
   return isNaN(parsed) ? 0 : parsed;
 }
+
+/**
+ * Validate file type
+ * @param file - File to validate
+ * @returns True if file is an image
+ */
+export function isValidImageFile(file: File): boolean {
+  return file.type.startsWith("image/");
+}
+
+/**
+ * Generate unique file name
+ * @param file - File to generate name for
+ * @returns Unique file name
+ */
+export function generateFileName(file: File): string {
+  const timestamp = Date.now();
+  const randomString = Math.random().toString(36).substring(2, 9);
+  const extension = file.name.split(".").pop();
+  const sanitizedName = file.name
+    .replace(/\.[^/.]+$/, "")
+    .replace(/[^a-z0-9]/gi, "_")
+    .toLowerCase();
+  return `${sanitizedName}_${timestamp}_${randomString}.${extension}`;
+}

@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
-import { useRoomsQuery } from "@/hooks/use-rooms-query";
+import { createRoom as createRoomAction, updateRoom as updateRoomAction } from "@/actions/rooms";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -139,7 +139,6 @@ export function RoomForm({
   onCancel,
 }: RoomFormProps) {
   const router = useRouter();
-  const { createRoom, updateRoom } = useRoomsQuery(1, 10, "", false);
 
   const defaultFormValues: RoomFormValues = {
     name: "",
@@ -186,24 +185,24 @@ export function RoomForm({
 
       if (mode === "edit") {
         // Update room with images
-        const updatedRoom = await updateRoom(
+        await updateRoomAction(
           roomId!,
           roomData,
           data.thumbnail,
           data.images && data.images.length > 0 ? data.images : undefined
         );
         toast.success("Cập nhật phòng thành công!", {
-          description: `Phòng ${updatedRoom.name} đã được cập nhật thành công.`,
+          description: `Phòng ${roomData.name} đã được cập nhật thành công.`,
         });
       } else {
         // Create room with images
-        const newRoom = await createRoom(
+        await createRoomAction(
           roomData,
           data.thumbnail,
           data.images && data.images.length > 0 ? data.images : undefined
         );
         toast.success("Tạo phòng thành công!", {
-          description: `Phòng ${newRoom.name} đã được tạo thành công.`,
+          description: `Phòng ${roomData.name} đã được tạo thành công.`,
         });
       }
 

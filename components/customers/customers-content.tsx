@@ -5,7 +5,6 @@ import { IconPlus } from "@tabler/icons-react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
-// import { type Customer } from "@/hooks/use-customers";
 import { useDebounce } from "@/hooks/use-debounce";
 import { createColumns } from "@/components/customers/columns";
 import { CreateCustomerDialog } from "@/components/customers/create-customer-dialog";
@@ -13,7 +12,12 @@ import { EditCustomerDialog } from "@/components/customers/edit-customer-dialog"
 import { DeleteCustomerDialog } from "@/components/customers/delete-customer-dialog";
 import { CustomerDetailDialog } from "@/components/customers/customer-detail-dialog";
 import { toast } from "sonner";
-import { useCustomersQuery } from "@/hooks/use-customers-query";
+import { useCustomers } from "@/hooks/use-customers";
+import {
+  createCustomerAction,
+  updateCustomerAction,
+  deleteCustomerAction,
+} from "@/actions/customers";
 import { type Customer } from "@/lib/types";
 
 export function CustomersContent() {
@@ -88,15 +92,11 @@ export function CustomersContent() {
     }
   }, [debouncedSearch, search, limit, updateSearchParams]);
 
-  const {
-    customers,
-    isLoading,
-    pagination,
-    createCustomer,
-    updateCustomer,
-    deleteCustomer,
-    refetch,
-  } = useCustomersQuery(page, limit, search);
+  const { customers, isLoading, pagination, mutate } = useCustomers({
+    search,
+    page,
+    limit,
+  });
 
   const handleEditCustomer = (customer: Customer) => {
     setEditingCustomer(customer);
@@ -114,13 +114,14 @@ export function CustomersContent() {
 
   const handleUpdateCustomer = async (
     id: string,
-    input: Parameters<typeof updateCustomer>[1]
+    input: { full_name?: string; email?: string; phone?: string | null }
   ) => {
     try {
-      await updateCustomer(id, input);
+      await updateCustomerAction(id, input);
       toast.success("Cập nhật khách hàng thành công!", {
         description: `Khách hàng ${input.full_name} đã được cập nhật thành công.`,
       });
+      await mutate();
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Không thể cập nhật khách hàng";
@@ -135,12 +136,13 @@ export function CustomersContent() {
     if (!customerToDelete) return;
 
     try {
-      await deleteCustomer(customerToDelete.id);
+      await deleteCustomerAction(customerToDelete.id);
       toast.success("Khóa khách hàng thành công!", {
         description: `Khách hàng ${customerToDelete.full_name} đã được khóa thành công.`,
       });
       setOpenDeleteDialog(false);
       setCustomerToDelete(null);
+      await mutate();
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Không thể khóa khách hàng";
@@ -151,14 +153,17 @@ export function CustomersContent() {
     }
   };
 
-  const handleCreateCustomer = async (
-    input: Parameters<typeof createCustomer>[0]
-  ) => {
+  const handleCreateCustomer = async (input: {
+    full_name: string;
+    email: string;
+    phone?: string | null;
+  }) => {
     try {
-      await createCustomer(input);
+      await createCustomerAction(input);
       toast.success("Tạo khách hàng thành công!", {
         description: `Khách hàng ${input.full_name} đã được tạo thành công.`,
       });
+      await mutate();
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Không thể tạo khách hàng";
@@ -196,7 +201,9 @@ export function CustomersContent() {
           emptyMessage="Không tìm thấy khách hàng nào."
           entityName="khách hàng"
           getRowId={(row) => row.id}
-          fetchData={refetch}
+          fetchData={async () => {
+            await mutate();
+          }}
           isLoading={isLoading}
           serverPagination={pagination}
           onPageChange={(newPage) => updateSearchParams(newPage, limit, search)}
@@ -206,41 +213,49 @@ export function CustomersContent() {
         />
       </div>
 
-      <CreateCustomerDialog
-        open={openCreateDialog}
-        onOpenChange={setOpenCreateDialog}
-        onCreate={handleCreateCustomer}
-      />
+      {openCreateDialog && (
+        <CreateCustomerDialog
+          open={openCreateDialog}
+          onOpenChange={setOpenCreateDialog}
+          onCreate={handleCreateCustomer}
+        />
+      )}
 
-      <EditCustomerDialog
-        open={openEditDialog}
-        onOpenChange={(open) => {
-          setOpenEditDialog(open);
-          if (!open) {
-            setEditingCustomer(null);
-          }
-        }}
-        customer={editingCustomer}
-        onUpdate={handleUpdateCustomer}
-      />
+      {openEditDialog && (
+        <EditCustomerDialog
+          open={openEditDialog}
+          onOpenChange={(open) => {
+            setOpenEditDialog(open);
+            if (!open) {
+              setEditingCustomer(null);
+            }
+          }}
+          customer={editingCustomer}
+          onUpdate={handleUpdateCustomer}
+        />
+      )}
 
-      <CustomerDetailDialog
-        open={openDetailDialog}
-        onOpenChange={(open) => {
-          setOpenDetailDialog(open);
-          if (!open) {
-            setViewingCustomer(null);
-          }
-        }}
-        customer={viewingCustomer}
-      />
+      {openDetailDialog && (
+        <CustomerDetailDialog
+          open={openDetailDialog}
+          onOpenChange={(open) => {
+            setOpenDetailDialog(open);
+            if (!open) {
+              setViewingCustomer(null);
+            }
+          }}
+          customer={viewingCustomer}
+        />
+      )}
 
-      <DeleteCustomerDialog
-        customer={customerToDelete}
-        open={openDeleteDialog}
-        onOpenChange={setOpenDeleteDialog}
-        onConfirm={handleConfirmDelete}
-      />
+      {openDeleteDialog && (
+        <DeleteCustomerDialog
+          customer={customerToDelete}
+          open={openDeleteDialog}
+          onOpenChange={setOpenDeleteDialog}
+          onConfirm={handleConfirmDelete}
+        />
+      )}
     </div>
   );
 }

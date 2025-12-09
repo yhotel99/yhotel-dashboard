@@ -9,7 +9,7 @@ import {
 } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
-import { getProfileById } from "@/services/profiles";
+import { getProfileByIdAction } from "@/actions/profiles";
 import { USER_STATUS } from "@/lib/constants";
 import { Profile } from "@/lib/types";
 
@@ -53,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         // Fetch and set profile
         try {
-          const profileData = await getProfileById(session.user.id);
+          const profileData = await getProfileByIdAction(session.user.id);
           setProfile(profileData);
         } catch (error) {
           console.error("Error fetching profile:", error);
@@ -81,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             // Fetch and set profile
             try {
-              const profileData = await getProfileById(user.id);
+              const profileData = await getProfileByIdAction(user.id);
               setProfile(profileData);
             } catch (error) {
               console.error("Error fetching profile:", error);
@@ -130,7 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       // Check profile status - only allow active users to login
-      const profile = await getProfileById(data.user.id);
+      const profile = await getProfileByIdAction(data.user.id);
 
       if (!profile) {
         // Profile not found, sign out and return error

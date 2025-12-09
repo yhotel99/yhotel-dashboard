@@ -6,8 +6,19 @@ import { IconPlus, IconSearch } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
-import { useBookingsQuery } from "@/hooks/use-bookings-query";
-import { usePaymentsQuery } from "@/hooks/use-payments-query";
+import { useBookings } from "@/hooks/use-bookings";
+import {
+  createBooking as createBookingAction,
+  updateBooking as updateBookingAction,
+  updateBookingStatusAction,
+  confirmBookingAction,
+  cancelBookingAction,
+  transferBookingAction,
+} from "@/actions/bookings";
+import {
+  markAdvancePaymentAsPaidAction,
+  checkAdvancePaymentStatusAction,
+} from "@/actions/payments";
 import type {
   BookingStatus,
   BookingInput,
@@ -85,24 +96,13 @@ export function BookingsContent() {
     }
   }, [debouncedSearch, search, limit, updateSearchParams]);
 
-  const {
-    bookings,
-    isLoading,
-    pagination,
-    updateBookingStatus,
-    pendingBooking,
-    confirmedBooking,
-    checkedInBooking,
-    checkedOutBooking,
-    cancelledBooking,
-    createBooking,
-    updateBooking,
-    transferBooking,
-    refetch,
-  } = useBookingsQuery(page, limit, search);
+  const { bookings, isLoading, pagination, mutate } = useBookings({
+    search,
+    page,
+    limit,
+  });
 
-  const { checkAdvancePaymentStatus, markAdvancePaymentAsPaid } =
-    usePaymentsQuery(1, 10, "", false);
+  // Use checkAdvancePaymentStatusAction and markAdvancePaymentAsPaidAction from actions
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = React.useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
@@ -119,9 +119,9 @@ export function BookingsContent() {
   const handleCreate = React.useCallback(
     async (input: BookingInput) => {
       try {
-        await createBooking(input);
+        await createBookingAction(input);
         toast.success("Đã tạo booking thành công");
-        await refetch();
+        await mutate();
       } catch (err) {
         const rawMessage =
           err instanceof Error ? err.message : "Không thể tạo booking";
@@ -132,7 +132,7 @@ export function BookingsContent() {
         });
       }
     },
-    [createBooking, refetch]
+    [mutate]
   );
 
   const handleEdit = React.useCallback(async (booking: BookingRecord) => {
@@ -144,9 +144,9 @@ export function BookingsContent() {
   const handleTransfer = React.useCallback(
     async (id: string, input: TransferBookingInput) => {
       try {
-        await transferBooking(id, input);
+        await transferBookingAction(id, input);
         toast.success("Đã chuyển phòng thành công");
-        await refetch();
+        await mutate();
       } catch (error) {
         console.error(error);
         toast.error("Không thể chuyển phòng", {
@@ -154,43 +154,43 @@ export function BookingsContent() {
         });
       }
     },
-    [transferBooking, refetch]
+    [mutate]
   );
 
   const handleCancelBooking = React.useCallback(
     async (id: string) => {
       try {
-        await cancelledBooking(id);
+        await cancelBookingAction(id);
         toast.success("Đã hủy booking thành công");
-        // State is already updated by cancelledBooking, no need to fetch
+        await mutate();
       } catch {
         toast.error("Không thể hủy booking");
       }
     },
-    [cancelledBooking]
+    [mutate]
   );
 
   const handleUpdate = React.useCallback(
     async (id: string, input: UpdateBookingInput) => {
-      await updateBooking(id, input);
+      await updateBookingAction(id, input);
       toast.success("Đã cập nhật booking thành công");
-      await refetch();
+      await mutate();
     },
-    [updateBooking, refetch]
+    [mutate]
   );
 
   const handleUpdateStatus = React.useCallback(
     async (id: string, status: BookingStatus) => {
-      await updateBookingStatus(id, status);
-      // State is already updated by updateBookingStatus, no need to fetch
+      await updateBookingStatusAction(id, status);
+      await mutate();
     },
-    [updateBookingStatus]
+    [mutate]
   );
 
   const handleMarkAdvancePayment = React.useCallback(
     async (bookingId: string) => {
       try {
-        await markAdvancePaymentAsPaid(bookingId);
+        await markAdvancePaymentAsPaidAction(bookingId);
         toast.success("Đã đánh dấu đặt cọc thành công");
         // Note: Payment status update doesn't affect booking list, no need to fetch
       } catch (error) {
@@ -198,7 +198,48 @@ export function BookingsContent() {
         throw error;
       }
     },
-    [markAdvancePaymentAsPaid]
+    []
+  );
+
+  // Status change handlers
+  const pendingBooking = React.useCallback(
+    async (id: string) => {
+      await updateBookingStatusAction(id, "pending");
+      await mutate();
+    },
+    [mutate]
+  );
+
+  const confirmedBooking = React.useCallback(
+    async (id: string) => {
+      await confirmBookingAction(id);
+      await mutate();
+    },
+    [mutate]
+  );
+
+  const checkedInBooking = React.useCallback(
+    async (id: string) => {
+      await updateBookingStatusAction(id, "checked_in");
+      await mutate();
+    },
+    [mutate]
+  );
+
+  const checkedOutBooking = React.useCallback(
+    async (id: string) => {
+      await updateBookingStatusAction(id, "checked_out");
+      await mutate();
+    },
+    [mutate]
+  );
+
+  const cancelledBooking = React.useCallback(
+    async (id: string) => {
+      await cancelBookingAction(id);
+      await mutate();
+    },
+    [mutate]
   );
 
   const columns = React.useMemo(
@@ -208,7 +249,7 @@ export function BookingsContent() {
         onTransfer: handleTransfer,
         onMarkAdvancePayment: handleMarkAdvancePayment,
         onCancelBooking: handleCancelBooking,
-        checkAdvancePaymentStatus,
+        checkAdvancePaymentStatus: checkAdvancePaymentStatusAction,
         pendingBooking,
         confirmedBooking,
         checkedInBooking,
@@ -221,7 +262,6 @@ export function BookingsContent() {
       handleTransfer,
       handleMarkAdvancePayment,
       handleCancelBooking,
-      checkAdvancePaymentStatus,
       pendingBooking,
       confirmedBooking,
       checkedInBooking,
@@ -264,7 +304,9 @@ export function BookingsContent() {
           emptyMessage="Không tìm thấy kết quả."
           entityName="booking"
           getRowId={(row) => row.id}
-          fetchData={() => refetch()}
+          fetchData={async () => {
+            await mutate();
+          }}
           isLoading={isLoading}
           serverPagination={pagination}
           onPageChange={(newPage) => updateSearchParams(newPage, limit, search)}

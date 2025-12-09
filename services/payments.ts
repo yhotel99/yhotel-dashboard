@@ -1,4 +1,6 @@
-import { createClient } from "@/lib/supabase/client";
+"use server";
+
+import { createClient } from "@/lib/supabase/server";
 import type {
   Payment,
   PaymentWithBooking,
@@ -29,7 +31,7 @@ export async function searchPayments({
   pagination: PaginationMeta;
 }> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Calculate offset
     const from = (page - 1) * limit;
@@ -117,7 +119,7 @@ export async function createPayment(input: {
   payment_status?: PaymentStatus;
 }): Promise<Payment> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data, error } = await supabase
       .from("payments")
       .insert({
@@ -154,7 +156,7 @@ export async function updatePaymentStatus(
   paidAt?: string | null
 ): Promise<void> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const updateData: {
       payment_status: string;
       paid_at?: string | null;
@@ -197,7 +199,7 @@ export async function updatePaymentStatusByBookingId(
   paidAt?: string | null
 ): Promise<void> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const updateData: {
       payment_status: string;
       paid_at?: string | null;
@@ -239,7 +241,7 @@ export async function checkAdvancePaymentStatus(bookingId: string): Promise<{
   paymentId: string | null;
 }> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data, error } = await supabase
       .from("payments")
       .select("id, payment_status")
@@ -281,7 +283,7 @@ export async function markAdvancePaymentAsPaid(
   bookingId: string
 ): Promise<void> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const now = new Date().toISOString();
     const { error } = await supabase
       .from("payments")
@@ -311,7 +313,7 @@ export async function getPaymentsByBookingId(
   bookingId: string
 ): Promise<PaymentWithBooking[]> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data, error } = await supabase
       .from("payments")
       .select("*")

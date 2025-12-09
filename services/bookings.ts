@@ -1,4 +1,6 @@
-import { createClient } from "@/lib/supabase/client";
+"use server";
+
+import { createClient } from "@/lib/supabase/server";
 import type {
   BookingRecord,
   BookingInput,
@@ -31,7 +33,7 @@ export async function searchBookings({
   customerId: string | null;
 }): Promise<BookingRecord[]> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data, error } = await supabase.rpc("search_bookings", {
       p_search: search,
       p_page: page,
@@ -63,7 +65,7 @@ export async function countBookings({
   customerId: string | null;
 }): Promise<number> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data, error } = await supabase.rpc("count_bookings", {
       p_search: search,
       p_customer_id: customerId,
@@ -93,7 +95,7 @@ export async function findConflictingBooking(
   checkOut: string
 ): Promise<BookingRecord | null> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data, error } = await supabase
       .from("bookings")
       .select("*")
@@ -129,7 +131,7 @@ export async function createBookingSecure(
   input: BookingInput
 ): Promise<string> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data: bookingId, error } = await supabase.rpc(
       "create_booking_secure",
       {
@@ -169,7 +171,7 @@ export async function getBookingByIdWithRelations(
   bookingId: string
 ): Promise<BookingRecord | null> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data, error } = await supabase
       .from("bookings")
       .select(
@@ -208,7 +210,7 @@ export async function getBookingByIdForCheckout(
   bookingId: string
 ): Promise<BookingRecord | null> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data, error } = await supabase
       .from("bookings")
       .select(
@@ -249,7 +251,7 @@ export async function getBookingById(
   bookingId: string
 ): Promise<BookingRecord | null> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data, error } = await supabase
       .from("bookings")
       .select("*")
@@ -277,7 +279,7 @@ export async function getBookingByIdWithDetails(
   bookingId: string
 ): Promise<BookingRecord | null> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data, error } = await supabase
       .from("bookings")
       .select(
@@ -315,7 +317,7 @@ export async function getBookingsByCustomerId(
   customerId: string
 ): Promise<BookingRecord[]> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data, error } = await supabase
       .from("bookings")
       .select(
@@ -357,7 +359,7 @@ export async function updateBooking(
   input: Partial<BookingInput>
 ): Promise<BookingRecord> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data, error } = await supabase
       .from("bookings")
       .update(input)
@@ -387,7 +389,7 @@ export async function updateBookingWithRelations(
   input: UpdateBookingInput
 ): Promise<BookingRecord> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data, error } = await supabase
       .from("bookings")
       .update(input)
@@ -427,7 +429,7 @@ export async function confirmBooking(
   bookingId: string
 ): Promise<BookingRecord> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Update booking status
     const updatedBooking = await updateBookingStatus(
@@ -464,11 +466,9 @@ export async function confirmBooking(
  * @param bookingId - Booking ID
  * @returns Updated booking record
  */
-export async function cancelBooking(
-  bookingId: string
-): Promise<BookingRecord> {
+export async function cancelBooking(bookingId: string): Promise<BookingRecord> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Update booking status
     const updatedBooking = await updateBookingStatus(
@@ -529,7 +529,7 @@ export async function createBookingWithPayments(
   input: BookingInput
 ): Promise<BookingRecord> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Create booking using secure RPC function
     const bookingId = await createBookingSecure(input);
@@ -601,7 +601,7 @@ export async function transferBooking(
   input: TransferBookingInput
 ): Promise<BookingRecord> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Step 1: Get current booking to check status
     const { data: currentBooking, error: fetchError } = await supabase
@@ -712,15 +712,13 @@ export async function transferBooking(
     } else {
       // Payment doesn't exist - create if needed
       if (finalAdvancePayment > 0) {
-        const { error: createError } = await supabase
-          .from("payments")
-          .insert({
-            booking_id: bookingId,
-            amount: finalAdvancePayment,
-            payment_type: PAYMENT_TYPE.ADVANCE_PAYMENT,
-            payment_method: PAYMENT_METHOD.PAY_AT_HOTEL,
-            payment_status: PAYMENT_STATUS.PENDING,
-          });
+        const { error: createError } = await supabase.from("payments").insert({
+          booking_id: bookingId,
+          amount: finalAdvancePayment,
+          payment_type: PAYMENT_TYPE.ADVANCE_PAYMENT,
+          payment_method: PAYMENT_METHOD.PAY_AT_HOTEL,
+          payment_status: PAYMENT_STATUS.PENDING,
+        });
 
         if (createError) {
           throw new Error(
@@ -756,28 +754,22 @@ export async function transferBooking(
           .eq("id", existingRoomCharge.id);
 
         if (deleteError) {
-          throw new Error(
-            `Không thể xóa room charge: ${deleteError.message}`
-          );
+          throw new Error(`Không thể xóa room charge: ${deleteError.message}`);
         }
       }
     } else {
       // Payment doesn't exist - create if needed
       if (finalRoomChargeAmount > 0) {
-        const { error: createError } = await supabase
-          .from("payments")
-          .insert({
-            booking_id: bookingId,
-            amount: finalRoomChargeAmount,
-            payment_type: PAYMENT_TYPE.ROOM_CHARGE,
-            payment_method: PAYMENT_METHOD.PAY_AT_HOTEL,
-            payment_status: PAYMENT_STATUS.PENDING,
-          });
+        const { error: createError } = await supabase.from("payments").insert({
+          booking_id: bookingId,
+          amount: finalRoomChargeAmount,
+          payment_type: PAYMENT_TYPE.ROOM_CHARGE,
+          payment_method: PAYMENT_METHOD.PAY_AT_HOTEL,
+          payment_status: PAYMENT_STATUS.PENDING,
+        });
 
         if (createError) {
-          throw new Error(
-            `Không thể tạo room charge: ${createError.message}`
-          );
+          throw new Error(`Không thể tạo room charge: ${createError.message}`);
         }
       }
     }
@@ -800,7 +792,7 @@ export async function getBookingStatusAndAmount(bookingId: string): Promise<{
   total_amount: number;
 } | null> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data, error } = await supabase
       .from("bookings")
       .select("status, total_amount")
@@ -830,7 +822,7 @@ export async function getBookingTotalAmount(
   bookingId: string
 ): Promise<number | null> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data, error } = await supabase
       .from("bookings")
       .select("total_amount")
@@ -858,7 +850,7 @@ export async function getBookingAmounts(bookingId: string): Promise<{
   advance_payment: number;
 } | null> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data, error } = await supabase
       .from("bookings")
       .select("total_amount, advance_payment")
@@ -895,7 +887,7 @@ export async function updateBookingStatus(
   }
 ): Promise<BookingRecord> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const updateData: Record<string, unknown> = { status };
 
     if (additionalData?.actual_check_in !== undefined) {
@@ -929,7 +921,7 @@ export async function updateBookingStatus(
  */
 export async function deleteBooking(bookingId: string): Promise<void> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { error } = await supabase
       .from("bookings")
       .update({ deleted_at: new Date().toISOString() })

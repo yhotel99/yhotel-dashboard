@@ -1,93 +1,57 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import {
-  searchGalleryImages,
-  addGalleryImages,
-  deleteGalleryImage,
-} from "@/services/gallery";
-
+import { useCallback } from "react";
+import useSWR from "swr";
+import { fetcher } from "@/lib/fetcher";
 import type { GalleryImage, PaginationMeta } from "@/lib/types";
 
-// Hook for managing gallery images
+// Type for API response
+type GalleryResponse = {
+  data: GalleryImage[];
+  pagination: PaginationMeta;
+};
+
+/**
+ * Hook for fetching gallery images with SWR
+ * @param page - Page number
+ * @param limit - Items per page
+ */
 export function useGallery(page: number = 1, limit: number = 20) {
-  const [images, setImages] = useState<GalleryImage[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [pagination, setPagination] = useState<PaginationMeta>({
+  // Build query parameters
+  const params = new URLSearchParams({
+    page: page.toString(),
+    limit: limit.toString(),
+  });
+
+  // Use SWR to fetch gallery images
+  const { data, error, isLoading, mutate } = useSWR<GalleryResponse>(
+    `/api/gallery?${params.toString()}`,
+    fetcher
+  );
+
+  const images = data?.data || [];
+  const pagination: PaginationMeta = data?.pagination || {
     total: 0,
     page: 1,
     limit: 20,
     totalPages: 0,
-  });
+  };
 
-  // Fetch images with pagination
-  const fetchImages = useCallback(
-    async (pageNum: number = page, limitNum: number = limit) => {
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        const { data, pagination: paginationData } = await searchGalleryImages({
-          page: pageNum,
-          limit: limitNum,
-        });
-
-        setImages(data);
-        setPagination(paginationData);
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error
-            ? err.message
-            : "Không thể tải danh sách hình ảnh";
-        setError(errorMessage);
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [page, limit]
-  );
-
-  // Load images on mount or when page/limit changes
-  useEffect(() => {
-    fetchImages(page, limit);
-  }, [page, limit, fetchImages]);
-
-  // Add images
-  const addImages = useCallback(
-    async (urls: string[]) => {
-      try {
-        await addGalleryImages(urls);
-        // Refetch to update pagination and show new images
-        await fetchImages(1, limit);
-      } catch (err) {
-        throw err;
-      }
-    },
-    [fetchImages, limit]
-  );
-
-  // Delete image
-  const deleteImage = useCallback(
-    async (id: string) => {
-      try {
-        await deleteGalleryImage(id);
-        // Refetch current page
-        await fetchImages(page, limit);
-      } catch (err) {
-        throw err;
-      }
-    },
-    [fetchImages, page, limit]
-  );
+  // Refetch images
+  const refetch = useCallback(async () => {
+    await mutate();
+  }, [mutate]);
 
   return {
     images,
     isLoading,
-    error,
+    error: error
+      ? error instanceof Error
+        ? error.message
+        : "Không thể tải danh sách hình ảnh"
+      : null,
     pagination,
-    fetchImages,
-    addImages,
-    deleteImage,
+    refetch,
+    mutate, // dùng để refresh sau khi CRUD
   };
 }

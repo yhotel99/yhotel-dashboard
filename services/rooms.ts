@@ -1,4 +1,6 @@
-import { createClient } from "@/lib/supabase/client";
+"use server";
+
+import { createClient } from "@/lib/supabase/server";
 import type {
   Room,
   RoomInput,
@@ -32,7 +34,7 @@ export async function getAvailableRooms(
   checkOut: string
 ): Promise<Room[]> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     // Use type assertion to bypass Supabase type checking
     const { data, error } = (await supabase.rpc("get_available_rooms", {
       p_check_in: checkIn,
@@ -89,7 +91,7 @@ export async function searchRooms({
   pagination: PaginationMeta;
 }> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Calculate offset
     const from = (page - 1) * limit;
@@ -198,7 +200,7 @@ export async function createRoom(
   imageList?: ImageValue[]
 ): Promise<Room> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data, error } = await supabase
       .from("rooms")
       .insert([input])
@@ -282,7 +284,7 @@ export async function updateRoom(
   imageList?: ImageValue[]
 ): Promise<Room> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Update room data
     const { data, error } = await supabase
@@ -379,7 +381,7 @@ export async function updateRoomStatus(
   status: Room["status"]
 ): Promise<Room> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Update only room status
     const { data, error } = await supabase
@@ -401,7 +403,9 @@ export async function updateRoomStatus(
     return updatedRoom;
   } catch (err) {
     const errorMessage =
-      err instanceof Error ? err.message : "Không thể cập nhật trạng thái phòng";
+      err instanceof Error
+        ? err.message
+        : "Không thể cập nhật trạng thái phòng";
     throw new Error(errorMessage);
   }
 }
@@ -412,7 +416,7 @@ export async function updateRoomStatus(
  */
 export async function deleteRoom(id: string): Promise<void> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { error } = await supabase
       .from("rooms")
       .update({ deleted_at: new Date().toISOString() })
@@ -433,11 +437,9 @@ export async function deleteRoom(id: string): Promise<void> {
  * @param id - Room ID
  * @returns Room with images or null
  */
-export async function getRoomById(
-  id: string
-): Promise<RoomWithImages | null> {
+export async function getRoomById(id: string): Promise<RoomWithImages | null> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Fetch room data with nested room_images and images
     const { data, error } = await supabase

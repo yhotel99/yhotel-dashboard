@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import type { BookingRecord, UpdateBookingInput } from "@/lib/types";
-import { useRoomsQuery } from "@/hooks/use-rooms-query";
+import { useRooms } from "@/hooks/use-rooms";
 import {
   formatCurrency,
   formatDateOnly,
@@ -46,7 +46,7 @@ export function EditBookingDialog({
   booking: BookingRecord | null;
   onUpdate: (id: string, input: UpdateBookingInput) => Promise<void>;
 }) {
-  const { rooms, refetch } = useRoomsQuery(1, 100, "", !open);
+  const { rooms, mutate: refetch } = useRooms({ page: 1, limit: 100, search: "" });
 
   // Fetch rooms when dialog opens
   useEffect(() => {

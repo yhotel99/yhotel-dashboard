@@ -1,185 +1,65 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useCallback } from "react";
+import useSWR from "swr";
+import { fetcher } from "@/lib/fetcher";
 import type { Profile, PaginationMeta } from "@/lib/types";
-import {
-  searchProfiles,
-  countProfiles,
-  getProfileById as getProfileByIdService,
-  updateProfile as updateProfileService,
-  deleteProfile as deleteProfileService,
-} from "@/services/profiles";
 
-// Hook for managing profiles
+// Type for API response
+type ProfilesResponse = {
+  data: Profile[];
+  pagination: PaginationMeta;
+};
+
+/**
+ * Hook for fetching profiles with SWR
+ * @param page - Page number
+ * @param limit - Items per page
+ * @param search - Search term
+ */
 export function useProfiles(
   page: number = 1,
   limit: number = 10,
   search: string = ""
 ) {
-  const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [pagination, setPagination] = useState<PaginationMeta>({
+  // Build query parameters
+  const params = new URLSearchParams({
+    page: page.toString(),
+    limit: limit.toString(),
+  });
+  if (search && search.trim() !== "") {
+    params.append("search", search.trim());
+  }
+
+  // Use SWR to fetch profiles
+  const { data, error, isLoading, mutate } = useSWR<ProfilesResponse>(
+    `/api/profiles?${params.toString()}`,
+    fetcher
+  );
+
+  const profiles = data?.data || [];
+  const pagination: PaginationMeta = data?.pagination || {
     total: 0,
     page: 1,
     limit: 10,
     totalPages: 0,
-  });
+  };
 
-  // Fetch profiles with pagination and search
-  const fetchProfiles = useCallback(
-    async (
-      pageNum: number = page,
-      limitNum: number = limit,
-      searchTerm: string = search
-    ) => {
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        const trimmedSearch = searchTerm?.trim() || null;
-
-        // Call both service functions in parallel for better performance
-        const [profilesData, total] = await Promise.all([
-          searchProfiles({
-            search: trimmedSearch,
-            page: pageNum,
-            limit: limitNum,
-          }),
-          countProfiles({ search: trimmedSearch }),
-        ]);
-
-        const totalPages = Math.ceil(total / limitNum);
-
-        setProfiles(profilesData);
-        setPagination({
-          total,
-          page: pageNum,
-          limit: limitNum,
-          totalPages,
-        });
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error
-            ? err.message
-            : "Không thể tải danh sách người dùng";
-        setError(errorMessage);
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    [page, limit, search]
-  );
-
-  // Load profiles on mount or when page/limit/search changes
-  useEffect(() => {
-    fetchProfiles(page, limit, search);
-  }, [page, limit, search, fetchProfiles]);
-
-  // Create user (via API route to avoid session change)
-  const createProfile = useCallback(
-    async (
-      input: Omit<
-        Profile,
-        "id" | "created_at" | "updated_at" | "deleted_at"
-      > & {
-        password: string;
-      }
-    ) => {
-      try {
-        // Call API route to create user (server-side with admin client)
-        const response = await fetch("/api/users/create", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: input.email,
-            password: input.password,
-            full_name: input.full_name,
-            phone: input.phone || null,
-            role: input.role,
-            status: input.status,
-          }),
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error || "Không thể tạo người dùng");
-        }
-
-        // Refetch current page to update total count
-        // Wait a bit for trigger to create profile
-        // await new Promise((resolve) => setTimeout(resolve, 500));
-        await fetchProfiles(page, limit, search);
-
-        return data.user;
-      } catch (err) {
-        throw err;
-      }
-    },
-    [fetchProfiles, page, limit, search]
-  );
-
-  // Update profile
-  const updateProfile = useCallback(
-    async (
-      id: string,
-      input: Partial<
-        Omit<Profile, "id" | "created_at" | "updated_at" | "deleted_at">
-      >
-    ) => {
-      try {
-        const updatedProfile = await updateProfileService(id, input);
-
-        // Refetch current page to ensure consistency
-        await fetchProfiles(page, limit, search);
-        return updatedProfile;
-      } catch (err) {
-        throw err;
-      }
-    },
-    [fetchProfiles, page, limit, search]
-  );
-
-  // Delete profile (soft delete)
-  const deleteProfile = useCallback(
-    async (id: string) => {
-      try {
-        await deleteProfileService(id);
-
-        // Refetch current page to ensure consistency
-        await fetchProfiles(page, limit, search);
-      } catch (err) {
-        throw err;
-      }
-    },
-    [fetchProfiles, page, limit, search]
-  );
-
-  // Get profile by ID
-  const getProfileById = useCallback(
-    async (id: string): Promise<Profile | null> => {
-      try {
-        return await getProfileByIdService(id);
-      } catch (err) {
-        console.error("Error getting profile:", err);
-        return null;
-      }
-    },
-    []
-  );
+  // Refetch profiles
+  const refetch = useCallback(async () => {
+    await mutate();
+  }, [mutate]);
 
   return {
     profiles,
     isLoading,
-    error,
+    error: error
+      ? error instanceof Error
+        ? error.message
+        : "Không thể tải danh sách người dùng"
+      : null,
     pagination,
-    fetchProfiles,
-    createProfile,
-    updateProfile,
-    deleteProfile,
-    getProfileById,
+    refetch,
+    mutate, // dùng để refresh sau khi CRUD
   };
 }

@@ -19,6 +19,7 @@ import { getDateISO } from "@/lib/functions";
 import { calculateNightsValue } from "@/lib/functions";
 import { useCustomers } from "@/hooks/use-customers";
 import { useDebounce } from "@/hooks/use-debounce";
+import { createCustomerAction } from "@/actions/customers";
 import { CreateCustomerDialog } from "@/components/customers/create-customer-dialog";
 
 type QuickBookingFormState = {
@@ -63,13 +64,14 @@ export function QuickBookingDialog({
 
   const debouncedSearch = useDebounce(customerSearch, 300);
   // Use separate hook for search results
-  const { customers: searchCustomers, createCustomer } = useCustomers(
-    1,
-    10,
-    debouncedSearch.trim().length >= SEARCH_CUSTOMER_MIN_LENGTH
-      ? debouncedSearch
-      : ""
-  );
+  const { customers: searchCustomers } = useCustomers({
+    page: 1,
+    limit: 10,
+    search:
+      debouncedSearch.trim().length >= SEARCH_CUSTOMER_MIN_LENGTH
+        ? debouncedSearch
+        : "",
+  });
 
   // Calculate search results and visibility
   const searchLength = customerSearch.trim().length;
@@ -335,7 +337,7 @@ export function QuickBookingDialog({
           onOpenChange={setIsCreateCustomerDialogOpen}
           onCreate={async (input) => {
             try {
-              const newCustomer = await createCustomer(input);
+              const newCustomer = await createCustomerAction(input);
               handleCreateCustomerSuccess(newCustomer);
             } catch (err) {
               // Error is handled by CreateCustomerDialog

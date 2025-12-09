@@ -9,7 +9,8 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { createColumns } from "@/components/blogs/columns";
 import { DeleteBlogDialog } from "@/components/blogs/delete-blog-dialog";
 import { toast } from "sonner";
-import { useBlogsQuery } from "@/hooks/use-blogs-query";
+import { useBlogs } from "@/hooks/use-blogs";
+import { updateBlogStatus as updateBlogStatusAction, deleteBlog as deleteBlogAction } from "@/actions/blogs";
 import type { Blog } from "@/lib/types";
 
 export function BlogsContent() {
@@ -78,10 +79,8 @@ export function BlogsContent() {
     blogs,
     isLoading,
     pagination,
-    updateBlogStatus,
-    deleteBlog,
-    refetch,
-  } = useBlogsQuery(page, limit, search);
+    mutate,
+  } = useBlogs({ search, page, limit });
 
   const handleEditBlog = React.useCallback(
     (blog: Blog) => {
@@ -98,12 +97,14 @@ export function BlogsContent() {
     if (!blogToDelete) return;
 
     try {
-      await deleteBlog(blogToDelete.id);
+      await deleteBlogAction(blogToDelete.id);
       toast.success("Xóa blog thành công!", {
         description: `Blog "${blogToDelete.title}" đã được xóa thành công.`,
       });
       setOpenDeleteDialog(false);
       setBlogToDelete(null);
+      // Refresh SWR cache
+      await mutate();
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Không thể xóa blog";
@@ -117,10 +118,12 @@ export function BlogsContent() {
   const handleInlineStatusChange = React.useCallback(
     async (blogId: string, newStatus: Blog["status"]) => {
       try {
-        await updateBlogStatus(blogId, newStatus);
+        await updateBlogStatusAction(blogId, newStatus);
         toast.success("Cập nhật trạng thái thành công!", {
           description: `Trạng thái blog đã được cập nhật thành công.`,
         });
+        // Refresh SWR cache
+        await mutate();
       } catch (err) {
         const errorMessage =
           err instanceof Error
@@ -132,7 +135,7 @@ export function BlogsContent() {
         throw err;
       }
     },
-    [updateBlogStatus]
+    [mutate]
   );
 
   // Create columns with handlers
@@ -172,7 +175,9 @@ export function BlogsContent() {
           emptyMessage="Không tìm thấy blog nào."
           entityName="blog"
           getRowId={(row) => row.id}
-          fetchData={refetch}
+          fetchData={async () => {
+            await mutate();
+          }}
           isLoading={isLoading}
           serverPagination={pagination}
           onPageChange={(newPage) => updateSearchParams(newPage, limit, search)}
@@ -182,12 +187,14 @@ export function BlogsContent() {
         />
       </div>
 
-      <DeleteBlogDialog
-        blog={blogToDelete}
-        open={openDeleteDialog}
-        onOpenChange={setOpenDeleteDialog}
-        onConfirm={handleConfirmDelete}
-      />
+      {blogToDelete && (
+        <DeleteBlogDialog
+          blog={blogToDelete}
+          open={openDeleteDialog}
+          onOpenChange={setOpenDeleteDialog}
+          onConfirm={handleConfirmDelete}
+        />
+      )}
     </div>
   );
 }

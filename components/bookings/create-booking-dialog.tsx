@@ -28,8 +28,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { IconSearch, IconPlus } from "@tabler/icons-react";
 import type { BookingInput } from "@/lib/types";
-import { useRoomsQuery } from "@/hooks/use-rooms-query";
+import { useRooms } from "@/hooks/use-rooms";
 import { useCustomers } from "@/hooks/use-customers";
+import { createCustomerAction } from "@/actions/customers";
 import { useDebounce } from "@/hooks/use-debounce";
 import { CreateCustomerDialog } from "@/components/customers/create-customer-dialog";
 import type { Customer } from "@/lib/types";
@@ -91,7 +92,11 @@ export function CreateBookingDialog({
     useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchResultsRef = useRef<HTMLDivElement>(null);
-  const { rooms, refetch } = useRoomsQuery(1, 100, "", open);
+  const { rooms, mutate: refetch } = useRooms({
+    page: 1,
+    limit: 100,
+    search: "",
+  });
   const debouncedSearch = useDebounce(customerSearch, 300);
 
   // Fetch rooms when dialog opens
@@ -102,13 +107,14 @@ export function CreateBookingDialog({
   }, [open, refetch]);
 
   // Use separate hook for search results
-  const { customers: searchCustomers, createCustomer } = useCustomers(
-    1,
-    10,
-    debouncedSearch.trim().length >= SEARCH_CUSTOMER_MIN_LENGTH
-      ? debouncedSearch
-      : ""
-  );
+  const { customers: searchCustomers } = useCustomers({
+    page: 1,
+    limit: 10,
+    search:
+      debouncedSearch.trim().length >= SEARCH_CUSTOMER_MIN_LENGTH
+        ? debouncedSearch
+        : "",
+  });
 
   // Convert dates to ISO strings with default times
   const checkInISO = getDateISO(formValues.check_in_date, false);
@@ -565,7 +571,7 @@ export function CreateBookingDialog({
         onOpenChange={setIsCreateCustomerDialogOpen}
         onCreate={async (input) => {
           try {
-            const newCustomer = await createCustomer(input);
+            const newCustomer = await createCustomerAction(input);
             handleCreateCustomerSuccess(newCustomer);
           } catch (err) {
             // Error is handled by CreateCustomerDialog

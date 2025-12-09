@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
-import { useBlogsQuery } from "@/hooks/use-blogs-query";
+import { createBlog as createBlogAction, updateBlog as updateBlogAction } from "@/actions/blogs";
 import type { BlogInput } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -72,8 +72,6 @@ function generateSlug(title: string): string {
 
 export function BlogForm({ mode, blogId, defaultValues }: BlogFormProps) {
   const router = useRouter();
-  // Create a separate instance for form operations
-  const { createBlog, updateBlog } = useBlogsQuery(1, 10, "", false);
 
   // Initialize slug manual edit flag based on defaultValues (for edit mode)
   const initialSlugManuallyEdited =
@@ -113,13 +111,13 @@ export function BlogForm({ mode, blogId, defaultValues }: BlogFormProps) {
       };
 
       if (mode === "create") {
-        await createBlog(payload);
+        await createBlogAction(payload);
         toast.success("Tạo blog thành công!", {
           description: `Blog "${payload.title}" đã được tạo thành công.`,
         });
         router.push("/dashboard/blogs");
       } else if (mode === "edit" && blogId) {
-        await updateBlog(blogId, payload);
+        await updateBlogAction(blogId, payload);
         toast.success("Cập nhật blog thành công!", {
           description: `Blog "${payload.title}" đã được cập nhật thành công.`,
         });

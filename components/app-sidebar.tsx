@@ -29,7 +29,7 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/auth-context";
 import { SIDEBAR_URLS } from "@/lib/constants";
 import { hasViewPermission } from "@/lib/permissions";
-import { getProfileById } from "@/services/profiles";
+import { getProfileByIdAction } from "@/actions/profiles";
 import type { Profile } from "@/lib/types";
 
 const allNavItems = [
@@ -160,7 +160,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     const fetchProfile = async () => {
       if (currentUser?.id) {
         try {
-          const userProfile = await getProfileById(currentUser.id);
+          const userProfile = await getProfileByIdAction(currentUser.id);
           setProfile(userProfile);
         } catch (error) {
           console.error("Error fetching profile:", error);

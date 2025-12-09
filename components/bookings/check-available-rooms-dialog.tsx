@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getAvailableRooms } from "@/services/rooms";
+import { getAvailableRoomsAction } from "@/actions/rooms";
 import type { Room } from "@/lib/types";
 import { formatCurrency, formatDateOnly, getDateISO } from "@/lib/functions";
 import { roomTypeLabels } from "@/lib/constants";
@@ -58,7 +58,7 @@ export function CheckAvailableRoomsDialog({
     try {
       setIsLoading(true);
       setHasSearched(true);
-      const rooms = await getAvailableRooms(checkInISO, checkOutISO);
+      const rooms = await getAvailableRoomsAction(checkInISO, checkOutISO);
       setAvailableRooms(rooms);
       if (rooms.length === 0) {
         toast.info("Không có phòng trống trong khoảng thời gian này");

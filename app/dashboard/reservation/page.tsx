@@ -197,7 +197,7 @@ export default function ReservationPage() {
           <Button
             variant="outline"
             size="icon"
-            onClick={refetch}
+            onClick={() => refetch()}
             disabled={isLoading}
             title="Làm mới dữ liệu"
           >

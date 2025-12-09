@@ -1,11 +1,13 @@
-import { createClient } from "@/lib/supabase/client";
+"use server";
+
+import { createClient } from "@/lib/supabase/server";
 import type {
   RefundRequestInput,
   RefundRequest,
   RefundRequestStatus,
   RefundRequestWithRelations,
 } from "@/lib/types";
-import { REFUND_REQUEST_STATUS } from "@/lib/constants";
+import { REFUND_REQUEST_STATUS, PAYMENT_STATUS } from "@/lib/constants";
 
 /**
  * Search refund requests with pagination and search (Client-side)
@@ -27,7 +29,7 @@ export async function searchRefundRequests({
   count: number;
 }> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Calculate offset
     const from = (page - 1) * limit;
@@ -87,7 +89,7 @@ export async function createRefundRequest(
   input: RefundRequestInput
 ): Promise<RefundRequest> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Get current user
     const {
@@ -135,7 +137,7 @@ export async function updateRefundRequestStatus(
   status: RefundRequestStatus
 ): Promise<RefundRequest> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Get current user
     const {
@@ -145,6 +147,17 @@ export async function updateRefundRequestStatus(
 
     if (userError || !user) {
       throw new Error("Không thể xác thực người dùng");
+    }
+
+    // Fetch refund request to get payment_id
+    const { data: refundRequest, error: fetchError } = await supabase
+      .from("refund_requests")
+      .select("payment_id")
+      .eq("id", id)
+      .single();
+
+    if (fetchError) {
+      throw new Error(fetchError.message);
     }
 
     const updateData: {
@@ -174,6 +187,23 @@ export async function updateRefundRequestStatus(
 
     if (error) {
       throw new Error(error.message);
+    }
+
+    // Update payment status to REFUNDED when refund request is refunded
+    if (
+      status === REFUND_REQUEST_STATUS.REFUNDED &&
+      refundRequest?.payment_id
+    ) {
+      const { error: paymentUpdateError } = await supabase
+        .from("payments")
+        .update({ payment_status: PAYMENT_STATUS.REFUNDED })
+        .eq("id", refundRequest.payment_id);
+
+      if (paymentUpdateError) {
+        console.error("Error updating payment status:", paymentUpdateError);
+        // Don't throw error here, refund request is already updated
+        // Just log the error
+      }
     }
 
     return data as RefundRequest;

@@ -6,14 +6,13 @@ import { IconArrowLeft } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
 import { BlogForm, type BlogFormValues } from "@/components/blog-form";
-import { useBlogsQuery } from "@/hooks/use-blogs-query";
+import { getBlogByIdAction } from "@/actions/blogs";
 import type { Blog } from "@/lib/types";
 
 export default function EditBlogPage() {
   const router = useRouter();
   const params = useParams();
   const blogId = params.id as string;
-  const { getBlogById } = useBlogsQuery(1, 10, "", false);
   const [blog, setBlog] = useState<Blog | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -21,13 +20,13 @@ export default function EditBlogPage() {
     const fetchBlog = async () => {
       if (!blogId) return;
       setIsLoading(true);
-      const blogData = await getBlogById(blogId);
+      const blogData = await getBlogByIdAction(blogId);
       setBlog(blogData);
       setIsLoading(false);
     };
 
     fetchBlog();
-  }, [blogId, getBlogById]);
+  }, [blogId]);
 
   const defaultValues: Partial<BlogFormValues> | undefined = blog
     ? {

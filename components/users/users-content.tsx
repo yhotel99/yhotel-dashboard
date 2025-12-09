@@ -6,7 +6,11 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
 import { toast } from "sonner";
-import { useProfilesQuery } from "@/hooks/use-profiles-query";
+import { useProfiles } from "@/hooks/use-profiles";
+import {
+  createProfileAction,
+  updateProfileAction,
+} from "@/actions/profiles";
 import type { Profile } from "@/lib/types";
 import { createColumns } from "@/components/users/columns";
 import {
@@ -85,10 +89,42 @@ export function UsersContent() {
     profiles,
     isLoading,
     pagination,
-    createProfile,
-    updateProfile,
     refetch,
-  } = useProfilesQuery(page, limit, search);
+    mutate,
+  } = useProfiles(page, limit, search);
+
+  // Wrapper functions to call server actions and refresh data
+  const handleCreateProfile = React.useCallback(
+    async (
+      input: Omit<
+        Profile,
+        "id" | "created_at" | "updated_at" | "deleted_at"
+      > & {
+        password: string;
+      }
+    ) => {
+      const newProfile = await createProfileAction(input);
+      // Refresh data after create
+      await mutate();
+      return newProfile;
+    },
+    [mutate]
+  );
+
+  const handleUpdateProfile = React.useCallback(
+    async (
+      id: string,
+      input: Partial<
+        Omit<Profile, "id" | "created_at" | "updated_at" | "deleted_at">
+      >
+    ) => {
+      const updatedProfile = await updateProfileAction(id, input);
+      // Refresh data after update
+      await mutate();
+      return updatedProfile;
+    },
+    [mutate]
+  );
 
   const handleCreateUser = () => {
     setEditingProfile(undefined);
@@ -107,7 +143,7 @@ export function UsersContent() {
 
   const handleCreate = async (data: CreateUserFormValues) => {
     try {
-      await createProfile({
+      await handleCreateProfile({
         full_name: data.full_name,
         email: data.email,
         password: data.password,
@@ -130,7 +166,7 @@ export function UsersContent() {
 
   const handleUpdate = async (id: string, data: EditUserFormValues) => {
     try {
-      const updatedProfile = await updateProfile(id, {
+      const updatedProfile = await handleUpdateProfile(id, {
         full_name: data.full_name,
         email: data.email,
         phone: data.phone || null,
