@@ -2,12 +2,9 @@
 
 import * as React from "react";
 import {
-  IconCamera,
   IconChartBar,
   IconCreditCard,
   IconDashboard,
-  IconFileAi,
-  IconFileDescription,
   IconInnerShadowTop,
   IconReceiptRefund,
   IconNews,
@@ -29,8 +26,6 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/auth-context";
 import { SIDEBAR_URLS } from "@/lib/constants";
 import { hasViewPermission } from "@/lib/permissions";
-import { getProfileByIdAction } from "@/actions/profiles";
-import type { Profile } from "@/lib/types";
 
 const allNavItems = [
   {
@@ -95,106 +90,37 @@ const allNavItems = [
   },
 ];
 
-const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
-  navClouds: [
-    {
-      title: "Capture",
-      icon: IconCamera,
-      isActive: true,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Proposal",
-      icon: IconFileDescription,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Prompts",
-      icon: IconFileAi,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-  ],
-};
-
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { currentUser } = useAuth();
-  const [profile, setProfile] = React.useState<Profile | null>(null);
-  const [isLoadingProfile, setIsLoadingProfile] = React.useState(true);
+  const { currentUser, profile, isLoading, isInitialized } = useAuth();
 
-  React.useEffect(() => {
-    const fetchProfile = async () => {
-      if (currentUser?.id) {
-        try {
-          const userProfile = await getProfileByIdAction(currentUser.id);
-          setProfile(userProfile);
-        } catch (error) {
-          console.error("Error fetching profile:", error);
-        } finally {
-          setIsLoadingProfile(false);
-        }
-      } else {
-        setIsLoadingProfile(false);
-      }
-    };
-
-    fetchProfile();
-  }, [currentUser?.id]);
-
+  console.log({
+    currentUser,
+    profile,
+    isLoading,
+    isInitialized,
+  });
   // Filter nav items based on permissions
   const filteredNavItems = React.useMemo(() => {
-    if (!profile || isLoadingProfile) {
-      return [];
+    if (!isInitialized || !currentUser) return [];
+
+    // If profile is not loaded yet, show all items (will be filtered once profile loads)
+    if (!profile || isLoading) {
+      return allNavItems;
     }
 
-    // Filter all items including dashboard based on permissions
     return allNavItems.filter((item) =>
       hasViewPermission(profile.role, item.resource)
     );
-  }, [profile, isLoadingProfile]);
+  }, [currentUser, profile, isLoading, isInitialized]);
 
   // Get first allowed page for logo link (fallback to first item or dashboard)
   const logoLink = React.useMemo(() => {
-    if (!profile || isLoadingProfile) {
+    if (!profile || isLoading || !isInitialized) {
       return SIDEBAR_URLS.DASHBOARD;
     }
     const firstAllowedItem = filteredNavItems[0];
     return firstAllowedItem?.url || SIDEBAR_URLS.DASHBOARD;
-  }, [filteredNavItems, profile, isLoadingProfile]);
+  }, [filteredNavItems, profile, isLoading, isInitialized]);
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>

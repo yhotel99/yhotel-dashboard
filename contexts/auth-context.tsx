@@ -10,8 +10,8 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
 import { getProfileByIdAction } from "@/actions/profiles";
-import { USER_STATUS } from "@/lib/constants";
 import { Profile } from "@/lib/types";
+import { USER_STATUS } from "@/lib/constants";
 
 const supabase = createClient();
 
@@ -26,7 +26,7 @@ interface AuthContextType {
   }: {
     email: string;
     password: string;
-  }) => Promise<{ error: Error | null; profile?: Profile | null }>;
+  }) => Promise<{ error: Error | null; profile?: Profile }>;
   logout: () => Promise<{ error: Error | null }>;
 }
 
