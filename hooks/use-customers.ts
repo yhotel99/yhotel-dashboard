@@ -2,23 +2,13 @@
 
 import useSWR from "swr";
 import type { Customer, PaginationMeta } from "@/lib/types";
+import { fetcher } from "@/lib/fetcher";
 
 // Type for API response
 type CustomersResponse = {
   data: Customer[];
   pagination: PaginationMeta;
 };
-
-// Fetcher function for SWR
-const fetcher = (url: string): Promise<CustomersResponse> =>
-  fetch(url).then((r) => {
-    if (!r.ok) {
-      return r.json().then((err) => {
-        throw new Error(err.error || "Không thể tải danh sách khách hàng");
-      });
-    }
-    return r.json();
-  });
 
 /**
  * Hook for fetching customers with SWR

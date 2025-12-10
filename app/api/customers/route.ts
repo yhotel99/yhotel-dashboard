@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import type { Customer, PaginationMeta } from "@/lib/types";
+import type { BookingStatus, Customer, PaginationMeta } from "@/lib/types";
+import { BOOKING_STATUS } from "@/lib/constants";
 
 // Type for customer with bookings (internal use)
 type CustomerWithBookings = Customer & {
   bookings?: Array<{
     id: string;
     total_amount: number;
+    status: BookingStatus;
     deleted_at: string | null;
   }>;
 };
@@ -18,7 +20,11 @@ function processCustomerData(customer: CustomerWithBookings): Customer {
   const bookings = customer.bookings || [];
 
   // Filter out deleted bookings
-  const activeBookings = bookings.filter((b) => !b.deleted_at);
+  const activeBookings = bookings.filter(
+    (b) => !b.deleted_at && b.status === BOOKING_STATUS.CHECKED_OUT
+  );
+
+  console.log({ bookings });
 
   // Calculate total bookings count
   const total_bookings = activeBookings.length;
@@ -78,6 +84,7 @@ export async function GET(req: NextRequest) {
         bookings (
           id,
           total_amount,
+          status,
           deleted_at
         )
       `,

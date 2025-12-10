@@ -2,23 +2,13 @@
 
 import useSWR from "swr";
 import type { BookingRecord, PaginationMeta } from "@/lib/types";
+import { fetcher } from "@/lib/fetcher";
 
 // Type for API response
 type BookingsResponse = {
   data: BookingRecord[];
   pagination: PaginationMeta;
 };
-
-// Fetcher function for SWR
-const fetcher = (url: string): Promise<BookingsResponse> =>
-  fetch(url).then((r) => {
-    if (!r.ok) {
-      return r.json().then((err) => {
-        throw new Error(err.error || "Không thể tải danh sách booking");
-      });
-    }
-    return r.json();
-  });
 
 /**
  * Hook for fetching bookings with SWR

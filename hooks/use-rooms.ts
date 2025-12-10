@@ -2,23 +2,13 @@
 
 import useSWR from "swr";
 import type { Room, PaginationMeta } from "@/lib/types";
+import { fetcher } from "@/lib/fetcher";
 
 // Type for API response
 type RoomsResponse = {
   data: Room[];
   pagination: PaginationMeta;
 };
-
-// Fetcher function for SWR
-const fetcher = (url: string): Promise<RoomsResponse> =>
-  fetch(url).then((r) => {
-    if (!r.ok) {
-      return r.json().then((err) => {
-        throw new Error(err.error || "Không thể tải danh sách phòng");
-      });
-    }
-    return r.json();
-  });
 
 /**
  * Hook for fetching rooms with SWR

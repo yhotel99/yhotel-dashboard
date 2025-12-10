@@ -2,23 +2,13 @@
 
 import useSWR from "swr";
 import type { Blog, PaginationMeta } from "@/lib/types";
+import { fetcher } from "@/lib/fetcher";
 
 // Type for API response
 type BlogsResponse = {
   data: Blog[];
   pagination: PaginationMeta;
 };
-
-// Fetcher function for SWR
-const fetcher = (url: string): Promise<BlogsResponse> =>
-  fetch(url).then((r) => {
-    if (!r.ok) {
-      return r.json().then((err) => {
-        throw new Error(err.error || "Không thể tải danh sách blog");
-      });
-    }
-    return r.json();
-  });
 
 /**
  * Hook for fetching blogs with SWR
