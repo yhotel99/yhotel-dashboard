@@ -63,7 +63,6 @@ export function NavUser({ user }: { user: User }) {
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <Avatar className="h-8 w-8 rounded-lg grayscale">
-                {/* <AvatarImage src={user.avatar} alt={user.name} /> */}
                 <AvatarFallback
                   className="rounded-full text-white font-semibold"
                   style={{
@@ -95,7 +94,6 @@ export function NavUser({ user }: { user: User }) {
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
-                  {/* <AvatarImage src={user.avatar} alt={user.name} /> */}
                   <AvatarFallback
                     className="rounded-full text-white font-semibold"
                     style={{

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import { usePathname } from "next/navigation";
 import { checkRoutePermission } from "@/lib/server-actions";
 
 /**
@@ -10,14 +9,10 @@ import { checkRoutePermission } from "@/lib/server-actions";
  * even if they try to access directly via URL
  */
 export function PermissionGuard({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-
   useEffect(() => {
     // Check permission when pathname changes
-    if (pathname.startsWith("/dashboard")) {
-      checkRoutePermission(pathname);
-    }
-  }, [pathname]);
+    checkRoutePermission();
+  }, []);
 
   return <>{children}</>;
 }

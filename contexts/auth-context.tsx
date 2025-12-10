@@ -26,7 +26,7 @@ interface AuthContextType {
   }: {
     email: string;
     password: string;
-  }) => Promise<{ error: Error | null }>;
+  }) => Promise<{ error: Error | null; profile: Profile | null }>;
   logout: () => Promise<{ error: Error | null }>;
 }
 
@@ -110,11 +110,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (error) {
-        return { error: new Error("Email hoặc mật khẩu không đúng") };
+        return {
+          error: new Error("Email hoặc mật khẩu không đúng"),
+          profile: null,
+        };
       }
 
       if (!data.user) {
-        return { error: new Error("Đăng nhập thất bại") };
+        return { error: new Error("Đăng nhập thất bại"), profile: null };
       }
 
       // Fetch profile để check status
@@ -122,7 +125,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (!profile) {
         await supabase.auth.signOut();
-        return { error: new Error("Không tìm thấy thông tin người dùng") };
+        return {
+          error: new Error("Không tìm thấy thông tin người dùng"),
+          profile: null,
+        };
       }
 
       if (profile.status !== USER_STATUS.ACTIVE) {
@@ -135,16 +141,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             ? "Tài khoản của bạn đã bị tạm khóa"
             : "Tài khoản của bạn không được phép đăng nhập";
 
-        return { error: new Error(msg) };
+        return { error: new Error(msg), profile: null };
       }
 
       setProfile(profile);
 
-      return { error: null };
+      return { error: null, profile };
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Đã xảy ra lỗi. Vui lòng thử lại.";
-      return { error: new Error(errorMessage) };
+      return { error: new Error(errorMessage), profile: null };
     }
   };
 

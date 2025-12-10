@@ -101,17 +101,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   });
   // Filter nav items based on permissions
   const filteredNavItems = React.useMemo(() => {
-    if (!isInitialized || !currentUser) return [];
-
-    // If profile is not loaded yet, show all items (will be filtered once profile loads)
-    if (!profile || isLoading) {
-      return allNavItems;
-    }
+    if (!isInitialized || !currentUser || !profile) return [];
 
     return allNavItems.filter((item) =>
       hasViewPermission(profile.role, item.resource)
     );
-  }, [currentUser, profile, isLoading, isInitialized]);
+  }, [currentUser, profile, isInitialized]);
 
   // Get first allowed page for logo link (fallback to first item or dashboard)
   const logoLink = React.useMemo(() => {

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { hasViewPermission } from "@/lib/permissions";
 import { SIDEBAR_URLS } from "@/lib/constants";
+import { headers } from "next/headers";
 
 // Mapping between URL paths and resource names
 const PATH_TO_RESOURCE: Record<string, string> = {
@@ -61,8 +62,12 @@ function getFirstAllowedPage(role: string): string {
  * Server action to check route permission
  * This will redirect if user doesn't have permission
  */
-export async function checkRoutePermission(pathname: string) {
+export async function checkRoutePermission() {
   const supabase = await createClient();
+  const h = await headers();
+  const pathname = h.get("next-url") || "/dashboard";
+
+  console.log({ pathname, file: "checkRoutePermission.ts" });
 
   // Get current user
   const {
