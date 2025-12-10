@@ -45,7 +45,9 @@ export function NotesCell({ notes }: NotesCellProps) {
               </DialogDescription>
             </DialogHeader>
             <div className="py-4">
-              <p className="text-sm whitespace-pre-wrap break-words">{notes}</p>
+              <p className="text-sm whitespace-pre-wrap wrap-break-word">
+                {notes}
+              </p>
             </div>
           </DialogContent>
         </Dialog>

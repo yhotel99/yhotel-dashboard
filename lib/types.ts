@@ -275,6 +275,27 @@ export type PaymentWithBooking = Payment & {
   } | null;
 };
 
+// Type for payment_search_row from database function
+export type PaymentSearchRow = {
+  id: string;
+  booking_id: string;
+  amount: number | string;
+  payment_method: string;
+  payment_status: string;
+  paid_at: string | null;
+  verified_at: string | null;
+  refunded_at: string | null;
+  created_at: string;
+  updated_at: string;
+  customers: {
+    full_name: string | null;
+    phone: string | null;
+  } | null;
+  rooms: {
+    name: string | null;
+  } | null;
+};
+
 // ============================================================================
 // Customer Types
 // ============================================================================
