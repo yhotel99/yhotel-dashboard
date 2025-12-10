@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import {
   IconCreditCard,
   IconDotsVertical,
@@ -8,8 +7,7 @@ import {
   IconNotification,
   IconUserCircle,
 } from "@tabler/icons-react";
-import { useAuth } from "@/contexts/auth-context";
-import { toast } from "sonner";
+import { logoutAction } from "@/actions/auth";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -31,26 +29,10 @@ import { User } from "@supabase/supabase-js";
 import { generateGradient, getInitials } from "@/lib/functions";
 
 export function NavUser({ user }: { user: User }) {
-  const router = useRouter();
   const { isMobile } = useSidebar();
-  const { logout } = useAuth();
 
   const handleLogout = async () => {
-    try {
-      const { error } = await logout();
-
-      if (error) {
-        toast.error(error.message || "Đăng xuất thất bại");
-        return;
-      }
-
-      toast.success("Đăng xuất thành công!");
-      router.push("/login");
-      router.refresh();
-    } catch (error) {
-      toast.error("Đã xảy ra lỗi. Vui lòng thử lại.");
-      console.error("Logout error:", error);
-    }
+    await logoutAction();
   };
 
   return (

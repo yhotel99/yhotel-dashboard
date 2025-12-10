@@ -91,12 +91,12 @@ const allNavigationItems = [
 
 export function SiteHeader() {
   const router = useRouter();
-  const { profile, isLoading } = useAuth();
+  const { profile } = useAuth();
   const [open, setOpen] = useState(false);
 
   // Filter navigation items based on permissions
   const navigationItems = useMemo(() => {
-    if (!profile || isLoading) {
+    if (!profile) {
       return [];
     }
 
@@ -104,7 +104,7 @@ export function SiteHeader() {
     return allNavigationItems.filter((item) =>
       hasViewPermission(profile.role, item.resource)
     );
-  }, [profile, isLoading]);
+  }, [profile]);
 
   // Handle Command + K keyboard shortcut
   useEffect(() => {

@@ -67,8 +67,6 @@ export async function checkRoutePermission() {
   const h = await headers();
   const pathname = h.get("next-url") || "/dashboard";
 
-  console.log({ pathname, file: "checkRoutePermission.ts" });
-
   // Get current user
   const {
     data: { user },

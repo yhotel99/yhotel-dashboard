@@ -92,31 +92,25 @@ const allNavItems = [
 ];
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { currentUser, profile, isLoading, isInitialized } = useAuth();
+  const { currentUser, profile } = useAuth();
 
-  console.log({
-    currentUser,
-    profile,
-    isLoading,
-    isInitialized,
-  });
   // Filter nav items based on permissions
   const filteredNavItems = React.useMemo(() => {
-    if (!isInitialized || !currentUser || !profile) return [];
+    if (!currentUser || !profile) return [];
 
     return allNavItems.filter((item) =>
       hasViewPermission(profile.role, item.resource)
     );
-  }, [currentUser, profile, isInitialized]);
+  }, [currentUser, profile]);
 
   // Get first allowed page for logo link (fallback to first item or dashboard)
   const logoLink = React.useMemo(() => {
-    if (!profile || isLoading || !isInitialized) {
+    if (!profile) {
       return SIDEBAR_URLS.DASHBOARD;
     }
     const firstAllowedItem = filteredNavItems[0];
     return firstAllowedItem?.url || SIDEBAR_URLS.DASHBOARD;
-  }, [filteredNavItems, profile, isLoading, isInitialized]);
+  }, [filteredNavItems, profile]);
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>

@@ -1,11 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { useAuth } from "@/contexts/auth-context";
+import { useFormStatus } from "react-dom";
+import { loginAction } from "@/actions/auth";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -16,72 +13,33 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { FieldDescription } from "@/components/ui/field";
-import { hasViewPermission } from "@/lib/permissions";
 
-const loginSchema = z.object({
-  email: z.string().email("Email không hợp lệ"),
-  password: z.string().min(6, "Mật khẩu phải có ít nhất 6 ký tự"),
-});
-
-type LoginFormValues = z.infer<typeof loginSchema>;
+function SubmitButton() {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" className="w-full" disabled={pending}>
+      {pending ? "Đang đăng nhập..." : "Login"}
+    </Button>
+  );
+}
 
 export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
-  const router = useRouter();
-  const { login } = useAuth();
-  const [isLoading, setIsLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
 
-  const form = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-    },
-  });
-
-  const onSubmit = async (values: LoginFormValues) => {
-    setIsLoading(true);
-    try {
-      const { error, profile: loginProfile } = await login({
-        email: values.email,
-        password: values.password,
-      });
-
-      if (error) {
-        toast.error(error.message || "Đăng nhập thất bại");
-        return;
-      }
-
-      toast.success("Đăng nhập thành công!");
-
-      // Use profile from login response for immediate redirect
-      // This avoids waiting for context state update
-      const userRole = loginProfile?.role;
-      const redirectPath =
-        userRole && hasViewPermission(userRole, "dashboard")
-          ? "/dashboard"
-          : "/dashboard/reservation";
-
-      router.push(redirectPath);
-    } catch (error) {
-      toast.error("Đã xảy ra lỗi. Vui lòng thử lại.");
-      console.error("Login error:", error);
-    } finally {
-      setIsLoading(false);
+  async function handleSubmit(formData: FormData) {
+    setError(null);
+    const result = await loginAction(formData);
+    if (result?.error) {
+      setError(result.error);
+      toast.error(result.error);
     }
-  };
+  }
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
@@ -91,49 +49,30 @@ export function LoginForm({
           <CardDescription>Login with your account</CardDescription>
         </CardHeader>
         <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
+          <form action={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
                 name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="email"
-                        placeholder="Enter your email"
-                        disabled={isLoading}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                type="email"
+                placeholder="Enter your email"
+                required
               />
-              <FormField
-                control={form.control}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
                 name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="password"
-                        placeholder="Enter your password"
-                        disabled={isLoading}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                type="password"
+                placeholder="Enter your password"
+                required
               />
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Đang đăng nhập..." : "Login"}
-              </Button>
-            </form>
-          </Form>
+            </div>
+            {error && <p className="text-sm text-destructive">{error}</p>}
+            <SubmitButton />
+          </form>
         </CardContent>
       </Card>
       <FieldDescription className="px-6 text-center">
