@@ -40,7 +40,7 @@ export function LoginForm({
   ...props
 }: React.ComponentProps<"div">) {
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, profile, currentUser } = useAuth();
   const [isLoading, setIsLoading] = React.useState(false);
 
   const form = useForm<LoginFormValues>({
@@ -54,7 +54,7 @@ export function LoginForm({
   const onSubmit = async (values: LoginFormValues) => {
     setIsLoading(true);
     try {
-      const { error, profile: loginProfile } = await login({
+      const { error } = await login({
         email: values.email,
         password: values.password,
       });
@@ -68,14 +68,13 @@ export function LoginForm({
 
       // Use profile from login response for immediate redirect
       // This avoids waiting for context state update
-      const userRole = loginProfile?.role;
-      const redirectPath =
-        userRole && hasViewPermission(userRole, "dashboard")
-          ? "/dashboard"
-          : "/dashboard/reservation";
+      // const userRole = loginProfile?.role;
+      // const redirectPath =
+      //   userRole && hasViewPermission(userRole, "dashboard")
+      //     ? "/dashboard"
+      //     : "/dashboard/reservation";
 
-      router.push(redirectPath);
-      router.refresh();
+      router.push("/dashboard");
     } catch (error) {
       toast.error("Đã xảy ra lỗi. Vui lòng thử lại.");
       console.error("Login error:", error);

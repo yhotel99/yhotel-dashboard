@@ -26,7 +26,7 @@ interface AuthContextType {
   }: {
     email: string;
     password: string;
-  }) => Promise<{ error: Error | null; profile?: Profile }>;
+  }) => Promise<{ error: Error | null }>;
   logout: () => Promise<{ error: Error | null }>;
 }
 
@@ -50,22 +50,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // User exists - update user state
         console.log(`${event} for user:`, session.user.id);
         setCurrentUser(session.user);
-
-        // Only fetch profile if we don't already have it (to avoid duplicate calls)
-        // The login function already fetches and sets the profile
-        if (event === "SIGNED_IN") {
-          // Profile will be set by login function, skip fetching here
-          // This prevents duplicate API calls
-        } else {
-          // For other events (TOKEN_REFRESHED, etc.), fetch profile
-          try {
-            const profileData = await getProfileByIdAction(session.user.id);
-            setProfile(profileData);
-          } catch (error) {
-            console.error("Error fetching profile:", error);
-            setProfile(null);
-          }
-        }
       } else {
         // No user - clear user state (session expired, user signed out, etc.)
         console.log(`${event} - clearing user state`);
@@ -86,13 +70,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             console.log("Initial user found:", user.id);
             setCurrentUser(user);
 
-            // Fetch and set profile
-            try {
-              const profileData = await getProfileByIdAction(user.id);
-              setProfile(profileData);
-            } catch (error) {
-              console.error("Error fetching profile:", error);
-              setProfile(null);
+            if (user.id) {
+              console.log("Fetching profile for user:", user.id);
+              const profile = await getProfileByIdAction(user.id);
+              setProfile(profile);
             }
           }
         } catch {
@@ -136,33 +117,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error: new Error("Đăng nhập thất bại") };
       }
 
-      // Check profile status - only allow active users to login
+      // Fetch profile để check status
       const profile = await getProfileByIdAction(data.user.id);
 
       if (!profile) {
-        // Profile not found, sign out and return error
         await supabase.auth.signOut();
         return { error: new Error("Không tìm thấy thông tin người dùng") };
       }
 
       if (profile.status !== USER_STATUS.ACTIVE) {
-        // User is not active, sign out and return error
         await supabase.auth.signOut();
-        const statusMessage =
+
+        const msg =
           profile.status === USER_STATUS.INACTIVE
             ? "Tài khoản của bạn đã bị vô hiệu hóa"
             : profile.status === USER_STATUS.SUSPENDED
             ? "Tài khoản của bạn đã bị tạm khóa"
             : "Tài khoản của bạn không được phép đăng nhập";
-        return { error: new Error(statusMessage) };
+
+        return { error: new Error(msg) };
       }
 
-      // Set profile after successful login
       setProfile(profile);
-      setCurrentUser(data.user);
 
-      // Auth state change listener will update currentUser automatically
-      return { error: null, profile };
+      return { error: null };
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Đã xảy ra lỗi. Vui lòng thử lại.";
