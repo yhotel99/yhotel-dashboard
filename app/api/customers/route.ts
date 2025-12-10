@@ -24,8 +24,6 @@ function processCustomerData(customer: CustomerWithBookings): Customer {
     (b) => !b.deleted_at && b.status === BOOKING_STATUS.CHECKED_OUT
   );
 
-  console.log({ bookings });
-
   // Calculate total bookings count
   const total_bookings = activeBookings.length;
 

@@ -36,7 +36,10 @@ export function useCustomers({
 
   const { data, error, isLoading, mutate } = useSWR<CustomersResponse>(
     `/api/customers?${params.toString()}`,
-    fetcher
+    fetcher,
+    {
+      dedupingInterval: 5000, // Giảm tần suất revalidate
+    }
   );
 
   return {

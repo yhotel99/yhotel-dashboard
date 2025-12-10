@@ -85,8 +85,6 @@ export function CreateBookingDialog({
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [customerSearch, setCustomerSearch] = useState("");
-  const [searchResults, setSearchResults] = useState<Customer[]>([]);
-  const [showSearchResults, setShowSearchResults] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
     null
   );
@@ -193,57 +191,16 @@ export function CreateBookingDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formValues.total_amount]);
 
-  // Update search results when customers from hook change
-  useEffect(() => {
-    const searchLength = customerSearch.trim().length;
-    const debouncedLength = debouncedSearch.trim().length;
-
-    // Only show results if current search is long enough AND debounced search matches
-    if (
-      searchLength >= SEARCH_CUSTOMER_MIN_LENGTH &&
-      debouncedLength >= SEARCH_CUSTOMER_MIN_LENGTH
-    ) {
-      // Only update if searchCustomers actually changed
-      setSearchResults((prev) => {
-        // Compare by IDs to avoid unnecessary updates
-        const prevIds = prev
-          .map((c) => c.id)
-          .sort()
-          .join(",");
-        const newIds = searchCustomers
-          .map((c) => c.id)
-          .sort()
-          .join(",");
-        if (prevIds !== newIds) {
-          return searchCustomers;
-        }
-        return prev;
-      });
-      setShowSearchResults(true);
-    } else {
-      setSearchResults([]);
-      setShowSearchResults(false);
+  // Calculate search results based on debounced search
+  const displaySearchResults = useMemo(() => {
+    if (debouncedSearch.trim().length >= SEARCH_CUSTOMER_MIN_LENGTH) {
+      return searchCustomers;
     }
-  }, [searchCustomers, debouncedSearch, customerSearch]);
+    return [];
+  }, [searchCustomers, debouncedSearch]);
 
-  // Close search results when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        searchInputRef.current &&
-        !searchInputRef.current.contains(event.target as Node) &&
-        searchResultsRef.current &&
-        !searchResultsRef.current.contains(event.target as Node)
-      ) {
-        setShowSearchResults(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
+  const shouldShowSearchResults =
+    debouncedSearch.trim().length >= SEARCH_CUSTOMER_MIN_LENGTH;
 
   const handleInputChange =
     (field: keyof CreateBookingFormState) =>
@@ -263,8 +220,6 @@ export function CreateBookingDialog({
     setError(null);
     setIsSubmitting(false);
     setCustomerSearch("");
-    setSearchResults([]);
-    setShowSearchResults(false);
     setSelectedCustomer(null);
   };
 
@@ -276,7 +231,6 @@ export function CreateBookingDialog({
         customer.email ? ` (${customer.email})` : ""
       }`
     );
-    setShowSearchResults(false);
   };
 
   const handleCreateCustomerSuccess = (customer: Customer) => {
@@ -445,13 +399,13 @@ export function CreateBookingDialog({
                   </div>
                 </div>
                 {!selectedCustomer &&
-                  showSearchResults &&
-                  searchResults.length > 0 && (
+                  shouldShowSearchResults &&
+                  displaySearchResults.length > 0 && (
                     <div
                       ref={searchResultsRef}
                       className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border bg-popover shadow-md"
                     >
-                      {searchResults.map((customer) => (
+                      {displaySearchResults.map((customer) => (
                         <button
                           key={customer.id}
                           type="button"
@@ -470,9 +424,8 @@ export function CreateBookingDialog({
                     </div>
                   )}
                 {!selectedCustomer &&
-                  showSearchResults &&
-                  debouncedSearch.trim().length >= SEARCH_CUSTOMER_MIN_LENGTH &&
-                  searchResults.length === 0 && (
+                  shouldShowSearchResults &&
+                  displaySearchResults.length === 0 && (
                     <div
                       ref={searchResultsRef}
                       className="absolute z-50 mt-1 w-full rounded-md border bg-popover p-4 text-center text-sm text-muted-foreground shadow-md"
@@ -623,19 +576,21 @@ export function CreateBookingDialog({
         </form>
       </DialogContent>
 
-      <CreateCustomerDialog
-        open={isCreateCustomerDialogOpen}
-        onOpenChange={setIsCreateCustomerDialogOpen}
-        onCreate={async (input) => {
-          try {
-            const newCustomer = await createCustomerAction(input);
-            handleCreateCustomerSuccess(newCustomer);
-          } catch (err) {
-            // Error is handled by CreateCustomerDialog
-            throw err;
-          }
-        }}
-      />
+      {isCreateCustomerDialogOpen && (
+        <CreateCustomerDialog
+          open={isCreateCustomerDialogOpen}
+          onOpenChange={setIsCreateCustomerDialogOpen}
+          onCreate={async (input) => {
+            try {
+              const newCustomer = await createCustomerAction(input);
+              handleCreateCustomerSuccess(newCustomer);
+            } catch (err) {
+              // Error is handled by CreateCustomerDialog
+              throw err;
+            }
+          }}
+        />
+      )}
     </Dialog>
   );
 }
