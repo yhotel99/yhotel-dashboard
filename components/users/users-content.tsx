@@ -7,10 +7,7 @@ import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
 import { toast } from "sonner";
 import { useProfiles } from "@/hooks/use-profiles";
-import {
-  createProfileAction,
-  updateProfileAction,
-} from "@/actions/profiles";
+import { createProfileAction, updateProfileAction } from "@/actions/profiles";
 import type { Profile } from "@/lib/types";
 import { createColumns } from "@/components/users/columns";
 import {
@@ -85,13 +82,11 @@ export function UsersContent() {
     return () => clearTimeout(timer);
   }, [localSearch, limit, search, updateSearchParams]);
 
-  const {
-    profiles,
-    isLoading,
-    pagination,
-    refetch,
-    mutate,
-  } = useProfiles(page, limit, search);
+  const { profiles, isLoading, pagination, refetch, mutate } = useProfiles(
+    page,
+    limit,
+    search
+  );
 
   // Wrapper functions to call server actions and refresh data
   const handleCreateProfile = React.useCallback(
@@ -103,10 +98,9 @@ export function UsersContent() {
         password: string;
       }
     ) => {
-      const newProfile = await createProfileAction(input);
+      await createProfileAction(input);
       // Refresh data after create
       await mutate();
-      return newProfile;
     },
     [mutate]
   );
@@ -220,17 +214,19 @@ export function UsersContent() {
         />
       </div>
 
-      <UserFormDialog
-        profile={editingProfile}
-        open={openUserDialog}
-        onOpenChange={(open) => {
-          if (!open) {
-            handleCloseUserDialog();
-          }
-        }}
-        onCreate={handleCreate}
-        onUpdate={handleUpdate}
-      />
+      {openUserDialog && (
+        <UserFormDialog
+          profile={editingProfile}
+          open={openUserDialog}
+          onOpenChange={(open) => {
+            if (!open) {
+              handleCloseUserDialog();
+            }
+          }}
+          onCreate={handleCreate}
+          onUpdate={handleUpdate}
+        />
+      )}
     </div>
   );
 }

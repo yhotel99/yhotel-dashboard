@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin/server";
 import { createClient } from "@/lib/supabase/server";
 import { USER_ROLE } from "@/lib/constants";
-import { UserRole } from "@/lib/types";
 
 export async function POST(request: NextRequest) {
   try {

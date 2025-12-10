@@ -47,13 +47,14 @@ export function UserActionsCell({
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      <ChangePasswordDialog
-        userId={profile.id}
-        userName={userName}
-        open={openPasswordDialog}
-        onOpenChange={setOpenPasswordDialog}
-      />
+      {openPasswordDialog && (
+        <ChangePasswordDialog
+          userId={profile.id}
+          userName={userName}
+          open={openPasswordDialog}
+          onOpenChange={setOpenPasswordDialog}
+        />
+      )}
     </>
   );
 }
-
