@@ -1,5 +1,10 @@
 import { useRouter } from "next/navigation";
-import { IconDotsVertical } from "@tabler/icons-react";
+import {
+  IconDotsVertical,
+  IconEdit,
+  IconRefresh,
+  IconTrash,
+} from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -37,15 +42,18 @@ export function RoomActionsCell({
         <DropdownMenuItem
           onClick={() => router.push(`/dashboard/rooms/edit/${room.id}`)}
         >
+          <IconEdit className="mr-2 size-4" />
           Chỉnh sửa
         </DropdownMenuItem>
         {onChangeStatus && (
           <DropdownMenuItem onClick={() => onChangeStatus(room)}>
+            <IconRefresh className="mr-2 size-4" />
             Thay đổi trạng thái
           </DropdownMenuItem>
         )}
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onClick={() => onDelete(room)}>
+          <IconTrash className="mr-2 size-4" />
           Xóa
         </DropdownMenuItem>
       </DropdownMenuContent>

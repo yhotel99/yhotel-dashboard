@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { IconDotsVertical } from "@tabler/icons-react";
+import { IconDotsVertical, IconEdit, IconKey } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -38,11 +38,13 @@ export function UserActionsCell({
             <span className="sr-only">Open menu</span>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-32">
+        <DropdownMenuContent align="end" className="w-44">
           <DropdownMenuItem onClick={() => onEdit(profile)}>
+            <IconEdit className="mr-2 size-4" />
             Chỉnh sửa
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setOpenPasswordDialog(true)}>
+            <IconKey className="mr-2 size-4" />
             Đổi mật khẩu
           </DropdownMenuItem>
         </DropdownMenuContent>

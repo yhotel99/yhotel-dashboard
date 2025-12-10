@@ -125,7 +125,7 @@ function RoomStatusCell({
     <Select defaultValue={status} onValueChange={handleChange}>
       <SelectTrigger
         className={cn(
-          "w-[120px] border px-2 py-1 text-xs font-medium",
+          "xl:w-[120px] w-full border px-2 py-1 text-xs font-medium",
           statusClasses[status]
         )}
       >

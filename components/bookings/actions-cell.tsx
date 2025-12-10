@@ -2,7 +2,15 @@
 
 import * as React from "react";
 import { useState } from "react";
-import { IconDotsVertical } from "@tabler/icons-react";
+import {
+  IconDotsVertical,
+  IconEdit,
+  IconRefresh,
+  IconTransfer,
+  IconCurrencyDollar,
+  IconReceiptRefund,
+  IconX,
+} from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -193,15 +201,18 @@ export function BookingActionsCell({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-44">
           <DropdownMenuItem onClick={() => onEdit(booking)}>
+            <IconEdit className="mr-2 size-4" />
             Chỉnh sửa
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setOpenChangeStatus(true)}>
+            <IconRefresh className="mr-2 size-4" />
             Thay đổi trạng thái
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => setOpenTransfer(true)}
             disabled={booking.status !== BOOKING_STATUS.PENDING}
           >
+            <IconTransfer className="mr-2 size-4" />
             Chuyển phòng
           </DropdownMenuItem>
           <DropdownMenuItem
@@ -214,11 +225,13 @@ export function BookingActionsCell({
               isCheckingAdvancePayment
             }
           >
+            <IconCurrencyDollar className="mr-2 size-4" />
             {advancePaymentStatus?.isPaid
               ? "Đã đánh dấu đặt cọc"
               : "Đánh dấu đặt cọc"}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setOpenRefundRequest(true)}>
+            <IconReceiptRefund className="mr-2 size-4" />
             Yêu cầu hoàn tiền
           </DropdownMenuItem>
           <DropdownMenuSeparator />
@@ -226,6 +239,7 @@ export function BookingActionsCell({
             variant="destructive"
             onClick={() => setOpenCancel(true)}
           >
+            <IconX className="mr-2 size-4" />
             Hủy booking
           </DropdownMenuItem>
         </DropdownMenuContent>

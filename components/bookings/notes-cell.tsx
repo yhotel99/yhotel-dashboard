@@ -24,7 +24,7 @@ export function NotesCell({ notes }: NotesCellProps) {
   }
 
   return (
-    <>
+    <div className="flex items-center w-full justify-center">
       <Button
         variant="ghost"
         size="icon"
@@ -35,18 +35,21 @@ export function NotesCell({ notes }: NotesCellProps) {
         <span className="sr-only">Xem ghi chú</span>
       </Button>
 
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Ghi chú</DialogTitle>
-            <DialogDescription>Thông tin ghi chú của booking</DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <p className="text-sm whitespace-pre-wrap break-words">{notes}</p>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
+      {isOpen && (
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Ghi chú</DialogTitle>
+              <DialogDescription>
+                Thông tin ghi chú của booking
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <p className="text-sm whitespace-pre-wrap break-words">{notes}</p>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+    </div>
   );
 }
-

@@ -1,6 +1,12 @@
 "use client";
 
-import { IconDotsVertical, IconTrash } from "@tabler/icons-react";
+import {
+  IconDotsVertical,
+  IconEdit,
+  IconEye,
+  IconTrash,
+} from "@tabler/icons-react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -20,6 +26,12 @@ export function BlogActionsCell({
   onEdit: (blog: Blog) => void;
   onDelete: (blog: Blog) => void;
 }) {
+  const router = useRouter();
+
+  const handleView = () => {
+    router.push(`/dashboard/blogs/${blog.slug}`);
+  };
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -33,7 +45,12 @@ export function BlogActionsCell({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-44">
+        <DropdownMenuItem onClick={handleView}>
+          <IconEye className="mr-2 size-4" />
+          Xem chi tiết
+        </DropdownMenuItem>
         <DropdownMenuItem onClick={() => onEdit(blog)}>
+          <IconEdit className="mr-2 size-4" />
           Chỉnh sửa
         </DropdownMenuItem>
         <DropdownMenuSeparator />
@@ -49,4 +66,3 @@ export function BlogActionsCell({
     </DropdownMenu>
   );
 }
-

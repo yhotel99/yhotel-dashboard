@@ -29,7 +29,8 @@ export function BlogStatusCell({
   onChangeStatus,
 }: BlogStatusCellProps) {
   const statusClasses: Record<BlogStatus, string> = {
-    draft: "border-gray-300 bg-gray-50 text-gray-700 dark:border-gray-500/60 dark:bg-gray-500/10 dark:text-gray-300",
+    draft:
+      "border-gray-300 bg-gray-50 text-gray-700 dark:border-gray-500/60 dark:bg-gray-500/10 dark:text-gray-300",
     published:
       "border-green-300 bg-green-50 text-green-700 dark:border-green-500/60 dark:bg-green-500/10 dark:text-green-300",
     archived:
@@ -51,7 +52,7 @@ export function BlogStatusCell({
     <Select defaultValue={status} onValueChange={handleChange}>
       <SelectTrigger
         className={cn(
-          "w-[140px] border px-2 py-1 text-xs font-medium",
+          "xl:w-[140px] w-full border px-2 py-1 text-xs font-medium",
           statusClasses[status]
         )}
       >
@@ -77,4 +78,3 @@ export function BlogStatusCell({
     </Select>
   );
 }
-

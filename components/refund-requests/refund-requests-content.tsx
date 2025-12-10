@@ -29,7 +29,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { IconDotsVertical } from "@tabler/icons-react";
+import {
+  IconCheck,
+  IconCurrencyDollar,
+  IconDotsVertical,
+  IconX,
+} from "@tabler/icons-react";
 import { toast } from "sonner";
 import {
   REFUND_REQUEST_STATUS,
@@ -144,18 +149,21 @@ function RefundRequestActionsCell({
           {refundRequest.status === REFUND_REQUEST_STATUS.PENDING && (
             <>
               <DropdownMenuItem onClick={() => setOpenApprove(true)}>
+                <IconCheck className="mr-2 size-4 text-green-500" />
                 Duyệt yêu cầu
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => setOpenReject(true)}
                 variant="destructive"
               >
+                <IconX className="mr-2 size-4 text-red-500" />
                 Từ chối
               </DropdownMenuItem>
             </>
           )}
           {refundRequest.status === REFUND_REQUEST_STATUS.APPROVED && (
             <DropdownMenuItem onClick={() => setOpenRefund(true)}>
+              <IconCurrencyDollar className="mr-2 size-4 text-blue-500" />
               Hoàn tiền
             </DropdownMenuItem>
           )}
@@ -169,65 +177,71 @@ function RefundRequestActionsCell({
       </DropdownMenu>
 
       {/* Approve Confirmation Dialog */}
-      <Dialog open={openApprove} onOpenChange={setOpenApprove}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Xác nhận duyệt yêu cầu hoàn tiền</DialogTitle>
-            <DialogDescription>
-              Bạn có chắc chắn muốn duyệt yêu cầu hoàn tiền này không? Yêu cầu
-              sẽ được chuyển sang trạng thái &quot;Đã duyệt&quot; và có thể thực
-              hiện hoàn tiền.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpenApprove(false)}>
-              Hủy
-            </Button>
-            <Button onClick={handleApprove}>Xác nhận duyệt</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {openApprove && (
+        <Dialog open={openApprove} onOpenChange={setOpenApprove}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Xác nhận duyệt yêu cầu hoàn tiền</DialogTitle>
+              <DialogDescription>
+                Bạn có chắc chắn muốn duyệt yêu cầu hoàn tiền này không? Yêu cầu
+                sẽ được chuyển sang trạng thái &quot;Đã duyệt&quot; và có thể
+                thực hiện hoàn tiền.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setOpenApprove(false)}>
+                Hủy
+              </Button>
+              <Button onClick={handleApprove}>Xác nhận duyệt</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Reject Confirmation Dialog */}
-      <Dialog open={openReject} onOpenChange={setOpenReject}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Xác nhận từ chối yêu cầu hoàn tiền</DialogTitle>
-            <DialogDescription>
-              Bạn có chắc chắn muốn từ chối yêu cầu hoàn tiền này không? Thao
-              tác này không thể hoàn tác.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpenReject(false)}>
-              Hủy
-            </Button>
-            <Button variant="destructive" onClick={handleReject}>
-              Xác nhận từ chối
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {openReject && (
+        <Dialog open={openReject} onOpenChange={setOpenReject}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Xác nhận từ chối yêu cầu hoàn tiền</DialogTitle>
+              <DialogDescription>
+                Bạn có chắc chắn muốn từ chối yêu cầu hoàn tiền này không? Thao
+                tác này không thể hoàn tác.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setOpenReject(false)}>
+                Hủy
+              </Button>
+              <Button variant="destructive" onClick={handleReject}>
+                Xác nhận từ chối
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Refund Confirmation Dialog */}
-      <Dialog open={openRefund} onOpenChange={setOpenRefund}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Xác nhận hoàn tiền</DialogTitle>
-            <DialogDescription>
-              Bạn có chắc chắn muốn hoàn tiền cho yêu cầu này không? Số tiền{" "}
-              <strong>{formatCurrency(refundRequest.amount)}</strong> sẽ được
-              hoàn lại cho khách hàng. Thao tác này không thể hoàn tác.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpenRefund(false)}>
-              Hủy
-            </Button>
-            <Button onClick={handleRefund}>Xác nhận hoàn tiền</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {openRefund && (
+        <Dialog open={openRefund} onOpenChange={setOpenRefund}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Xác nhận hoàn tiền</DialogTitle>
+              <DialogDescription>
+                Bạn có chắc chắn muốn hoàn tiền cho yêu cầu này không? Số tiền{" "}
+                <strong>{formatCurrency(refundRequest.amount)}</strong> sẽ được
+                hoàn lại cho khách hàng. Thao tác này không thể hoàn tác.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setOpenRefund(false)}>
+                Hủy
+              </Button>
+              <Button onClick={handleRefund}>Xác nhận hoàn tiền</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </>
   );
 }
@@ -461,4 +475,3 @@ export function RefundRequestsContent() {
     </div>
   );
 }
-

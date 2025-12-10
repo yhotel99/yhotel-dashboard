@@ -19,9 +19,7 @@ import {
 /**
  * Create booking using secure RPC function
  */
-async function createBookingSecure(
-  input: BookingInput
-): Promise<string> {
+async function createBookingSecure(input: BookingInput): Promise<string> {
   try {
     const supabase = await createClient();
     const { data: bookingId, error } = await supabase.rpc(
@@ -299,6 +297,42 @@ export async function updateBookingStatusAction(
       err instanceof Error
         ? err.message
         : "Không thể cập nhật trạng thái booking";
+    throw new Error(errorMessage);
+  }
+}
+
+/**
+ * Check in booking (update status to checked_in and set actual_check_in)
+ */
+export async function checkInBookingAction(bookingId: string) {
+  try {
+    const now = new Date().toISOString();
+    await updateBookingStatusInternal(bookingId, BOOKING_STATUS.CHECKED_IN, {
+      actual_check_in: now,
+    });
+    // Revalidate bookings page after check in
+    revalidatePath("/dashboard/bookings");
+  } catch (err) {
+    const errorMessage =
+      err instanceof Error ? err.message : "Không thể check in booking";
+    throw new Error(errorMessage);
+  }
+}
+
+/**
+ * Check out booking (update status to checked_out and set actual_check_out)
+ */
+export async function checkOutBookingAction(bookingId: string) {
+  try {
+    const now = new Date().toISOString();
+    await updateBookingStatusInternal(bookingId, BOOKING_STATUS.CHECKED_OUT, {
+      actual_check_out: now,
+    });
+    // Revalidate bookings page after check out
+    revalidatePath("/dashboard/bookings");
+  } catch (err) {
+    const errorMessage =
+      err instanceof Error ? err.message : "Không thể check out booking";
     throw new Error(errorMessage);
   }
 }

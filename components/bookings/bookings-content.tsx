@@ -14,6 +14,8 @@ import {
   confirmBookingAction,
   cancelBookingAction,
   transferBookingAction,
+  checkInBookingAction,
+  checkOutBookingAction,
 } from "@/actions/bookings";
 import {
   markAdvancePaymentAsPaidAction,
@@ -220,7 +222,7 @@ export function BookingsContent() {
 
   const checkedInBooking = React.useCallback(
     async (id: string) => {
-      await updateBookingStatusAction(id, "checked_in");
+      await checkInBookingAction(id);
       await mutate();
     },
     [mutate]
@@ -228,7 +230,7 @@ export function BookingsContent() {
 
   const checkedOutBooking = React.useCallback(
     async (id: string) => {
-      await updateBookingStatusAction(id, "checked_out");
+      await checkOutBookingAction(id);
       await mutate();
     },
     [mutate]

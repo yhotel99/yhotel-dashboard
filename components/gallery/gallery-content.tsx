@@ -317,15 +317,17 @@ export function GalleryContent() {
                   key={image.id}
                   className="group relative aspect-square overflow-hidden rounded-lg border bg-card"
                 >
-                  <ImageZoom className="relative aspect-square">
-                    <Image
-                      src={image.url}
-                      alt=""
-                      fill
-                      className="object-contain w-full h-full"
-                      loading="lazy"
-                    />
-                  </ImageZoom>
+                  {image.url && (
+                    <ImageZoom className="relative w-full h-full aspect-square">
+                      <Image
+                        src={image.url}
+                        alt={image.url}
+                        fill
+                        className="object-contain"
+                        loading="lazy"
+                      />
+                    </ImageZoom>
+                  )}
                   <Button
                     variant="destructive"
                     size="icon"
@@ -381,146 +383,153 @@ export function GalleryContent() {
       </div>
 
       {/* Upload Dialog */}
-      <Dialog open={isUploadDialogOpen} onOpenChange={handleDialogClose}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Tải ảnh lên</DialogTitle>
-            <DialogDescription>
-              Chọn file ảnh từ máy tính của bạn
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            {/* File Upload */}
-            <div className="space-y-2">
-              <Label htmlFor="file-upload">Chọn file ảnh</Label>
-              <Input
-                id="file-upload"
-                type="file"
-                accept="image/*"
-                multiple
-                ref={fileInputRef}
-                onChange={handleFileSelect}
-                className="cursor-pointer py-1.5"
-              />
-              <p className="text-muted-foreground text-xs">
-                Bạn có thể chọn nhiều file cùng lúc
-              </p>
-            </div>
-
-            {/* Preview */}
-            {previewItems.length > 0 && (
+      {isUploadDialogOpen && (
+        <Dialog open={isUploadDialogOpen} onOpenChange={handleDialogClose}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Tải ảnh lên</DialogTitle>
+              <DialogDescription>
+                Chọn file ảnh từ máy tính của bạn
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              {/* File Upload */}
               <div className="space-y-2">
-                <Label>Ảnh đã chọn ({previewItems.length})</Label>
-                <div className="grid grid-cols-4 gap-2 max-h-[200px] overflow-y-auto p-2 border rounded-md">
-                  {previewItems.map((item) => (
-                    <div key={item.id} className="relative aspect-square group">
-                      <Image
-                        src={item.url}
-                        alt={`Preview ${item.file.name}`}
-                        fill
-                        className="w-full h-full object-cover rounded border"
-                      />
-                      <Button
-                        variant="destructive"
-                        size="icon"
-                        className="absolute top-1 right-1 size-6 opacity-0 group-hover:opacity-100"
-                        onClick={() => handleRemovePreview(item.id)}
+                <Label htmlFor="file-upload">Chọn file ảnh</Label>
+                <Input
+                  id="file-upload"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  ref={fileInputRef}
+                  onChange={handleFileSelect}
+                  className="cursor-pointer py-1.5"
+                />
+                <p className="text-muted-foreground text-xs">
+                  Bạn có thể chọn nhiều file cùng lúc
+                </p>
+              </div>
+
+              {/* Preview */}
+              {previewItems.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Ảnh đã chọn ({previewItems.length})</Label>
+                  <div className="grid grid-cols-4 gap-2 max-h-[200px] overflow-y-auto p-2 border rounded-md">
+                    {previewItems.map((item) => (
+                      <div
+                        key={item.id}
+                        className="relative aspect-square group"
                       >
-                        <IconTrash className="size-3" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Upload Progress */}
-            {isUploadingFiles && uploadProgress.length > 0 && (
-              <div className="space-y-2">
-                <Label>Tiến trình tải lên</Label>
-                <div className="space-y-3">
-                  {uploadProgress.map((progress, index) => (
-                    <div key={index} className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="truncate max-w-[320px]">
-                          {progress.fileName}
-                        </span>
-                        <span className="text-muted-foreground">
-                          {progress.status === "uploading" && "Đang tải..."}
-                          {progress.status === "success" && "✓ Thành công"}
-                          {progress.status === "error" && "✗ Lỗi"}
-                          {progress.status === "pending" && "Chờ..."}
-                        </span>
+                        <Image
+                          src={item.url}
+                          alt={`Preview ${item.file.name}`}
+                          fill
+                          className="w-full h-full object-cover rounded border"
+                        />
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          className="absolute top-1 right-1 size-6 opacity-0 group-hover:opacity-100"
+                          onClick={() => handleRemovePreview(item.id)}
+                        >
+                          <IconTrash className="size-3" />
+                        </Button>
                       </div>
-                      {progress.status === "uploading" && (
-                        <div className="h-2 bg-muted rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-primary transition-all"
-                            style={{ width: `${progress.progress}%` }}
-                          />
-                        </div>
-                      )}
-                      {progress.error && (
-                        <p className="text-sm text-destructive">
-                          {progress.error}
-                        </p>
-                      )}
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                // Close dialog - cleanup will happen in handleDialogClose
-                handleDialogClose(false);
-              }}
-              disabled={isUploadingFiles}
-            >
-              Hủy
-            </Button>
-            <Button
-              onClick={handleUpload}
-              disabled={isUploadingFiles || previewItems.length === 0}
-            >
-              <IconUpload className="size-4 mr-2" />
-              {isUploadingFiles
-                ? "Đang tải lên..."
-                : `Tải lên ${previewItems.length} ảnh`}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              )}
+
+              {/* Upload Progress */}
+              {isUploadingFiles && uploadProgress.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Tiến trình tải lên</Label>
+                  <div className="space-y-3">
+                    {uploadProgress.map((progress, index) => (
+                      <div key={index} className="space-y-2">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="truncate max-w-[320px]">
+                            {progress.fileName}
+                          </span>
+                          <span className="text-muted-foreground">
+                            {progress.status === "uploading" && "Đang tải..."}
+                            {progress.status === "success" && "✓ Thành công"}
+                            {progress.status === "error" && "✗ Lỗi"}
+                            {progress.status === "pending" && "Chờ..."}
+                          </span>
+                        </div>
+                        {progress.status === "uploading" && (
+                          <div className="h-2 bg-muted rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-primary transition-all"
+                              style={{ width: `${progress.progress}%` }}
+                            />
+                          </div>
+                        )}
+                        {progress.error && (
+                          <p className="text-sm text-destructive">
+                            {progress.error}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  // Close dialog - cleanup will happen in handleDialogClose
+                  handleDialogClose(false);
+                }}
+                disabled={isUploadingFiles}
+              >
+                Hủy
+              </Button>
+              <Button
+                onClick={handleUpload}
+                disabled={isUploadingFiles || previewItems.length === 0}
+              >
+                <IconUpload className="size-4 mr-2" />
+                {isUploadingFiles
+                  ? "Đang tải lên..."
+                  : `Tải lên ${previewItems.length} ảnh`}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Xác nhận xóa hình ảnh</DialogTitle>
-            <DialogDescription>
-              Bạn có chắc chắn muốn xóa hình ảnh này? Hành động này không thể
-              hoàn tác.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsDeleteDialogOpen(false);
-                setImageIdToDelete(null);
-              }}
-            >
-              Hủy
-            </Button>
-            <Button variant="destructive" onClick={handleConfirmDelete}>
-              Xác nhận xóa
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {isDeleteDialogOpen && (
+        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Xác nhận xóa hình ảnh</DialogTitle>
+              <DialogDescription>
+                Bạn có chắc chắn muốn xóa hình ảnh này? Hành động này không thể
+                hoàn tác.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsDeleteDialogOpen(false);
+                  setImageIdToDelete(null);
+                }}
+              >
+                Hủy
+              </Button>
+              <Button variant="destructive" onClick={handleConfirmDelete}>
+                Xác nhận xóa
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

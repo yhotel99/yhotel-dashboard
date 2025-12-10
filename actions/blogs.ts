@@ -170,3 +170,58 @@ export async function getBlogByIdAction(id: string): Promise<Blog | null> {
     return null;
   }
 }
+
+/**
+ * Get blog by slug
+ * @param slug - Blog slug
+ * @returns Blog or null
+ */
+export async function getBlogBySlugAction(slug: string): Promise<Blog | null> {
+  try {
+    const supabase = await createClient();
+
+    // Fetch blog data with author info
+    const { data, error } = await supabase
+      .from("blogs")
+      .select(
+        `
+        *,
+        profiles!blogs_author_id_fkey (
+          id,
+          full_name,
+          email
+        )
+      `
+      )
+      .eq("slug", slug)
+      .is("deleted_at", null)
+      .single();
+
+    if (error || !data) {
+      return null;
+    }
+
+    type BlogWithAuthorData = Blog & {
+      profiles?: {
+        id: string;
+        full_name: string;
+        email: string;
+      } | null;
+    };
+
+    const blogData = data as BlogWithAuthorData;
+    const { profiles, ...blogWithoutAuthor } = blogData;
+
+    return {
+      ...blogWithoutAuthor,
+      author: profiles
+        ? {
+            full_name: profiles.full_name,
+            email: profiles.email,
+          }
+        : null,
+    } as Blog;
+  } catch {
+    return null;
+  }
+}

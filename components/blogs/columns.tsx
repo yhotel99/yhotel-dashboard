@@ -4,6 +4,11 @@ import { formatDateOnly } from "@/lib/functions";
 import { BlogActionsCell } from "./actions-cell";
 import { BlogStatusCell } from "./status-cell";
 import Image from "next/image";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export function createColumns(
   onEdit: (blog: Blog) => void,
@@ -15,13 +20,15 @@ export function createColumns(
       accessorKey: "featured_image",
       header: "Ảnh",
       cell: ({ row }) => (
-        <div className="relative aspect-video w-20 h-14 rounded-md border overflow-hidden">
+        <div className="relative aspect-video xl:w-18 w-14 xl:h-14 h-10 rounded-md border overflow-hidden">
           {row.original.featured_image ? (
             <Image
               src={row.original.featured_image}
               alt={row.original.title}
               fill
               className="object-cover"
+              sizes="(max-width: 1280px) 56px, 72px"
+              loading="lazy"
             />
           ) : (
             <div className="w-full h-full bg-muted flex items-center justify-center">
@@ -43,9 +50,9 @@ export function createColumns(
       minSize: 200,
       cell: ({ row }) => (
         <div className="flex flex-col gap-1">
-          <span className="font-medium">{row.original.title}</span>
+          <span className="font-medium line-clamp-1">{row.original.title}</span>
           {row.original.excerpt && (
-            <span className="text-xs text-muted-foreground line-clamp-1">
+            <span className="text-xs text-muted-foreground line-clamp-1 ">
               {row.original.excerpt}
             </span>
           )}
@@ -56,9 +63,16 @@ export function createColumns(
       accessorKey: "slug",
       header: "Slug",
       cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground font-mono">
-          {row.original.slug}
-        </span>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="text-sm text-muted-foreground font-mono line-clamp-1">
+              {row.original.slug}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{row.original.slug}</p>
+          </TooltipContent>
+        </Tooltip>
       ),
       size: 180,
       minSize: 150,

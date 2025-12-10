@@ -1,6 +1,12 @@
 "use client";
 
-import { IconDotsVertical } from "@tabler/icons-react";
+import {
+  IconDotsVertical,
+  IconEye,
+  IconCalendar,
+  IconEdit,
+  IconLock,
+} from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -37,19 +43,23 @@ export function ActionsCell({
       <DropdownMenuContent align="end" className="w-44">
         {onViewDetail && (
           <DropdownMenuItem onClick={() => onViewDetail(customer)}>
+            <IconEye className="mr-2 size-4" />
             Xem chi tiết
           </DropdownMenuItem>
         )}
         {onViewBookings && (
           <DropdownMenuItem onClick={() => onViewBookings(customer)}>
+            <IconCalendar className="mr-2 size-4" />
             Xem đặt phòng
           </DropdownMenuItem>
         )}
         <DropdownMenuItem onClick={() => onEdit(customer)}>
+          <IconEdit className="mr-2 size-4" />
           Chỉnh sửa
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive">
+          <IconLock className="mr-2 size-4" />
           Khóa khách hàng
         </DropdownMenuItem>
       </DropdownMenuContent>
