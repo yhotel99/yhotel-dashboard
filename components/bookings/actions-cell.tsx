@@ -210,7 +210,10 @@ export function BookingActionsCell({
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => setOpenTransfer(true)}
-            disabled={booking.status !== BOOKING_STATUS.PENDING}
+            disabled={
+              booking.status !== BOOKING_STATUS.PENDING ||
+              advancePaymentStatus?.isPaid
+            }
           >
             <IconTransfer className="mr-2 size-4" />
             Chuyển phòng

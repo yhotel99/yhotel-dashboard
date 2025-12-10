@@ -4,6 +4,7 @@ import {
   useState,
   useEffect,
   useRef,
+  useMemo,
   type ChangeEvent,
   type FormEvent,
 } from "react";
@@ -104,7 +105,8 @@ export function CreateBookingDialog({
     if (open) {
       refetch();
     }
-  }, [open, refetch]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   // Use separate hook for search results
   const { customers: searchCustomers } = useCustomers({
@@ -117,28 +119,61 @@ export function CreateBookingDialog({
   });
 
   // Convert dates to ISO strings with default times
-  const checkInISO = getDateISO(formValues.check_in_date, false);
-  const checkOutISO = getDateISO(formValues.check_out_date, true);
+  const checkInISO = useMemo(
+    () => getDateISO(formValues.check_in_date, false),
+    [formValues.check_in_date]
+  );
+  const checkOutISO = useMemo(
+    () => getDateISO(formValues.check_out_date, true),
+    [formValues.check_out_date]
+  );
 
-  const nights = calculateNightsValue(checkInISO || "", checkOutISO || "");
+  const nights = useMemo(
+    () => calculateNightsValue(checkInISO || "", checkOutISO || ""),
+    [checkInISO, checkOutISO]
+  );
 
   // Get selected room
-  const selectedRoom = rooms.find((room) => room.id === formValues.room_id);
+  const selectedRoom = useMemo(
+    () => rooms.find((room) => room.id === formValues.room_id),
+    [rooms, formValues.room_id]
+  );
 
   // Calculate total amount from room price and nights
-  const calculatedTotalAmount =
-    selectedRoom && nights > 0 ? selectedRoom.price_per_night * nights : 0;
+  const calculatedTotalAmount = useMemo(() => {
+    if (selectedRoom && nights > 0) {
+      return selectedRoom.price_per_night * nights;
+    }
+    return 0;
+  }, [selectedRoom, nights]);
 
   // Auto-update total amount when room or dates change
   useEffect(() => {
     if (calculatedTotalAmount > 0) {
-      setFormValues((prev) => ({
-        ...prev,
-        total_amount: calculatedTotalAmount.toString(),
-      }));
+      setFormValues((prev) => {
+        // Only update if the value actually changed to prevent infinite loops
+        const currentTotal = Number(prev.total_amount || 0);
+        if (Math.abs(currentTotal - calculatedTotalAmount) > 0.01) {
+          return {
+            ...prev,
+            total_amount: calculatedTotalAmount.toString(),
+          };
+        }
+        return prev;
+      });
+    } else if (calculatedTotalAmount === 0 && formValues.room_id) {
+      // Reset to 0 if no room selected or invalid dates
+      setFormValues((prev) => {
+        if (prev.total_amount !== "0") {
+          return {
+            ...prev,
+            total_amount: "0",
+          };
+        }
+        return prev;
+      });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formValues.room_id, formValues.check_in_date, formValues.check_out_date]);
+  }, [calculatedTotalAmount, formValues.room_id]);
 
   // Format advance_payment when total_amount changes (to update max value display)
   useEffect(() => {
@@ -167,7 +202,22 @@ export function CreateBookingDialog({
       searchLength >= SEARCH_CUSTOMER_MIN_LENGTH &&
       debouncedLength >= SEARCH_CUSTOMER_MIN_LENGTH
     ) {
-      setSearchResults(searchCustomers);
+      // Only update if searchCustomers actually changed
+      setSearchResults((prev) => {
+        // Compare by IDs to avoid unnecessary updates
+        const prevIds = prev
+          .map((c) => c.id)
+          .sort()
+          .join(",");
+        const newIds = searchCustomers
+          .map((c) => c.id)
+          .sort()
+          .join(",");
+        if (prevIds !== newIds) {
+          return searchCustomers;
+        }
+        return prev;
+      });
       setShowSearchResults(true);
     } else {
       setSearchResults([]);
@@ -233,20 +283,24 @@ export function CreateBookingDialog({
     setIsCreateCustomerDialogOpen(false);
   };
 
-  // Set default room_id when dialog opens
+  // Reset form when dialog closes, set default room_id when dialog opens
+  const prevOpenRef = useRef(open);
   useEffect(() => {
-    if (open && defaultRoomId) {
+    if (!open && prevOpenRef.current) {
+      // Dialog just closed, reset form
+      resetForm();
+    } else if (open && !prevOpenRef.current && defaultRoomId) {
+      // Dialog just opened, set default room_id
       setFormValues((prev) => ({
         ...prev,
         room_id: defaultRoomId,
       }));
     }
+    prevOpenRef.current = open;
   }, [open, defaultRoomId]);
 
   const handleDialogOpenChange = (nextOpen: boolean) => {
-    if (!nextOpen) {
-      resetForm();
-    }
+    // Form will be reset in useEffect when open becomes false
     onOpenChange(nextOpen);
   };
 

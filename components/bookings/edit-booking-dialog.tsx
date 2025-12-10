@@ -53,7 +53,8 @@ export function EditBookingDialog({
     if (open) {
       refetch();
     }
-  }, [open, refetch]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   // Calculate initial form values from booking
   const getInitialFormValues = (): EditBookingFormState => {

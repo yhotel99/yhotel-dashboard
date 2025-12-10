@@ -161,7 +161,7 @@ export async function checkAdvancePaymentStatusAction(
       .select("id, payment_status")
       .eq("booking_id", bookingId)
       .eq("payment_type", PAYMENT_TYPE.ADVANCE_PAYMENT)
-      .maybeSingle();
+      .single();
 
     if (error) {
       throw new Error(error.message);
