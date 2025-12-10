@@ -41,17 +41,18 @@ const allNavItems = [
     resource: "rooms",
   },
   {
-    title: "Bookings",
-    url: SIDEBAR_URLS.BOOKINGS,
-    icon: IconChartBar,
-    resource: "bookings",
-  },
-  {
     title: "Reservation",
     url: SIDEBAR_URLS.RESERVATION,
     icon: IconInnerShadowTop,
     resource: "reservations",
   },
+  {
+    title: "Bookings",
+    url: SIDEBAR_URLS.BOOKINGS,
+    icon: IconChartBar,
+    resource: "bookings",
+  },
+
   {
     title: "Customers",
     url: SIDEBAR_URLS.CUSTOMERS,
@@ -136,7 +137,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain
-          items={filteredNavItems.map(({ resource, ...item }) => item)}
+          items={filteredNavItems.map(({ title, url, icon }) => ({
+            title,
+            url,
+            icon,
+          }))}
         />
       </SidebarContent>
       <SidebarFooter>
