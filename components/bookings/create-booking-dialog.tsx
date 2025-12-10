@@ -94,7 +94,7 @@ export function CreateBookingDialog({
   const searchResultsRef = useRef<HTMLDivElement>(null);
   const { rooms, mutate: refetch } = useRooms({
     page: 1,
-    limit: 100,
+    limit: 20,
     search: "",
   });
   const debouncedSearch = useDebounce(customerSearch, 300);
