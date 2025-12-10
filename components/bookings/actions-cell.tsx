@@ -199,7 +199,7 @@ export function BookingActionsCell({
             <span className="sr-only">Open menu</span>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-44">
+        <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuItem onClick={() => onEdit(booking)}>
             <IconEdit className="mr-2 size-4" />
             Chỉnh sửa
@@ -241,6 +241,7 @@ export function BookingActionsCell({
           <DropdownMenuItem
             variant="destructive"
             onClick={() => setOpenCancel(true)}
+            disabled={booking.status === BOOKING_STATUS.CANCELLED}
           >
             <IconX className="mr-2 size-4" />
             Hủy booking

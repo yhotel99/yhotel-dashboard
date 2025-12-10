@@ -42,6 +42,7 @@ import {
   formatNumberWithSeparators,
   parseFormattedNumber,
 } from "@/lib/functions";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 type CreateBookingFormState = {
   customer_id: string;
@@ -500,21 +501,23 @@ export function CreateBookingDialog({
                   <SelectValue placeholder="Chọn phòng" />
                 </SelectTrigger>
                 <SelectContent>
-                  {rooms.length === 0 ? (
-                    <SelectItem value="no_room" disabled>
-                      Không có phòng
-                    </SelectItem>
-                  ) : (
-                    rooms.map((room) => (
-                      <SelectItem key={room.id} value={room.id}>
-                        {room.name} -{" "}
-                        {new Intl.NumberFormat("vi-VN").format(
-                          room.price_per_night
-                        )}{" "}
-                        VNĐ/đêm
+                  <ScrollArea className="max-h-[300px]">
+                    {rooms.length === 0 ? (
+                      <SelectItem value="no_room" disabled>
+                        Không có phòng
                       </SelectItem>
-                    ))
-                  )}
+                    ) : (
+                      rooms.map((room) => (
+                        <SelectItem key={room.id} value={room.id}>
+                          {room.name} -{" "}
+                          {new Intl.NumberFormat("vi-VN").format(
+                            room.price_per_night
+                          )}{" "}
+                          VNĐ/đêm
+                        </SelectItem>
+                      ))
+                    )}
+                  </ScrollArea>
                 </SelectContent>
               </Select>
             </div>
