@@ -6,7 +6,6 @@ import {
   IconDotsVertical,
   IconEdit,
   IconRefresh,
-  IconTransfer,
   IconCurrencyDollar,
   IconReceiptRefund,
   IconX,
@@ -208,7 +207,7 @@ export function BookingActionsCell({
             <IconRefresh className="mr-2 size-4" />
             Thay đổi trạng thái
           </DropdownMenuItem>
-          <DropdownMenuItem
+          {/* <DropdownMenuItem
             onClick={() => setOpenTransfer(true)}
             disabled={
               booking.status !== BOOKING_STATUS.PENDING ||
@@ -217,7 +216,7 @@ export function BookingActionsCell({
           >
             <IconTransfer className="mr-2 size-4" />
             Chuyển phòng
-          </DropdownMenuItem>
+          </DropdownMenuItem> */}
           <DropdownMenuItem
             onClick={() => setOpenMarkAdvancePayment(true)}
             disabled={
