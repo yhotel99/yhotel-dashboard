@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 
 import {
   IconTrendingUp,
@@ -58,83 +58,15 @@ import {
 } from "recharts";
 
 import { formatCurrency } from "@/lib/functions";
+import { paymentMethodLabels } from "@/lib/constants";
 
-import { createClient } from "@/lib/supabase/client";
-
-import { roomTypeLabels } from "@/lib/constants";
-
-import type { Room } from "@/lib/types";
 import { Download } from "lucide-react";
-
-// Mock data for reports
-
-const revenueData = [
-  { month: "Tháng 1", revenue: 45000000, bookings: 120 },
-  { month: "Tháng 2", revenue: 52000000, bookings: 145 },
-  { month: "Tháng 3", revenue: 48000000, bookings: 135 },
-  { month: "Tháng 4", revenue: 61000000, bookings: 168 },
-  { month: "Tháng 5", revenue: 58000000, bookings: 152 },
-  { month: "Tháng 6", revenue: 65000000, bookings: 180 },
-];
-
-const dailyReportData = [
-  {
-    date: "2024-01-15",
-    revenue: 2500000,
-    bookings: 8,
-    checkIns: 5,
-    checkOuts: 6,
-    occupancy: 85,
-  },
-  {
-    date: "2024-01-16",
-    revenue: 3200000,
-    bookings: 12,
-    checkIns: 8,
-    checkOuts: 4,
-    occupancy: 92,
-  },
-  {
-    date: "2024-01-17",
-    revenue: 2800000,
-    bookings: 10,
-    checkIns: 6,
-    checkOuts: 7,
-    occupancy: 88,
-  },
-  {
-    date: "2024-01-18",
-    revenue: 3500000,
-    bookings: 15,
-    checkIns: 10,
-    checkOuts: 5,
-    occupancy: 95,
-  },
-  {
-    date: "2024-01-19",
-    revenue: 2900000,
-    bookings: 11,
-    checkIns: 7,
-    checkOuts: 8,
-    occupancy: 90,
-  },
-  {
-    date: "2024-01-20",
-    revenue: 4100000,
-    bookings: 18,
-    checkIns: 12,
-    checkOuts: 6,
-    occupancy: 98,
-  },
-  {
-    date: "2024-01-21",
-    revenue: 3800000,
-    bookings: 16,
-    checkIns: 9,
-    checkOuts: 9,
-    occupancy: 94,
-  },
-];
+import useSWR from "swr";
+import { fetcher } from "@/lib/fetcher";
+import { endOfMonth, startOfMonth } from "date-fns";
+import Link from "next/link";
+import { PaymentStatusBadge } from "@/components/payments/status";
+import type { PaymentWithBooking } from "@/lib/types";
 
 const chartConfig = {
   revenue: {
@@ -163,8 +95,7 @@ const chartConfig = {
   },
 };
 
-// Colors for pie chart
-
+// Colors for pie chart - Room Types
 const ROOM_TYPE_COLORS = [
   "hsl(var(--primary))",
   "hsl(217, 91%, 60%)",
@@ -172,88 +103,159 @@ const ROOM_TYPE_COLORS = [
   "hsl(47, 96%, 53%)",
 ];
 
+// Colors for pie chart - Customer Sources
+const CUSTOMER_SOURCE_COLORS = [
+  "hsl(217, 91%, 60%)", // Blue for Booking.com
+  "hsl(142, 76%, 36%)", // Green for Agoda
+  "hsl(47, 96%, 53%)", // Orange for Vãng lai
+  "hsl(0, 0%, 60%)", // Grey for Website
+];
+
+// Types for API responses
+type SummaryResponse = {
+  totalRevenue: number;
+  totalBookings: number;
+  averageOccupancy: number;
+  totalGuests: number;
+  revenueGrowth: number;
+  bookingGrowth: number;
+  occupancyGrowth: number;
+  guestGrowth: number;
+};
+
+type MonthlyResponse = {
+  month: string;
+  revenue: number;
+  bookings: number;
+}[];
+
+type RoomStatsResponse = {
+  type: string;
+  label: string;
+  count: number;
+}[];
+
+type CustomerSourceResponse = {
+  source: string;
+  label: string;
+  count: number;
+}[];
+
+type RoomStatusResponse = {
+  status: string;
+  label: string;
+  count: number;
+  color: string;
+}[];
+
+type PaymentsResponse = {
+  data: PaymentWithBooking[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+};
+
 export function SystemReports() {
   // Initialize date range to current month
+  // const getCurrentMonthRange = () => {
+  //   const now = new Date();
+  //   const from = new Date(now.getFullYear(), now.getMonth(), 1);
+  //   const to = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  //   from.setHours(0, 0, 0, 0);
+  //   to.setHours(23, 59, 59, 999);
+  //   return { from, to };
+  // };
+
   const getCurrentMonthRange = () => {
     const now = new Date();
-    const from = new Date(now.getFullYear(), now.getMonth(), 1);
-    const to = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    from.setHours(0, 0, 0, 0);
-    to.setHours(23, 59, 59, 999);
-    return { from, to };
+    return {
+      from: startOfMonth(now),
+      to: endOfMonth(now),
+    };
   };
 
   const [dateRange, setDateRange] = useState(getCurrentMonthRange());
   const [reportType, setReportType] = useState("revenue");
-  const [roomStats, setRoomStats] = useState<
-    { type: string; label: string; count: number }[]
-  >([]);
-  const [isLoadingRoomStats, setIsLoadingRoomStats] = useState(true);
+  const [monthRange, setMonthRange] = useState("6_months");
+  // Build URLs for SWR
+  const fromISO = dateRange.from.toISOString();
+  const toISO = dateRange.to.toISOString();
 
-  // Fetch room statistics by type
+  const summaryUrl = `/api/reports/summary?fromDate=${encodeURIComponent(
+    fromISO
+  )}&toDate=${encodeURIComponent(toISO)}`;
+  const monthlyUrl = `/api/reports/monthly?months=${
+    monthRange === "6_months" ? "6" : "12"
+  }`;
+  const roomStatsUrl = "/api/reports/room-stats";
+  const customerSourcesUrl = "/api/reports/customer-sources";
 
-  const fetchRoomStats = useCallback(async () => {
-    try {
-      setIsLoadingRoomStats(true);
-      const supabase = createClient();
+  // Use SWR for all data fetching
+  const {
+    data: summaryData,
+    isLoading: isLoadingSummary,
+    error: summaryError,
+  } = useSWR<SummaryResponse>(summaryUrl, fetcher);
+  const {
+    data: monthlyData,
+    isLoading: isLoadingMonthly,
+    error: monthlyError,
+  } = useSWR<MonthlyResponse>(monthlyUrl, fetcher);
+  const {
+    data: roomStatsData,
+    isLoading: isLoadingRoomStats,
+    error: roomStatsError,
+  } = useSWR<RoomStatsResponse>(roomStatsUrl, fetcher);
+  const {
+    data: customerSourcesData,
+    isLoading: isLoadingCustomerSources,
+    error: customerSourcesError,
+  } = useSWR<CustomerSourceResponse>(customerSourcesUrl, fetcher);
+  const {
+    data: roomStatusData,
+    isLoading: isLoadingRoomStatus,
+    error: roomStatusError,
+  } = useSWR<RoomStatusResponse>("/api/reports/room-status", fetcher);
+  const { data: recentPaymentsData, isLoading: isLoadingRecentPayments } =
+    useSWR<PaymentsResponse>("/api/payments?page=1&limit=10", fetcher);
 
-      // Fetch all rooms without pagination
-      const { data, error } = await supabase
-        .from("rooms")
-        .select("room_type")
-        .is("deleted_at", null);
+  // Derived state with safe defaults - ensure arrays are always arrays
+  const summaryStats =
+    summaryData &&
+    !summaryError &&
+    typeof summaryData === "object" &&
+    !Array.isArray(summaryData)
+      ? summaryData
+      : {
+          totalRevenue: 0,
+          totalBookings: 0,
+          averageOccupancy: 0,
+          totalGuests: 0,
+          revenueGrowth: 0,
+          bookingGrowth: 0,
+          occupancyGrowth: 0,
+          guestGrowth: 0,
+        };
+  const revenueData =
+    Array.isArray(monthlyData) && !monthlyError ? monthlyData : [];
+  const roomStats =
+    Array.isArray(roomStatsData) && !roomStatsError ? roomStatsData : [];
+  const customerSources =
+    Array.isArray(customerSourcesData) && !customerSourcesError
+      ? customerSourcesData
+      : [];
+  const roomStatuses =
+    Array.isArray(roomStatusData) && !roomStatusError ? roomStatusData : [];
 
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      // Count rooms by type
-      const typeCounts: Record<string, number> = {
-        standard: 0,
-        deluxe: 0,
-        superior: 0,
-        family: 0,
-      };
-
-      (data || []).forEach((room: { room_type: Room["room_type"] }) => {
-        if (room.room_type && typeCounts[room.room_type] !== undefined) {
-          typeCounts[room.room_type]++;
-        }
-      });
-
-      // Transform to chart data
-      const stats = Object.entries(typeCounts).map(([type, count]) => ({
-        type,
-        label: roomTypeLabels[type as Room["room_type"]],
-        count,
-      }));
-
-      setRoomStats(stats);
-    } catch (err) {
-      console.error("Error fetching room stats:", err);
-      // Set empty stats on error
-      setRoomStats([]);
-    } finally {
-      setIsLoadingRoomStats(false);
-    }
-  }, []);
-
-  // Fetch room stats on mount
-  useEffect(() => {
-    fetchRoomStats();
-  }, [fetchRoomStats]);
-
-  // Mock summary stats
-  const summaryStats = {
-    totalRevenue: 329000000,
-    totalBookings: 900,
-    averageOccupancy: 89.5,
-    totalGuests: 2150,
-    revenueGrowth: 12.5,
-    bookingGrowth: 8.3,
-    occupancyGrowth: 5.2,
-    guestGrowth: 15.7,
-  };
+  // Calculate total rooms for percentage
+  const totalRooms = roomStatuses.reduce(
+    (sum, status) => sum + status.count,
+    0
+  );
+  const isLoadingReports = isLoadingSummary || isLoadingMonthly;
 
   return (
     <div className="flex flex-col gap-6 px-4 py-6 lg:px-6">
@@ -425,161 +427,78 @@ export function SystemReports() {
               <div>
                 <CardTitle className="text-2xl">Doanh thu theo tháng</CardTitle>
                 <CardDescription className="text-base mt-1">
-                  Biểu đồ doanh thu 6 tháng gần nhất
+                  Biểu đồ doanh thu {monthRange === "6_months" ? "6" : "12"}{" "}
+                  tháng gần nhất
                 </CardDescription>
               </div>
-              <Select value={reportType} onValueChange={setReportType}>
-                <SelectTrigger className="w-[140px] border-primary/20">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="revenue">Doanh thu</SelectItem>
-                  <SelectItem value="bookings">Đặt phòng</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2">
+                <Select value={reportType} onValueChange={setReportType}>
+                  <SelectTrigger className="w-[140px] border-primary/20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="revenue">Doanh thu</SelectItem>
+                    <SelectItem value="bookings">Đặt phòng</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={monthRange} onValueChange={setMonthRange}>
+                  <SelectTrigger className="w-[140px] border-primary/20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="6_months">6 tháng</SelectItem>
+                    <SelectItem value="12_months">1 năm</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="px-2 sm:px-6">
-            <ChartContainer config={chartConfig} className="h-[350px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={revenueData}
-                  margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
-                  barCategoryGap="20%"
-                >
-                  <defs>
-                    <linearGradient
-                      id="revenueGradient"
-                      x1="0"
-                      y1="0"
-                      x2="0"
-                      y2="1"
-                    >
-                      <stop
-                        offset="0%"
-                        stopColor="hsl(var(--primary))"
-                        stopOpacity={1}
-                      />
-                      <stop
-                        offset="100%"
-                        stopColor="hsl(var(--primary))"
-                        stopOpacity={0.3}
-                      />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    className="stroke-primary/10"
-                  />
-                  <XAxis
-                    dataKey="month"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={12}
-                    className="text-xs font-medium"
-                    tick={{ fill: "hsl(var(--muted-foreground))" }}
-                  />
-                  <YAxis
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={12}
-                    className="text-xs font-medium"
-                    tick={{ fill: "hsl(var(--muted-foreground))" }}
-                    tickFormatter={(value) =>
-                      `${(value / 1000000).toFixed(0)}Tr`
-                    }
-                  />
-                  <ChartTooltip
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        const data = payload[0].payload;
-                        return (
-                          <div className="rounded-lg border border-primary/20 bg-background p-3 shadow-lg">
-                            <div className="mb-2">
-                              <p className="text-sm font-semibold text-primary">
-                                {data.month}
-                              </p>
-                            </div>
-                            <div className="space-y-2">
-                              <div className="flex items-center justify-between gap-4">
-                                <div className="flex items-center gap-2">
-                                  <div className="h-3 w-3 rounded-full bg-primary" />
-                                  <span className="text-xs text-muted-foreground">
-                                    Doanh thu
-                                  </span>
-                                </div>
-                                <span className="text-sm font-bold text-primary">
-                                  {formatCurrency(data.revenue)}
-                                </span>
-                              </div>
-                              <div className="flex items-center justify-between gap-4">
-                                <div className="flex items-center gap-2">
-                                  <div className="h-3 w-3 rounded-full bg-primary/60" />
-                                  <span className="text-xs text-muted-foreground">
-                                    Đặt phòng
-                                  </span>
-                                </div>
-                                <span className="text-sm font-semibold text-primary/80">
-                                  {data.bookings} phòng
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                    cursor={{ fill: "hsl(var(--primary) / 0.1)" }}
-                  />
-                  <Bar
-                    dataKey={reportType === "revenue" ? "revenue" : "bookings"}
-                    fill="url(#revenueGradient)"
-                    radius={[12, 12, 0, 0]}
-                    className="hover:opacity-100 transition-opacity"
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-
-        {/* Room Statistics Chart */}
-        <Card className="border-primary/20 bg-linear-to-br from-primary/5 via-card to-card">
-          <CardHeader>
-            <CardTitle className="text-2xl">
-              Thống kê số lượng theo loại phòng
-            </CardTitle>
-            <CardDescription className="text-base mt-1">
-              Biểu đồ phân bố số lượng phòng theo từng loại
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="px-2 sm:px-6">
-            {isLoadingRoomStats ? (
+            {isLoadingReports ? (
               <div className="h-[350px] flex items-center justify-center">
                 <p className="text-muted-foreground">Đang tải dữ liệu...</p>
               </div>
-            ) : roomStats.length === 0 ? (
+            ) : revenueData.length === 0 ? (
               <div className="h-[350px] flex items-center justify-center">
                 <p className="text-muted-foreground">Không có dữ liệu</p>
               </div>
             ) : (
-              <div className="grid gap-6 md:grid-cols-2">
-                {/* Bar Chart */}
-                <ChartContainer
-                  config={chartConfig}
-                  className="h-[350px] w-full"
-                >
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={roomStats}
-                      margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
-                      barCategoryGap="20%"
-                    >
-                      <defs>
-                        {roomStats.map((_, index) => (
+              (() => {
+                // Calculate max value for Y-axis domain
+                const maxValue =
+                  reportType === "revenue"
+                    ? Math.max(...revenueData.map((d) => d.revenue || 0), 0)
+                    : Math.max(...revenueData.map((d) => d.bookings || 0), 0);
+
+                // Calculate nice rounded max value for better tick distribution
+                const getNiceMax = (max: number) => {
+                  if (max === 0) return reportType === "revenue" ? 100 : 10;
+                  const magnitude = Math.pow(10, Math.floor(Math.log10(max)));
+                  const normalized = max / magnitude;
+                  let niceValue;
+                  if (normalized <= 1) niceValue = 1;
+                  else if (normalized <= 2) niceValue = 2;
+                  else if (normalized <= 5) niceValue = 5;
+                  else niceValue = 10;
+                  return niceValue * magnitude;
+                };
+
+                const niceMax = getNiceMax(maxValue * 1.1);
+
+                return (
+                  <ChartContainer
+                    config={chartConfig}
+                    className="h-[350px] w-full"
+                  >
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={revenueData}
+                        margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
+                        barCategoryGap="20%"
+                      >
+                        <defs>
                           <linearGradient
-                            key={`gradient-${index}`}
-                            id={`roomGradient-${index}`}
+                            id="revenueGradient"
                             x1="0"
                             y1="0"
                             x2="0"
@@ -587,338 +506,489 @@ export function SystemReports() {
                           >
                             <stop
                               offset="0%"
-                              stopColor={
-                                ROOM_TYPE_COLORS[
-                                  index % ROOM_TYPE_COLORS.length
-                                ]
-                              }
+                              stopColor="hsl(var(--primary))"
                               stopOpacity={1}
                             />
                             <stop
                               offset="100%"
-                              stopColor={
-                                ROOM_TYPE_COLORS[
-                                  index % ROOM_TYPE_COLORS.length
-                                ]
-                              }
+                              stopColor="hsl(var(--primary))"
                               stopOpacity={0.3}
                             />
                           </linearGradient>
-                        ))}
-                      </defs>
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        className="stroke-primary/10"
-                      />
-                      <XAxis
-                        dataKey="label"
-                        tickLine={false}
-                        axisLine={false}
-                        tickMargin={12}
-                        className="text-xs font-medium"
-                        tick={{ fill: "hsl(var(--muted-foreground))" }}
-                      />
-                      <YAxis
-                        tickLine={false}
-                        axisLine={false}
-                        tickMargin={12}
-                        className="text-xs font-medium"
-                        tick={{ fill: "hsl(var(--muted-foreground))" }}
-                      />
-                      <ChartTooltip
-                        content={({ active, payload }) => {
-                          if (active && payload && payload.length) {
-                            const data = payload[0].payload;
-                            return (
-                              <div className="rounded-lg border border-primary/20 bg-background p-3 shadow-lg">
-                                <div className="mb-2">
-                                  <p className="text-sm font-semibold text-primary">
-                                    {data.label}
-                                  </p>
-                                </div>
-                                <div className="flex items-center justify-between gap-4">
-                                  <div className="flex items-center gap-2">
-                                    <div
-                                      className="h-3 w-3 rounded-full"
-                                      style={{
-                                        backgroundColor:
-                                          ROOM_TYPE_COLORS[
-                                            roomStats.findIndex(
-                                              (s) => s.type === data.type
-                                            ) % ROOM_TYPE_COLORS.length
-                                          ],
-                                      }}
-                                    />
-                                    <span className="text-xs text-muted-foreground">
-                                      Số lượng
-                                    </span>
-                                  </div>
-                                  <span className="text-sm font-bold text-primary">
-                                    {data.count} phòng
-                                  </span>
-                                </div>
-                              </div>
-                            );
-                          }
-                          return null;
-                        }}
-                        cursor={{ fill: "hsl(var(--primary) / 0.1)" }}
-                      />
-                      <Bar
-                        dataKey="count"
-                        radius={[12, 12, 0, 0]}
-                        className="hover:opacity-100 transition-opacity"
-                      >
-                        {roomStats.map((entry, index) => {
-                          const color =
-                            ROOM_TYPE_COLORS[index % ROOM_TYPE_COLORS.length];
-                          return <Cell key={`cell-${index}`} fill={color} />;
-                        })}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </ChartContainer>
-
-                {/* Pie Chart */}
-                <ChartContainer
-                  config={chartConfig}
-                  className="h-[350px] w-full"
-                >
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={roomStats}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ label, percent }) =>
-                          `${label}: ${(percent * 100).toFixed(0)}%`
-                        }
-                        outerRadius={100}
-                        fill="#8884d8"
-                        dataKey="count"
-                      >
-                        {roomStats.map((_, index) => (
-                          <Cell
-                            key={`cell-${index}`}
-                            fill={
-                              ROOM_TYPE_COLORS[index % ROOM_TYPE_COLORS.length]
+                        </defs>
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          stroke="hsl(var(--border))"
+                          vertical={true}
+                          horizontal={true}
+                        />
+                        <XAxis
+                          dataKey="month"
+                          tickLine={false}
+                          axisLine={false}
+                          tickMargin={12}
+                          className="text-xs font-medium"
+                          tick={{ fill: "hsl(var(--muted-foreground))" }}
+                        />
+                        <YAxis
+                          tickLine={false}
+                          axisLine={false}
+                          tickMargin={12}
+                          className="text-xs font-medium"
+                          tick={{ fill: "hsl(var(--muted-foreground))" }}
+                          domain={[0, niceMax]}
+                          allowDecimals={false}
+                          ticks={[
+                            0,
+                            niceMax / 4,
+                            niceMax / 2,
+                            (niceMax * 3) / 4,
+                            niceMax,
+                          ]}
+                          tickFormatter={(value) => {
+                            if (reportType === "revenue") {
+                              if (value >= 1000000) {
+                                return `${(value / 1000000).toFixed(1)}Tr`;
+                              } else if (value >= 1000) {
+                                return `${(value / 1000).toFixed(0)}K`;
+                              } else {
+                                return value.toString();
+                              }
+                            } else {
+                              return value.toString();
                             }
-                          />
-                        ))}
-                      </Pie>
-                      <ChartTooltip
-                        content={({ active, payload }) => {
-                          if (active && payload && payload.length) {
-                            const data = payload[0].payload;
-                            const total = roomStats.reduce(
-                              (sum, stat) => sum + stat.count,
-                              0
-                            );
-                            const percentage =
-                              total > 0
-                                ? ((data.count / total) * 100).toFixed(1)
-                                : 0;
-                            return (
-                              <div className="rounded-lg border border-primary/20 bg-background p-3 shadow-lg">
-                                <div className="mb-2">
-                                  <p className="text-sm font-semibold text-primary">
-                                    {data.label}
-                                  </p>
-                                </div>
-                                <div className="space-y-1">
-                                  <div className="flex items-center justify-between gap-4">
-                                    <span className="text-xs text-muted-foreground">
-                                      Số lượng
-                                    </span>
-                                    <span className="text-sm font-bold text-primary">
-                                      {data.count} phòng
-                                    </span>
+                          }}
+                        />
+                        <ChartTooltip
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              const data = payload[0].payload;
+                              return (
+                                <div className="rounded-lg border border-primary/20 bg-background p-3 shadow-lg">
+                                  <div className="mb-2">
+                                    <p className="text-sm font-semibold text-primary">
+                                      {data.month}
+                                    </p>
                                   </div>
-                                  <div className="flex items-center justify-between gap-4">
-                                    <span className="text-xs text-muted-foreground">
-                                      Tỷ lệ
-                                    </span>
-                                    <span className="text-sm font-semibold text-primary/80">
-                                      {percentage}%
-                                    </span>
+                                  <div className="space-y-2">
+                                    <div className="flex items-center justify-between gap-4">
+                                      <div className="flex items-center gap-2">
+                                        <div className="h-3 w-3 rounded-full bg-primary" />
+                                        <span className="text-xs text-muted-foreground">
+                                          Doanh thu
+                                        </span>
+                                      </div>
+                                      <span className="text-sm font-bold text-primary">
+                                        {formatCurrency(data.revenue)}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center justify-between gap-4">
+                                      <div className="flex items-center gap-2">
+                                        <div className="h-3 w-3 rounded-full bg-primary/60" />
+                                        <span className="text-xs text-muted-foreground">
+                                          Đặt phòng
+                                        </span>
+                                      </div>
+                                      <span className="text-sm font-semibold text-primary/80">
+                                        {data.bookings} phòng
+                                      </span>
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            );
+                              );
+                            }
+                            return null;
+                          }}
+                          cursor={{ fill: "hsl(var(--primary) / 0.1)" }}
+                        />
+                        <Bar
+                          dataKey={
+                            reportType === "revenue" ? "revenue" : "bookings"
                           }
-                          return null;
-                        }}
-                      />
-                      <Legend
-                        formatter={(value) => (
-                          <span className="text-xs text-muted-foreground">
-                            {value}
-                          </span>
-                        )}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </ChartContainer>
-              </div>
+                          fill="url(#revenueGradient)"
+                          radius={[12, 12, 0, 0]}
+                          className="hover:opacity-100 transition-opacity"
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
+                );
+              })()
             )}
           </CardContent>
         </Card>
 
-        <Card className="border-primary/20 bg-linear-to-br from-primary/5 via-card to-card">
-          <CardHeader>
-            <CardTitle className="text-2xl">Thống kê hoạt động</CardTitle>
-            <CardDescription className="text-base mt-1">
-              Phân tích hiệu suất hoạt động
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">
-                  Tỷ lệ lấp đầy trung bình
-                </span>
-                <span className="font-semibold">
-                  {summaryStats.averageOccupancy}%
-                </span>
-              </div>
-              <div className="h-2 w-full rounded-full bg-muted">
-                <div
-                  className="h-2 rounded-full bg-primary"
-                  style={{ width: `${summaryStats.averageOccupancy}%` }}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">
-                  Tỷ lệ đặt phòng thành công
-                </span>
-                <span className="font-semibold">94.5%</span>
-              </div>
-              <div className="h-2 w-full rounded-full bg-muted">
-                <div
-                  className="h-2 rounded-full bg-primary"
-                  style={{ width: "94.5%" }}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">
-                  Tỷ lệ hủy đặt phòng
-                </span>
-                <span className="font-semibold">5.5%</span>
-              </div>
-              <div className="h-2 w-full rounded-full bg-muted">
-                <div
-                  className="h-2 rounded-full bg-red-500"
-                  style={{ width: "5.5%" }}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">
-                  Thời gian check-in trung bình
-                </span>
-                <span className="font-semibold text-primary">12 phút</span>
-              </div>
-              <div className="h-2 w-full rounded-full bg-muted">
-                <div
-                  className="h-2 rounded-full bg-primary"
-                  style={{ width: "80%" }}
-                />
-              </div>
-            </div>
-            <div className="pt-4 border-t border-primary/10">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">
-                  Đánh giá khách hàng
-                </span>
-                <Badge
-                  variant="outline"
-                  className="bg-primary/10 text-primary border-primary/20"
-                >
-                  4.8/5.0
-                </Badge>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Charts Grid - Room Types and Customer Sources */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Room Statistics Chart */}
+          <Card className="border-primary/20 bg-linear-to-br from-primary/5 via-card to-card">
+            <CardHeader>
+              <CardTitle className="text-2xl">Loại phòng</CardTitle>
+              <CardDescription className="text-base mt-1">
+                Phân bổ số lượng phòng theo từng loại
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="px-2 sm:px-6">
+              {isLoadingRoomStats ? (
+                <div className="h-[350px] flex items-center justify-center">
+                  <p className="text-muted-foreground">Đang tải dữ liệu...</p>
+                </div>
+              ) : roomStats.length === 0 ? (
+                <div className="h-[350px] flex items-center justify-center">
+                  <p className="text-muted-foreground">Không có dữ liệu</p>
+                </div>
+              ) : (
+                <div className="flex justify-center">
+                  {/* Donut Chart */}
+                  <ChartContainer
+                    config={chartConfig}
+                    className="h-[350px] w-full"
+                  >
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={roomStats}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ label, percent }) =>
+                            `${label}: ${(percent * 100).toFixed(0)}%`
+                          }
+                          outerRadius={100}
+                          innerRadius={60}
+                          fill="#8884d8"
+                          dataKey="count"
+                        >
+                          {roomStats.map((_, index) => (
+                            <Cell
+                              key={`cell-${index}`}
+                              fill={
+                                ROOM_TYPE_COLORS[
+                                  index % ROOM_TYPE_COLORS.length
+                                ]
+                              }
+                            />
+                          ))}
+                        </Pie>
+                        <ChartTooltip
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              const data = payload[0].payload;
+                              const total = roomStats.reduce(
+                                (sum, stat) => sum + stat.count,
+                                0
+                              );
+                              const percentage =
+                                total > 0
+                                  ? ((data.count / total) * 100).toFixed(1)
+                                  : 0;
+                              return (
+                                <div className="rounded-lg border border-primary/20 bg-background p-3 shadow-lg">
+                                  <div className="mb-2">
+                                    <p className="text-sm font-semibold text-primary">
+                                      {data.label}
+                                    </p>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <div className="flex items-center justify-between gap-4">
+                                      <span className="text-xs text-muted-foreground">
+                                        Số lượng
+                                      </span>
+                                      <span className="text-sm font-bold text-primary">
+                                        {data.count} phòng
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center justify-between gap-4">
+                                      <span className="text-xs text-muted-foreground">
+                                        Tỷ lệ
+                                      </span>
+                                      <span className="text-sm font-semibold text-primary/80">
+                                        {percentage}%
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                        <Legend
+                          formatter={(value) => (
+                            <span className="text-xs text-muted-foreground">
+                              {value}
+                            </span>
+                          )}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Customer Sources Chart */}
+          <Card className="border-primary/20 bg-linear-to-br from-primary/5 via-card to-card">
+            <CardHeader>
+              <CardTitle className="text-2xl">Nguồn khách</CardTitle>
+              <CardDescription className="text-base mt-1">
+                Phân bổ số lượng đặt phòng theo nguồn khách
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="px-2 sm:px-6">
+              {isLoadingCustomerSources ? (
+                <div className="h-[350px] flex items-center justify-center">
+                  <p className="text-muted-foreground">Đang tải dữ liệu...</p>
+                </div>
+              ) : customerSources.length === 0 ? (
+                <div className="h-[350px] flex items-center justify-center">
+                  <p className="text-muted-foreground">Không có dữ liệu</p>
+                </div>
+              ) : (
+                <div className="flex justify-center">
+                  {/* Donut Chart */}
+                  <ChartContainer
+                    config={chartConfig}
+                    className="h-[350px] w-full"
+                  >
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={customerSources}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ label, percent }) =>
+                            `${label}: ${(percent * 100).toFixed(0)}%`
+                          }
+                          outerRadius={100}
+                          innerRadius={60}
+                          fill="#8884d8"
+                          dataKey="count"
+                        >
+                          {customerSources.map((_, index) => (
+                            <Cell
+                              key={`cell-${index}`}
+                              fill={
+                                CUSTOMER_SOURCE_COLORS[
+                                  index % CUSTOMER_SOURCE_COLORS.length
+                                ]
+                              }
+                            />
+                          ))}
+                        </Pie>
+                        <ChartTooltip
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              const data = payload[0].payload;
+                              const total = customerSources.reduce(
+                                (sum, stat) => sum + stat.count,
+                                0
+                              );
+                              const percentage =
+                                total > 0
+                                  ? ((data.count / total) * 100).toFixed(1)
+                                  : 0;
+                              return (
+                                <div className="rounded-lg border border-primary/20 bg-background p-3 shadow-lg">
+                                  <div className="mb-2">
+                                    <p className="text-sm font-semibold text-primary">
+                                      {data.label}
+                                    </p>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <div className="flex items-center justify-between gap-4">
+                                      <span className="text-xs text-muted-foreground">
+                                        Số lượng
+                                      </span>
+                                      <span className="text-sm font-bold text-primary">
+                                        {data.count} đặt phòng
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center justify-between gap-4">
+                                      <span className="text-xs text-muted-foreground">
+                                        Tỷ lệ
+                                      </span>
+                                      <span className="text-sm font-semibold text-primary/80">
+                                        {percentage}%
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                        <Legend
+                          formatter={(value) => (
+                            <span className="text-xs text-muted-foreground">
+                              {value}
+                            </span>
+                          )}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
-      {/* Daily Report Table */}
+      {/* Room Status */}
       <Card className="border-primary/20 bg-linear-to-br from-primary/5 via-card to-card">
         <CardHeader>
-          <CardTitle className="text-2xl">Báo cáo chi tiết theo ngày</CardTitle>
-          <CardDescription className="text-base mt-1">
-            Thống kê doanh thu, đặt phòng và hoạt động hàng ngày
-          </CardDescription>
+          <CardTitle className="text-2xl">Tình trạng phòng</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border border-primary/20">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Ngày</TableHead>
-                  <TableHead className="text-right">Doanh thu</TableHead>
-                  <TableHead className="text-right">Đặt phòng</TableHead>
-                  <TableHead className="text-right">Check-in</TableHead>
-                  <TableHead className="text-right">Check-out</TableHead>
-                  <TableHead className="text-right">Tỷ lệ lấp đầy</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {dailyReportData.map((report) => (
-                  <TableRow key={report.date}>
-                    <TableCell className="font-medium">
-                      {new Date(report.date).toLocaleDateString("vi-VN", {
-                        weekday: "short",
-                        day: "2-digit",
-                        month: "2-digit",
-                      })}
-                    </TableCell>
-                    <TableCell className="text-right font-semibold text-primary">
-                      {formatCurrency(report.revenue)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {report.bookings}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Badge
-                        variant="outline"
-                        className="bg-primary/10 text-primary border-primary/20"
+          {isLoadingRoomStatus ? (
+            <div className="h-[200px] flex items-center justify-center">
+              <p className="text-muted-foreground">Đang tải dữ liệu...</p>
+            </div>
+          ) : roomStatuses.length === 0 ? (
+            <div className="h-[200px] flex items-center justify-center">
+              <p className="text-muted-foreground">Không có dữ liệu</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {roomStatuses.map((status) => {
+                const percentage =
+                  totalRooms > 0 ? (status.count / totalRooms) * 100 : 0;
+                const colorClasses = {
+                  green: "bg-green-500",
+                  red: "bg-red-500",
+                  orange: "bg-orange-500",
+                };
+                const textColorClasses = {
+                  green: "text-green-600 dark:text-green-400",
+                  red: "text-red-600 dark:text-red-400",
+                  orange: "text-orange-600 dark:text-orange-400",
+                };
+
+                return (
+                  <div key={status.status} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-foreground">
+                        {status.label}
+                      </span>
+                      <span
+                        className={`text-sm font-semibold ${
+                          textColorClasses[
+                            status.color as keyof typeof textColorClasses
+                          ]
+                        }`}
                       >
-                        {report.checkIns}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Badge
-                        variant="outline"
-                        className="bg-primary/10 text-primary border-primary/20"
-                      >
-                        {report.checkOuts}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <span className="font-semibold text-primary">
-                          {report.occupancy}%
-                        </span>
-                        <div className="h-2 w-16 rounded-full bg-muted">
-                          <div
-                            className="h-2 rounded-full bg-primary"
-                            style={{ width: `${report.occupancy}%` }}
-                          />
-                        </div>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                        {status.count} phòng
+                      </span>
+                    </div>
+                    <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
+                      <div
+                        className={`h-full rounded-full transition-all ${
+                          colorClasses[
+                            status.color as keyof typeof colorClasses
+                          ]
+                        }`}
+                        style={{ width: `${percentage}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Recent Transactions */}
+      <Card className="border-primary/20 bg-linear-to-br from-primary/5 via-card to-card">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-2xl">Giao dịch gần đây</CardTitle>
+              <CardDescription className="text-base mt-1">
+                10 giao dịch thanh toán mới nhất
+              </CardDescription>
+            </div>
+            <Button asChild variant="outline">
+              <Link href="/dashboard/payments">Xem tất cả</Link>
+            </Button>
           </div>
+        </CardHeader>
+        <CardContent>
+          {isLoadingRecentPayments ? (
+            <div className="h-[200px] flex items-center justify-center">
+              <p className="text-muted-foreground">Đang tải dữ liệu...</p>
+            </div>
+          ) : !recentPaymentsData?.data ||
+            recentPaymentsData.data.length === 0 ? (
+            <div className="h-[200px] flex items-center justify-center">
+              <p className="text-muted-foreground">Không có giao dịch</p>
+            </div>
+          ) : (
+            <div className="rounded-md border border-primary/20">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Khách hàng</TableHead>
+                    <TableHead>Phòng</TableHead>
+                    <TableHead className="text-right">Số tiền</TableHead>
+                    <TableHead>Phương thức</TableHead>
+                    <TableHead>Trạng thái</TableHead>
+                    <TableHead>Ngày</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {recentPaymentsData.data.map((payment) => (
+                    <TableRow key={payment.id}>
+                      <TableCell className="font-medium">
+                        {payment.bookings?.customers?.full_name || "N/A"}
+                      </TableCell>
+                      <TableCell>
+                        {payment.bookings?.rooms?.name || "N/A"}
+                      </TableCell>
+                      <TableCell className="text-right font-semibold text-primary">
+                        {formatCurrency(payment.amount)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className="bg-primary/10 text-primary border-primary/20"
+                        >
+                          {paymentMethodLabels[payment.payment_method] ||
+                            payment.payment_method}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <PaymentStatusBadge status={payment.payment_status} />
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {payment.paid_at
+                          ? new Date(payment.paid_at).toLocaleDateString(
+                              "vi-VN",
+                              {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "numeric",
+                              }
+                            )
+                          : new Date(payment.created_at).toLocaleDateString(
+                              "vi-VN",
+                              {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "numeric",
+                              }
+                            )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
