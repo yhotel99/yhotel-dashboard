@@ -18,8 +18,8 @@ import {
 import { useGallery } from "@/hooks/use-gallery";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
-
 import type { ImageValue, GalleryImage } from "@/lib/types";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface ImageSelectorProps {
   value?: ImageValue | string;
@@ -28,6 +28,8 @@ interface ImageSelectorProps {
   description?: string;
   multiple?: boolean;
 }
+
+const imagesPerPage = 24;
 
 export function ImageSelector({
   value,
@@ -39,7 +41,6 @@ export function ImageSelector({
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedImages, setSelectedImages] = useState<GalleryImage[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const imagesPerPage = 24;
 
   // Fetch images with pagination
   const { images, isLoading, pagination } = useGallery(
@@ -167,7 +168,7 @@ export function ImageSelector({
           }
         }}
       >
-        <DialogContent className="min-w-2xl max-w-6xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="md:min-w-2xl max-w-6xl max-h-[80vh]">
           <DialogHeader>
             <DialogTitle>Chọn ảnh từ gallery</DialogTitle>
             <DialogDescription>
@@ -176,99 +177,101 @@ export function ImageSelector({
                 : "Click vào ảnh để chọn"}
             </DialogDescription>
           </DialogHeader>
-
-          {isLoading ? (
-            <div className="grid grid-cols-4 gap-4">
-              {Array.from({ length: 12 }).map((_, i) => (
-                <div key={i} className="aspect-square bg-muted rounded-lg" />
-              ))}
-            </div>
-          ) : images.length > 0 ? (
-            <div className="grid grid-cols-4 gap-4">
-              {images.map((image) => {
-                const isSelected =
-                  selectedImages.find((img) => img.id === image.id) !==
-                  undefined;
-                return (
-                  <div
-                    key={image.id}
-                    className={cn(
-                      "relative aspect-square cursor-pointer rounded-lg border-2 overflow-hidden transition-all",
-                      isSelected
-                        ? "border-primary ring-2 ring-primary"
-                        : "border-border hover:border-primary/50"
-                    )}
-                    onClick={() => handleImageClick(image)}
-                  >
-                    <Image
-                      src={image.url}
-                      alt=""
-                      fill
-                      className="object-cover"
-                    />
-                    {isSelected && (
-                      <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
-                        <div className="bg-primary text-primary-foreground rounded-full p-2">
-                          <IconCheck className="size-6" />
+          <ScrollArea className="h-[600px] scrollbar-hide">
+            {isLoading ? (
+              <div className="grid grid-cols-4 gap-4">
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <div key={i} className="aspect-square bg-muted rounded-lg" />
+                ))}
+              </div>
+            ) : images.length > 0 ? (
+              <div className="grid grid-cols-4 gap-4">
+                {images.map((image) => {
+                  const isSelected =
+                    selectedImages.find((img) => img.id === image.id) !==
+                    undefined;
+                  return (
+                    <div
+                      key={image.id}
+                      className={cn(
+                        "relative aspect-square cursor-pointer rounded-lg border-2 overflow-hidden transition-all",
+                        isSelected
+                          ? "border-primary ring-2 ring-primary"
+                          : "border-border hover:border-primary/50"
+                      )}
+                      onClick={() => handleImageClick(image)}
+                    >
+                      <Image
+                        src={image.url}
+                        alt=""
+                        fill
+                        className="object-cover"
+                      />
+                      {isSelected && (
+                        <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
+                          <div className="bg-primary text-primary-foreground rounded-full p-2">
+                            <IconCheck className="size-6" />
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              Chưa có ảnh nào trong gallery
-            </div>
-          )}
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                Chưa có ảnh nào trong gallery
+              </div>
+            )}
+          </ScrollArea>
 
           {/* Pagination */}
-          {pagination.totalPages > 1 && (
-            <div className="flex items-center justify-between mt-4 pt-4 border-t">
-              <div className="text-sm text-muted-foreground">
-                Trang {pagination.page} / {pagination.totalPages} (
-                {pagination.total} ảnh)
+          <div>
+            {pagination.totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                <div className="text-sm text-muted-foreground">
+                  Trang {pagination.page} / {pagination.totalPages} (
+                  {pagination.total} ảnh)
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.max(1, prev - 1))
+                    }
+                    disabled={currentPage <= 1}
+                  >
+                    <IconChevronLeft className="size-4" />
+                    Trước
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setCurrentPage((prev) =>
+                        Math.min(pagination.totalPages, prev + 1)
+                      )
+                    }
+                    disabled={currentPage >= pagination.totalPages}
+                  >
+                    Sau
+                    <IconChevronRight className="size-4" />
+                  </Button>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setCurrentPage((prev) => Math.max(1, prev - 1))
-                  }
-                  disabled={currentPage <= 1}
-                >
-                  <IconChevronLeft className="size-4" />
-                  Trước
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setCurrentPage((prev) =>
-                      Math.min(pagination.totalPages, prev + 1)
-                    )
-                  }
-                  disabled={currentPage >= pagination.totalPages}
-                >
-                  Sau
-                  <IconChevronRight className="size-4" />
-                </Button>
-              </div>
+            )}
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="outline" onClick={handleCancel}>
+                Hủy
+              </Button>
+              <Button
+                onClick={handleConfirm}
+                disabled={selectedImages.length === 0}
+              >
+                Xác nhận ({selectedImages.length})
+              </Button>
             </div>
-          )}
-
-          <div className="flex justify-end gap-2 mt-4">
-            <Button variant="outline" onClick={handleCancel}>
-              Hủy
-            </Button>
-            <Button
-              onClick={handleConfirm}
-              disabled={selectedImages.length === 0}
-            >
-              Xác nhận ({selectedImages.length})
-            </Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -292,7 +295,6 @@ export function ImageListSelector({
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedImages, setSelectedImages] = useState<GalleryImage[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const imagesPerPage = 24;
 
   // Fetch images with pagination
   const { images, isLoading, pagination } = useGallery(
@@ -409,7 +411,7 @@ export function ImageListSelector({
           }
         }}
       >
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl md:min-w-2xl">
           <DialogHeader>
             <DialogTitle>Chọn danh sách ảnh từ gallery</DialogTitle>
             <DialogDescription>
@@ -418,95 +420,99 @@ export function ImageListSelector({
             </DialogDescription>
           </DialogHeader>
 
-          {isLoading ? (
-            <div className="grid grid-cols-4 gap-4">
-              {Array.from({ length: 12 }).map((_, i) => (
-                <div key={i} className="aspect-square bg-muted rounded-lg" />
-              ))}
-            </div>
-          ) : images.length > 0 ? (
-            <div className="grid grid-cols-4 gap-4">
-              {images.map((image) => {
-                const isSelected =
-                  selectedImages.find((img) => img.id === image.id) !==
-                  undefined;
-                return (
-                  <div
-                    key={image.id}
-                    className={cn(
-                      "relative aspect-square cursor-pointer rounded-lg border-2 overflow-hidden transition-all",
-                      isSelected
-                        ? "border-primary ring-2 ring-primary"
-                        : "border-border hover:border-primary/50"
-                    )}
-                    onClick={() => handleImageClick(image)}
-                  >
-                    <Image
-                      src={image.url}
-                      alt=""
-                      fill
-                      className="object-cover"
-                    />
-                    {isSelected && (
-                      <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
-                        <div className="bg-primary text-primary-foreground rounded-full p-2">
-                          <IconCheck className="size-6" />
+          <ScrollArea className="h-[600px] scrollbar-hide">
+            {isLoading ? (
+              <div className="grid grid-cols-4 gap-4">
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <div key={i} className="aspect-square bg-muted rounded-lg" />
+                ))}
+              </div>
+            ) : images.length > 0 ? (
+              <div className="grid grid-cols-4 gap-4">
+                {images.map((image) => {
+                  const isSelected =
+                    selectedImages.find((img) => img.id === image.id) !==
+                    undefined;
+                  return (
+                    <div
+                      key={image.id}
+                      className={cn(
+                        "relative aspect-square cursor-pointer rounded-lg border-2 overflow-hidden transition-all",
+                        isSelected
+                          ? "border-primary ring-2 ring-primary"
+                          : "border-border hover:border-primary/50"
+                      )}
+                      onClick={() => handleImageClick(image)}
+                    >
+                      <Image
+                        src={image.url}
+                        alt=""
+                        fill
+                        className="object-cover"
+                      />
+                      {isSelected && (
+                        <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
+                          <div className="bg-primary text-primary-foreground rounded-full p-2">
+                            <IconCheck className="size-6" />
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              Chưa có ảnh nào trong gallery
-            </div>
-          )}
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                Chưa có ảnh nào trong gallery
+              </div>
+            )}
+          </ScrollArea>
 
           {/* Pagination */}
-          {pagination.totalPages > 1 && (
-            <div className="flex items-center justify-between mt-4 pt-4 border-t">
-              <div className="text-sm text-muted-foreground">
-                Trang {pagination.page} / {pagination.totalPages} (
-                {pagination.total} ảnh)
+          <div>
+            {pagination.totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                <div className="text-sm text-muted-foreground">
+                  Trang {pagination.page} / {pagination.totalPages} (
+                  {pagination.total} ảnh)
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.max(1, prev - 1))
+                    }
+                    disabled={currentPage <= 1}
+                  >
+                    <IconChevronLeft className="size-4" />
+                    Trước
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setCurrentPage((prev) =>
+                        Math.min(pagination.totalPages, prev + 1)
+                      )
+                    }
+                    disabled={currentPage >= pagination.totalPages}
+                  >
+                    Sau
+                    <IconChevronRight className="size-4" />
+                  </Button>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setCurrentPage((prev) => Math.max(1, prev - 1))
-                  }
-                  disabled={currentPage <= 1}
-                >
-                  <IconChevronLeft className="size-4" />
-                  Trước
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setCurrentPage((prev) =>
-                      Math.min(pagination.totalPages, prev + 1)
-                    )
-                  }
-                  disabled={currentPage >= pagination.totalPages}
-                >
-                  Sau
-                  <IconChevronRight className="size-4" />
-                </Button>
-              </div>
-            </div>
-          )}
+            )}
 
-          <div className="flex justify-end gap-2 mt-4">
-            <Button variant="outline" onClick={handleCancel}>
-              Hủy
-            </Button>
-            <Button onClick={handleConfirm}>
-              Xác nhận ({selectedImages.length})
-            </Button>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="outline" onClick={handleCancel}>
+                Hủy
+              </Button>
+              <Button onClick={handleConfirm}>
+                Xác nhận ({selectedImages.length})
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

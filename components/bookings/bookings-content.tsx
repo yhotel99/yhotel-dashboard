@@ -33,8 +33,8 @@ import { createColumns } from "@/components/bookings/columns";
 import { CreateBookingDialog } from "@/components/bookings/create-booking-dialog";
 import { EditBookingDialog } from "@/components/bookings/edit-booking-dialog";
 import { CheckAvailableRoomsDialog } from "@/components/bookings/check-available-rooms-dialog";
-import { toast } from "sonner";
 import { translateBookingError } from "@/lib/functions";
+import { toast } from "sonner";
 
 export function BookingsContent() {
   const router = useRouter();
