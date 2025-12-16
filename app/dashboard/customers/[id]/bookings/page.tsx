@@ -61,8 +61,6 @@ export default function CustomerBookingsPage() {
   const searchParams = useSearchParams();
   const customerId = params.id as string;
 
-  const [customerName, setCustomerName] = useState<string>("Khách hàng");
-  const [phone, setPhone] = useState<string>("");
   const [localSearch, setLocalSearch] = useState("");
 
   // Get pagination and search from URL params
@@ -108,11 +106,6 @@ export default function CustomerBookingsPage() {
     [router, searchParams, customerId]
   );
 
-  // Sync local search with URL search
-  useEffect(() => {
-    setLocalSearch(search);
-  }, [search]);
-
   // Debounce search
   const debouncedSearch = useDebounce(localSearch, 500);
 
@@ -129,12 +122,17 @@ export default function CustomerBookingsPage() {
     customerId: customerId || null,
   });
 
-  // Get customer info from bookings (all bookings have same customer)
-  useEffect(() => {
+  const customerInfo = useMemo(() => {
     if (bookings.length > 0 && bookings[0].customers) {
-      setCustomerName(bookings[0].customers.full_name);
-      setPhone(bookings[0].customers.phone || "");
+      return {
+        name: bookings[0].customers.full_name,
+        phone: bookings[0].customers.phone || "",
+      };
     }
+    return {
+      name: "Khách hàng",
+      phone: "",
+    };
   }, [bookings]);
 
   const columns = useMemo(() => createColumns(), []);
@@ -152,9 +150,13 @@ export default function CustomerBookingsPage() {
           <span className="sr-only">Quay lại</span>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold">Booking của {customerName}</h1>
-          {phone ? (
-            <p className="text-muted-foreground text-sm">SĐT: {phone}</p>
+          <h1 className="text-2xl font-bold">
+            Booking của {customerInfo.name}
+          </h1>
+          {customerInfo.phone ? (
+            <p className="text-muted-foreground text-sm">
+              SĐT: {customerInfo.phone}
+            </p>
           ) : null}
         </div>
       </div>

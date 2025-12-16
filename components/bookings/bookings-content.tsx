@@ -60,10 +60,10 @@ export function BookingsContent() {
     return searchParams.get("search") || "";
   }, [searchParams]);
 
-  // Sync local search with URL search
-  React.useEffect(() => {
-    setLocalSearch(search);
-  }, [search]);
+  // // Sync local search with URL search
+  // React.useEffect(() => {
+  //   setLocalSearch(search);
+  // }, [search]);
 
   // Debounce search
   const debouncedSearch = useDebounce(localSearch, 500);

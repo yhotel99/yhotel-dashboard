@@ -124,11 +124,6 @@ export function PaymentsContent() {
     [router, searchParams]
   );
 
-  // Sync local search with URL search
-  useEffect(() => {
-    setLocalSearch(search);
-  }, [search]);
-
   // Debounce search
   const debouncedSearch = useDebounce(localSearch, 500);
 

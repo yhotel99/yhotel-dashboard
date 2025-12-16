@@ -10,7 +10,10 @@ import { createColumns } from "@/components/blogs/columns";
 import { DeleteBlogDialog } from "@/components/blogs/delete-blog-dialog";
 import { toast } from "sonner";
 import { useBlogs } from "@/hooks/use-blogs";
-import { updateBlogStatus as updateBlogStatusAction, deleteBlog as deleteBlogAction } from "@/actions/blogs";
+import {
+  updateBlogStatus as updateBlogStatusAction,
+  deleteBlog as deleteBlogAction,
+} from "@/actions/blogs";
 import type { Blog } from "@/lib/types";
 
 export function BlogsContent() {
@@ -61,11 +64,6 @@ export function BlogsContent() {
     [router, searchParams]
   );
 
-  // Sync local search with URL search
-  React.useEffect(() => {
-    setLocalSearch(search);
-  }, [search]);
-
   // Debounce search
   const debouncedSearch = useDebounce(localSearch, 500);
 
@@ -75,12 +73,11 @@ export function BlogsContent() {
     }
   }, [debouncedSearch, search, limit, updateSearchParams]);
 
-  const {
-    blogs,
-    isLoading,
-    pagination,
-    mutate,
-  } = useBlogs({ search, page, limit });
+  const { blogs, isLoading, pagination, mutate } = useBlogs({
+    search,
+    page,
+    limit,
+  });
 
   const handleEditBlog = React.useCallback(
     (blog: Blog) => {
