@@ -79,62 +79,13 @@ export async function updateRefundRequestStatusAction(
       throw new Error("Không thể xác thực người dùng");
     }
 
-    // Fetch refund request to get payment_id
-    const { data: refundRequest, error: fetchError } = await supabase
-      .from("refund_requests")
-      .select("payment_id")
-      .eq("id", id)
-      .single();
+    const { data, error } = await supabase.rpc("update_refund_request_status", {
+      p_refund_request_id: id,
+      p_status: status,
+      p_user_id: user.id,
+    });
 
-    if (fetchError) {
-      throw new Error(fetchError.message);
-    }
-
-    const updateData: {
-      status: RefundRequestStatus;
-      approved_by?: string | null;
-      refunded_by?: string | null;
-    } = {
-      status,
-    };
-
-    // Set approved_by if status is approved
-    if (status === REFUND_REQUEST_STATUS.APPROVED) {
-      updateData.approved_by = user.id;
-    }
-
-    // Set refunded_by if status is refunded
-    if (status === REFUND_REQUEST_STATUS.REFUNDED) {
-      updateData.refunded_by = user.id;
-    }
-
-    const { data, error } = await supabase
-      .from("refund_requests")
-      .update(updateData)
-      .eq("id", id)
-      .select()
-      .single();
-
-    if (error) {
-      throw new Error(error.message);
-    }
-
-    // Update payment status to REFUNDED when refund request is refunded
-    if (
-      status === REFUND_REQUEST_STATUS.REFUNDED &&
-      refundRequest?.payment_id
-    ) {
-      const { error: paymentUpdateError } = await supabase
-        .from("payments")
-        .update({ payment_status: PAYMENT_STATUS.REFUNDED })
-        .eq("id", refundRequest.payment_id);
-
-      if (paymentUpdateError) {
-        console.error("Error updating payment status:", paymentUpdateError);
-        // Don't throw error here, refund request is already updated
-        // Just log the error
-      }
-    }
+    if (error) throw new Error(error.message);
 
     // Revalidate refund requests page
     revalidatePath("/dashboard/refund-requests");
@@ -145,32 +96,6 @@ export async function updateRefundRequestStatusAction(
       err instanceof Error
         ? err.message
         : "Không thể cập nhật trạng thái yêu cầu hoàn tiền";
-    throw new Error(errorMessage);
-  }
-}
-
-/**
- * Delete refund request (soft delete)
- */
-export async function deleteRefundRequestAction(id: string): Promise<void> {
-  try {
-    const supabase = await createClient();
-
-    // Soft delete by setting deleted_at
-    const { error } = await supabase
-      .from("refund_requests")
-      .update({ deleted_at: new Date().toISOString() })
-      .eq("id", id);
-
-    if (error) {
-      throw new Error(error.message);
-    }
-
-    // Revalidate refund requests page
-    revalidatePath("/dashboard/refund-requests");
-  } catch (err) {
-    const errorMessage =
-      err instanceof Error ? err.message : "Không thể xóa yêu cầu hoàn tiền";
     throw new Error(errorMessage);
   }
 }

@@ -43,10 +43,10 @@ export function BookingNotesDialog({
 
     try {
       setIsSaving(true);
-      const updated = await updateBookingAction(booking.id, {
+      const updatedBooking = await updateBookingAction(booking.id, {
         notes: notes.trim() || null,
       });
-      onSave(updated);
+      onSave(updatedBooking);
       toast.success("Đã lưu ghi chú");
       onOpenChange(false);
     } catch (error) {

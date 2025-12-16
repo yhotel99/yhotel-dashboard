@@ -237,7 +237,7 @@ export function CheckoutDialog({
       </Dialog>
 
       {/* Edit Booking Dialog */}
-      {booking && (
+      {booking && isEditDialogOpen && (
         <EditBookingDialog
           open={isEditDialogOpen}
           onOpenChange={setIsEditDialogOpen}
@@ -251,22 +251,26 @@ export function CheckoutDialog({
       )}
 
       {/* Checkout Confirmation Dialog */}
-      <CheckoutConfirmationDialog
-        open={isConfirmDialogOpen}
-        onOpenChange={setIsConfirmDialogOpen}
-        booking={booking}
-        room={room}
-        isCheckingOut={isCheckingOut}
-        onConfirm={handleCheckout}
-      />
+      {isConfirmDialogOpen && (
+        <CheckoutConfirmationDialog
+          open={isConfirmDialogOpen}
+          onOpenChange={setIsConfirmDialogOpen}
+          booking={booking}
+          room={room}
+          isCheckingOut={isCheckingOut}
+          onConfirm={handleCheckout}
+        />
+      )}
 
       {/* Notes Dialog */}
-      <BookingNotesDialog
-        open={isNotesDialogOpen}
-        onOpenChange={setIsNotesDialogOpen}
-        booking={booking}
-        onSave={handleSaveNotes}
-      />
+      {isNotesDialogOpen && (
+        <BookingNotesDialog
+          open={isNotesDialogOpen}
+          onOpenChange={setIsNotesDialogOpen}
+          booking={booking}
+          onSave={handleSaveNotes}
+        />
+      )}
     </>
   );
 }
