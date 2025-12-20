@@ -14,10 +14,8 @@ export function useReservation() {
   const swrKey = "/api/reservations";
 
   // Use SWR to fetch reservation data with caching and deduplication
-  const { data, error, isLoading, mutate } = useSWR<ReservationsResponse>(
-    swrKey,
-    fetcher
-  );
+  const { data, error, isLoading, mutate, isValidating } =
+    useSWR<ReservationsResponse>(swrKey, fetcher);
 
   const rooms = data?.data || [];
   const errorMessage = error
@@ -28,7 +26,7 @@ export function useReservation() {
 
   return {
     rooms,
-    isLoading,
+    isLoading: isLoading || isValidating,
     error: errorMessage,
     refetch: mutate,
     mutate,

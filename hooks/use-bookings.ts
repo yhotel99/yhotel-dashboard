@@ -40,10 +40,8 @@ export function useBookings({
     params.append("customerId", customerId);
   }
 
-  const { data, error, isLoading, mutate } = useSWR<BookingsResponse>(
-    `/api/bookings?${params.toString()}`,
-    fetcher
-  );
+  const { data, error, isLoading, mutate, isValidating } =
+    useSWR<BookingsResponse>(`/api/bookings?${params.toString()}`, fetcher);
 
   return {
     bookings: data?.data || [],
@@ -53,7 +51,7 @@ export function useBookings({
       limit: 10,
       totalPages: 0,
     },
-    isLoading,
+    isLoading: isLoading || isValidating,
     error: error
       ? error instanceof Error
         ? error.message

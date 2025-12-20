@@ -40,10 +40,8 @@ export function usePayments({
     params.append("bookingId", bookingId);
   }
 
-  const { data, error, isLoading, mutate } = useSWR<PaymentsResponse>(
-    `/api/payments?${params.toString()}`,
-    fetcher
-  );
+  const { data, error, isLoading, mutate, isValidating } =
+    useSWR<PaymentsResponse>(`/api/payments?${params.toString()}`, fetcher);
 
   return {
     payments: data?.data || [],
@@ -53,7 +51,7 @@ export function usePayments({
       limit: 10,
       totalPages: 0,
     },
-    isLoading,
+    isLoading: isLoading || isValidating,
     error: error
       ? error instanceof Error
         ? error.message

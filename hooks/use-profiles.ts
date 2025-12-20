@@ -32,10 +32,8 @@ export function useProfiles(
   }
 
   // Use SWR to fetch profiles
-  const { data, error, isLoading, mutate } = useSWR<ProfilesResponse>(
-    `/api/profiles?${params.toString()}`,
-    fetcher
-  );
+  const { data, error, isLoading, mutate, isValidating } =
+    useSWR<ProfilesResponse>(`/api/profiles?${params.toString()}`, fetcher);
 
   const profiles = data?.data || [];
   const pagination: PaginationMeta = data?.pagination || {
@@ -52,7 +50,7 @@ export function useProfiles(
 
   return {
     profiles,
-    isLoading,
+    isLoading: isLoading || isValidating,
     error: error
       ? error instanceof Error
         ? error.message

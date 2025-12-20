@@ -24,10 +24,8 @@ export function useGallery(page: number = 1, limit: number = 20) {
   });
 
   // Use SWR to fetch gallery images
-  const { data, error, isLoading, mutate } = useSWR<GalleryResponse>(
-    `/api/gallery?${params.toString()}`,
-    fetcher
-  );
+  const { data, error, isLoading, mutate, isValidating } =
+    useSWR<GalleryResponse>(`/api/gallery?${params.toString()}`, fetcher);
 
   const images = data?.data || [];
   const pagination: PaginationMeta = data?.pagination || {
@@ -44,7 +42,7 @@ export function useGallery(page: number = 1, limit: number = 20) {
 
   return {
     images,
-    isLoading,
+    isLoading: isLoading || isValidating,
     error: error
       ? error instanceof Error
         ? error.message

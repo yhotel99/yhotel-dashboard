@@ -34,10 +34,8 @@ export function useRooms({
     params.append("search", search.trim());
   }
 
-  const { data, error, isLoading, mutate } = useSWR<RoomsResponse>(
-    `/api/rooms?${params.toString()}`,
-    fetcher
-  );
+  const { data, error, isLoading, mutate, isValidating } =
+    useSWR<RoomsResponse>(`/api/rooms?${params.toString()}`, fetcher);
 
   return {
     rooms: data?.data || [],
@@ -47,7 +45,7 @@ export function useRooms({
       limit: 10,
       totalPages: 0,
     },
-    isLoading,
+    isLoading: isLoading || isValidating,
     error: error
       ? error instanceof Error
         ? error.message

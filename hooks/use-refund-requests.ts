@@ -32,10 +32,11 @@ export function useRefundRequests(
   }
 
   // Use SWR to fetch refund requests
-  const { data, error, isLoading, mutate } = useSWR<RefundRequestsResponse>(
-    `/api/refund-requests?${params.toString()}`,
-    fetcher
-  );
+  const { data, error, isLoading, mutate, isValidating } =
+    useSWR<RefundRequestsResponse>(
+      `/api/refund-requests?${params.toString()}`,
+      fetcher
+    );
 
   const refundRequests = data?.data || [];
   const pagination: PaginationMeta = data?.pagination || {
@@ -52,7 +53,7 @@ export function useRefundRequests(
 
   return {
     refundRequests,
-    isLoading,
+    isLoading: isLoading || isValidating,
     error: error
       ? error instanceof Error
         ? error.message

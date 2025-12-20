@@ -34,13 +34,10 @@ export function useCustomers({
     params.append("search", search.trim());
   }
 
-  const { data, error, isLoading, mutate } = useSWR<CustomersResponse>(
-    `/api/customers?${params.toString()}`,
-    fetcher,
-    {
+  const { data, error, isLoading, mutate, isValidating } =
+    useSWR<CustomersResponse>(`/api/customers?${params.toString()}`, fetcher, {
       dedupingInterval: 5000, // Giảm tần suất revalidate
-    }
-  );
+    });
 
   return {
     customers: data?.data || [],
@@ -50,7 +47,7 @@ export function useCustomers({
       limit: 10,
       totalPages: 0,
     },
-    isLoading,
+    isLoading: isLoading || isValidating,
     error: error
       ? error instanceof Error
         ? error.message

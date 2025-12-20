@@ -34,10 +34,8 @@ export function useBlogs({
     params.append("search", search.trim());
   }
 
-  const { data, error, isLoading, mutate } = useSWR<BlogsResponse>(
-    `/api/blogs?${params.toString()}`,
-    fetcher
-  );
+  const { data, error, isLoading, mutate, isValidating } =
+    useSWR<BlogsResponse>(`/api/blogs?${params.toString()}`, fetcher);
 
   return {
     blogs: data?.data || [],
@@ -47,7 +45,7 @@ export function useBlogs({
       limit: 10,
       totalPages: 0,
     },
-    isLoading,
+    isLoading: isLoading || isValidating,
     error: error
       ? error instanceof Error
         ? error.message
