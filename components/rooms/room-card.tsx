@@ -8,10 +8,17 @@ import type { RoomWithBooking, Room } from "@/lib/types";
 import {
   roomTypeLabels,
   ROOM_MAP_STATUS,
+  ROOM_STATUS,
   roomStatusLabels,
   roomMapStatusCardColors,
 } from "@/lib/constants";
-import { IconDotsVertical, IconSparkles, IconSun } from "@tabler/icons-react";
+import {
+  IconDotsVertical,
+  IconSparkles,
+  IconSun,
+  IconCheck,
+  IconTool,
+} from "@tabler/icons-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -83,7 +90,50 @@ export function RoomCard({ room, onStatusChange }: RoomCardProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isQuickBookingOpen, setIsQuickBookingOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
-  // createBooking is now a server action
+
+  // Lấy config cho badge dựa trên room status
+  const getStatusConfig = () => {
+    switch (room.status) {
+      case ROOM_STATUS.AVAILABLE:
+        return {
+          label: roomStatusLabels[ROOM_STATUS.AVAILABLE],
+          className:
+            "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300",
+          icon: IconCheck,
+        };
+      case ROOM_STATUS.CLEAN:
+        return {
+          label: "Sạch", // Dùng "Sạch" thay vì "Đã dọn" cho ngắn gọn
+          className:
+            "bg-sky-100 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300",
+          icon: IconSparkles,
+        };
+      case ROOM_STATUS.NOT_CLEAN:
+        return {
+          label: roomStatusLabels[ROOM_STATUS.NOT_CLEAN],
+          className:
+            "bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-300",
+          icon: BrushCleaning,
+        };
+      case ROOM_STATUS.MAINTENANCE:
+        return {
+          label: roomStatusLabels[ROOM_STATUS.MAINTENANCE],
+          className:
+            "bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300",
+          icon: IconTool,
+        };
+      default:
+        return {
+          label: roomStatusLabels[room.status] || "Không xác định",
+          className:
+            "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
+          icon: IconSparkles,
+        };
+    }
+  };
+
+  const statusConfig = getStatusConfig();
+  const StatusIcon = statusConfig.icon;
 
   const handleConfirmStatusChange = async (
     roomId: string,
@@ -181,54 +231,52 @@ export function RoomCard({ room, onStatusChange }: RoomCardProps) {
             variant="secondary"
             className={cn(
               "rounded-full px-2.5 py-1 text-xs font-medium gap-1.5 w-fit",
-              room.isClean
-                ? "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
-                : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+              statusConfig.className
             )}
           >
-            {room.isClean ? (
-              <IconSparkles className="size-3" />
-            ) : (
-              <BrushCleaning className="size-3" />
-            )}
-            {room.isClean ? "Sạch" : "Chưa dọn"}
+            <StatusIcon className="size-3" />
+            {statusConfig.label}
           </Badge>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-7 hover:bg-gray-100 dark:hover:bg-gray-800"
-              >
-                <IconDotsVertical className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {room.isClean ? (
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsDialogOpen(true);
-                  }}
-                  className="cursor-pointer"
+          {room.status !== ROOM_STATUS.MAINTENANCE && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-7 hover:bg-gray-100 dark:hover:bg-gray-800"
                 >
-                  <BrushCleaning className="size-4 mr-2" />
-                  Chưa dọn
-                </DropdownMenuItem>
-              ) : (
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsDialogOpen(true);
-                  }}
-                  className="cursor-pointer"
-                >
-                  <IconSparkles className="size-4 mr-2" />
-                  Làm sạch
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+                  <IconDotsVertical className="size-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {/* Chỉ hiển thị option để chuyển status nếu không phải MAINTENANCE */}
+                {room.status === ROOM_STATUS.CLEAN ||
+                room.status === ROOM_STATUS.AVAILABLE ? (
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsDialogOpen(true);
+                    }}
+                    className="cursor-pointer"
+                  >
+                    <BrushCleaning className="size-4 mr-2" />
+                    Chưa dọn
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsDialogOpen(true);
+                    }}
+                    className="cursor-pointer"
+                  >
+                    <IconSparkles className="size-4 mr-2" />
+                    Làm sạch
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
 
         {/* Room number - lớn và đậm */}

@@ -18,9 +18,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { ROOM_STATUS, roomStatusLabels } from "@/lib/constants";
-import { StatusBadge } from "./status-badge";
 import { Room } from "@/lib/types";
+import { IconSparkles, IconCheck, IconTool } from "@tabler/icons-react";
+import { BrushCleaning } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface UpdateRoomStatusDialogProps {
   room: Room | null;
@@ -35,34 +38,72 @@ export function UpdateRoomStatusDialog({
   onOpenChange,
   onConfirm,
 }: UpdateRoomStatusDialogProps) {
-  const currentEffectiveStatus =
-    room?.status === ROOM_STATUS.AVAILABLE
-      ? ROOM_STATUS.CLEAN
-      : room?.status || "";
+  // Lấy config cho badge dựa trên room status (giống như room-card)
+  const getStatusConfig = (status: Room["status"]) => {
+    switch (status) {
+      case ROOM_STATUS.AVAILABLE:
+        return {
+          label: roomStatusLabels[ROOM_STATUS.AVAILABLE],
+          className:
+            "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300",
+          icon: IconCheck,
+        };
+      case ROOM_STATUS.CLEAN:
+        return {
+          label: "Sạch", // Dùng "Sạch" thay vì "Đã dọn" cho ngắn gọn (giống room-card)
+          className:
+            "bg-sky-100 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300",
+          icon: IconSparkles,
+        };
+      case ROOM_STATUS.NOT_CLEAN:
+        return {
+          label: roomStatusLabels[ROOM_STATUS.NOT_CLEAN],
+          className:
+            "bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-300",
+          icon: BrushCleaning,
+        };
+      case ROOM_STATUS.MAINTENANCE:
+        return {
+          label: roomStatusLabels[ROOM_STATUS.MAINTENANCE],
+          className:
+            "bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300",
+          icon: IconTool,
+        };
+      default:
+        return {
+          label: roomStatusLabels[status] || "Không xác định",
+          className:
+            "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
+          icon: IconSparkles,
+        };
+    }
+  };
+
+  // Xác định status mặc định để chọn: nếu AVAILABLE thì chọn CLEAN, ngược lại dùng status hiện tại
+  const getDefaultSelectedStatus = (
+    currentStatus: Room["status"]
+  ): Room["status"] => {
+    if (currentStatus === ROOM_STATUS.AVAILABLE) {
+      return ROOM_STATUS.CLEAN;
+    }
+    return currentStatus;
+  };
 
   const [selectedStatus, setSelectedStatus] = useState<Room["status"] | "">(
-    currentEffectiveStatus
+    room ? getDefaultSelectedStatus(room.status) : ""
   );
   const [isUpdating, setIsUpdating] = useState(false);
 
   // Update selected status when room changes
   useEffect(() => {
     if (room) {
-      setSelectedStatus(
-        room.status === ROOM_STATUS.AVAILABLE ? ROOM_STATUS.CLEAN : room.status
-      );
+      setSelectedStatus(getDefaultSelectedStatus(room.status));
     }
   }, [room]);
 
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
-      setSelectedStatus(
-        room
-          ? room.status === ROOM_STATUS.AVAILABLE
-            ? ROOM_STATUS.CLEAN
-            : room.status
-          : ""
-      );
+      setSelectedStatus(room ? getDefaultSelectedStatus(room.status) : "");
     }
     onOpenChange(newOpen);
   };
@@ -70,10 +111,9 @@ export function UpdateRoomStatusDialog({
   const handleConfirm = async () => {
     if (!room) return;
 
-    const effectiveStatus =
-      room.status === ROOM_STATUS.AVAILABLE ? ROOM_STATUS.CLEAN : room.status;
+    const defaultStatus = getDefaultSelectedStatus(room.status);
 
-    if (!selectedStatus || selectedStatus === effectiveStatus) {
+    if (!selectedStatus || selectedStatus === defaultStatus) {
       return;
     }
 
@@ -105,13 +145,22 @@ export function UpdateRoomStatusDialog({
           <div className="space-y-2">
             <Label>Trạng thái hiện tại</Label>
             <div>
-              <StatusBadge
-                status={
-                  room.status === ROOM_STATUS.AVAILABLE
-                    ? ROOM_STATUS.CLEAN
-                    : room.status
-                }
-              />
+              {(() => {
+                const statusConfig = getStatusConfig(room.status);
+                const StatusIcon = statusConfig.icon;
+                return (
+                  <Badge
+                    variant="secondary"
+                    className={cn(
+                      "rounded-full px-2.5 py-1 text-xs font-medium gap-1.5 w-fit",
+                      statusConfig.className
+                    )}
+                  >
+                    <StatusIcon className="size-3" />
+                    {statusConfig.label}
+                  </Badge>
+                );
+              })()}
             </div>
           </div>
           <div className="space-y-2">
@@ -149,7 +198,8 @@ export function UpdateRoomStatusDialog({
             disabled={
               isUpdating ||
               !selectedStatus ||
-              selectedStatus === currentEffectiveStatus
+              !room ||
+              selectedStatus === getDefaultSelectedStatus(room.status)
             }
           >
             {isUpdating ? "Đang cập nhật..." : "Cập nhật trạng thái"}
