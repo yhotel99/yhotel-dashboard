@@ -168,7 +168,7 @@ export function ImageSelector({
           }
         }}
       >
-        <DialogContent className="md:min-w-2xl max-w-6xl max-h-[80vh]">
+        <DialogContent className="md:min-w-2xl max-w-6xl">
           <DialogHeader>
             <DialogTitle>Chọn ảnh từ gallery</DialogTitle>
             <DialogDescription>
@@ -177,7 +177,7 @@ export function ImageSelector({
                 : "Click vào ảnh để chọn"}
             </DialogDescription>
           </DialogHeader>
-          <ScrollArea className="h-[600px] scrollbar-hide">
+          <ScrollArea className="h-[500px] scrollbar-hide">
             {isLoading ? (
               <div className="grid grid-cols-4 gap-4">
                 {Array.from({ length: 12 }).map((_, i) => (
@@ -420,7 +420,7 @@ export function ImageListSelector({
             </DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="h-[600px] scrollbar-hide">
+          <ScrollArea className="h-[500px] scrollbar-hide">
             {isLoading ? (
               <div className="grid grid-cols-4 gap-4">
                 {Array.from({ length: 12 }).map((_, i) => (
