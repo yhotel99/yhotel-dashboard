@@ -346,3 +346,16 @@ export function translateBookingErrorMessage(
 
   return rawMessage;
 }
+
+export const PATH_TO_RESOURCE: Record<string, string> = {
+  [SIDEBAR_URLS.DASHBOARD]: "dashboard",
+  [SIDEBAR_URLS.ROOMS]: "rooms",
+  [SIDEBAR_URLS.BOOKINGS]: "bookings",
+  [SIDEBAR_URLS.RESERVATION]: "reservations",
+  [SIDEBAR_URLS.CUSTOMERS]: "customers",
+  [SIDEBAR_URLS.PAYMENTS]: "payments",
+  [SIDEBAR_URLS.REFUND_REQUESTS]: "refund-requests",
+  [SIDEBAR_URLS.GALLERY]: "gallery",
+  [SIDEBAR_URLS.USERS]: "users",
+  [SIDEBAR_URLS.BLOGS]: "blogs",
+};

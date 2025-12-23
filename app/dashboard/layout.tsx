@@ -25,7 +25,7 @@ export default async function DashboardLayout({
   return (
     <AuthProvider>
       <ClientSync user={user} profile={profile} />
-      <PermissionGuard>
+      <PermissionGuard user={user} profile={profile}>
         <SidebarProvider
           style={
             {

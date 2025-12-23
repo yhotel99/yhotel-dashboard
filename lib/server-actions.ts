@@ -1,10 +1,9 @@
 "use server";
 
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import { hasViewPermission } from "@/lib/permissions";
 import { SIDEBAR_URLS } from "@/lib/constants";
-import { headers } from "next/headers";
+import { Profile } from "./types";
+import { User } from "@supabase/supabase-js";
 
 // Mapping between URL paths and resource names
 const PATH_TO_RESOURCE: Record<string, string> = {
@@ -59,41 +58,27 @@ function getFirstAllowedPage(role: string): string {
 }
 
 /**
- * Server action to check route permission
- * This will redirect if user doesn't have permission
+ * Server action to check route permission status (without redirect)
+ * Returns permission status and fallback URL
  */
-export async function checkRoutePermission() {
-  const supabase = await createClient();
-  const h = await headers();
-  const pathname = h.get("next-url") || "/dashboard";
-
-  // Get current user
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
+export async function checkRoutePermissionStatus(
+  pathname: string,
+  user: User | null,
+  profile: Profile | null
+): Promise<{ hasPermission: boolean; fallbackUrl: string }> {
+  if (!user || !profile) {
+    return { hasPermission: false, fallbackUrl: "/login" };
   }
 
-  // Get user profile
-  const { data: profile, error } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .is("deleted_at", null)
-    .single();
-
-  if (error || !profile) {
-    redirect("/login");
-  }
-
-  // Get resource from current pathname
+  // Get resource from pathname
   const resource = getResourceFromPath(pathname);
 
-  // If resource is found and user doesn't have permission, redirect
-  if (resource && !hasViewPermission(profile.role, resource)) {
-    const allowedPage = getFirstAllowedPage(profile.role);
-    redirect(allowedPage);
-  }
+  // If resource is null (not found in mapping), allow access (fallback)
+  // Otherwise, check if user has permission for that resource
+  const hasPermission = !resource || hasViewPermission(profile.role, resource);
+
+  // Get fallback URL (first allowed page for the role)
+  const fallbackUrl = getFirstAllowedPage(profile.role);
+
+  return { hasPermission, fallbackUrl };
 }
