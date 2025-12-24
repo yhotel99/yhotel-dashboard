@@ -43,6 +43,13 @@ import {
   parseFormattedNumber,
 } from "@/lib/functions";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format, parseISO } from "date-fns";
 
 type CreateBookingFormState = {
   customer_id: string;
@@ -258,6 +265,23 @@ export function CreateBookingDialog({
     // Form will be reset in useEffect when open becomes false
     onOpenChange(nextOpen);
   };
+
+  const formatDisplayDate = (value: string) => {
+    if (!value) return null;
+    try {
+      return format(parseISO(value), "dd/MM/yyyy");
+    } catch {
+      return null;
+    }
+  };
+
+  const handleDateSelect =
+    (field: "check_in_date" | "check_out_date") => (date?: Date) => {
+      setFormValues((prev) => ({
+        ...prev,
+        [field]: date ? format(date, "yyyy-MM-dd") : "",
+      }));
+    };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -488,26 +512,55 @@ export function CreateBookingDialog({
 
             <div className="space-y-2">
               <Label htmlFor="check_in_date">Ngày check-in *</Label>
-              <Input
-                id="check_in_date"
-                type="date"
-                value={formValues.check_in_date}
-                onChange={handleInputChange("check_in_date")}
-                required
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-between text-left font-normal"
+                  >
+                    {formatDisplayDate(formValues.check_in_date) || "Chọn ngày"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="start" className="w-auto p-2">
+                  <Calendar
+                    mode="single"
+                    selected={
+                      formValues.check_in_date
+                        ? parseISO(formValues.check_in_date)
+                        : undefined
+                    }
+                    onSelect={handleDateSelect("check_in_date")}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="check_out_date">
                 Ngày check-out * {nights > 0 ? `(${nights} đêm)` : ""}
               </Label>
-              <Input
-                id="check_out_date"
-                type="date"
-                value={formValues.check_out_date}
-                onChange={handleInputChange("check_out_date")}
-                required
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-between text-left font-normal"
+                  >
+                    {formatDisplayDate(formValues.check_out_date) ||
+                      "Chọn ngày"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="start" className="w-auto p-2">
+                  <Calendar
+                    mode="single"
+                    selected={
+                      formValues.check_out_date
+                        ? parseISO(formValues.check_out_date)
+                        : undefined
+                    }
+                    onSelect={handleDateSelect("check_out_date")}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="space-y-2">

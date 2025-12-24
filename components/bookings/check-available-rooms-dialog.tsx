@@ -10,7 +10,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getAvailableRoomsAction } from "@/actions/rooms";
 import type { Room } from "@/lib/types";
@@ -20,6 +19,13 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format, parseISO } from "date-fns";
 
 interface CheckAvailableRoomsDialogProps {
   open: boolean;
@@ -86,6 +92,19 @@ export function CheckAvailableRoomsDialog({
     onOpenChange(newOpen);
   };
 
+  const formatDisplayDate = (value: string) => {
+    if (!value) return null;
+    try {
+      return format(parseISO(value), "dd/MM/yyyy");
+    } catch {
+      return null;
+    }
+  };
+
+  const handleDateSelect = (setter: (v: string) => void) => (date?: Date) => {
+    setter(date ? format(date, "yyyy-MM-dd") : "");
+  };
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="min-w-2xl max-w-6xl max-h-[60vh] flex flex-col">
@@ -101,23 +120,43 @@ export function CheckAvailableRoomsDialog({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="check_in_date">Ngày check-in *</Label>
-              <Input
-                id="check_in_date"
-                type="date"
-                value={checkInDate}
-                onChange={(e) => setCheckInDate(e.target.value)}
-                required
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-between text-left font-normal"
+                  >
+                    {formatDisplayDate(checkInDate) || "Chọn ngày"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="start" className="w-auto p-2">
+                  <Calendar
+                    mode="single"
+                    selected={checkInDate ? parseISO(checkInDate) : undefined}
+                    onSelect={handleDateSelect(setCheckInDate)}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="space-y-2">
               <Label htmlFor="check_out_date">Ngày check-out *</Label>
-              <Input
-                id="check_out_date"
-                type="date"
-                value={checkOutDate}
-                onChange={(e) => setCheckOutDate(e.target.value)}
-                required
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-between text-left font-normal"
+                  >
+                    {formatDisplayDate(checkOutDate) || "Chọn ngày"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="start" className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={checkOutDate ? parseISO(checkOutDate) : undefined}
+                    onSelect={handleDateSelect(setCheckOutDate)}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
 

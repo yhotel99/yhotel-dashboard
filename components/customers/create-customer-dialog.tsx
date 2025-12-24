@@ -23,6 +23,13 @@ import type { CustomerInput } from "@/lib/types";
 import { toast } from "sonner";
 import { translateCustomerError } from "@/lib/functions";
 import { CUSTOMER_ERROR_PATTERNS } from "@/lib/constants";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format, parseISO } from "date-fns";
 
 type CreateCustomerFormState = {
   full_name: string;
@@ -89,6 +96,22 @@ export function CreateCustomerDialog({
       resetForm();
     }
     onOpenChange(nextOpen);
+  };
+
+  const formatDisplayDate = (value: string) => {
+    if (!value) return null;
+    try {
+      return format(parseISO(value), "dd/MM/yyyy");
+    } catch {
+      return null;
+    }
+  };
+
+  const handleDateSelect = (field: "date_of_birth") => (date?: Date) => {
+    setFormValues((prev) => ({
+      ...prev,
+      [field]: date ? format(date, "yyyy-MM-dd") : "",
+    }));
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -239,12 +262,27 @@ export function CreateCustomerDialog({
             </div>
             <div className="space-y-2">
               <Label htmlFor="date_of_birth">Ngày sinh</Label>
-              <Input
-                id="date_of_birth"
-                type="date"
-                value={formValues.date_of_birth}
-                onChange={handleInputChange("date_of_birth")}
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-between text-left font-normal"
+                  >
+                    {formatDisplayDate(formValues.date_of_birth) || "Chọn ngày"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="start" className="w-auto p-2">
+                  <Calendar
+                    mode="single"
+                    selected={
+                      formValues.date_of_birth
+                        ? parseISO(formValues.date_of_birth)
+                        : undefined
+                    }
+                    onSelect={handleDateSelect("date_of_birth")}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="space-y-2">
               <Label htmlFor="source">Nguồn</Label>
