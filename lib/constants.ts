@@ -232,6 +232,31 @@ export const refundRequestStatusLabels: Record<
 };
 
 /**
+ * Customer source values
+ */
+export const CUSTOMER_SOURCE = {
+  WEBSITE: "website",
+  AGODA: "agoda",
+  BOOKING: "booking",
+  TRAVELOKA: "traveloka",
+  OTHER: "khác",
+} as const;
+
+/**
+ * Customer source labels mapping
+ */
+export const customerSourceLabels: Record<
+  (typeof CUSTOMER_SOURCE)[keyof typeof CUSTOMER_SOURCE],
+  string
+> = {
+  [CUSTOMER_SOURCE.WEBSITE]: "Website",
+  [CUSTOMER_SOURCE.AGODA]: "Agoda",
+  [CUSTOMER_SOURCE.BOOKING]: "Booking",
+  [CUSTOMER_SOURCE.TRAVELOKA]: "Traveloka",
+  [CUSTOMER_SOURCE.OTHER]: "Khác",
+};
+
+/**
  * Booking error message patterns constants
  */
 /**

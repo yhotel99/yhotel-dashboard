@@ -3,6 +3,7 @@ import type { Customer } from "@/lib/types";
 import { formatCurrency, formatDateOnly } from "@/lib/functions";
 import { StatusBadge } from "./status-badge";
 import { ActionsCell } from "./actions-cell";
+import { customerSourceLabels } from "@/lib/constants";
 
 export function createColumns(
   onEdit: (customer: Customer) => void,
@@ -71,7 +72,13 @@ export function createColumns(
     {
       accessorKey: "source",
       header: "Nguồn",
-      cell: ({ row }) => row.original.source ?? "-",
+      cell: ({ row }) => {
+        return (
+          customerSourceLabels[
+            row.original.source as keyof typeof customerSourceLabels
+          ] ?? "-"
+        );
+      },
       size: 70,
       minSize: 60,
     },

@@ -28,6 +28,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Customer, CustomerInput } from "@/lib/types";
 import {
+  CUSTOMER_SOURCE,
+  customerSourceLabels,
+} from "@/lib/constants";
+import {
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -201,7 +205,7 @@ export function EditCustomerDialog({
       id_card: formValues.id_card.trim() || null,
       customer_type: formValues.customer_type,
       date_of_birth: formValues.date_of_birth || null,
-      source: formValues.source.trim() || null,
+      source: formValues.source || null,
     };
 
     try {
@@ -322,13 +326,31 @@ export function EditCustomerDialog({
             </div>
             <div className="space-y-2">
               <Label htmlFor="source">Nguồn</Label>
-              <Input
-                id="source"
-                type="text"
-                placeholder="Nhập nguồn khách hàng"
+              <Select
                 value={formValues.source}
-                onChange={handleInputChange("source")}
-              />
+                onValueChange={handleSelectChange("source")}
+              >
+                <SelectTrigger id="source" className="w-full">
+                  <SelectValue placeholder="Chọn nguồn khách hàng" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={CUSTOMER_SOURCE.WEBSITE}>
+                    {customerSourceLabels[CUSTOMER_SOURCE.WEBSITE]}
+                  </SelectItem>
+                  <SelectItem value={CUSTOMER_SOURCE.AGODA}>
+                    {customerSourceLabels[CUSTOMER_SOURCE.AGODA]}
+                  </SelectItem>
+                  <SelectItem value={CUSTOMER_SOURCE.BOOKING}>
+                    {customerSourceLabels[CUSTOMER_SOURCE.BOOKING]}
+                  </SelectItem>
+                  <SelectItem value={CUSTOMER_SOURCE.TRAVELOKA}>
+                    {customerSourceLabels[CUSTOMER_SOURCE.TRAVELOKA]}
+                  </SelectItem>
+                  <SelectItem value={CUSTOMER_SOURCE.OTHER}>
+                    {customerSourceLabels[CUSTOMER_SOURCE.OTHER]}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
