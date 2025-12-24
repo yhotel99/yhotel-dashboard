@@ -280,6 +280,7 @@ export type PaymentSearchRow = {
   id: string;
   booking_id: string;
   amount: number | string;
+  payment_type: string;
   payment_method: string;
   payment_status: string;
   paid_at: string | null;
@@ -404,6 +405,15 @@ export type RefundRequestWithRelations = RefundRequest & {
     rooms?: {
       name: string;
     } | null;
+  } | null;
+  request_by_profile?: {
+    full_name: string;
+  } | null;
+  approved_by_profile?: {
+    full_name: string;
+  } | null;
+  refunded_by_profile?: {
+    full_name: string;
   } | null;
 };
 

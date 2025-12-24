@@ -16,6 +16,8 @@ import type {
  * - search: Search term (optional)
  * - page: Page number (default: 1)
  * - limit: Items per page (default: 10)
+ * - bookingId: Filter by booking ID (optional)
+ * - customerId: Filter by customer ID (optional)
  */
 export async function GET(req: NextRequest) {
   try {
@@ -23,7 +25,8 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get("search") || "";
     const page = Number(searchParams.get("page") || 1);
     const limit = Number(searchParams.get("limit") || 10);
-    const bookingId = searchParams.get("bookingId");
+    const bookingId = searchParams.get("bookingId") || null;
+    const customerId = searchParams.get("customerId") || null;
 
     // Validate pagination parameters
     if (page < 1 || limit < 1) {
@@ -35,50 +38,8 @@ export async function GET(req: NextRequest) {
 
     const supabase = await createClient();
 
-    // If bookingId is provided, use regular query (function doesn't support bookingId filter)
-    if (bookingId) {
-      const { data, error, count } = await supabase
-        .from("payments")
-        .select(
-          `
-          *,
-          bookings:booking_id (
-            customers:customer_id (
-              full_name,
-              phone
-            ),
-            rooms:room_id (
-              name
-            )
-          )
-        `
-        )
-        .eq("booking_id", bookingId)
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        return NextResponse.json({ error: error.message }, { status: 400 });
-      }
-
-      const paymentsData = (data || []) as PaymentWithBooking[];
-
-      const total = count || 0;
-      const totalPages = Math.ceil(total / limit);
-
-      return NextResponse.json({
-        data: paymentsData,
-        pagination: {
-          total,
-          page,
-          limit,
-          totalPages,
-        },
-      });
-    }
-
     // Use RPC functions for search
     const trimmedSearch = search.trim() || null;
-    const customerId = searchParams.get("customerId") || null;
 
     // Call both RPC functions in parallel
     const [paymentsResult, countResult] = await Promise.all([
@@ -87,10 +48,12 @@ export async function GET(req: NextRequest) {
         p_page: page,
         p_limit: limit,
         p_customer_id: customerId || null,
+        p_booking_id: bookingId || null,
       }),
       supabase.rpc("count_payments", {
         p_search: trimmedSearch,
         p_customer_id: customerId || null,
+        p_booking_id: bookingId || null,
       }),
     ]);
 
@@ -111,27 +74,13 @@ export async function GET(req: NextRequest) {
     const searchRows = (paymentsResult.data || []) as PaymentSearchRow[];
     const total = (countResult.data as number) || 0;
 
-    // Get payment_type for each payment (not included in search result)
-    const paymentIds = searchRows.map((row) => row.id);
-    const { data: paymentTypesData } = await supabase
-      .from("payments")
-      .select("id, payment_type")
-      .in("id", paymentIds);
-
-    // Create a map of payment_id -> payment_type
-    const paymentTypeMap = new Map<string, string>();
-    (paymentTypesData || []).forEach((p) => {
-      paymentTypeMap.set(p.id, p.payment_type);
-    });
-
     // Map payment_search_row to PaymentWithBooking format
     const paymentsData: PaymentWithBooking[] = searchRows.map((row) => ({
       id: row.id,
       booking_id: row.booking_id,
       amount:
         typeof row.amount === "string" ? parseFloat(row.amount) : row.amount,
-      payment_type: (paymentTypeMap.get(row.id) ||
-        "room_charge") as PaymentType,
+      payment_type: (row.payment_type || "room_charge") as PaymentType,
       payment_method: row.payment_method as PaymentMethod,
       payment_status: row.payment_status as PaymentStatus,
       paid_at: row.paid_at,

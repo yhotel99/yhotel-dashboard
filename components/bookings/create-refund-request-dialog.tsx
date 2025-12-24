@@ -83,11 +83,7 @@ export function CreateRefundRequestDialog({
 
   // Filter eligible payments (only PAID or REFUNDED)
   const payments = React.useMemo(() => {
-    return allPayments.filter(
-      (p) =>
-        p.payment_status === PAYMENT_STATUS.PAID ||
-        p.payment_status === PAYMENT_STATUS.REFUNDED
-    );
+    return allPayments.filter((p) => p.payment_status === PAYMENT_STATUS.PAID);
   }, [allPayments]);
 
   // Auto-select first payment when payments are loaded

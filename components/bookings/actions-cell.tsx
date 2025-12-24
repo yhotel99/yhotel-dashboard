@@ -207,16 +207,7 @@ export function BookingActionsCell({
             <IconRefresh className="mr-2 size-4" />
             Thay đổi trạng thái
           </DropdownMenuItem>
-          {/* <DropdownMenuItem
-            onClick={() => setOpenTransfer(true)}
-            disabled={
-              booking.status !== BOOKING_STATUS.PENDING ||
-              advancePaymentStatus?.isPaid
-            }
-          >
-            <IconTransfer className="mr-2 size-4" />
-            Chuyển phòng
-          </DropdownMenuItem> */}
+
           <DropdownMenuItem
             onClick={() => setOpenMarkAdvancePayment(true)}
             disabled={

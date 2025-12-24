@@ -72,6 +72,7 @@ interface DataTableProps<TData, TValue> {
   onLimitChange?: (limit: number) => void;
   serverSearch?: string;
   onSearchChange?: (search: string) => void;
+  initialColumnVisibility?: VisibilityState;
 }
 
 export function DataTable<TData, TValue>({
@@ -91,13 +92,14 @@ export function DataTable<TData, TValue>({
   onLimitChange,
   serverSearch,
   onSearchChange,
+  initialColumnVisibility,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
   );
   const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({});
+    React.useState<VisibilityState>(initialColumnVisibility || {});
   const [pagination, setPagination] = React.useState({
     pageIndex: serverPagination ? serverPagination.page - 1 : 0,
     pageSize: serverPagination ? serverPagination.limit : defaultPageSize,
@@ -157,12 +159,12 @@ export function DataTable<TData, TValue>({
   const visibleHeaders = table
     .getHeaderGroups()[0]
     .headers.filter((h) => !h.isPlaceholder && h.column.getIsVisible());
-  
+
   // Calculate total size of all visible columns
   const totalSize = visibleHeaders.reduce((sum, header) => {
     return sum + (header.column.getSize() || 100);
   }, 0);
-  
+
   // Calculate width for each column based on its size
   const getColumnWidth = (columnSize: number) => {
     return `${(columnSize / totalSize) * 100}%`;

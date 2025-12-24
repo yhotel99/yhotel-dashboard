@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
-    // Build query with bookings join
+    // Build query with bookings join and user profiles
     let query = supabase.from("refund_requests").select(
       `
         *,
@@ -32,6 +32,15 @@ export async function GET(req: NextRequest) {
           rooms:room_id (
             name
           )
+        ),
+        request_by_profile:request_by (
+          full_name
+        ),
+        approved_by_profile:approved_by (
+          full_name
+        ),
+        refunded_by_profile:refunded_by (
+          full_name
         )
       `,
       { count: "exact" }

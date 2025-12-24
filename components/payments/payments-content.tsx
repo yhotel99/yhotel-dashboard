@@ -62,14 +62,6 @@ const createColumns = (): ColumnDef<PaymentWithBooking>[] => [
     minSize: 130,
   },
   {
-    accessorKey: "refunded_at",
-    header: "Ngày hoàn tiền",
-    cell: ({ row }) =>
-      row.original.refunded_at ? formatDateOnly(row.original.refunded_at) : "-",
-    size: 150,
-    minSize: 130,
-  },
-  {
     accessorKey: "created_at",
     header: "Ngày tạo",
     cell: ({ row }) => formatDateOnly(row.original.created_at),

@@ -7,7 +7,7 @@ import type {
   RefundRequest,
   RefundRequestStatus,
 } from "@/lib/types";
-import { REFUND_REQUEST_STATUS, PAYMENT_STATUS } from "@/lib/constants";
+import { REFUND_REQUEST_STATUS } from "@/lib/constants";
 
 /**
  * Create a new refund request

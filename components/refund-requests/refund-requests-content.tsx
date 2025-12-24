@@ -321,6 +321,59 @@ const createColumns = (
     minSize: 100,
   },
   {
+    accessorKey: "request_by",
+    header: "Người yêu cầu",
+    cell: ({ row }) =>
+      row.original.request_by_profile?.full_name || (
+        <span className="font-mono text-sm text-muted-foreground">
+          {row.original.request_by.slice(0, 8).toUpperCase()}
+        </span>
+      ),
+    size: 150,
+    minSize: 120,
+    enableHiding: true,
+  },
+  {
+    accessorKey: "approved_by",
+    header: "Người duyệt",
+    cell: ({ row }) =>
+      row.original.approved_by_profile?.full_name ||
+      (row.original.approved_by ? (
+        <span className="font-mono text-sm text-muted-foreground">
+          {row.original.approved_by.slice(0, 8).toUpperCase()}
+        </span>
+      ) : (
+        "-"
+      )),
+    size: 150,
+    minSize: 120,
+    enableHiding: true,
+  },
+  {
+    accessorKey: "refunded_by",
+    header: "Người hoàn tiền",
+    cell: ({ row }) =>
+      row.original.refunded_by_profile?.full_name ||
+      (row.original.refunded_by ? (
+        <span className="font-mono text-sm text-muted-foreground">
+          {row.original.refunded_by.slice(0, 8).toUpperCase()}
+        </span>
+      ) : (
+        "-"
+      )),
+    size: 150,
+    minSize: 120,
+    enableHiding: true,
+  },
+  {
+    accessorKey: "note",
+    header: "Ghi chú",
+    cell: ({ row }) => row.original.note ?? "-",
+    size: 150,
+    minSize: 120,
+    enableHiding: true,
+  },
+  {
     id: "actions",
     cell: ({ row }) => (
       <RefundRequestActionsCell
@@ -332,6 +385,7 @@ const createColumns = (
     size: 40,
     minSize: 40,
     maxSize: 50,
+    enableHiding: false,
   },
 ];
 
@@ -465,6 +519,12 @@ export function RefundRequestsContent() {
           onLimitChange={(newLimit) => updateSearchParams(1, newLimit, search)}
           serverSearch={localSearch}
           onSearchChange={setLocalSearch}
+          initialColumnVisibility={{
+            request_by: false,
+            approved_by: false,
+            refunded_by: false,
+            note: false,
+          }}
         />
       </div>
     </div>
