@@ -29,62 +29,62 @@ import { hasViewPermission } from "@/lib/permissions";
 
 const allNavItems = [
   {
-    title: "Dashboard",
+    title: "Tổng Quan",
     url: SIDEBAR_URLS.DASHBOARD,
     icon: IconDashboard,
     resource: "dashboard",
   },
   {
-    title: "Rooms",
+    title: "Quản lý Phòng Khách Sạn",
     url: SIDEBAR_URLS.ROOMS,
     icon: HotelIcon,
     resource: "rooms",
   },
   {
-    title: "Reservation",
+    title: "Quản Lý Đặt Chỗ",
     url: SIDEBAR_URLS.RESERVATION,
     icon: IconInnerShadowTop,
     resource: "reservations",
   },
   {
-    title: "Bookings",
+    title: "Quản Lý Đơn Đặt Phòng",
     url: SIDEBAR_URLS.BOOKINGS,
     icon: IconChartBar,
     resource: "bookings",
   },
 
   {
-    title: "Customers",
+    title: "Quản Lý Khách Hàng",
     url: SIDEBAR_URLS.CUSTOMERS,
     icon: UserCircle,
     resource: "customers",
   },
   {
-    title: "Payments",
+    title: "Quản Lý Thanh Toán",
     url: SIDEBAR_URLS.PAYMENTS,
     icon: IconCreditCard,
     resource: "payments",
   },
   {
-    title: "Refund Requests",
+    title: "Quản Lý Hoàn Tiền",
     url: SIDEBAR_URLS.REFUND_REQUESTS,
     icon: IconReceiptRefund,
     resource: "refund-requests",
   },
   {
-    title: "Gallery",
+    title: "Quản Lý Bộ Sưu Tập Ảnh",
     url: SIDEBAR_URLS.GALLERY,
     icon: Images,
     resource: "gallery",
   },
   {
-    title: "Blogs",
+    title: "Quản Lý Blog",
     url: "/dashboard/blogs",
     icon: IconNews,
     resource: "blogs",
   },
   {
-    title: "Users",
+    title: "Quản Lý Người Dùng",
     url: SIDEBAR_URLS.USERS,
     icon: User2,
     resource: "users",

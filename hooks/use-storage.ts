@@ -51,7 +51,7 @@ export function useStorage(options: UseStorageOptions = {}) {
           progress[i] = {
             ...progress[i],
             status: "uploading",
-            progress: 0,
+            progress: 50, // Show 50% while uploading
           };
           setUploadProgress([...progress]);
           onProgress?.(progress);
