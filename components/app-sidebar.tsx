@@ -1,14 +1,6 @@
 "use client";
 
 import * as React from "react";
-import {
-  IconChartBar,
-  IconCreditCard,
-  IconDashboard,
-  IconInnerShadowTop,
-  IconReceiptRefund,
-  IconNews,
-} from "@tabler/icons-react";
 
 import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
@@ -21,75 +13,11 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { HotelIcon, Images, User2, UserCircle } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/auth-context";
-import { SIDEBAR_URLS } from "@/lib/constants";
+import { allNavItems, SIDEBAR_URLS } from "@/lib/constants";
 import { hasViewPermission } from "@/lib/permissions";
-
-const allNavItems = [
-  {
-    title: "Tổng Quan",
-    url: SIDEBAR_URLS.DASHBOARD,
-    icon: IconDashboard,
-    resource: "dashboard",
-  },
-  {
-    title: "Quản lý Phòng Khách Sạn",
-    url: SIDEBAR_URLS.ROOMS,
-    icon: HotelIcon,
-    resource: "rooms",
-  },
-  {
-    title: "Quản Lý Đặt Chỗ",
-    url: SIDEBAR_URLS.RESERVATION,
-    icon: IconInnerShadowTop,
-    resource: "reservations",
-  },
-  {
-    title: "Quản Lý Đơn Đặt Phòng",
-    url: SIDEBAR_URLS.BOOKINGS,
-    icon: IconChartBar,
-    resource: "bookings",
-  },
-
-  {
-    title: "Quản Lý Khách Hàng",
-    url: SIDEBAR_URLS.CUSTOMERS,
-    icon: UserCircle,
-    resource: "customers",
-  },
-  {
-    title: "Quản Lý Thanh Toán",
-    url: SIDEBAR_URLS.PAYMENTS,
-    icon: IconCreditCard,
-    resource: "payments",
-  },
-  {
-    title: "Quản Lý Hoàn Tiền",
-    url: SIDEBAR_URLS.REFUND_REQUESTS,
-    icon: IconReceiptRefund,
-    resource: "refund-requests",
-  },
-  {
-    title: "Quản Lý Bộ Sưu Tập Ảnh",
-    url: SIDEBAR_URLS.GALLERY,
-    icon: Images,
-    resource: "gallery",
-  },
-  {
-    title: "Quản Lý Blog",
-    url: "/dashboard/blogs",
-    icon: IconNews,
-    resource: "blogs",
-  },
-  {
-    title: "Quản Lý Người Dùng",
-    url: SIDEBAR_URLS.USERS,
-    icon: User2,
-    resource: "users",
-  },
-];
+import { IconInnerShadowTop } from "@tabler/icons-react";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { currentUser, profile } = useAuth();

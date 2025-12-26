@@ -15,8 +15,11 @@ import { Label } from "@/components/ui/label";
 import { IconSearch, IconPlus } from "@tabler/icons-react";
 import type { BookingInput, Customer } from "@/lib/types";
 import type { RoomWithBooking } from "@/lib/types";
-import { getDateISO } from "@/lib/functions";
-import { calculateNightsValue } from "@/lib/functions";
+import {
+  getDateISO,
+  calculateNightsValue,
+  formatCurrency,
+} from "@/lib/functions";
 import { useCustomers } from "@/hooks/use-customers";
 import { useDebounce } from "@/hooks/use-debounce";
 import { createCustomerAction } from "@/actions/customers";
@@ -144,6 +147,29 @@ export function QuickBookingDialog({
         [field]: date ? format(date, "yyyy-MM-dd") : "",
       }));
     };
+
+  // Calculate number of nights and total amount
+  const nightsAndAmount = useMemo(() => {
+    if (!formValues.check_in_date || !formValues.check_out_date) {
+      return { nights: 0, totalAmount: 0 };
+    }
+
+    const checkInISO = getDateISO(formValues.check_in_date, false);
+    const checkOutISO = getDateISO(formValues.check_out_date, true);
+
+    if (!checkInISO || !checkOutISO) {
+      return { nights: 0, totalAmount: 0 };
+    }
+
+    const nights = calculateNightsValue(checkInISO, checkOutISO);
+    const totalAmount = nights > 0 ? room.price_per_night * nights : 0;
+
+    return { nights, totalAmount };
+  }, [
+    formValues.check_in_date,
+    formValues.check_out_date,
+    room.price_per_night,
+  ]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -360,6 +386,29 @@ export function QuickBookingDialog({
               Tối đa: {room.max_guests} người
             </p>
           </div>
+
+          {/* Display nights and total amount */}
+          {formValues.check_in_date &&
+            formValues.check_out_date &&
+            nightsAndAmount.nights > 0 && (
+              <div className="rounded-lg border bg-muted/50 p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Số đêm:</span>
+                  <span className="font-semibold">
+                    {nightsAndAmount.nights} đêm
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    Tổng tiền:
+                  </span>
+                  <span className="font-semibold text-lg">
+                    {formatCurrency(nightsAndAmount.totalAmount)}
+                  </span>
+                </div>
+              </div>
+            )}
+
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
           <DialogFooter>
             <Button

@@ -155,7 +155,9 @@ export async function updateBooking(
     const { data, error } = await supabase
       .from("bookings")
       .update(input)
-      .eq("id", bookingId);
+      .eq("id", bookingId)
+      .select()
+      .single();
 
     if (error) {
       throw new Error(error.message);
