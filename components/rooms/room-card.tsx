@@ -147,6 +147,7 @@ export function RoomCard({ room, onStatusChange }: RoomCardProps) {
           roomStatusLabels[status as keyof typeof roomStatusLabels] || status
         }.`,
       });
+
       setIsDialogOpen(false);
       onStatusChange?.();
     } catch (error) {

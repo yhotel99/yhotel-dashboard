@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getProfileByIdAction } from "@/actions/profiles";
 import { USER_STATUS } from "@/lib/constants";
 import { hasViewPermission } from "@/lib/permissions";
+import { revalidatePath } from "next/cache";
 
 export async function loginAction(formData: FormData) {
   const email = formData.get("email") as string;
@@ -62,5 +63,6 @@ export async function loginAction(formData: FormData) {
 export async function logoutAction() {
   const supabase = await createClient();
   await supabase.auth.signOut();
-  return redirect("/login");
+  revalidatePath('/dashboard', 'layout');
+  redirect('/login');
 }

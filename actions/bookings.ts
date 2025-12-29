@@ -10,6 +10,7 @@ import type {
   BookingRecord,
 } from "@/lib/types";
 import { BOOKING_STATUS } from "@/lib/constants";
+import { formatDate } from "@/lib/functions";
 
 /**
  * Create booking using secure RPC function
@@ -241,14 +242,86 @@ export async function checkOutBookingAction(bookingId: string) {
 export async function confirmBookingAction(bookingId: string) {
   try {
     const supabase = await createClient();
+    type BookingWithCustomer = {
+      id: string;
+      room: {
+        name: string;
+      } | null;
+      check_in: string;
+      check_out: string;
+      customer: {
+        email: string;
+        full_name: string;
+      } | null;
+    };
 
     const { error } = await supabase.rpc("confirm_booking_secure", {
       p_booking_id: bookingId,
     });
 
+
     if (error) {
       console.error("Error confirming booking:", error);
       throw new Error(error.message);
+    }
+
+    // Send email to customer
+ 
+    // 2️⃣ Lấy thông tin booking + customer
+    const { data: booking, error: bookingError } = await supabase
+      .from("bookings")
+      .select(
+        `
+        id,
+        room:room_id (
+          name
+        ),
+        check_in,
+        check_out,
+        customer:customer_id (
+          email,
+          full_name
+        )
+      `
+      )
+      .eq("id", bookingId)
+      .single() as { data: BookingWithCustomer; error: Error | null };
+
+    if (bookingError) {
+      console.error("Error fetching booking:", bookingError);
+      throw new Error(bookingError.message);
+    }
+
+    if (!booking) throw new Error("Không tìm thấy booking");
+
+    console.log("booking", booking);
+    
+    // // 3️⃣ Gửi email xác nhận qua Edge Function
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/send-email-confirm-booking`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+        },
+        body: JSON.stringify({
+          customer_name: booking.customer?.full_name || "-",
+          customer_email: booking.customer?.email || "-",
+          booking_code: booking.id,
+          room_name: booking.room?.name || "-",
+          check_in: `14:00 PM `,
+          check_out: formatDate(booking.check_out),
+        }),
+        cache: "no-store",
+      }
+    );
+
+    const emailResult = await res.json();
+
+    if (!res.ok) {
+      console.error("Send email failed", emailResult);
+      // optional: không throw để không chặn confirm booking
     }
 
     // Revalidate bookings page after confirming
