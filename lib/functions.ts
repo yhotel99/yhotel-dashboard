@@ -278,3 +278,52 @@ export function generateFileName(file: File): string {
     .toLowerCase();
   return `${sanitizedName}_${timestamp}_${randomString}.${extension}`;
 }
+
+
+export function formatDateTimePretty(isoString: string, options: {
+  timeZone?: number;
+  showIcons?: boolean;
+  format?: "full" | "time" | "date";
+} = {}): string {
+  const {
+    timeZone = 7, // Múi giờ Việt Nam (+7)
+    showIcons = true, // Hiển thị biểu tượng
+    format = "full" // "full" | "time" | "date"
+  } = options;
+  
+  const date = new Date(isoString);
+  
+  if (isNaN(date.getTime())) {
+    return showIcons ? "⏰ --:-- | 📅 Ngày không hợp lệ" : "--:-- | Ngày không hợp lệ";
+  }
+  
+  // Chuyển sang múi giờ chỉ định
+  const localDate = new Date(date.getTime() + timeZone * 60 * 60 * 1000);
+  
+  // Lấy các thành phần
+  const hours = localDate.getUTCHours().toString().padStart(2, '0');
+  const minutes = localDate.getUTCMinutes().toString().padStart(2, '0');
+  const day = localDate.getUTCDate();
+  const month = localDate.getUTCMonth() + 1;
+  const year = localDate.getUTCFullYear();
+  
+  // Tên thứ
+  const weekdays = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+  const weekday = weekdays[localDate.getUTCDay()];
+  
+  // Tạo chuỗi kết quả
+  const timeStr = `${hours}:${minutes}`;
+  const dateStr = `${weekday}, ${day.toString().padStart(2, '0')}/${month.toString().padStart(2, '0')}/${year}`;
+  
+  // Format theo tùy chọn
+  if (format === "time") {
+    return showIcons ? `⏰ ${timeStr}` : timeStr;
+  }
+  
+  if (format === "date") {
+    return showIcons ? `📅 ${dateStr}` : dateStr;
+  }
+  
+  // Format mặc định (full)
+  return showIcons ? `⏰ ${timeStr} | 📅 ${dateStr}` : `${timeStr} | ${dateStr}`;
+}

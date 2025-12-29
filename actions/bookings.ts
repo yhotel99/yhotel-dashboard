@@ -10,7 +10,7 @@ import type {
   BookingRecord,
 } from "@/lib/types";
 import { BOOKING_STATUS } from "@/lib/constants";
-import { formatDate } from "@/lib/functions";
+import { formatDateTimePretty } from "@/lib/functions";
 
 /**
  * Create booking using secure RPC function
@@ -310,8 +310,8 @@ export async function confirmBookingAction(bookingId: string) {
           customer_email: booking.customer?.email || "-",
           booking_code: booking.id,
           room_name: booking.room?.name || "-",
-          check_in: `14:00 PM `,
-          check_out: formatDate(booking.check_out),
+          check_in: formatDateTimePretty(booking.check_in),
+          check_out: formatDateTimePretty(booking.check_out),
         }),
         cache: "no-store",
       }
