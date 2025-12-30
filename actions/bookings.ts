@@ -9,7 +9,7 @@ import type {
   BookingStatus,
   BookingRecord,
 } from "@/lib/types";
-import { BOOKING_STATUS } from "@/lib/constants";
+import { BOOKING_STATUS, PAYMENT_METHOD } from "@/lib/constants";
 import { formatDateTimePretty } from "@/lib/functions";
 
 /**
@@ -27,6 +27,7 @@ async function createBookingSecure(input: BookingInput): Promise<string> {
         p_check_out: input.check_out,
         p_number_of_nights: input.number_of_nights || 0,
         p_total_amount: input.total_amount,
+        p_payment_method: PAYMENT_METHOD.PAY_AT_HOTEL,
         p_total_guests: input.total_guests ?? 1,
         p_notes: input.notes || null,
         p_advance_payment: input.advance_payment ?? 0,
@@ -332,6 +333,16 @@ export async function confirmBookingAction(bookingId: string) {
     throw new Error(errorMessage);
   }
 }
+
+// export async function confirmBookingAction(bookingCode: string) {
+//     await fetch("/functions/v1/send-confirm-booking", {
+//         method: "POST",
+//         headers: { "Content-Type": "application/json" },
+//         body: JSON.stringify({ booking_code: bookingCode }),
+//     });
+
+//     revalidatePath("/dashboard/bookings");
+// }
 
 /**
  * Cancel booking (update status and cancel pending payments)
