@@ -24,7 +24,7 @@ export function createColumns(
       paymentId: string | null;
     }>;
     pendingBooking?: (bookingId: string) => Promise<void>;
-    confirmedBooking?: (bookingId: string) => Promise<void>;
+    confirmedBooking?: (bookingCode: string) => Promise<void>;
     checkedInBooking?: (bookingId: string) => Promise<void>;
     checkedOutBooking?: (bookingId: string) => Promise<void>;
     cancelledBooking?: (bookingId: string) => Promise<void>;

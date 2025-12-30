@@ -29,11 +29,12 @@ interface ChangeBookingStatusDialogProps {
   onOpenChange: (open: boolean) => void;
   currentStatus: BookingStatus;
   pendingBooking: (bookingId: string) => Promise<void>;
-  confirmedBooking: (bookingId: string) => Promise<void>;
+  confirmedBooking: (bookingCode: string) => Promise<void>;
   checkedInBooking: (bookingId: string) => Promise<void>;
   checkedOutBooking: (bookingId: string) => Promise<void>;
   cancelledBooking: (bookingId: string) => Promise<void>;
   bookingId: string;
+  bookingCode: string;
   isLoading?: boolean;
 }
 
@@ -99,6 +100,7 @@ export function ChangeBookingStatusDialog({
   checkedOutBooking,
   cancelledBooking,
   bookingId,
+  bookingCode,
   isLoading: externalIsLoading = false,
 }: ChangeBookingStatusDialogProps) {
   const [selectedStatus, setSelectedStatus] =
@@ -140,7 +142,7 @@ export function ChangeBookingStatusDialog({
           await pendingBooking(bookingId);
           break;
         case BOOKING_STATUS.CONFIRMED:
-          await confirmedBooking(bookingId);
+          await confirmedBooking(bookingCode);
           break;
         case BOOKING_STATUS.CHECKED_IN:
           await checkedInBooking(bookingId);

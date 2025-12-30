@@ -35,13 +35,13 @@ export async function GET(req: NextRequest) {
 
     // Call both RPC functions in parallel
     const [bookingsData, countData] = await Promise.all([
-      supabase.rpc("search_bookings", {
+      supabase.rpc("search_bookings_json", {
         p_search: trimmedSearch,
         p_page: page,
         p_limit: limit,
         p_customer_id: trimmedCustomerId,
       }),
-      supabase.rpc("count_bookings", {
+      supabase.rpc("count_bookings_json", {
         p_search: trimmedSearch,
         p_customer_id: trimmedCustomerId,
       }),

@@ -11,7 +11,7 @@ import {
   createBooking as createBookingAction,
   updateBooking as updateBookingAction,
   updateBookingStatusAction,
-  confirmBookingAction,
+  confirmBookingEmailAction,
   cancelBookingAction,
   transferBookingAction,
   checkInBookingAction,
@@ -208,8 +208,8 @@ export function BookingsContent() {
   );
 
   const confirmedBooking = React.useCallback(
-    async (id: string) => {
-      await confirmBookingAction(id);
+    async (bookingCode: string) => {
+      await confirmBookingEmailAction(bookingCode);
       await mutate();
     },
     [mutate]

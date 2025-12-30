@@ -175,6 +175,7 @@ export type BookingRecord = {
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
+  booking_code: string;
   // Relations (from join queries)
   customers?: {
     full_name: string;

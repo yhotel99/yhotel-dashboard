@@ -112,7 +112,7 @@ export function BookingActionsCell({
     paymentId: string | null;
   }>;
   pendingBooking: (bookingId: string) => Promise<void>;
-  confirmedBooking: (bookingId: string) => Promise<void>;
+  confirmedBooking: (bookingCode: string) => Promise<void>;
   checkedInBooking: (bookingId: string) => Promise<void>;
   checkedOutBooking: (bookingId: string) => Promise<void>;
   cancelledBooking: (bookingId: string) => Promise<void>;
@@ -259,6 +259,7 @@ export function BookingActionsCell({
           onOpenChange={setOpenChangeStatus}
           currentStatus={booking.status}
           bookingId={booking.id}
+          bookingCode={booking.booking_code}
           pendingBooking={pendingBooking}
           confirmedBooking={confirmedBooking}
           checkedInBooking={checkedInBooking}

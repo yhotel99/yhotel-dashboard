@@ -34,7 +34,7 @@ export async function searchBookings({
 }): Promise<BookingRecord[]> {
   try {
     const supabase = await createClient();
-    const { data, error } = await supabase.rpc("search_bookings", {
+    const { data, error } = await supabase.rpc("search_bookings_json", {
       p_search: search,
       p_page: page,
       p_limit: limit,
@@ -66,7 +66,7 @@ export async function countBookings({
 }): Promise<number> {
   try {
     const supabase = await createClient();
-    const { data, error } = await supabase.rpc("count_bookings", {
+    const { data, error } = await supabase.rpc("count_bookings_json", {
       p_search: search,
       p_customer_id: customerId,
     });

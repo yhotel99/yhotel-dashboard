@@ -43,6 +43,8 @@ export function useBookings({
   const { data, error, isLoading, mutate, isValidating } =
     useSWR<BookingsResponse>(`/api/bookings?${params.toString()}`, fetcher);
 
+
+    console.log("data", data);
   return {
     bookings: data?.data || [],
     pagination: data?.pagination || {

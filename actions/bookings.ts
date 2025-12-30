@@ -378,3 +378,38 @@ export async function transferBookingAction(
 ) {
   console.log("transferBookingAction", bookingId, input);
 }
+
+
+export async function confirmBookingEmailAction(bookingCode: string) {
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/send-confirm-booking`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+      },
+      body: JSON.stringify({
+
+        booking_code: bookingCode,
+
+      }),
+      cache: "no-store",
+    }
+  );
+
+  const emailResult = await res.json();
+  console.log({
+    emailResult,
+    bookingCode,
+  });
+
+  if (!res.ok) {
+    console.error("Send email failed", emailResult);
+    // optional: không throw để không chặn confirm booking
+  }
+
+  // Revalidate bookings page after confirming
+  revalidatePath("/dashboard/bookings");
+
+}
