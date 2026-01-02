@@ -255,7 +255,7 @@ const createColumns = (
   ) => Promise<RefundRequest>
 ): ColumnDef<RefundRequestWithRelations>[] => [
   {
-    accessorKey: "id",
+    accessorKey: "Mã yêu cầu",
     header: "Mã yêu cầu",
     cell: ({ row }) => (
       <span className="font-mono text-sm">
@@ -266,21 +266,21 @@ const createColumns = (
     minSize: 100,
   },
   {
-    accessorKey: "customer",
+    accessorKey: "Khách hàng",
     header: "Khách hàng",
     cell: ({ row }) => row.original.bookings?.customers?.full_name ?? "-",
     size: 150,
     minSize: 120,
   },
   {
-    accessorKey: "room",
+    accessorKey: "Phòng",
     header: "Phòng",
     cell: ({ row }) => row.original.bookings?.rooms?.name ?? "-",
     size: 100,
     minSize: 80,
   },
   {
-    accessorKey: "booking_id",
+    accessorKey: "Mã booking",
     header: "Mã booking",
     cell: ({ row }) => (
       <span className="font-mono text-sm">
@@ -291,14 +291,14 @@ const createColumns = (
     minSize: 100,
   },
   {
-    accessorKey: "amount",
+    accessorKey: "Số tiền",
     header: "Số tiền",
     cell: ({ row }) => formatCurrency(row.original.amount),
     size: 120,
     minSize: 100,
   },
   {
-    accessorKey: "status",
+    accessorKey: "Trạng thái",
     header: "Trạng thái",
     cell: ({ row }) => (
       <RefundRequestStatusBadge status={row.original.status} />
@@ -307,21 +307,21 @@ const createColumns = (
     minSize: 100,
   },
   {
-    accessorKey: "reason",
+    accessorKey: "Lý do",
     header: "Lý do",
     cell: ({ row }) => row.original.reason ?? "-",
     size: 150,
     minSize: 120,
   },
   {
-    accessorKey: "created_at",
+    accessorKey: "Ngày tạo",
     header: "Ngày tạo",
     cell: ({ row }) => formatDateOnly(row.original.created_at),
     size: 120,
     minSize: 100,
   },
   {
-    accessorKey: "request_by",
+    accessorKey: "Người yêu cầu",
     header: "Người yêu cầu",
     cell: ({ row }) =>
       row.original.request_by_profile?.full_name || (
@@ -334,7 +334,7 @@ const createColumns = (
     enableHiding: true,
   },
   {
-    accessorKey: "approved_by",
+    accessorKey: "Người duyệt",
     header: "Người duyệt",
     cell: ({ row }) =>
       row.original.approved_by_profile?.full_name ||
@@ -350,7 +350,7 @@ const createColumns = (
     enableHiding: true,
   },
   {
-    accessorKey: "refunded_by",
+    accessorKey: "Người hoàn tiền",
     header: "Người hoàn tiền",
     cell: ({ row }) =>
       row.original.refunded_by_profile?.full_name ||
@@ -366,7 +366,7 @@ const createColumns = (
     enableHiding: true,
   },
   {
-    accessorKey: "note",
+    accessorKey: "Ghi chú",
     header: "Ghi chú",
     cell: ({ row }) => row.original.note ?? "-",
     size: 150,
@@ -374,7 +374,7 @@ const createColumns = (
     enableHiding: true,
   },
   {
-    id: "actions",
+    id: "Hành động",
     cell: ({ row }) => (
       <RefundRequestActionsCell
         refundRequest={row.original}

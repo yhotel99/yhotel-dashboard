@@ -14,42 +14,42 @@ import { BookingRecord } from "@/lib/types";
 
 const createColumns = (): ColumnDef<BookingRecord>[] => [
   {
-    accessorKey: "id",
+    accessorKey: "Mã booking",
     header: "Mã booking",
     cell: ({ row }) => row.original.id.slice(0, 8),
   },
   {
-    accessorKey: "room_id",
+    accessorKey: "Phòng",
     header: "Phòng",
     cell: ({ row }) => row.original.rooms?.name ?? "-",
   },
   {
-    accessorKey: "check_in",
+    accessorKey: "Ngày check-in",
     header: "Check-in",
     cell: ({ row }) => formatDateOnly(row.original.check_in),
   },
   {
-    accessorKey: "check_out",
+    accessorKey: "Ngày check-out",
     header: "Check-out",
     cell: ({ row }) => formatDateOnly(row.original.check_out),
   },
   {
-    accessorKey: "number_of_nights",
+    accessorKey: "Số đêm",
     header: "Số đêm",
     cell: ({ row }) => `${row.original.number_of_nights} đêm`,
   },
   {
-    accessorKey: "total_amount",
+    accessorKey: "Tổng tiền",
     header: "Tổng tiền",
     cell: ({ row }) => formatCurrency(row.original.total_amount),
   },
   {
-    accessorKey: "advance_payment",
+    accessorKey: "Tiền đặt cọc",
     header: "Tiền cọc",
     cell: ({ row }) => formatCurrency(row.original.advance_payment || 0),
   },
   {
-    accessorKey: "status",
+    accessorKey: "Trạng thái",
     header: "Trạng thái",
     cell: ({ row }) => <StatusBadge status={row.original.status} />,
   },

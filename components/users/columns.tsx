@@ -10,35 +10,37 @@ export function createColumns(
 ): ColumnDef<Profile>[] {
   return [
     {
-      accessorKey: "full_name",
+      accessorKey: "Tên",
       header: "Tên",
+      cell: ({ row }) => row.original.full_name,
     },
     {
       accessorKey: "email",
       header: "Email",
+      cell: ({ row }) => row.original.email,
     },
     {
-      accessorKey: "phone",
+      accessorKey: "Số điện thoại",
       header: "Số điện thoại",
       cell: ({ row }) => row.original.phone || "-",
     },
     {
-      accessorKey: "role",
+      accessorKey: "Vai trò",
       header: "Vai trò",
       cell: ({ row }) => <RoleBadge role={row.original.role} />,
     },
     {
-      accessorKey: "status",
+      accessorKey: "Trạng thái",
       header: "Trạng thái",
       cell: ({ row }) => <StatusBadge status={row.original.status} />,
     },
     {
-      accessorKey: "created_at",
+      accessorKey: "Ngày tạo",
       header: "Ngày tạo",
       cell: ({ row }) => formatDate(row.original.created_at),
     },
     {
-      id: "actions",
+      id: "Hành động",
       cell: ({ row }) => (
         <UserActionsCell
           userName={row.original.full_name}

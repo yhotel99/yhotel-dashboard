@@ -12,21 +12,21 @@ export function createColumns(
 ): ColumnDef<Customer>[] {
   return [
     {
-      accessorKey: "full_name",
+      accessorKey: "Họ tên",
       header: "Họ tên",
-      enableHiding: false,
+      cell: ({ row }) => row.original.full_name,
       size: 150,
       minSize: 140,
     },
     {
-      accessorKey: "phone",
+      accessorKey: "Số điện thoại",
       header: "SĐT",
       cell: ({ row }) => row.original.phone ?? "-",
       size: 90,
       minSize: 70,
     },
     {
-      accessorKey: "email",
+      accessorKey: "Email",
       header: "Email",
       cell: ({ row }) => (
         <span className="text-blue-700 underline cursor-pointer">
@@ -37,14 +37,14 @@ export function createColumns(
       minSize: 140,
     },
     {
-      accessorKey: "total_bookings",
+      accessorKey: "Số đơn",
       header: "Số đơn",
       cell: ({ row }) => <span>{row.original.total_bookings ?? 0} lần</span>,
       size: 70,
       minSize: 60,
     },
     {
-      accessorKey: "total_spent",
+      accessorKey: "Tổng chi tiêu",
       header: "Tổng chi tiêu",
       cell: ({ row }) => {
         const total = row.original.total_spent ?? 0;
@@ -54,14 +54,14 @@ export function createColumns(
       minSize: 90,
     },
     {
-      accessorKey: "created_at",
+      accessorKey: "Ngày đăng ký",
       header: "Ngày đăng ký",
       cell: ({ row }) => formatDateOnly(row.original.created_at),
       size: 120,
       minSize: 100,
     },
     {
-      accessorKey: "customer_type",
+      accessorKey: "Loại khách hàng",
       header: "Loại khách hàng",
       cell: ({ row }) => (
         <StatusBadge customerType={row.original.customer_type} />
@@ -70,7 +70,7 @@ export function createColumns(
       minSize: 80,
     },
     {
-      accessorKey: "source",
+      accessorKey: "Nguồn",
       header: "Nguồn",
       cell: ({ row }) => {
         return (
@@ -83,7 +83,7 @@ export function createColumns(
       minSize: 60,
     },
     {
-      id: "actions",
+      id: "Hành động",
       cell: ({ row }) => (
         <ActionsCell
           customer={row.original}

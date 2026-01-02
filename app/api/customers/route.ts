@@ -1,47 +1,66 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import type { BookingStatus, Customer, PaginationMeta } from "@/lib/types";
-import { BOOKING_STATUS } from "@/lib/constants";
-
-// Type for customer with bookings (internal use)
-type CustomerWithBookings = Customer & {
-  bookings?: Array<{
-    id: string;
-    total_amount: number;
-    status: BookingStatus;
-    deleted_at: string | null;
-  }>;
-};
+import type { Customer, PaginationMeta } from "@/lib/types";
+import { BOOKING_STATUS, PAYMENT_STATUS } from "@/lib/constants";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
- * Process customer data and calculate stats from bookings
+ * Calculate customer stats (total bookings and total spent)
  */
-function processCustomerData(customer: CustomerWithBookings): Customer {
-  const bookings = customer.bookings || [];
+async function calculateCustomerStats(customerId: string, supabase: SupabaseClient) {
+  // Get all completed bookings (confirmed, checked_in, checked_out)
+  const { data: bookingsData, error: bookingsError } = await supabase
+    .from("bookings")
+    .select("id")
+    .eq("customer_id", customerId)
+    .in("status", [
+      BOOKING_STATUS.CONFIRMED,
+      BOOKING_STATUS.CHECKED_IN,
+      BOOKING_STATUS.CHECKED_OUT,
+    ])
+    .is("deleted_at", null);
 
-  // Filter out deleted bookings
-  const activeBookings = bookings.filter(
-    (b) => !b.deleted_at && b.status === BOOKING_STATUS.CHECKED_OUT
-  );
+  if (bookingsError) {
+    console.error("Error fetching bookings for customer stats:", bookingsError);
+    return { total_bookings: 0, total_spent: 0 };
+  }
 
-  // Calculate total bookings count
-  const total_bookings = activeBookings.length;
+  const bookingIds = (bookingsData || []).map((b: { id: string }) => b.id);
+  const total_bookings = bookingIds.length;
 
-  // Calculate total spent (sum of total_amount)
-  const total_spent = activeBookings.reduce(
-    (sum, booking) => sum + Number(booking.total_amount || 0),
+  // Get all paid payments for this customer (from all their bookings)
+  const { data: allBookingIdsData, error: allBookingsError } = await supabase
+    .from("bookings")
+    .select("id")
+    .eq("customer_id", customerId)
+    .is("deleted_at", null);
+
+  if (allBookingsError) {
+    console.error("Error fetching all bookings for payments:", allBookingsError);
+    return { total_bookings, total_spent: 0 };
+  }
+
+  const allBookingIds = (allBookingIdsData || []).map((b: { id: string }) => b.id);
+
+  // Calculate total spent from all paid payments
+  const { data: paymentsData, error: paymentsError } = await supabase
+    .from("payments")
+    .select("amount")
+    .in("booking_id", allBookingIds)
+    .eq("payment_status", PAYMENT_STATUS.PAID)
+
+
+  if (paymentsError) {
+    console.error("Error fetching payments for customer stats:", paymentsError);
+    return { total_bookings, total_spent: 0 };
+  }
+
+  const total_spent = (paymentsData || []).reduce(
+    (sum: number, payment: { amount: number }) => sum + Number(payment.amount || 0),
     0
   );
 
-  // Remove bookings from customer object and add computed fields
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { bookings: _, ...customerWithoutBookings } = customer;
-
-  return {
-    ...customerWithoutBookings,
-    total_bookings,
-    total_spent,
-  } as Customer;
+  return { total_bookings, total_spent };
 }
 
 /**
@@ -73,21 +92,10 @@ export async function GET(req: NextRequest) {
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
-    // Build query with bookings join to calculate stats
+    // First, get customers with pagination and search
     let query = supabase
       .from("customers")
-      .select(
-        `
-        *,
-        bookings (
-          id,
-          total_amount,
-          status,
-          deleted_at
-        )
-      `,
-        { count: "exact" }
-      )
+      .select("*", { count: "exact" })
       .is("deleted_at", null);
 
     // Add search filter if search term exists
@@ -108,9 +116,16 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    // Process customers data and calculate stats from bookings
-    const customersData = ((data || []) as CustomerWithBookings[]).map(
-      processCustomerData
+    // Calculate stats for each customer
+    const customersData = await Promise.all(
+      (data || []).map(async (customer: Customer) => {
+        const stats = await calculateCustomerStats(customer.id, supabase);
+        return {
+          ...customer,
+          total_bookings: stats.total_bookings,
+          total_spent: stats.total_spent,
+        } as Customer;
+      })
     );
 
     const total = count || 0;

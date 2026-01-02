@@ -32,57 +32,66 @@ export function createColumns(
 ): ColumnDef<BookingRecord>[] {
   return [
     {
-      accessorKey: "customers",
+      accessorKey: "Mã booking",
+      header: "Mã booking",
+      cell: ({ row }) => (
+        <div className="font-semibold text-primary">
+          {row.original.booking_code}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "Tên khách hàng",
       header: "Khách hàng",
       cell: ({ row }) => row.original.customers?.full_name ?? "-",
     },
     {
-      accessorKey: "rooms",
+      accessorKey: "Số phòng",
       header: "Số phòng",
       cell: ({ row }) => row.original.rooms?.name ?? "-",
     },
     {
-      accessorKey: "check_in",
+      accessorKey: "Ngày check-in",
       header: "Check-in",
       cell: ({ row }) => formatDateOnly(row.original.check_in),
     },
     {
-      accessorKey: "check_out",
+      accessorKey: "Ngày check-out",
       header: "Check-out",
       cell: ({ row }) => formatDateOnly(row.original.check_out),
     },
     {
-      accessorKey: "number_of_nights",
+      accessorKey: "Số đêm",
       header: "Số đêm",
       cell: ({ row }) => `${row.original.number_of_nights} đêm`,
     },
     {
-      accessorKey: "total_guests",
+      accessorKey: "Số khách",
       header: "Số khách",
       cell: ({ row }) => `${row.original.total_guests} người`,
     },
     {
-      accessorKey: "total_amount",
+      accessorKey: "Tổng tiền",
       header: "Tổng tiền",
       cell: ({ row }) => formatCurrency(row.original.total_amount),
     },
     {
-      accessorKey: "advance_payment",
+      accessorKey: "Tiền đặt cọc",
       header: "Tiền đặt cọc",
       cell: ({ row }) => formatCurrency(row.original.advance_payment),
     },
     {
-      accessorKey: "status",
+      accessorKey: "Trạng thái",
       header: "Trạng thái",
       cell: ({ row }) => <StatusBadge status={row.original.status} />,
     },
     {
-      accessorKey: "notes",
+      accessorKey: "Ghi chú",
       header: "Ghi chú",
       cell: ({ row }) => <NotesCell notes={row.original.notes} />,
     },
     {
-      id: "actions",
+      id: "Hành động",
       cell: ({ row }) => {
         const defaultCancelledBooking =
           handlers?.cancelledBooking ||

@@ -14,28 +14,28 @@ import { useDebounce } from "@/hooks/use-debounce";
 
 const createColumns = (): ColumnDef<PaymentWithBooking>[] => [
   {
-    accessorKey: "customer",
+    accessorKey: "Khách hàng",
     header: "Khách hàng",
     cell: ({ row }) => row.original.bookings?.customers?.full_name ?? "-",
     size: 150,
     minSize: 120,
   },
   {
-    accessorKey: "room",
+    accessorKey: "Phòng",
     header: "Phòng",
     cell: ({ row }) => row.original.bookings?.rooms?.name ?? "-",
     size: 100,
     minSize: 80,
   },
   {
-    accessorKey: "amount",
+    accessorKey: "Số tiền",
     header: "Số tiền",
     cell: ({ row }) => formatCurrency(row.original.amount),
     size: 120,
     minSize: 100,
   },
   {
-    accessorKey: "payment_type",
+    accessorKey: "Loại thanh toán",
     header: "Loại thanh toán",
     cell: ({ row }) =>
       paymentTypeLabels[
@@ -45,7 +45,7 @@ const createColumns = (): ColumnDef<PaymentWithBooking>[] => [
     minSize: 120,
   },
   {
-    accessorKey: "payment_status",
+    accessorKey: "Trạng thái",
     header: "Trạng thái",
     cell: ({ row }) => (
       <PaymentStatusBadge status={row.original.payment_status} />
@@ -54,7 +54,7 @@ const createColumns = (): ColumnDef<PaymentWithBooking>[] => [
     minSize: 120,
   },
   {
-    accessorKey: "paid_at",
+    accessorKey: "Ngày thanh toán",
     header: "Ngày thanh toán",
     cell: ({ row }) =>
       row.original.paid_at ? formatDateOnly(row.original.paid_at) : "-",
@@ -62,7 +62,7 @@ const createColumns = (): ColumnDef<PaymentWithBooking>[] => [
     minSize: 130,
   },
   {
-    accessorKey: "created_at",
+    accessorKey: "Ngày tạo",
     header: "Ngày tạo",
     cell: ({ row }) => formatDateOnly(row.original.created_at),
     size: 150,

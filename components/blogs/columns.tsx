@@ -17,7 +17,7 @@ export function createColumns(
 ): ColumnDef<Blog>[] {
   return [
     {
-      accessorKey: "featured_image",
+      accessorKey: "Ảnh",
       header: "Ảnh",
       cell: ({ row }) => (
         <div className="relative aspect-video xl:w-18 w-14 xl:h-14 h-10 rounded-md border overflow-hidden">
@@ -43,7 +43,7 @@ export function createColumns(
       minSize: 80,
     },
     {
-      accessorKey: "title",
+      accessorKey: "Tiêu đề",
       header: "Tiêu đề",
       enableHiding: false,
       size: 250,
@@ -78,7 +78,7 @@ export function createColumns(
       minSize: 150,
     },
     {
-      accessorKey: "status",
+      accessorKey: "Trạng thái",
       header: "Trạng thái",
       cell: ({ row }) => (
         <BlogStatusCell
@@ -91,14 +91,14 @@ export function createColumns(
       minSize: 100,
     },
     {
-      accessorKey: "author",
+      accessorKey: "Tác giả",
       header: "Tác giả",
       cell: ({ row }) => row.original.author?.full_name || "-",
       size: 120,
       minSize: 100,
     },
     {
-      accessorKey: "published_at",
+      accessorKey: "Ngày xuất bản",
       header: "Ngày xuất bản",
       cell: ({ row }) =>
         row.original.published_at
@@ -108,14 +108,14 @@ export function createColumns(
       minSize: 100,
     },
     {
-      accessorKey: "created_at",
+      accessorKey: "Ngày tạo",
       header: "Ngày tạo",
       cell: ({ row }) => formatDateOnly(row.original.created_at),
       size: 120,
       minSize: 100,
     },
     {
-      id: "actions",
+      id: "Hành động",
       cell: ({ row }) => (
         <BlogActionsCell
           blog={row.original}

@@ -20,7 +20,7 @@ export function createColumns(
 ): ColumnDef<Room>[] {
   return [
     {
-      accessorKey: "thumbnail",
+      accessorKey: "Ảnh",
       header: "Ảnh",
       cell: ({ row }) => (
         <ThumbnailCell thumbnailUrl={row.original.thumbnail?.url} />
@@ -29,20 +29,21 @@ export function createColumns(
       minSize: 50,
     },
     {
-      accessorKey: "name",
+      accessorKey: "Tên phòng",
       header: "Tên phòng",
+      cell: ({ row }) => row.original.name,
       size: 100,
       minSize: 80,
     },
     {
-      accessorKey: "room_type",
+      accessorKey: "Loại phòng",
       header: "Loại phòng",
       cell: ({ row }) => roomTypeLabels[row.original.room_type],
       size: 100,
       minSize: 80,
     },
     {
-      accessorKey: "status",
+      accessorKey: "Trạng thái",
       header: "Trạng thái",
       cell: ({ row }) => (
         <RoomStatusCell
@@ -55,21 +56,21 @@ export function createColumns(
       minSize: 80,
     },
     {
-      accessorKey: "price_per_night",
+      accessorKey: "Giá mỗi đêm",
       header: "Giá mỗi đêm",
       cell: ({ row }) => formatCurrency(row.original.price_per_night),
       size: 120,
       minSize: 100,
     },
     {
-      accessorKey: "max_guests",
+      accessorKey: "Số khách tối đa",
       header: "Số khách tối đa",
       cell: ({ row }) => `${row.original.max_guests} người`,
       size: 120,
       minSize: 100,
     },
     {
-      accessorKey: "amenities",
+      accessorKey: "Tiện ích",
       header: "Tiện ích",
       cell: ({ row }) => {
         const amenities = Array.isArray(row.original.amenities)
@@ -81,7 +82,7 @@ export function createColumns(
       minSize: 120,
     },
     {
-      id: "actions",
+      id: "Hành động",
       cell: ({ row }) => (
         <RoomActionsCell room={row.original} onDelete={onDelete} />
       ),
