@@ -4,7 +4,10 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
-import { createRoom as createRoomAction, updateRoom as updateRoomAction } from "@/actions/rooms";
+import {
+  createRoom as createRoomAction,
+  updateRoom as updateRoomAction,
+} from "@/actions/rooms";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -14,7 +17,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Form,
   FormControl,
@@ -35,7 +37,12 @@ import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
 import { ImageSelector, ImageListSelector } from "@/components/image-selector";
 import { formatCurrency } from "@/lib/functions";
-import { ROOM_STATUS, roomStatusLabels } from "@/lib/constants";
+import {
+  AMENITIES_OPTIONS,
+  ROOM_STATUS,
+  roomStatusLabels,
+} from "@/lib/constants";
+import { MultiSelect } from "@/components/multi-select";
 
 // Room type enum matching database
 export const roomTypeEnum = [
@@ -109,19 +116,6 @@ export const editRoomFormSchema = baseRoomFormSchema.extend({
 export const roomFormSchema = editRoomFormSchema;
 
 export type RoomFormValues = z.infer<typeof roomFormSchema>;
-
-export const availableAmenities = [
-  "WiFi",
-  "TV",
-  "Mini Bar",
-  "Balcony",
-  "Air Conditioning",
-  "Safe",
-  "Refrigerator",
-  "Hair Dryer",
-  "Coffee Maker",
-  "Room Service",
-];
 
 interface RoomFormProps {
   mode?: "create" | "edit";
@@ -382,6 +376,29 @@ export function RoomForm({
                   </FormItem>
                 )}
               />
+
+              <FormField
+                control={form.control}
+                name="amenities"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tiện ích</FormLabel>
+                    <MultiSelect
+                      options={AMENITIES_OPTIONS}
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                      placeholder="Chọn tiện ích phòng"
+                      variant="default"
+                      maxCount={5}
+                      modalPopover={false}
+                      className="w-full"
+                    />
+                    <FormDescription>
+                      Chọn các tiện ích có trong phòng (tùy chọn)
+                    </FormDescription>
+                  </FormItem>
+                )}
+              />
             </div>
 
             <FormField
@@ -400,59 +417,6 @@ export function RoomForm({
                   <FormDescription>
                     Mô tả chi tiết về phòng và các đặc điểm nổi bật
                   </FormDescription>
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="amenities"
-              render={() => (
-                <FormItem>
-                  <div className="mb-4">
-                    <FormLabel className="text-base">Tiện ích</FormLabel>
-                    <FormDescription>
-                      Chọn các tiện ích có trong phòng (tùy chọn)
-                    </FormDescription>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
-                    {availableAmenities.map((amenity) => (
-                      <FormField
-                        key={amenity}
-                        control={form.control}
-                        name="amenities"
-                        render={({ field }) => {
-                          return (
-                            <FormItem
-                              key={amenity}
-                              className="flex flex-row items-start space-x-3 space-y-0"
-                            >
-                              <FormControl>
-                                <Checkbox
-                                  checked={field.value?.includes(amenity)}
-                                  onCheckedChange={(checked) => {
-                                    return checked
-                                      ? field.onChange([
-                                          ...(field.value || []),
-                                          amenity,
-                                        ])
-                                      : field.onChange(
-                                          (field.value || []).filter(
-                                            (value) => value !== amenity
-                                          )
-                                        );
-                                  }}
-                                />
-                              </FormControl>
-                              <FormLabel className="font-normal">
-                                {amenity}
-                              </FormLabel>
-                            </FormItem>
-                          );
-                        }}
-                      />
-                    ))}
-                  </div>
                 </FormItem>
               )}
             />

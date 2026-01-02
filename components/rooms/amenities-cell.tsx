@@ -4,6 +4,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { AMENITIES_OPTIONS } from "@/lib/constants";
 
 export function AmenitiesCell({ amenities }: { amenities: string[] }) {
   if (!Array.isArray(amenities) || amenities.length === 0) {
@@ -18,7 +19,7 @@ export function AmenitiesCell({ amenities }: { amenities: string[] }) {
     <div className="flex gap-1 flex-wrap items-center">
       {visibleAmenities.map((amenity, index) => (
         <Badge key={index} variant="outline" className="text-xs">
-          {amenity}
+          {AMENITIES_OPTIONS.find((option) => option.value === amenity)?.label}
         </Badge>
       ))}
       {remainingCount > 0 && (
@@ -33,12 +34,12 @@ export function AmenitiesCell({ amenities }: { amenities: string[] }) {
               <p className="font-semibold mb-1">Tiện ích khác:</p>
               <div className="flex flex-wrap gap-1">
                 {remainingAmenities.map((amenity, index) => (
-                  <Badge
-                    key={index}
-                    variant="secondary"
-                    className="text-xs"
-                  >
-                    {amenity}
+                  <Badge key={index} variant="secondary" className="text-xs">
+                    {
+                      AMENITIES_OPTIONS.find(
+                        (option) => option.value === amenity
+                      )?.label
+                    }
                   </Badge>
                 ))}
               </div>
@@ -49,4 +50,3 @@ export function AmenitiesCell({ amenities }: { amenities: string[] }) {
     </div>
   );
 }
-

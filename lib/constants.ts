@@ -402,58 +402,68 @@ export const allNavItems = [
     resource: "dashboard",
   },
   {
-    title: "Quản lý Phòng Khách Sạn",
+    title: "Phòng Khách Sạn",
     url: SIDEBAR_URLS.ROOMS,
     icon: HotelIcon,
     resource: "rooms",
   },
   {
-    title: "Quản Lý Đặt Chỗ",
+    title: "Đặt Chỗ",
     url: SIDEBAR_URLS.RESERVATION,
     icon: IconInnerShadowTop,
     resource: "reservations",
   },
   {
-    title: "Quản Lý Đơn Đặt Phòng",
+    title: "Đơn Đặt Phòng",
     url: SIDEBAR_URLS.BOOKINGS,
     icon: IconChartBar,
     resource: "bookings",
   },
 
   {
-    title: "Quản Lý Khách Hàng",
+    title: "Khách Hàng",
     url: SIDEBAR_URLS.CUSTOMERS,
     icon: UserCircle,
     resource: "customers",
   },
   {
-    title: "Quản Lý Thanh Toán",
+    title: "Thanh Toán",
     url: SIDEBAR_URLS.PAYMENTS,
     icon: IconCreditCard,
     resource: "payments",
   },
   {
-    title: "Quản Lý Hoàn Tiền",
+    title: "Hoàn Tiền",
     url: SIDEBAR_URLS.REFUND_REQUESTS,
     icon: IconReceiptRefund,
     resource: "refund-requests",
   },
   {
-    title: "Quản Lý Bộ Sưu Tập Ảnh",
+    title: "Bộ Sưu Tập Ảnh",
     url: SIDEBAR_URLS.GALLERY,
     icon: Images,
     resource: "gallery",
   },
   {
-    title: "Quản Lý Blog",
+    title: "Blog",
     url: "/dashboard/blogs",
     icon: IconNews,
     resource: "blogs",
   },
   {
-    title: "Quản Lý Người Dùng",
+    title: "Người Dùng",
     url: SIDEBAR_URLS.USERS,
     icon: User2,
     resource: "users",
   },
+];
+
+
+export const AMENITIES_OPTIONS = [
+  { label: "WiFi Tốc độ cao", value: "wifi_high_speed" },
+  { label: "Bãi đỗ xe", value: "parking" },
+  { label: "Cà phê", value: "coffee" },
+  { label: "Có phục vụ bữa sáng", value: "breakfast_service" },
+  { label: "Giặt ủi", value: "laundry" },
+  { label: "Hỗ trợ liên hệ Tài Xế", value: "taxi_support" },
 ];
