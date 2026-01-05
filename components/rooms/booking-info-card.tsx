@@ -19,7 +19,7 @@ export function BookingInfoCard({ booking }: BookingInfoCardProps) {
         <div className="flex justify-between items-center">
           <span className="text-muted-foreground">Mã booking:</span>
           <span className="font-medium font-mono">
-            {booking.id.slice(0, 8).toUpperCase()}
+            {booking.booking_code || booking.id.slice(0, 8).toUpperCase()}
           </span>
         </div>
         <div className="flex justify-between items-center">

@@ -58,7 +58,6 @@ export function LoginForm({
                 placeholder="Enter your email"
                 required
                 maxLength={254}
-                aria-label="Email"
               />
             </div>
             <div className="space-y-2">
@@ -70,7 +69,6 @@ export function LoginForm({
                 placeholder="Enter your password"
                 required
                 maxLength={128}
-                aria-label="Password"
               />
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}

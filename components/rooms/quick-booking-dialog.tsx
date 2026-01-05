@@ -362,6 +362,7 @@ export function QuickBookingDialog({
                       : undefined
                   }
                   onSelect={handleDateSelect("check_out_date")}
+                  disabled={(date) => date < new Date(formValues.check_in_date)}
                 />
               </PopoverContent>
             </Popover>

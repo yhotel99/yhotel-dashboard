@@ -43,7 +43,7 @@ export function CheckoutConfirmationDialog({
             <div className="flex justify-between">
               <span className="text-muted-foreground">Mã booking:</span>
               <span className="font-medium font-mono">
-                {booking.id.slice(0, 8).toUpperCase()}
+                {booking.booking_code || booking.id.slice(0, 8).toUpperCase()}
               </span>
             </div>
             <div className="flex justify-between">
@@ -65,7 +65,7 @@ export function CheckoutConfirmationDialog({
           <Button
             onClick={onConfirm}
             disabled={isCheckingOut}
-            className="bg-green-600 hover:bg-green-700"
+            className="bg-primary hover:bg-primary/90"
           >
             {isCheckingOut ? "Đang xử lý..." : "Xác nhận check-out"}
           </Button>
@@ -74,4 +74,3 @@ export function CheckoutConfirmationDialog({
     </Dialog>
   );
 }
-

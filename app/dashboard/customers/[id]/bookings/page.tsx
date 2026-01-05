@@ -16,7 +16,8 @@ const createColumns = (): ColumnDef<BookingRecord>[] => [
   {
     accessorKey: "Mã booking",
     header: "Mã booking",
-    cell: ({ row }) => row.original.id.slice(0, 8),
+    cell: ({ row }) =>
+      row.original.booking_code || row.original.id.slice(0, 8).toUpperCase(),
   },
   {
     accessorKey: "Phòng",

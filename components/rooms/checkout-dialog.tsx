@@ -227,7 +227,7 @@ export function CheckoutDialog({
                 size="sm"
                 onClick={handleCheckoutClick}
                 disabled={isCheckingOut}
-                className="w-full sm:w-auto sm:min-w-[120px] bg-green-600 hover:bg-green-800 text-white text-xs py-5 sm:text-sm"
+                className="w-full sm:w-auto sm:min-w-[120px] bg-primary hover:bg-primary/90 text-white text-xs py-5 sm:text-sm"
               >
                 Trả phòng
               </Button>
