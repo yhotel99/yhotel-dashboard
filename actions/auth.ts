@@ -8,12 +8,13 @@ import { hasViewPermission } from "@/lib/permissions";
 import { revalidatePath } from "next/cache";
 
 export async function loginAction(formData: FormData) {
-  const email = formData.get("email") as string;
-  const password = formData.get("password") as string;
+  const email = String(formData.get("email") || "");
+  const password = String(formData.get("password") || "");
 
   if (!email || !password) {
     return { error: "Email và mật khẩu không được để trống" };
   }
+
 
   const supabase = await createClient();
 
@@ -57,7 +58,7 @@ export async function loginAction(formData: FormData) {
       ? "/dashboard"
       : "/dashboard/reservation";
 
-  return redirect(redirectPath);
+  redirect(redirectPath);
 }
 
 export async function logoutAction() {

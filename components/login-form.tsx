@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FieldDescription } from "@/components/ui/field";
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -58,6 +57,8 @@ export function LoginForm({
                 type="email"
                 placeholder="Enter your email"
                 required
+                maxLength={254}
+                aria-label="Email"
               />
             </div>
             <div className="space-y-2">
@@ -68,6 +69,8 @@ export function LoginForm({
                 type="password"
                 placeholder="Enter your password"
                 required
+                maxLength={128}
+                aria-label="Password"
               />
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
@@ -75,10 +78,6 @@ export function LoginForm({
           </form>
         </CardContent>
       </Card>
-      <FieldDescription className="px-6 text-center">
-        By clicking continue, you agree to our <a href="#">Terms of Service</a>{" "}
-        and <a href="#">Privacy Policy</a>.
-      </FieldDescription>
     </div>
   );
 }
