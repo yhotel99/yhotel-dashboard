@@ -20,10 +20,12 @@ export function useBlogs({
   search = "",
   page = 1,
   limit = 10,
+  fallbackData,
 }: {
   search?: string;
   page?: number;
   limit?: number;
+  fallbackData?: Blog[];
 }) {
   // Build query parameters
   const params = new URLSearchParams({
@@ -35,7 +37,17 @@ export function useBlogs({
   }
 
   const { data, error, isLoading, mutate, isValidating } =
-    useSWR<BlogsResponse>(`/api/blogs?${params.toString()}`, fetcher);
+    useSWR<BlogsResponse>(`/api/blogs?${params.toString()}`, fetcher, {
+      fallbackData: fallbackData && page === 1 ? {
+        data: fallbackData,
+        pagination: {
+          total: fallbackData.length,
+          page: 1,
+          limit: 10,
+          totalPages: 1,
+        },
+      } : undefined,
+    });
 
   return {
     blogs: data?.data || [],
