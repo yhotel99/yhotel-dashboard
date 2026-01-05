@@ -1,32 +1,7 @@
 import { Suspense } from "react";
 import { BlogsContent } from "@/components/blogs/blogs-content";
 
-export default async function BlogsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{
-    page: string;
-    limit: string;
-    search: string;
-  }>;
-}) {
-  const { page, limit, search } = await searchParams;
-
-  const params = new URLSearchParams({
-    page: page || "1",
-    limit: limit || "10",
-  });
-  if (search && search.trim() !== "") {
-    params.append("search", search.trim());
-  }
-
-  const response = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/api/blogs?${params.toString()}`
-  );
-  const blogs = await response.json();
-  console.log({
-    blogs,
-  });
+export default async function BlogsPage() {
   return (
     <Suspense
       fallback={
@@ -55,7 +30,7 @@ export default async function BlogsPage({
         </div>
       }
     >
-      <BlogsContent initialData={blogs || []} />
+      <BlogsContent />
     </Suspense>
   );
 }
