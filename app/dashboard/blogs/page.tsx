@@ -1,22 +1,24 @@
 import { Suspense } from "react";
 import { BlogsContent } from "@/components/blogs/blogs-content";
+import { searchBlogs } from "@/services/blogs";
+type Props = {
+  params: Promise<{ username: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+};
 
-export default async function BlogsPage({
-  searchParams,
-}: {
-  searchParams?:
-    | Promise<{ [key: string]: string | string[] | undefined }>
-    | { [key: string]: string | string[] | undefined };
-}) {
+export default async function BlogsPage({ searchParams }: Props) {
   // Resolve searchParams nếu là Promise (Next.js 16+)
-  const params =
-    searchParams instanceof Promise ? await searchParams : searchParams;
+  const params = await searchParams;
 
-  // Log searchParams để debug
-  console.log("BlogsPage searchParams:", params);
-  console.log("Search:", params?.search);
-  console.log("Page:", params?.page);
-  console.log("Limit:", params?.limit);
+  const page = params.page ? Number(params.page) : 1;
+  const limit = params.limit ? Number(params.limit) : 10;
+  const search = params.search ? String(params.search) : "";
+
+  const { data: blogs, pagination } = await searchBlogs({
+    page,
+    limit,
+    search,
+  });
 
   return (
     <Suspense
@@ -46,7 +48,7 @@ export default async function BlogsPage({
         </div>
       }
     >
-      <BlogsContent />
+      <BlogsContent initialData={{ data: blogs, pagination }} />
     </Suspense>
   );
 }

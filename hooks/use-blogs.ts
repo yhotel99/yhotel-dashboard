@@ -1,14 +1,10 @@
 "use client";
 
 import useSWR from "swr";
-import type { Blog, PaginationMeta } from "@/lib/types";
+import type { Blog, BlogsResponse } from "@/lib/types";
 import { fetcher } from "@/lib/fetcher";
 
-// Type for API response
-type BlogsResponse = {
-  data: Blog[];
-  pagination: PaginationMeta;
-};
+
 
 /**
  * Hook for fetching blogs with SWR
@@ -20,10 +16,12 @@ export function useBlogs({
   search = "",
   page = 1,
   limit = 10,
+  fallbackData,
 }: {
   search?: string;
   page?: number;
   limit?: number;
+  fallbackData?: BlogsResponse;
 }) {
   // Build query parameters
   const params = new URLSearchParams({
@@ -35,7 +33,10 @@ export function useBlogs({
   }
 
   const { data, error, isLoading, mutate, isValidating } =
-    useSWR<BlogsResponse>(`/api/blogs?${params.toString()}`, fetcher);
+    useSWR<BlogsResponse>(`/api/blogs?${params.toString()}`, fetcher, {
+      fallbackData: fallbackData,
+      revalidateOnMount: true,
+    });
 
   return {
     blogs: data?.data || [],

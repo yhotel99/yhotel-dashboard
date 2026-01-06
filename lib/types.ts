@@ -456,3 +456,8 @@ export type BlogInput = {
   featured_image?: string | null;
   published_at?: string | null;
 };
+
+export type BlogsResponse = {
+  data: Blog[];
+  pagination: PaginationMeta;
+};

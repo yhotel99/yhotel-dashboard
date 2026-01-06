@@ -14,9 +14,9 @@ import {
   updateBlogStatus as updateBlogStatusAction,
   deleteBlog as deleteBlogAction,
 } from "@/actions/blogs";
-import type { Blog } from "@/lib/types";
+import type { Blog, BlogsResponse } from "@/lib/types";
 
-export function BlogsContent() {
+export function BlogsContent({ initialData }: { initialData: BlogsResponse }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [localSearch, setLocalSearch] = React.useState("");
@@ -77,7 +77,10 @@ export function BlogsContent() {
     search,
     page,
     limit,
+    fallbackData: initialData,
   });
+
+  console.log({ initialData });
 
   const handleEditBlog = React.useCallback(
     (blog: Blog) => {
