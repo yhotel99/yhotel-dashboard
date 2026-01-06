@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR from "swr";
-import type { Blog, BlogsResponse } from "@/lib/types";
+import type { BlogsResponse } from "@/lib/types";
 import { fetcher } from "@/lib/fetcher";
 
 
@@ -11,6 +11,7 @@ import { fetcher } from "@/lib/fetcher";
  * @param search - Search term
  * @param page - Page number
  * @param limit - Items per page
+ * @param fallbackData - Fallback data
  */
 export function useBlogs({
   search = "",
@@ -35,8 +36,12 @@ export function useBlogs({
   const { data, error, isLoading, mutate, isValidating } =
     useSWR<BlogsResponse>(`/api/blogs?${params.toString()}`, fetcher, {
       fallbackData: fallbackData,
-      revalidateOnMount: true,
+      revalidateOnMount: false
     });
+
+  
+
+    
 
   return {
     blogs: data?.data || [],
