@@ -1,7 +1,23 @@
 import { Suspense } from "react";
 import { BlogsContent } from "@/components/blogs/blogs-content";
 
-export default async function BlogsPage() {
+export default async function BlogsPage({
+  searchParams,
+}: {
+  searchParams?:
+    | Promise<{ [key: string]: string | string[] | undefined }>
+    | { [key: string]: string | string[] | undefined };
+}) {
+  // Resolve searchParams nếu là Promise (Next.js 16+)
+  const params =
+    searchParams instanceof Promise ? await searchParams : searchParams;
+
+  // Log searchParams để debug
+  console.log("BlogsPage searchParams:", params);
+  console.log("Search:", params?.search);
+  console.log("Page:", params?.page);
+  console.log("Limit:", params?.limit);
+
   return (
     <Suspense
       fallback={
