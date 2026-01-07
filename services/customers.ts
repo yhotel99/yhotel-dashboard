@@ -1,4 +1,3 @@
-"use server";
 
 import { createClient } from "@/lib/supabase/server";
 import type { Customer, CustomerInput } from "@/lib/types";

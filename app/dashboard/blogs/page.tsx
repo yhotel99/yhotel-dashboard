@@ -1,13 +1,12 @@
 import { Suspense } from "react";
 import { BlogsContent } from "@/components/blogs/blogs-content";
 import { searchBlogs } from "@/services/blogs";
+
 type Props = {
-  params: Promise<{ username: string }>;
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 };
 
 export default async function BlogsPage({ searchParams }: Props) {
-  // Resolve searchParams nếu là Promise (Next.js 16+)
   const params = await searchParams;
 
   const page = params.page ? Number(params.page) : 1;

@@ -1,4 +1,3 @@
-"use server";
 
 import { createClient } from "@/lib/supabase/server";
 import type { GalleryImage, PaginationMeta } from "@/lib/types";
