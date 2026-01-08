@@ -1,7 +1,7 @@
-"use client";
-
 import { Suspense } from "react";
 import { RefundRequestsContent } from "@/components/refund-requests/refund-requests-content";
+import type { PageProps } from "@/lib/types";
+import { getRefundRequestsListWithPagination } from "@/services/refund-requests";
 
 // Loading fallback component
 function RefundRequestsLoading() {
@@ -25,10 +25,19 @@ function RefundRequestsLoading() {
 }
 
 // Main page component
-export default function RefundRequestsPage() {
+export default async function RefundRequestsPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const page = params.page ? Number(params.page) : 1;
+  const limit = params.limit ? Number(params.limit) : 10;
+  const search = params.search ? String(params.search) : "";
+  const initialData = await getRefundRequestsListWithPagination({
+    page,
+    limit,
+    search,
+  });
   return (
     <Suspense fallback={<RefundRequestsLoading />}>
-      <RefundRequestsContent />
+      <RefundRequestsContent initialData={initialData} />
     </Suspense>
   );
 }

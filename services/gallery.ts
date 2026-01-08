@@ -1,6 +1,6 @@
 
 import { createClient } from "@/lib/supabase/server";
-import type { GalleryImage, PaginationMeta } from "@/lib/types";
+import type { GalleryImage, GalleryImagesResponse, PaginationMeta } from "@/lib/types";
 
 /**
  * Search gallery images with pagination
@@ -14,10 +14,7 @@ export async function searchGalleryImages({
 }: {
   page: number;
   limit: number;
-}): Promise<{
-  data: GalleryImage[];
-  pagination: PaginationMeta;
-}> {
+}): Promise<GalleryImagesResponse> {
   try {
     const supabase = await createClient();
 

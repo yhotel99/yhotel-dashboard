@@ -1,19 +1,16 @@
 import { Suspense } from "react";
 import { BlogsContent } from "@/components/blogs/blogs-content";
-import { searchBlogs } from "@/services/blogs";
+import { getBlogsListWithPagination } from "@/services/blogs";
+import type { PageProps } from "@/lib/types";
 
-type Props = {
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
-};
-
-export default async function BlogsPage({ searchParams }: Props) {
+export default async function BlogsPage({ searchParams }: PageProps) {
   const params = await searchParams;
 
   const page = params.page ? Number(params.page) : 1;
   const limit = params.limit ? Number(params.limit) : 10;
   const search = params.search ? String(params.search) : "";
 
-  const { data: blogs, pagination } = await searchBlogs({
+  const initialData = await getBlogsListWithPagination({
     page,
     limit,
     search,
@@ -47,7 +44,7 @@ export default async function BlogsPage({ searchParams }: Props) {
         </div>
       }
     >
-      <BlogsContent initialData={{ data: blogs, pagination }} />
+      <BlogsContent initialData={initialData} />
     </Suspense>
   );
 }

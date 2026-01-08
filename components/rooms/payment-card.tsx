@@ -1,24 +1,40 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import useSWR from "swr";
 import { Card } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/functions";
-import type { BookingRecord, RoomWithBooking } from "@/lib/types";
-import { usePayments } from "@/hooks/use-payments";
+import type { BookingRecord, RoomWithBooking, PaymentWithBooking } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PaymentStatusBadge } from "@/components/payments/status";
 import { PAYMENT_TYPE } from "@/lib/constants";
+import { fetcher } from "@/lib/fetcher";
 
 interface PaymentCardProps {
   booking: BookingRecord;
   room: RoomWithBooking;
 }
 
+type PaymentsResponse = {
+  data: PaymentWithBooking[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+};
+
 export function PaymentCard({ booking }: PaymentCardProps) {
-  const { payments, isLoading } = usePayments({
-    bookingId: booking.id || null,
-    page: 1,
-    limit: 100, // Get all payments for the booking
-  });
+  const bookingId = booking.id || null;
+  const { data, isLoading } = useSWR<PaymentsResponse>(
+    bookingId
+      ? `/api/payments?bookingId=${bookingId}&page=1&limit=100`
+      : null,
+    fetcher
+  );
+
+  const payments = data?.data || [];
 
   const advancePayment = payments.find(
     (p) => p.payment_type === PAYMENT_TYPE.ADVANCE_PAYMENT

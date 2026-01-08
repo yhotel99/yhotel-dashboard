@@ -15,9 +15,9 @@ import {
 import { toast } from "sonner";
 import { createColumns } from "@/components/rooms/columns";
 import { DeleteRoomDialog } from "@/components/rooms/delete-room-dialog";
-import { Room } from "@/lib/types";
+import type { Room, RoomsResponse } from "@/lib/types";
 
-export function RoomsContent() {
+export function RoomsContent({ initialData }: { initialData: RoomsResponse }) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -86,6 +86,7 @@ export function RoomsContent() {
     search,
     page,
     limit,
+    fallbackData: initialData,
   });
 
   // Delete room dialog state

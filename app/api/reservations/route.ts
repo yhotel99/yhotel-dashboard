@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import {  NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { RoomWithBooking, Room, RoomStatusViewData } from "@/lib/types";
 import { ROOM_STATUS, type RoomMapStatus } from "@/lib/constants";
@@ -8,7 +8,7 @@ import { ROOM_STATUS, type RoomMapStatus } from "@/lib/constants";
  * Fetch reservation data from room_status_view
  * Returns array of rooms with booking information and status
  */
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     const supabase = await createClient();
 

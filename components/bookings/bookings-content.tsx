@@ -27,6 +27,7 @@ import type {
   BookingRecord,
   UpdateBookingInput,
   TransferBookingInput,
+  BookingsResponse,
 } from "@/lib/types";
 import { useDebounce } from "@/hooks/use-debounce";
 import { createColumns } from "@/components/bookings/columns";
@@ -36,7 +37,11 @@ import { CheckAvailableRoomsDialog } from "@/components/bookings/check-available
 import { translateBookingError } from "@/lib/functions";
 import { toast } from "sonner";
 
-export function BookingsContent() {
+export function BookingsContent({
+  initialData,
+}: {
+  initialData: BookingsResponse;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [localSearch, setLocalSearch] = React.useState("");
@@ -97,6 +102,7 @@ export function BookingsContent() {
     search,
     page,
     limit,
+    fallbackData: initialData,
   });
 
   // Use checkAdvancePaymentStatusAction and markAdvancePaymentAsPaidAction from actions

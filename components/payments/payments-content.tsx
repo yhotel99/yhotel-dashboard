@@ -6,7 +6,7 @@ import { ColumnDef } from "@tanstack/react-table";
 
 import { DataTable } from "@/components/data-table";
 import { usePayments } from "@/hooks/use-payments";
-import type { PaymentWithBooking } from "@/lib/types";
+import type { PaymentsResponse, PaymentWithBooking } from "@/lib/types";
 import { PaymentStatusBadge } from "@/components/payments/status";
 import { formatCurrency, formatDateOnly } from "@/lib/functions";
 import { paymentTypeLabels } from "@/lib/constants";
@@ -70,7 +70,11 @@ const createColumns = (): ColumnDef<PaymentWithBooking>[] => [
   },
 ];
 
-export function PaymentsContent() {
+export function PaymentsContent({
+  initialData,
+}: {
+  initialData: PaymentsResponse;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [localSearch, setLocalSearch] = useState("");
@@ -129,6 +133,7 @@ export function PaymentsContent() {
     search,
     page,
     limit,
+    fallbackData: initialData,
   });
 
   // Handle empty page after deletion or invalid page number

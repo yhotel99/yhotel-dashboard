@@ -5,6 +5,7 @@ import type {
   BookingInput,
   UpdateBookingInput,
   TransferBookingInput,
+  PaginationMeta,
 } from "@/lib/types";
 import {
   BOOKING_STATUS,
@@ -932,5 +933,84 @@ export async function deleteBooking(bookingId: string): Promise<void> {
   } catch (err) {
     console.error("Error deleting booking:", err);
     throw err;
+  }
+}
+
+/**
+ * Get bookings list with pagination
+ * @param search - Search term (optional)
+ * @param page - Page number (default: 1)
+ * @param limit - Items per page (default: 10)
+ * @param customerId - Customer ID to filter (optional)
+ * @returns Object with bookings data and pagination metadata
+ */
+export async function getBookingsListWithPagination({
+  search,
+  page = 1,
+  limit = 10,
+  customerId,
+}: {
+  search?: string | null;
+  page?: number;
+  limit?: number;
+  customerId?: string | null;
+}): Promise<{
+  data: BookingRecord[];
+  pagination: PaginationMeta;
+}> {
+  try {
+    // Validate pagination parameters
+    if (page < 1 || limit < 1) {
+      throw new Error("Page and limit must be greater than 0");
+    }
+
+    const supabase = await createClient();
+
+    // Trim and normalize search and customerId
+    const trimmedSearch = search?.trim() || null;
+    const trimmedCustomerId = customerId?.trim() || null;
+
+    // Call both RPC functions in parallel
+    const [bookingsData, countData] = await Promise.all([
+      supabase.rpc("search_bookings_json", {
+        p_search: trimmedSearch,
+        p_page: page,
+        p_limit: limit,
+        p_customer_id: trimmedCustomerId,
+      }),
+      supabase.rpc("count_bookings_json", {
+        p_search: trimmedSearch,
+        p_customer_id: trimmedCustomerId,
+      }),
+    ]);
+
+    if (bookingsData.error) {
+      throw new Error(bookingsData.error.message);
+    }
+
+    if (countData.error) {
+      throw new Error(countData.error.message);
+    }
+
+    const bookings = (bookingsData.data || []) as BookingRecord[];
+    const total = (countData.data as number) || 0;
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data: bookings,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages,
+      },
+    };
+  } catch (err) {
+    const errorMessage =
+      err instanceof Error
+        ? err.message
+        : "Không thể tải danh sách booking";
+    console.error("Error fetching bookings list:", err);
+    throw new Error(errorMessage);
   }
 }

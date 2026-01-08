@@ -8,7 +8,7 @@ import { DataTable } from "@/components/data-table";
 import { toast } from "sonner";
 import { useProfiles } from "@/hooks/use-profiles";
 import { createProfileAction, updateProfileAction } from "@/actions/profiles";
-import type { Profile } from "@/lib/types";
+import type { Profile, ProfilesResponse } from "@/lib/types";
 import { createColumns } from "@/components/users/columns";
 import {
   UserFormDialog,
@@ -16,7 +16,11 @@ import {
   type EditUserFormValues,
 } from "@/components/users/user-form-dialog";
 
-export function UsersContent() {
+export function UsersContent({
+  initialData,
+}: {
+  initialData: ProfilesResponse;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [localSearch, setLocalSearch] = React.useState("");
@@ -82,11 +86,12 @@ export function UsersContent() {
     return () => clearTimeout(timer);
   }, [localSearch, limit, search, updateSearchParams]);
 
-  const { profiles, isLoading, pagination, refetch, mutate } = useProfiles(
+  const { profiles, isLoading, pagination, refetch, mutate } = useProfiles({
     page,
     limit,
-    search
-  );
+    search,
+    fallbackData: initialData,
+  });
 
   // Wrapper functions to call server actions and refresh data
   const handleCreateProfile = React.useCallback(

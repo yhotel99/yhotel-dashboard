@@ -1,15 +1,10 @@
 "use client";
 
 import { useCallback } from "react";
-import useSWR from "swr";
+import useSWR, { SWRConfiguration } from "swr";
 import { fetcher } from "@/lib/fetcher";
-import type { RefundRequestWithRelations, PaginationMeta } from "@/lib/types";
+import type {  PaginationMeta, RefundRequestsResponse } from "@/lib/types";
 
-// Type for API response
-type RefundRequestsResponse = {
-  data: RefundRequestWithRelations[];
-  pagination: PaginationMeta;
-};
 
 /**
  * Hook for fetching refund requests with SWR
@@ -18,9 +13,17 @@ type RefundRequestsResponse = {
  * @param search - Search term
  */
 export function useRefundRequests(
-  page: number = 1,
-  limit: number = 10,
-  search: string = ""
+{
+  page = 1,
+  limit = 10,
+  search = "",
+  fallbackData,
+}: {
+  page?: number;
+  limit?: number;
+  search?: string;
+  fallbackData?: RefundRequestsResponse;
+}
 ) {
   // Build query parameters
   const params = new URLSearchParams({
@@ -31,11 +34,18 @@ export function useRefundRequests(
     params.append("search", search.trim());
   }
 
+  const config: SWRConfiguration<RefundRequestsResponse> = {
+  }
+  if(fallbackData) {
+    config.revalidateOnMount = false;
+    config.fallbackData = fallbackData;
+  }
+
   // Use SWR to fetch refund requests
   const { data, error, isLoading, mutate, isValidating } =
     useSWR<RefundRequestsResponse>(
       `/api/refund-requests?${params.toString()}`,
-      fetcher
+      fetcher, config
     );
 
   const refundRequests = data?.data || [];

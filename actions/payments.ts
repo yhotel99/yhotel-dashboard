@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { PAYMENT_STATUS, PAYMENT_TYPE } from "@/lib/constants";
+import type { PaymentWithBooking } from "@/lib/types";
 
 /**
  * Check advance payment status by booking ID
@@ -79,6 +80,49 @@ export async function markAdvancePaymentAsPaidAction(
   } catch (err) {
     const errorMessage =
       err instanceof Error ? err.message : "Không thể đánh dấu đặt cọc";
+    throw new Error(errorMessage);
+  }
+}
+
+/**
+ * Get payments by booking ID
+ * @param bookingId - Booking ID
+ * @returns Array of payment records
+ */
+export async function getPaymentsByBookingIdAction(
+  bookingId: string
+): Promise<PaymentWithBooking[]> {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("payments")
+      .select(
+        `
+        *,
+        bookings:booking_id (
+          customers:customer_id (
+            full_name,
+            phone
+          ),
+          rooms:room_id (
+            name
+          )
+        )
+      `
+      )
+      .eq("booking_id", bookingId)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return (data || []) as PaymentWithBooking[];
+  } catch (err) {
+    const errorMessage =
+      err instanceof Error
+        ? err.message
+        : "Không thể tải danh sách thanh toán";
     throw new Error(errorMessage);
   }
 }

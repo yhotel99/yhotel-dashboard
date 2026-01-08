@@ -18,9 +18,13 @@ import {
   updateCustomerAction,
   deleteCustomerAction,
 } from "@/actions/customers";
-import { type Customer } from "@/lib/types";
+import { type Customer, CustomersResponse } from "@/lib/types";
 
-export function CustomersContent() {
+export function CustomersContent({
+  initialData,
+}: {
+  initialData: CustomersResponse;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [localSearch, setLocalSearch] = React.useState("");
@@ -91,6 +95,7 @@ export function CustomersContent() {
     search,
     page,
     limit,
+    fallbackData: initialData,
   });
 
   const handleEditCustomer = (customer: Customer) => {

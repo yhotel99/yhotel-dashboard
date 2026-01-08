@@ -1,5 +1,5 @@
-
-import { createClient } from "@/lib/supabase/server";
+"use client"
+import { createClient } from "@/lib/supabase/client";
 import type { UploadResult } from "@/lib/types";
 import { isValidImageFile, generateFileName } from "@/lib/functions";
 
@@ -19,7 +19,7 @@ export async function uploadFile(
     throw new Error(`File ${file.name} không phải là hình ảnh`);
   }
 
-  const supabase = await createClient();
+  const supabase = createClient();
   const fileName = generateFileName(file);
   const filePath = folder ? `${folder}/${fileName}` : fileName;
 

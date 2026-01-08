@@ -1,6 +1,8 @@
 
 import { createClient } from "@/lib/supabase/server";
-import type { Customer, CustomerInput } from "@/lib/types";
+import type { Customer, CustomerInput, PaginationMeta } from "@/lib/types";
+import { BOOKING_STATUS, PAYMENT_STATUS } from "@/lib/constants";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 // Type for customer with bookings (internal use)
 type CustomerWithBookings = Customer & {
@@ -280,6 +282,162 @@ export async function deleteCustomer(id: string): Promise<void> {
   } catch (err) {
     const errorMessage =
       err instanceof Error ? err.message : "Không thể xóa khách hàng";
+    throw new Error(errorMessage);
+  }
+}
+
+/**
+ * Calculate customer stats (total bookings and total spent)
+ * @param customerId - Customer ID
+ * @param supabase - Supabase client
+ * @returns Object with total_bookings and total_spent
+ */
+async function calculateCustomerStats(
+  customerId: string,
+  supabase: SupabaseClient
+) {
+  // Get all completed bookings (confirmed, checked_in, checked_out)
+  const { data: bookingsData, error: bookingsError } = await supabase
+    .from("bookings")
+    .select("id")
+    .eq("customer_id", customerId)
+    .in("status", [
+      BOOKING_STATUS.CONFIRMED,
+      BOOKING_STATUS.CHECKED_IN,
+      BOOKING_STATUS.CHECKED_OUT,
+    ])
+    .is("deleted_at", null);
+
+  if (bookingsError) {
+    console.error("Error fetching bookings for customer stats:", bookingsError);
+    return { total_bookings: 0, total_spent: 0 };
+  }
+
+  const bookingIds = (bookingsData || []).map((b: { id: string }) => b.id);
+  const total_bookings = bookingIds.length;
+
+  // Get all paid payments for this customer (from all their bookings)
+  const { data: allBookingIdsData, error: allBookingsError } = await supabase
+    .from("bookings")
+    .select("id")
+    .eq("customer_id", customerId)
+    .is("deleted_at", null);
+
+  if (allBookingsError) {
+    console.error("Error fetching all bookings for payments:", allBookingsError);
+    return { total_bookings, total_spent: 0 };
+  }
+
+  const allBookingIds = (allBookingIdsData || []).map(
+    (b: { id: string }) => b.id
+  );
+
+  // Calculate total spent from all paid payments
+  const { data: paymentsData, error: paymentsError } = await supabase
+    .from("payments")
+    .select("amount")
+    .in("booking_id", allBookingIds)
+    .eq("payment_status", PAYMENT_STATUS.PAID);
+
+  if (paymentsError) {
+    console.error("Error fetching payments for customer stats:", paymentsError);
+    return { total_bookings, total_spent: 0 };
+  }
+
+  const total_spent = (paymentsData || []).reduce(
+    (sum: number, payment: { amount: number }) =>
+      sum + Number(payment.amount || 0),
+    0
+  );
+
+  return { total_bookings, total_spent };
+}
+
+/**
+ * Get customers list with pagination
+ * @param search - Search term (optional)
+ * @param page - Page number (default: 1)
+ * @param limit - Items per page (default: 10)
+ * @returns Object with customers data and pagination metadata
+ */
+export async function getCustomersListWithPagination({
+  search,
+  page = 1,
+  limit = 10,
+}: {
+  search?: string | null;
+  page?: number;
+  limit?: number;
+}): Promise<{
+  data: Customer[];
+  pagination: PaginationMeta;
+}> {
+  try {
+    // Validate pagination parameters
+    if (page < 1 || limit < 1) {
+      throw new Error("Page and limit must be greater than 0");
+    }
+
+    const supabase = await createClient();
+
+    // Calculate offset
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    // First, get customers with pagination and search
+    let query = supabase
+      .from("customers")
+      .select("*", { count: "exact" })
+      .is("deleted_at", null);
+
+    // Add search filter if search term exists
+    // Search by full_name, email, or phone
+    if (search && search.trim() !== "") {
+      const trimmedSearch = search.trim();
+      query = query.or(
+        `full_name.ilike.%${trimmedSearch}%,email.ilike.%${trimmedSearch}%,phone.ilike.%${trimmedSearch}%`
+      );
+    }
+
+    // Fetch data with pagination
+    const { data, error, count } = await query
+      .order("created_at", { ascending: false })
+      .range(from, to);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    // Calculate stats for each customer
+    const customersData = await Promise.all(
+      (data || []).map(async (customer: Customer) => {
+        const stats = await calculateCustomerStats(customer.id, supabase);
+        return {
+          ...customer,
+          total_bookings: stats.total_bookings,
+          total_spent: stats.total_spent,
+        } as Customer;
+      })
+    );
+
+    const total = count || 0;
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data: customersData,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages,
+      },
+    };
+  } catch (err) {
+    const errorMessage =
+      err instanceof Error
+        ? err.message
+        : "Không thể tải danh sách khách hàng";
+    console.error("Error fetching customers list:", err);
     throw new Error(errorMessage);
   }
 }

@@ -1,6 +1,6 @@
 
 import { createClient } from "@/lib/supabase/server";
-import type { Profile } from "@/lib/types";
+import type { Profile, PaginationMeta } from "@/lib/types";
 
 /**
  * Search profiles with pagination
@@ -169,5 +169,83 @@ export async function deleteProfile(id: string): Promise<void> {
   } catch (err) {
     console.error("Error deleting profile:", err);
     throw err;
+  }
+}
+
+/**
+ * Get profiles list with pagination
+ * @param search - Search term (optional)
+ * @param page - Page number (default: 1)
+ * @param limit - Items per page (default: 10)
+ * @returns Object with profiles data and pagination metadata
+ */
+export async function getProfilesListWithPagination({
+  search,
+  page = 1,
+  limit = 10,
+}: {
+  search?: string | null;
+  page?: number;
+  limit?: number;
+}): Promise<{
+  data: Profile[];
+  pagination: PaginationMeta;
+}> {
+  try {
+    // Validate pagination parameters
+    if (page < 1 || limit < 1) {
+      throw new Error("Page and limit must be greater than 0");
+    }
+
+    const supabase = await createClient();
+
+    // Calculate offset
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    // Build query
+    let query = supabase
+      .from("profiles")
+      .select("*", { count: "exact" })
+      .is("deleted_at", null);
+
+    // Add search filter if search term exists
+    // Search in full_name, email, and phone using OR operator
+    if (search && search.trim() !== "") {
+      const trimmedSearch = search.trim();
+      query = query.or(
+        `full_name.ilike.%${trimmedSearch}%,email.ilike.%${trimmedSearch}%,phone.ilike.%${trimmedSearch}%`
+      );
+    }
+
+    // Fetch data with pagination
+    const { data, error, count } = await query
+      .order("created_at", { ascending: false })
+      .range(from, to);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    const profilesData = (data || []) as Profile[];
+    const total = count || 0;
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data: profilesData,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages,
+      },
+    };
+  } catch (err) {
+    const errorMessage =
+      err instanceof Error
+        ? err.message
+        : "Không thể tải danh sách người dùng";
+    console.error("Error fetching profiles list:", err);
+    throw new Error(errorMessage);
   }
 }

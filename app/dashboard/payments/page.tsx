@@ -1,7 +1,21 @@
 import { Suspense } from "react";
 import { PaymentsContent } from "@/components/payments/payments-content";
+import type { PageProps } from "@/lib/types";
+import { getPaymentsListWithPagination } from "@/services/payments";
 
-export default function PaymentsPage() {
+export default async function PaymentsPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+
+  const page = params.page ? Number(params.page) : 1;
+  const limit = params.limit ? Number(params.limit) : 10;
+  const search = params.search ? String(params.search) : "";
+
+  const initialData = await getPaymentsListWithPagination({
+    page,
+    limit,
+    search,
+  });
+
   return (
     <Suspense
       fallback={
@@ -30,7 +44,7 @@ export default function PaymentsPage() {
         </div>
       }
     >
-      <PaymentsContent />
+      <PaymentsContent initialData={initialData} />
     </Suspense>
   );
 }

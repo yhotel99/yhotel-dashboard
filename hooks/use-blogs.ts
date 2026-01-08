@@ -1,6 +1,6 @@
 "use client";
 
-import useSWR from "swr";
+import useSWR, { SWRConfiguration } from "swr";
 import type { BlogsResponse } from "@/lib/types";
 import { fetcher } from "@/lib/fetcher";
 
@@ -24,6 +24,9 @@ export function useBlogs({
   limit?: number;
   fallbackData?: BlogsResponse;
 }) {
+
+  const config: SWRConfiguration<BlogsResponse> = {
+  }
   // Build query parameters
   const params = new URLSearchParams({
     page: page.toString(),
@@ -33,11 +36,13 @@ export function useBlogs({
     params.append("search", search.trim());
   }
 
+  if(fallbackData) {
+    config.revalidateOnMount = false;
+    config.fallbackData = fallbackData;
+  }
+
   const { data, error, isLoading, mutate, isValidating } =
-    useSWR<BlogsResponse>(`/api/blogs?${params.toString()}`, fetcher, {
-      fallbackData: fallbackData,
-      revalidateOnMount: false
-    });
+    useSWR<BlogsResponse>(`/api/blogs?${params.toString()}`, fetcher, config);
 
   
 

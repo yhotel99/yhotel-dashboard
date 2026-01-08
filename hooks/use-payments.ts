@@ -1,14 +1,10 @@
 "use client";
 
-import useSWR from "swr";
-import type { PaymentWithBooking, PaginationMeta } from "@/lib/types";
+import useSWR, { SWRConfiguration } from "swr";
+import type { PaymentsResponse } from "@/lib/types";
 import { fetcher } from "@/lib/fetcher";
 
-// Type for API response
-type PaymentsResponse = {
-  data: PaymentWithBooking[];
-  pagination: PaginationMeta;
-};
+
 
 /**
  * Hook for fetching payments with SWR
@@ -22,12 +18,15 @@ export function usePayments({
   page = 1,
   limit = 10,
   bookingId = null,
+  fallbackData,
 }: {
   search?: string;
   page?: number;
   limit?: number;
   bookingId?: string | null;
+  fallbackData?: PaymentsResponse;
 }) {
+
   // Build query parameters
   const params = new URLSearchParams({
     page: page.toString(),
@@ -40,8 +39,15 @@ export function usePayments({
     params.append("bookingId", bookingId);
   }
 
+  const config: SWRConfiguration<PaymentsResponse> = {
+  }
+  if(fallbackData) {
+    config.revalidateOnMount = false;
+    config.fallbackData = fallbackData;
+  }
+
   const { data, error, isLoading, mutate, isValidating } =
-    useSWR<PaymentsResponse>(`/api/payments?${params.toString()}`, fetcher);
+    useSWR<PaymentsResponse>(`/api/payments?${params.toString()}`, fetcher, config);
 
   return {
     payments: data?.data || [],

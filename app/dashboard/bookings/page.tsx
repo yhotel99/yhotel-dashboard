@@ -1,7 +1,21 @@
 import { Suspense } from "react";
 import { BookingsContent } from "@/components/bookings/bookings-content";
+import { getBookingsListWithPagination } from "@/services/bookings";
+import type { PageProps } from "@/lib/types";
 
-export default function BookingsPage() {
+export default async function BookingsPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+
+  const page = params.page ? Number(params.page) : 1;
+  const limit = params.limit ? Number(params.limit) : 10;
+  const search = params.search ? String(params.search) : "";
+
+  const initialData = await getBookingsListWithPagination({
+    page,
+    limit,
+    search,
+  });
+
   return (
     <Suspense
       fallback={
@@ -30,7 +44,7 @@ export default function BookingsPage() {
         </div>
       }
     >
-      <BookingsContent />
+      <BookingsContent initialData={initialData} />
     </Suspense>
   );
 }

@@ -1,7 +1,18 @@
 import { Suspense } from "react";
 import { RoomsContent } from "@/components/rooms/rooms-content";
+import type { PageProps } from "@/lib/types";
+import { getRoomsListWithPagination } from "@/services/rooms";
 
-export default function RoomsPage() {
+export default async function RoomsPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const page = params.page ? Number(params.page) : 1;
+  const limit = params.limit ? Number(params.limit) : 10;
+  const search = params.search ? String(params.search) : "";
+  const initialData = await getRoomsListWithPagination({
+    page,
+    limit,
+    search,
+  });
   return (
     <Suspense
       fallback={
@@ -30,7 +41,7 @@ export default function RoomsPage() {
         </div>
       }
     >
-      <RoomsContent />
+      <RoomsContent initialData={initialData} />
     </Suspense>
   );
 }

@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { GalleryContent } from "@/components/gallery/gallery-content";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { PageProps } from "@/lib/types";
 
 function GalleryPageSkeleton() {
   return (
@@ -31,7 +32,7 @@ function GalleryPageSkeleton() {
   );
 }
 
-export default function GalleryPage() {
+export default async function GalleryPage() {
   return (
     <Suspense fallback={<GalleryPageSkeleton />}>
       <GalleryContent />

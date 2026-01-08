@@ -65,14 +65,6 @@ export function GalleryContent() {
     folder: "gallery",
   });
 
-  console.log({
-    images,
-    pagination,
-    isLoading,
-    isUploadingFiles,
-    uploadProgress,
-  });
-
   // Update URL search params when pagination changes
   const updateSearchParams = useCallback(
     (newPage: number, newLimit: number) => {

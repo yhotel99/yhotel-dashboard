@@ -521,3 +521,126 @@ export async function getRoomById(id: string): Promise<RoomWithImages | null> {
     return null;
   }
 }
+
+/**
+ * Get rooms list with pagination
+ * @param search - Search term (optional)
+ * @param page - Page number (default: 1)
+ * @param limit - Items per page (default: 10)
+ * @returns Object with rooms data and pagination metadata
+ */
+export async function getRoomsListWithPagination({
+  search,
+  page = 1,
+  limit = 10,
+}: {
+  search?: string | null;
+  page?: number;
+  limit?: number;
+}): Promise<{
+  data: Room[];
+  pagination: PaginationMeta;
+}> {
+  try {
+    // Validate pagination parameters
+    if (page < 1 || limit < 1) {
+      throw new Error("Page and limit must be greater than 0");
+    }
+
+    const supabase = await createClient();
+
+    // Calculate offset
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    // Build query with room_images join - only fetch thumbnail (is_main = true)
+    let query = supabase
+      .from("rooms")
+      .select(
+        `
+        *,
+        room_images!inner (
+          image_id,
+          is_main,
+          images (
+            id,
+            url
+          )
+        )
+      `,
+        { count: "exact" }
+      )
+      .is("deleted_at", null)
+      .eq("room_images.is_main", true);
+
+    // Add search filter if search term exists
+    if (search && search.trim() !== "") {
+      query = query.ilike("name", `%${search.trim()}%`);
+    }
+
+    // Fetch data with pagination
+    const { data, error, count } = await query
+      .order("created_at", { ascending: false })
+      .range(from, to);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    // Process rooms to extract thumbnails
+    type RoomWithImagesData = Room & {
+      room_images?: Array<{
+        image_id: string;
+        is_main: boolean;
+        images: {
+          id: string;
+          url: string;
+        } | null;
+      }>;
+    };
+
+    const roomsData = (data || []).map((room: RoomWithImagesData) => {
+      const roomImages = room.room_images || [];
+
+      // Get thumbnail - query already filtered for is_main = true, so take first item
+      const thumbnailRoomImage = roomImages[0];
+      const thumbnail =
+        thumbnailRoomImage && thumbnailRoomImage.images
+          ? {
+              id: thumbnailRoomImage.images.id,
+              url: thumbnailRoomImage.images.url,
+            }
+          : undefined;
+
+      // Remove room_images from room data
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { room_images, ...roomWithoutImages } = room;
+
+      return {
+        ...roomWithoutImages,
+        amenities: Array.isArray(room.amenities) ? room.amenities : [],
+        thumbnail,
+      } as Room;
+    });
+
+    const total = count || 0;
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data: roomsData,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages,
+      },
+    };
+  } catch (err) {
+    const errorMessage =
+      err instanceof Error
+        ? err.message
+        : "Không thể tải danh sách phòng";
+    console.error("Error fetching rooms list:", err);
+    throw new Error(errorMessage);
+  }
+}

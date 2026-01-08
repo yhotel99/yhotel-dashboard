@@ -8,6 +8,7 @@ import type {
   RefundRequestStatus,
   RefundRequest,
   RefundRequestWithRelations,
+  RefundRequestsResponse,
 } from "@/lib/types";
 import { useRefundRequests } from "@/hooks/use-refund-requests";
 import { updateRefundRequestStatusAction } from "@/actions/refund-requests";
@@ -390,7 +391,11 @@ const createColumns = (
 ];
 
 // Main content component
-export function RefundRequestsContent() {
+export function RefundRequestsContent({
+  initialData,
+}: {
+  initialData: RefundRequestsResponse;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [localSearch, setLocalSearch] = useState("");
@@ -447,7 +452,12 @@ export function RefundRequestsContent() {
 
   // Use SWR hook for refund requests
   const { refundRequests, isLoading, pagination, refetch, mutate } =
-    useRefundRequests(page, limit, search);
+    useRefundRequests({
+      page,
+      limit,
+      search,
+      fallbackData: initialData,
+    });
 
   // Wrapper function to update refund request status
   const handleUpdateRefundRequestStatus = useCallback(

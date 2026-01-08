@@ -1,15 +1,10 @@
 "use client";
 
 import { useCallback } from "react";
-import useSWR from "swr";
+import useSWR, { SWRConfiguration } from "swr";
 import { fetcher } from "@/lib/fetcher";
-import type { Profile, PaginationMeta } from "@/lib/types";
+import type {  PaginationMeta, ProfilesResponse } from "@/lib/types";
 
-// Type for API response
-type ProfilesResponse = {
-  data: Profile[];
-  pagination: PaginationMeta;
-};
 
 /**
  * Hook for fetching profiles with SWR
@@ -18,9 +13,17 @@ type ProfilesResponse = {
  * @param search - Search term
  */
 export function useProfiles(
-  page: number = 1,
-  limit: number = 10,
-  search: string = ""
+  {
+    page = 1,
+    limit = 10,
+    search = "",
+    fallbackData,
+  }: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    fallbackData?: ProfilesResponse;
+  }
 ) {
   // Build query parameters
   const params = new URLSearchParams({
@@ -31,9 +34,16 @@ export function useProfiles(
     params.append("search", search.trim());
   }
 
+  const config: SWRConfiguration<ProfilesResponse> = {
+  }
+  if(fallbackData) {
+    config.revalidateOnMount = false;
+    config.fallbackData = fallbackData;
+  }
+
   // Use SWR to fetch profiles
   const { data, error, isLoading, mutate, isValidating } =
-    useSWR<ProfilesResponse>(`/api/profiles?${params.toString()}`, fetcher);
+    useSWR<ProfilesResponse>(`/api/profiles?${params.toString()}`, fetcher, config);
 
   const profiles = data?.data || [];
   const pagination: PaginationMeta = data?.pagination || {

@@ -1,7 +1,21 @@
 import { Suspense } from "react";
 import { CustomersContent } from "@/components/customers/customers-content";
+import { getCustomersListWithPagination } from "@/services/customers";
+import type { PageProps } from "@/lib/types";
 
-export default function CustomersPage() {
+export default async function CustomersPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+
+  const page = params.page ? Number(params.page) : 1;
+  const limit = params.limit ? Number(params.limit) : 10;
+  const search = params.search ? String(params.search) : "";
+
+  const initialData = await getCustomersListWithPagination({
+    page,
+    limit,
+    search,
+  });
+
   return (
     <Suspense
       fallback={
@@ -30,7 +44,7 @@ export default function CustomersPage() {
         </div>
       }
     >
-      <CustomersContent />
+      <CustomersContent initialData={initialData} />
     </Suspense>
   );
 }

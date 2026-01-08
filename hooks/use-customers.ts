@@ -1,30 +1,31 @@
 "use client";
 
-import useSWR from "swr";
-import type { Customer, PaginationMeta } from "@/lib/types";
+import useSWR, { SWRConfiguration } from "swr";
+import type { CustomersResponse } from "@/lib/types";
 import { fetcher } from "@/lib/fetcher";
 
-// Type for API response
-type CustomersResponse = {
-  data: Customer[];
-  pagination: PaginationMeta;
-};
+
 
 /**
  * Hook for fetching customers with SWR
  * @param search - Search term
  * @param page - Page number
  * @param limit - Items per page
+ * @param fallbackData - Fallback data
  */
 export function useCustomers({
   search = "",
   page = 1,
   limit = 10,
+  fallbackData,
 }: {
   search?: string;
   page?: number;
   limit?: number;
+  fallbackData?: CustomersResponse;
 }) {
+  const config: SWRConfiguration<CustomersResponse> = {
+  }
   // Build query parameters
   const params = new URLSearchParams({
     page: page.toString(),
@@ -34,10 +35,13 @@ export function useCustomers({
     params.append("search", search.trim());
   }
 
+  if(fallbackData) {
+    config.revalidateOnMount = false;
+    config.fallbackData = fallbackData;
+  }
+
   const { data, error, isLoading, mutate, isValidating } =
-    useSWR<CustomersResponse>(`/api/customers?${params.toString()}`, fetcher, {
-      dedupingInterval: 5000, // Giảm tần suất revalidate
-    });
+    useSWR<CustomersResponse>(`/api/customers?${params.toString()}`, fetcher, config);
 
   return {
     customers: data?.data || [],

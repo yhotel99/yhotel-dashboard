@@ -2,12 +2,8 @@
 
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
-import type { RoomWithBooking } from "@/lib/types";
+import type { ReservationsResponse } from "@/lib/types";
 
-// Type for API response
-type ReservationsResponse = {
-  data: RoomWithBooking[];
-};
 
 export function useReservation() {
   // Use a static key for reservation data

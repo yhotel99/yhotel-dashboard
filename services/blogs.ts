@@ -9,7 +9,7 @@ import type { Blog, BlogInput, PaginationMeta } from "@/lib/types";
  * @param limit - Items per page
  * @returns Object containing blogs array and pagination metadata
  */
-export async function searchBlogs({
+export async function getBlogsListWithPagination({
   search,
   page,
   limit,

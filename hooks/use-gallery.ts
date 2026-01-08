@@ -3,13 +3,9 @@
 import { useCallback } from "react";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
-import type { GalleryImage, PaginationMeta } from "@/lib/types";
+import type { GalleryImagesResponse, PaginationMeta } from "@/lib/types";
 
-// Type for API response
-type GalleryResponse = {
-  data: GalleryImage[];
-  pagination: PaginationMeta;
-};
+
 
 /**
  * Hook for fetching gallery images with SWR
@@ -25,7 +21,7 @@ export function useGallery(page: number = 1, limit: number = 20) {
 
   // Use SWR to fetch gallery images
   const { data, error, isLoading, mutate, isValidating } =
-    useSWR<GalleryResponse>(`/api/gallery?${params.toString()}`, fetcher);
+    useSWR<GalleryImagesResponse>(`/api/gallery?${params.toString()}`, fetcher);
 
   const images = data?.data || [];
   const pagination: PaginationMeta = data?.pagination || {

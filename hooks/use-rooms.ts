@@ -1,14 +1,10 @@
 "use client";
 
-import useSWR from "swr";
-import type { Room, PaginationMeta } from "@/lib/types";
+import useSWR, { SWRConfiguration } from "swr";
+import type { RoomsResponse } from "@/lib/types";
 import { fetcher } from "@/lib/fetcher";
 
-// Type for API response
-type RoomsResponse = {
-  data: Room[];
-  pagination: PaginationMeta;
-};
+
 
 /**
  * Hook for fetching rooms with SWR
@@ -20,10 +16,12 @@ export function useRooms({
   search = "",
   page = 1,
   limit = 10,
+  fallbackData,
 }: {
   search?: string;
   page?: number;
   limit?: number;
+  fallbackData?: RoomsResponse;
 }) {
   // Build query parameters
   const params = new URLSearchParams({
@@ -34,8 +32,15 @@ export function useRooms({
     params.append("search", search.trim());
   }
 
+  const config: SWRConfiguration<RoomsResponse> = {
+  }
+  if(fallbackData) {
+    config.revalidateOnMount = false;
+    config.fallbackData = fallbackData;
+  }
+
   const { data, error, isLoading, mutate, isValidating } =
-    useSWR<RoomsResponse>(`/api/rooms?${params.toString()}`, fetcher);
+    useSWR<RoomsResponse>(`/api/rooms?${params.toString()}`, fetcher, config);
 
   return {
     rooms: data?.data || [],

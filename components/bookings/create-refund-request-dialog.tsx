@@ -23,9 +23,9 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { usePayments } from "@/hooks/use-payments";
 import { createRefundRequestAction } from "@/actions/refund-requests";
-import type { BookingRecord } from "@/lib/types";
+import { getPaymentsByBookingIdAction } from "@/actions/payments";
+import type { BookingRecord, PaymentWithBooking } from "@/lib/types";
 import { PAYMENT_STATUS } from "@/lib/constants";
 import { toast } from "sonner";
 
@@ -60,16 +60,85 @@ export function CreateRefundRequestDialog({
   booking,
   onSuccess,
 }: CreateRefundRequestDialogProps) {
-  const { payments: allPayments, isLoading: isLoadingPayments } = usePayments({
-    bookingId: open ? booking.id : null,
-    page: 1,
-    limit: 100, // Get all payments for the booking
-  });
+  const [allPayments, setAllPayments] = React.useState<PaymentWithBooking[]>(
+    []
+  );
+  const [isLoadingPayments, setIsLoadingPayments] = React.useState(false);
+  const [paymentsError, setPaymentsError] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
-  // Filter eligible payments (only PAID)
+  // Fetch payments when dialog opens
+  React.useEffect(() => {
+    if (open && booking.id) {
+      const fetchPayments = async () => {
+        try {
+          setIsLoadingPayments(true);
+          setPaymentsError(null);
+          const payments = await getPaymentsByBookingIdAction(booking.id);
+          setAllPayments(payments);
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error
+              ? error.message
+              : "Không thể tải danh sách thanh toán";
+          setPaymentsError(errorMessage);
+          setAllPayments([]);
+        } finally {
+          setIsLoadingPayments(false);
+        }
+      };
+
+      fetchPayments();
+    } else {
+      // Reset when dialog closes
+      setAllPayments([]);
+      setPaymentsError(null);
+    }
+  }, [open, booking.id]);
+
+  // Debug: Log payments when they change
+  React.useEffect(() => {
+    if (open && !isLoadingPayments) {
+      console.log("CreateRefundRequestDialog - Booking ID:", booking.id);
+      console.log("CreateRefundRequestDialog - All payments:", allPayments);
+      console.log(
+        "CreateRefundRequestDialog - Payment statuses:",
+        allPayments.map((p) => ({
+          id: p.id,
+          status: p.payment_status,
+          amount: p.amount,
+          booking_id: p.booking_id,
+        }))
+      );
+      console.log(
+        "CreateRefundRequestDialog - PAYMENT_STATUS.PAID:",
+        PAYMENT_STATUS.PAID
+      );
+    }
+  }, [allPayments, isLoadingPayments, open, booking.id]);
+
+  // Filter eligible payments (only PAID, exclude REFUNDED)
   const paidPayments = React.useMemo(() => {
-    return allPayments.filter((p) => p.payment_status === PAYMENT_STATUS.PAID);
+    const eligible = allPayments.filter((p) => {
+      const status = p.payment_status;
+      const isPaid = status === PAYMENT_STATUS.PAID;
+      const isNotRefunded = status !== PAYMENT_STATUS.REFUNDED;
+      const isNotCancelled = status !== PAYMENT_STATUS.CANCELLED;
+      const isNotFailed = status !== PAYMENT_STATUS.FAILED;
+
+      if (!isPaid) {
+        console.log(
+          `Payment ${p.id} not eligible: status is "${status}", expected "${PAYMENT_STATUS.PAID}"`
+        );
+      }
+
+      return isPaid && isNotRefunded && isNotCancelled && isNotFailed;
+    });
+    console.log(
+      "CreateRefundRequestDialog - Eligible payments for refund:",
+      eligible
+    );
+    return eligible;
   }, [allPayments]);
 
   // Calculate total paid amount
@@ -154,9 +223,23 @@ export function CreateRefundRequestDialog({
               <div className="text-sm text-muted-foreground">
                 Đang tải thông tin thanh toán...
               </div>
+            ) : paymentsError ? (
+              <div className="text-sm text-destructive">
+                Lỗi khi tải thông tin thanh toán: {paymentsError}
+              </div>
+            ) : allPayments.length === 0 ? (
+              <div className="text-sm text-destructive">
+                Không tìm thấy thanh toán nào cho booking này
+              </div>
             ) : paidPayments.length === 0 ? (
               <div className="text-sm text-destructive">
-                Không có thanh toán nào để hoàn tiền
+                Không có thanh toán nào để hoàn tiền.
+                {allPayments.length > 0 && (
+                  <span className="block mt-1 text-xs">
+                    (Tìm thấy {allPayments.length} thanh toán nhưng không có
+                    thanh toán nào ở trạng thái &quot;Đã thanh toán&quot;)
+                  </span>
+                )}
               </div>
             ) : (
               <>

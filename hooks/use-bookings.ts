@@ -1,14 +1,9 @@
 "use client";
 
-import useSWR from "swr";
-import type { BookingRecord, PaginationMeta } from "@/lib/types";
+import useSWR, { SWRConfiguration } from "swr";
+import type { BookingRecord, BookingsResponse, PaginationMeta } from "@/lib/types";
 import { fetcher } from "@/lib/fetcher";
 
-// Type for API response
-type BookingsResponse = {
-  data: BookingRecord[];
-  pagination: PaginationMeta;
-};
 
 /**
  * Hook for fetching bookings with SWR
@@ -22,12 +17,17 @@ export function useBookings({
   page = 1,
   limit = 10,
   customerId = null,
+  fallbackData,
 }: {
   search?: string;
   page?: number;
   limit?: number;
   customerId?: string | null;
+  fallbackData?: BookingsResponse;
 }) {
+
+  const config: SWRConfiguration<BookingsResponse> = {
+  }
   // Build query parameters
   const params = new URLSearchParams({
     page: page.toString(),
@@ -40,11 +40,15 @@ export function useBookings({
     params.append("customerId", customerId);
   }
 
+  if(fallbackData) {
+    config.revalidateOnMount = false;
+    config.fallbackData = fallbackData;
+  }
+
   const { data, error, isLoading, mutate, isValidating } =
-    useSWR<BookingsResponse>(`/api/bookings?${params.toString()}`, fetcher);
+    useSWR<BookingsResponse>(`/api/bookings?${params.toString()}`, fetcher, config);
 
 
-    console.log("data", data);
   return {
     bookings: data?.data || [],
     pagination: data?.pagination || {

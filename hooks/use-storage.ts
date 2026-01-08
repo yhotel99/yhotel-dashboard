@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { uploadFileAction } from "@/actions/storage";
+import { uploadFile as uploadFileService } from "@/services/storage";
 
 import type {
   UploadProgress,
@@ -20,7 +20,7 @@ export function useStorage(options: UseStorageOptions = {}) {
   // Upload single file
   const uploadFile = useCallback(
     async (file: File): Promise<UploadResult> => {
-      return await uploadFileAction(file, bucket, folder);
+      return await uploadFileService(file, bucket, folder);
     },
     [bucket, folder]
   );
@@ -57,7 +57,7 @@ export function useStorage(options: UseStorageOptions = {}) {
           onProgress?.(progress);
 
           // Upload file
-          const result = await uploadFileAction(file, bucket, folder);
+          const result = await uploadFileService(file, bucket, folder);
 
           // Update progress: success
           progress[i] = {

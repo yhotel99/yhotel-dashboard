@@ -461,3 +461,46 @@ export type BlogsResponse = {
   data: Blog[];
   pagination: PaginationMeta;
 };
+
+export type BookingsResponse = {
+  data: BookingRecord[];
+  pagination: PaginationMeta;
+};
+
+export type CustomersResponse = {
+  data: Customer[];
+  pagination: PaginationMeta;
+};
+
+export type GalleryImagesResponse = {
+  data: GalleryImage[];
+  pagination: PaginationMeta;
+};
+
+export type PaymentsResponse = {
+  data: PaymentWithBooking[];
+  pagination: PaginationMeta;
+};
+
+export type ProfilesResponse = {
+  data: Profile[];
+  pagination: PaginationMeta;
+};
+
+export type RefundRequestsResponse = {
+  data: RefundRequestWithRelations[];
+  pagination: PaginationMeta;
+};
+
+export type ReservationsResponse = {
+  data: RoomWithBooking[];
+};
+
+export type RoomsResponse = {
+  data: Room[];
+  pagination: PaginationMeta;
+};
+
+export type PageProps = {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+};

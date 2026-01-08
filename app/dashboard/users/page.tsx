@@ -1,7 +1,18 @@
 import { Suspense } from "react";
 import { UsersContent } from "@/components/users/users-content";
+import type { PageProps } from "@/lib/types";
+import { getProfilesListWithPagination } from "@/services/profiles";
 
-export default function UsersPage() {
+export default async function UsersPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const page = params.page ? Number(params.page) : 1;
+  const limit = params.limit ? Number(params.limit) : 10;
+  const search = params.search ? String(params.search) : "";
+  const initialData = await getProfilesListWithPagination({
+    page,
+    limit,
+    search,
+  });
   return (
     <Suspense
       fallback={
@@ -30,7 +41,7 @@ export default function UsersPage() {
         </div>
       }
     >
-      <UsersContent />
+      <UsersContent initialData={initialData} />
     </Suspense>
   );
 }
