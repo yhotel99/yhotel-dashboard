@@ -7,6 +7,7 @@ import {
   IconInnerShadowTop,
   IconReceiptRefund,
   IconNews,
+  IconHistory,
 } from "@tabler/icons-react";
 import { HotelIcon, Images, User2, UserCircle } from "lucide-react";
 
@@ -281,6 +282,7 @@ export const SIDEBAR_URLS = {
   RESERVATION: "/dashboard/reservation",
   CUSTOMERS: "/dashboard/customers",
   PAYMENTS: "/dashboard/payments",
+  PAYMENT_LOGS: "/dashboard/payment-logs",
   REFUND_REQUESTS: "/dashboard/refund-requests",
   GALLERY: "/dashboard/gallery",
   USERS: "/dashboard/users",
@@ -388,6 +390,7 @@ export const PATH_TO_RESOURCE: Record<string, string> = {
   [SIDEBAR_URLS.RESERVATION]: "reservations",
   [SIDEBAR_URLS.CUSTOMERS]: "customers",
   [SIDEBAR_URLS.PAYMENTS]: "payments",
+  [SIDEBAR_URLS.PAYMENT_LOGS]: "payment-logs",
   [SIDEBAR_URLS.REFUND_REQUESTS]: "refund-requests",
   [SIDEBAR_URLS.GALLERY]: "gallery",
   [SIDEBAR_URLS.USERS]: "users",
@@ -431,6 +434,12 @@ export const allNavItems = [
     url: SIDEBAR_URLS.PAYMENTS,
     icon: IconCreditCard,
     resource: "payments",
+  },
+  {
+    title: "Lịch Sử Webhook",
+    url: SIDEBAR_URLS.PAYMENT_LOGS,
+    icon: IconHistory,
+    resource: "payment-logs",
   },
   {
     title: "Hoàn Tiền",

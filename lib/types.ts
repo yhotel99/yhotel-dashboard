@@ -482,6 +482,43 @@ export type PaymentsResponse = {
   pagination: PaginationMeta;
 };
 
+// ============================================================================
+// Payment Log Types
+// ============================================================================
+
+// Payment log type matching database schema (payment_logs table)
+export type PaymentLog = {
+  id: string;
+  booking_id: string | null;
+  booking_code: string | null;
+  transaction_id: string | null;
+  amount: number | null;
+  content: string | null;
+  bank_code: string | null;
+  status: string | null;
+  raw_payload: Record<string, unknown> | null;
+  processed_at: string;
+  created_at: string;
+};
+
+// Payment log with booking and related data (from join queries)
+export type PaymentLogWithBooking = PaymentLog & {
+  bookings?: {
+    customers?: {
+      full_name: string;
+      phone: string | null;
+    } | null;
+    rooms?: {
+      name: string;
+    } | null;
+  } | null;
+};
+
+export type PaymentLogsResponse = {
+  data: PaymentLogWithBooking[];
+  pagination: PaginationMeta;
+};
+
 export type ProfilesResponse = {
   data: Profile[];
   pagination: PaginationMeta;
