@@ -284,6 +284,7 @@ export function CreateCustomerDialog({
                         : undefined
                     }
                     onSelect={handleDateSelect("date_of_birth")}
+                    captionLayout="dropdown"
                   />
                 </PopoverContent>
               </Popover>
