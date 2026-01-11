@@ -1,11 +1,12 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { CUSTOMER_SOURCE, customerSourceLabels } from "@/lib/constants";
 
 /**
  * GET /api/reports/customer-sources
  * Get customer source statistics
  */
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     const supabase = await createClient();
 
@@ -29,69 +30,55 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Count bookings by source
-    const sourceCounts: Record<string, number> = {
-      booking_com: 0,
-      agoda: 0,
-      walk_in: 0,
-      website: 0,
-      other: 0,
+    // Initialize counts for all customer sources
+    const sourceCounts: Record<
+      (typeof CUSTOMER_SOURCE)[keyof typeof CUSTOMER_SOURCE],
+      number
+    > = {
+      [CUSTOMER_SOURCE.WEBSITE]: 0,
+      [CUSTOMER_SOURCE.AGODA]: 0,
+      [CUSTOMER_SOURCE.BOOKING]: 0,
+      [CUSTOMER_SOURCE.TRAVELOKA]: 0,
+      [CUSTOMER_SOURCE.OTHER]: 0,
     };
 
-    (bookings || []).forEach((booking: any) => {
-      const source = booking.customers?.source?.toLowerCase() || null;
-      
+    (bookings || []).forEach((booking: unknown) => {
+      const bookingData = booking as {
+        customers?: { source?: string | null } | null;
+      };
+      const source = bookingData.customers?.source?.toLowerCase()?.trim() || null;
+
       if (!source) {
-        sourceCounts.other++;
+        sourceCounts[CUSTOMER_SOURCE.OTHER]++;
         return;
       }
 
-      // Normalize source names
-      if (source.includes("booking.com") || source.includes("booking_com")) {
-        sourceCounts.booking_com++;
-      } else if (source.includes("agoda")) {
-        sourceCounts.agoda++;
+      // Match source to constants
+      if (source === CUSTOMER_SOURCE.WEBSITE) {
+        sourceCounts[CUSTOMER_SOURCE.WEBSITE]++;
+      } else if (source === CUSTOMER_SOURCE.AGODA) {
+        sourceCounts[CUSTOMER_SOURCE.AGODA]++;
       } else if (
-        source.includes("vãng lai") ||
-        source.includes("vang lai") ||
-        source.includes("walk") ||
-        source.includes("walk_in")
+        source === CUSTOMER_SOURCE.BOOKING ||
+        source.includes("booking.com") ||
+        source.includes("booking_com")
       ) {
-        sourceCounts.walk_in++;
-      } else if (
-        source.includes("website") ||
-        source.includes("web") ||
-        source.includes("site")
-      ) {
-        sourceCounts.website++;
+        sourceCounts[CUSTOMER_SOURCE.BOOKING]++;
+      } else if (source === CUSTOMER_SOURCE.TRAVELOKA) {
+        sourceCounts[CUSTOMER_SOURCE.TRAVELOKA]++;
       } else {
-        sourceCounts.other++;
+        sourceCounts[CUSTOMER_SOURCE.OTHER]++;
       }
     });
 
-    // Transform to chart data
-    const stats = [
-      {
-        source: "booking_com",
-        label: "Booking.com",
-        count: sourceCounts.booking_com,
-      },
-      {
-        source: "agoda",
-        label: "Agoda",
-        count: sourceCounts.agoda,
-      },
-      {
-        source: "walk_in",
-        label: "Vãng lai",
-        count: sourceCounts.walk_in,
-      },
-      {
-        source: "website",
-        label: "Website",
-        count: sourceCounts.website,
-      },
-    ].filter((item) => item.count > 0); // Only include sources with bookings
+    // Transform to chart data using constants and labels
+    const stats = Object.values(CUSTOMER_SOURCE)
+      .map((source) => ({
+        source,
+        label: customerSourceLabels[source],
+        count: sourceCounts[source],
+      }))
+      .filter((item) => item.count > 0); // Only include sources with bookings
 
     return NextResponse.json(stats);
   } catch (err) {
