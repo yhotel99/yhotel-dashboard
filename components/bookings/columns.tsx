@@ -10,6 +10,13 @@ import type {
 import { BookingActionsCell } from "@/components/bookings/actions-cell";
 import { StatusBadge } from "@/components/bookings/status";
 import { NotesCell } from "@/components/bookings/notes-cell";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Copy } from "lucide-react";
+import { toast } from "sonner";
 
 export function createColumns(
   updateStatus: (id: string, status: BookingStatus) => Promise<void>,
@@ -34,11 +41,38 @@ export function createColumns(
     {
       accessorKey: "Mã booking",
       header: "Mã booking",
-      cell: ({ row }) => (
-        <div className="font-semibold text-primary">
-          {row.original.booking_code}
-        </div>
-      ),
+      cell: ({ row }) => {
+        const bookingCode = row.original.booking_code;
+        const handleCopy = (e: React.MouseEvent) => {
+          e.stopPropagation();
+          navigator.clipboard.writeText(bookingCode);
+          toast.success("Đã sao chép mã booking!");
+        };
+
+        return (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div
+                className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={handleCopy}
+              >
+                <span className="font-semibold text-primary">
+                  {bookingCode}
+                </span>
+                <Copy className="size-3 text-muted-foreground shrink-0" />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <div className="flex flex-col gap-1">
+                <p>{bookingCode}</p>
+                <p className="text-[10px] text-muted-foreground">
+                  Click để sao chép
+                </p>
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        );
+      },
     },
     {
       accessorKey: "Tên khách hàng",

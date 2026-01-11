@@ -320,6 +320,7 @@ export function EditCustomerDialog({
                         : undefined
                     }
                     onSelect={handleDateSelect("date_of_birth")}
+                    captionLayout="dropdown"
                   />
                 </PopoverContent>
               </Popover>

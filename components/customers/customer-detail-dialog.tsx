@@ -21,6 +21,7 @@ import { Separator } from "@/components/ui/separator";
 import type { Customer } from "@/lib/types";
 import { formatCurrency, formatDateOnly } from "@/lib/functions";
 import { StatusBadge } from "./status-badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface CustomerDetailDialogProps {
   open: boolean;
@@ -44,7 +45,7 @@ export function CustomerDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="!max-w-3xl h-full">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <IconUser className="size-5" />
@@ -55,7 +56,8 @@ export function CustomerDetailDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <ScrollArea className="max-h-[70vh]">
+          <div className="space-y-6">
           {/* Basic Information */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Thông tin cơ bản</h3>
@@ -181,14 +183,16 @@ export function CustomerDetailDialog({
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex justify-end gap-2 pt-4">
+       
+        </div>
+        </ScrollArea>
+           {/* Actions */}
+          <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Đóng
             </Button>
             <Button onClick={handleViewBookings}>Xem đặt phòng</Button>
           </div>
-        </div>
       </DialogContent>
     </Dialog>
   );

@@ -322,6 +322,7 @@ export type Customer = {
   // Computed fields from bookings
   total_bookings?: number;
   total_spent?: number;
+  total_refunded?: number;
 };
 
 // Customer input type for create/update

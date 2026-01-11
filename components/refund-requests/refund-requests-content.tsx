@@ -17,12 +17,6 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -33,7 +27,7 @@ import {
 import {
   IconCheck,
   IconCurrencyDollar,
-  IconDotsVertical,
+  IconEye,
   IconX,
 } from "@tabler/icons-react";
 import { toast } from "sonner";
@@ -41,6 +35,13 @@ import {
   REFUND_REQUEST_STATUS,
   refundRequestStatusLabels,
 } from "@/lib/constants";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Copy } from "lucide-react";
+import { RefundRequestDetailDialog } from "./refund-request-detail-dialog";
 
 // Refund request status colors
 const refundRequestStatusColors: Record<RefundRequestStatus, string> = {
@@ -69,6 +70,7 @@ function RefundRequestActionsCell({
   refundRequest,
   onStatusChange,
   updateRefundRequestStatus,
+  onViewDetail,
 }: {
   refundRequest: RefundRequestWithRelations;
   onStatusChange: () => void;
@@ -76,6 +78,7 @@ function RefundRequestActionsCell({
     id: string,
     status: RefundRequestStatus
   ) => Promise<RefundRequest>;
+  onViewDetail: (refundRequest: RefundRequestWithRelations) => void;
 }) {
   const [openApprove, setOpenApprove] = useState(false);
   const [openReject, setOpenReject] = useState(false);
@@ -135,47 +138,73 @@ function RefundRequestActionsCell({
 
   return (
     <>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            className="data-[state=open]:bg-muted text-muted-foreground flex size-8"
-            size="icon"
-          >
-            <IconDotsVertical />
-            <span className="sr-only">Open menu</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-44">
-          {refundRequest.status === REFUND_REQUEST_STATUS.PENDING && (
-            <>
-              <DropdownMenuItem onClick={() => setOpenApprove(true)}>
-                <IconCheck className="mr-2 size-4 text-green-500" />
-                Duyệt yêu cầu
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => setOpenReject(true)}
-                variant="destructive"
+      <div className="flex items-center gap-1">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-8"
+              onClick={() => onViewDetail(refundRequest)}
+            >
+              <IconEye className="size-4" />
+              <span className="sr-only">Xem chi tiết</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Xem chi tiết</TooltipContent>
+        </Tooltip>
+
+        {refundRequest.status === REFUND_REQUEST_STATUS.PENDING && (
+          <>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+                  onClick={() => setOpenApprove(true)}
+                >
+                  <IconCheck className="size-4" />
+                  <span className="sr-only">Duyệt yêu cầu</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Duyệt yêu cầu</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                  onClick={() => setOpenReject(true)}
+                >
+                  <IconX className="size-4" />
+                  <span className="sr-only">Từ chối</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Từ chối</TooltipContent>
+            </Tooltip>
+          </>
+        )}
+
+        {refundRequest.status === REFUND_REQUEST_STATUS.APPROVED && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                onClick={() => setOpenRefund(true)}
               >
-                <IconX className="mr-2 size-4 text-red-500" />
-                Từ chối
-              </DropdownMenuItem>
-            </>
-          )}
-          {refundRequest.status === REFUND_REQUEST_STATUS.APPROVED && (
-            <DropdownMenuItem onClick={() => setOpenRefund(true)}>
-              <IconCurrencyDollar className="mr-2 size-4 text-blue-500" />
-              Hoàn tiền
-            </DropdownMenuItem>
-          )}
-          {refundRequest.status !== REFUND_REQUEST_STATUS.PENDING &&
-            refundRequest.status !== REFUND_REQUEST_STATUS.APPROVED && (
-              <DropdownMenuItem disabled>
-                Không có hành động khả dụng
-              </DropdownMenuItem>
-            )}
-        </DropdownMenuContent>
-      </DropdownMenu>
+                <IconCurrencyDollar className="size-4" />
+                <span className="sr-only">Hoàn tiền</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Hoàn tiền</TooltipContent>
+          </Tooltip>
+        )}
+      </div>
 
       {/* Approve Confirmation Dialog */}
       {openApprove && (
@@ -253,16 +282,44 @@ const createColumns = (
   updateRefundRequestStatus: (
     id: string,
     status: RefundRequestStatus
-  ) => Promise<RefundRequest>
+  ) => Promise<RefundRequest>,
+  onViewDetail: (refundRequest: RefundRequestWithRelations) => void
 ): ColumnDef<RefundRequestWithRelations>[] => [
   {
     accessorKey: "Mã yêu cầu",
     header: "Mã yêu cầu",
-    cell: ({ row }) => (
-      <span className="font-mono text-sm">
-        {row.original.id.slice(0, 8).toUpperCase()}
-      </span>
-    ),
+    cell: ({ row }) => {
+      const id = row.original.id;
+      const handleCopy = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        navigator.clipboard.writeText(id);
+        toast.success("Đã sao chép mã yêu cầu!");
+      };
+
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div
+              className="flex items-center justify-between gap-1.5 cursor-pointer hover:opacity-80 transition-opacity overflow-hidden"
+              onClick={handleCopy}
+            >
+              <span className="font-mono text-sm truncate uppercase">
+                {id.slice(0, 8)}
+              </span>
+              <Copy className="size-3 text-muted-foreground shrink-0" />
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <div className="flex flex-col gap-1">
+              <p className="font-mono text-xs">{id}</p>
+              <p className="text-[10px] text-muted-foreground">
+                Click để sao chép
+              </p>
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      );
+    },
     size: 120,
     minSize: 100,
   },
@@ -281,17 +338,6 @@ const createColumns = (
     minSize: 80,
   },
   {
-    accessorKey: "Mã booking",
-    header: "Mã booking",
-    cell: ({ row }) => (
-      <span className="font-mono text-sm">
-        {row.original.booking_id.slice(0, 8).toUpperCase()}
-      </span>
-    ),
-    size: 120,
-    minSize: 100,
-  },
-  {
     accessorKey: "Số tiền",
     header: "Số tiền",
     cell: ({ row }) => formatCurrency(row.original.amount),
@@ -307,13 +353,7 @@ const createColumns = (
     size: 120,
     minSize: 100,
   },
-  {
-    accessorKey: "Lý do",
-    header: "Lý do",
-    cell: ({ row }) => row.original.reason ?? "-",
-    size: 150,
-    minSize: 120,
-  },
+
   {
     accessorKey: "Ngày tạo",
     header: "Ngày tạo",
@@ -334,46 +374,7 @@ const createColumns = (
     minSize: 120,
     enableHiding: true,
   },
-  {
-    accessorKey: "Người duyệt",
-    header: "Người duyệt",
-    cell: ({ row }) =>
-      row.original.approved_by_profile?.full_name ||
-      (row.original.approved_by ? (
-        <span className="font-mono text-sm text-muted-foreground">
-          {row.original.approved_by.slice(0, 8).toUpperCase()}
-        </span>
-      ) : (
-        "-"
-      )),
-    size: 150,
-    minSize: 120,
-    enableHiding: true,
-  },
-  {
-    accessorKey: "Người hoàn tiền",
-    header: "Người hoàn tiền",
-    cell: ({ row }) =>
-      row.original.refunded_by_profile?.full_name ||
-      (row.original.refunded_by ? (
-        <span className="font-mono text-sm text-muted-foreground">
-          {row.original.refunded_by.slice(0, 8).toUpperCase()}
-        </span>
-      ) : (
-        "-"
-      )),
-    size: 150,
-    minSize: 120,
-    enableHiding: true,
-  },
-  {
-    accessorKey: "Ghi chú",
-    header: "Ghi chú",
-    cell: ({ row }) => row.original.note ?? "-",
-    size: 150,
-    minSize: 120,
-    enableHiding: true,
-  },
+
   {
     id: "Hành động",
     cell: ({ row }) => (
@@ -381,11 +382,12 @@ const createColumns = (
         refundRequest={row.original}
         onStatusChange={onStatusChange}
         updateRefundRequestStatus={updateRefundRequestStatus}
+        onViewDetail={onViewDetail}
       />
     ),
-    size: 40,
-    minSize: 40,
-    maxSize: 50,
+    size: 110,
+    minSize: 110,
+    maxSize: 120,
     enableHiding: false,
   },
 ];
@@ -399,6 +401,9 @@ export function RefundRequestsContent({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [localSearch, setLocalSearch] = useState("");
+  const [selectedRefundRequest, setSelectedRefundRequest] =
+    useState<RefundRequestWithRelations | null>(null);
+  const [openDetailDialog, setOpenDetailDialog] = useState(false);
 
   // Get pagination and search from URL params
   const page = useMemo(() => {
@@ -497,9 +502,22 @@ export function RefundRequestsContent({
     updateSearchParams,
   ]);
 
+  const handleViewDetail = useCallback(
+    (refundRequest: RefundRequestWithRelations) => {
+      setSelectedRefundRequest(refundRequest);
+      setOpenDetailDialog(true);
+    },
+    []
+  );
+
   const columns = useMemo(
-    () => createColumns(() => refetch(), handleUpdateRefundRequestStatus),
-    [refetch, handleUpdateRefundRequestStatus]
+    () =>
+      createColumns(
+        () => refetch(),
+        handleUpdateRefundRequestStatus,
+        handleViewDetail
+      ),
+    [refetch, handleUpdateRefundRequestStatus, handleViewDetail]
   );
 
   return (
@@ -537,6 +555,14 @@ export function RefundRequestsContent({
           }}
         />
       </div>
+
+      {openDetailDialog && (
+        <RefundRequestDetailDialog
+          open={openDetailDialog}
+          onOpenChange={setOpenDetailDialog}
+          refundRequest={selectedRefundRequest}
+        />
+      )}
     </div>
   );
 }

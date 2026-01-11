@@ -24,8 +24,7 @@ export function useCustomers({
   limit?: number;
   fallbackData?: CustomersResponse;
 }) {
-  const config: SWRConfiguration<CustomersResponse> = {
-  }
+  const config: SWRConfiguration<CustomersResponse> = {}
   // Build query parameters
   const params = new URLSearchParams({
     page: page.toString(),

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { Customer, PaginationMeta } from "@/lib/types";
-import { BOOKING_STATUS, PAYMENT_STATUS } from "@/lib/constants";
+import { BOOKING_STATUS, PAYMENT_STATUS, REFUND_REQUEST_STATUS } from "@/lib/constants";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
@@ -22,7 +22,7 @@ async function calculateCustomerStats(customerId: string, supabase: SupabaseClie
 
   if (bookingsError) {
     console.error("Error fetching bookings for customer stats:", bookingsError);
-    return { total_bookings: 0, total_spent: 0 };
+    return { total_bookings: 0, total_spent: 0, total_refunded: 0 };
   }
 
   const bookingIds = (bookingsData || []).map((b: { id: string }) => b.id);
@@ -37,7 +37,7 @@ async function calculateCustomerStats(customerId: string, supabase: SupabaseClie
 
   if (allBookingsError) {
     console.error("Error fetching all bookings for payments:", allBookingsError);
-    return { total_bookings, total_spent: 0 };
+    return { total_bookings, total_spent: 0, total_refunded: 0 };
   }
 
   const allBookingIds = (allBookingIdsData || []).map((b: { id: string }) => b.id);
@@ -47,12 +47,10 @@ async function calculateCustomerStats(customerId: string, supabase: SupabaseClie
     .from("payments")
     .select("amount")
     .in("booking_id", allBookingIds)
-    .eq("payment_status", PAYMENT_STATUS.PAID)
-
+    .eq("payment_status", PAYMENT_STATUS.PAID);
 
   if (paymentsError) {
     console.error("Error fetching payments for customer stats:", paymentsError);
-    return { total_bookings, total_spent: 0 };
   }
 
   const total_spent = (paymentsData || []).reduce(
@@ -60,7 +58,23 @@ async function calculateCustomerStats(customerId: string, supabase: SupabaseClie
     0
   );
 
-  return { total_bookings, total_spent };
+  // Calculate total refunded amount
+  const { data: refundsData, error: refundsError } = await supabase
+    .from("refund_requests")
+    .select("amount")
+    .eq("customer_id", customerId)
+    .eq("status", REFUND_REQUEST_STATUS.REFUNDED);
+
+  if (refundsError) {
+    console.error("Error fetching refunds for customer stats:", refundsError);
+  }
+
+  const total_refunded = (refundsData || []).reduce(
+    (sum: number, refund: { amount: number }) => sum + Number(refund.amount || 0),
+    0
+  );
+
+  return { total_bookings, total_spent, total_refunded };
 }
 
 /**
@@ -124,6 +138,7 @@ export async function GET(req: NextRequest) {
           ...customer,
           total_bookings: stats.total_bookings,
           total_spent: stats.total_spent,
+          total_refunded: stats.total_refunded,
         } as Customer;
       })
     );

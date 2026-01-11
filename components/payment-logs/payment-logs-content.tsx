@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Eye } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const createColumns = (): ColumnDef<PaymentLogWithBooking>[] => [
   {
@@ -154,14 +155,15 @@ const createColumns = (): ColumnDef<PaymentLogWithBooking>[] => [
               <Eye className="h-4 w-4" />
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="!max-w-2xl">
             <DialogHeader>
               <DialogTitle>Chi tiết Webhook Payment</DialogTitle>
               <DialogDescription>
                 Thông tin chi tiết về webhook thanh toán
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
+            <ScrollArea className="max-h-[80vh]">
+              <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">
@@ -239,6 +241,7 @@ const createColumns = (): ColumnDef<PaymentLogWithBooking>[] => [
                 </div>
               )}
             </div>
+            </ScrollArea>
           </DialogContent>
         </Dialog>
       );

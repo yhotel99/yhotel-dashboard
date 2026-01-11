@@ -4,6 +4,13 @@ import { formatCurrency, formatDateOnly } from "@/lib/functions";
 import { StatusBadge } from "./status-badge";
 import { ActionsCell } from "./actions-cell";
 import { customerSourceLabels } from "@/lib/constants";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { toast } from "sonner";
+import { Copy } from "lucide-react";
 
 export function createColumns(
   onEdit: (customer: Customer) => void,
@@ -28,11 +35,38 @@ export function createColumns(
     {
       accessorKey: "Email",
       header: "Email",
-      cell: ({ row }) => (
-        <span className="text-blue-700 underline cursor-pointer">
-          {row.original.email}
-        </span>
-      ),
+      cell: ({ row }) => {
+        const email = row.original.email;
+        if (!email) return "-";
+
+        const handleCopy = (e: React.MouseEvent) => {
+          e.stopPropagation();
+          navigator.clipboard.writeText(email);
+          toast.success("Đã sao chép email!");
+        };
+
+        return (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div
+                className="flex items-center justify-between gap-1.5 cursor-pointer hover:opacity-80 transition-opacity overflow-hidden"
+                onClick={handleCopy}
+              >
+                <span className="text-blue-700 underline truncate">
+                  {email}
+                </span>
+                <Copy className="size-3 text-muted-foreground shrink-0" />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <div className="flex flex-col gap-1">
+                <p>{email}</p>
+                <p className="text-[10px] text-muted-foreground">Click để sao chép</p>
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        );
+      },
       size: 160,
       minSize: 140,
     },
@@ -49,6 +83,16 @@ export function createColumns(
       cell: ({ row }) => {
         const total = row.original.total_spent ?? 0;
         return <span>{formatCurrency(total)}</span>;
+      },
+      size: 100,
+      minSize: 90,
+    },
+    {
+      accessorKey: "Tổng hoàn tiền",
+      header: "Tổng hoàn tiền",
+      cell: ({ row }) => {
+        const total = row.original.total_refunded ?? 0;
+        return <span className="text-red-600">{formatCurrency(total)}</span>;
       },
       size: 100,
       minSize: 90,
