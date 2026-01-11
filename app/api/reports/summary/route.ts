@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { PAYMENT_STATUS, BOOKING_STATUS } from "@/lib/constants";
+import { PAYMENT_STATUS, BOOKING_STATUS, REFUND_REQUEST_STATUS } from "@/lib/constants";
 import { ReportSummary } from "../types";
 
 /**
@@ -48,13 +48,17 @@ export async function GET(req: NextRequest) {
     const prevFromISO = prevFromDate.toISOString();
     const prevToISO = prevToDate.toISOString();
 
+
+
     // Fetch current period data
     const [
       { data: currentPayments, error: paymentsError },
       { data: currentBookings, error: bookingsError },
+      { data: currentRefunds, error: refundsError },
       { data: totalRooms, error: roomsError },
       { data: prevPayments, error: prevPaymentsError },
       { data: prevBookings, error: prevBookingsError },
+      { data: prevRefunds, error: prevRefundsError },
     ] = await Promise.all([
       // Current period payments (paid)
       supabase
@@ -66,10 +70,17 @@ export async function GET(req: NextRequest) {
       // Current period bookings
       supabase
         .from("bookings")
-        .select("total_amount, total_guests, status")
+        .select("total_amount, status")
         .is("deleted_at", null)
         .gte("created_at", fromISO)
         .lte("created_at", toISO),
+      // Current period refunds
+      supabase
+        .from("refund_requests")
+        .select("amount")
+        .eq("status", REFUND_REQUEST_STATUS.REFUNDED)
+        .gte("updated_at", fromISO)
+        .lte("updated_at", toISO),
       // Total rooms
       supabase
         .from("rooms")
@@ -85,18 +96,27 @@ export async function GET(req: NextRequest) {
       // Previous period bookings
       supabase
         .from("bookings")
-        .select("total_amount, total_guests, status")
+        .select("total_amount, status")
         .is("deleted_at", null)
         .gte("created_at", prevFromISO)
         .lte("created_at", prevToISO),
+      // Previous period refunds
+      supabase
+        .from("refund_requests")
+        .select("amount")
+        .eq("status", REFUND_REQUEST_STATUS.REFUNDED)
+        .gte("updated_at", prevFromISO)
+        .lte("updated_at", prevToISO),
     ]);
 
     if (
       paymentsError ||
       bookingsError ||
+      refundsError ||
       roomsError ||
       prevPaymentsError ||
-      prevBookingsError
+      prevBookingsError ||
+      prevRefundsError
     ) {
       return NextResponse.json(
         { error: "Error fetching report data" },
@@ -107,16 +127,21 @@ export async function GET(req: NextRequest) {
     // Calculate current period stats
     const totalRevenue =
       currentPayments?.reduce(
-        (sum, p) =>
-          sum +
-          (typeof p.amount === "string"
-            ? parseFloat(p.amount)
-            : p.amount || 0),
+        (sum, p) => {
+          const val = typeof p.amount === "string" ? parseFloat(p.amount) : (p.amount || 0);
+          return sum + (isNaN(val) ? 0 : val);
+        },
         0
       ) || 0;
     const totalBookings = currentBookings?.length || 0;
-    const totalGuests =
-      currentBookings?.reduce((sum, b) => sum + (b.total_guests || 0), 0) || 0;
+    const totalRefunded =
+      currentRefunds?.reduce(
+        (sum, r) => {
+          const val = typeof r.amount === "string" ? parseFloat(r.amount) : (r.amount || 0);
+          return sum + (isNaN(val) ? 0 : val);
+        },
+        0
+      ) || 0;
 
     // Calculate occupancy (bookings that are checked_in or checked_out)
     const activeBookings =
@@ -132,16 +157,22 @@ export async function GET(req: NextRequest) {
     // Calculate previous period stats
     const prevTotalRevenue =
       prevPayments?.reduce(
-        (sum, p) =>
-          sum +
-          (typeof p.amount === "string"
-            ? parseFloat(p.amount)
-            : p.amount || 0),
+        (sum, p) => {
+          const val = typeof p.amount === "string" ? parseFloat(p.amount) : (p.amount || 0);
+          return sum + (isNaN(val) ? 0 : val);
+        },
         0
       ) || 0;
     const prevTotalBookings = prevBookings?.length || 0;
-    const prevTotalGuests =
-      prevBookings?.reduce((sum, b) => sum + (b.total_guests || 0), 0) || 0;
+    const prevTotalRefunded =
+      prevRefunds?.reduce(
+        (sum, r) => {
+          const val = typeof r.amount === "string" ? parseFloat(r.amount) : (r.amount || 0);
+          return sum + (isNaN(val) ? 0 : val);
+        },
+        0
+      ) || 0;
+
     const prevActiveBookings =
       prevBookings?.filter(
         (b) =>
@@ -165,20 +196,25 @@ export async function GET(req: NextRequest) {
         ? ((averageOccupancy - prevAverageOccupancy) / prevAverageOccupancy) *
           100
         : 0;
-    const guestGrowth =
-      prevTotalGuests > 0
-        ? ((totalGuests - prevTotalGuests) / prevTotalGuests) * 100
+    const refundGrowth =
+      prevTotalRefunded > 0
+        ? ((totalRefunded - prevTotalRefunded) / prevTotalRefunded) * 100
         : 0;
 
+    const totalRevenueNum = isNaN(totalRevenue) ? 0 : totalRevenue;
+    const totalBookingsNum = isNaN(totalBookings) ? 0 : totalBookings;
+    const averageOccupancyNum = isNaN(averageOccupancy) ? 0 : averageOccupancy;
+    const totalRefundedNum = isNaN(totalRefunded) ? 0 : totalRefunded;
+
     const summary: ReportSummary = {
-      totalRevenue,
-      totalBookings,
-      averageOccupancy: Math.min(averageOccupancy, 100), // Cap at 100%
-      totalGuests,
-      revenueGrowth: Math.round(revenueGrowth * 10) / 10,
-      bookingGrowth: Math.round(bookingGrowth * 10) / 10,
-      occupancyGrowth: Math.round(occupancyGrowth * 10) / 10,
-      guestGrowth: Math.round(guestGrowth * 10) / 10,
+      totalRevenue: totalRevenueNum,
+      totalBookings: totalBookingsNum,
+      averageOccupancy: Math.min(averageOccupancyNum, 100),
+      totalRefunded: totalRefundedNum,
+      revenueGrowth: isNaN(revenueGrowth) ? 0 : Math.round(revenueGrowth * 10) / 10,
+      bookingGrowth: isNaN(bookingGrowth) ? 0 : Math.round(bookingGrowth * 10) / 10,
+      occupancyGrowth: isNaN(occupancyGrowth) ? 0 : Math.round(occupancyGrowth * 10) / 10,
+      refundGrowth: isNaN(refundGrowth) ? 0 : Math.round(refundGrowth * 10) / 10,
     };
 
     return NextResponse.json(summary);

@@ -116,11 +116,11 @@ type SummaryResponse = {
   totalRevenue: number;
   totalBookings: number;
   averageOccupancy: number;
-  totalGuests: number;
+  totalRefunded: number;
   revenueGrowth: number;
   bookingGrowth: number;
   occupancyGrowth: number;
-  guestGrowth: number;
+  refundGrowth: number;
 };
 
 type MonthlyResponse = {
@@ -213,22 +213,16 @@ export function SystemReports() {
     useSWR<PaymentsResponse>("/api/payments?page=1&limit=10", fetcher);
 
   // Derived state with safe defaults - ensure arrays are always arrays
-  const summaryStats =
-    summaryData &&
-    !summaryError &&
-    typeof summaryData === "object" &&
-    !Array.isArray(summaryData)
-      ? summaryData
-      : {
-          totalRevenue: 0,
-          totalBookings: 0,
-          averageOccupancy: 0,
-          totalGuests: 0,
-          revenueGrowth: 0,
-          bookingGrowth: 0,
-          occupancyGrowth: 0,
-          guestGrowth: 0,
-        };
+  const summaryStats = {
+    totalRevenue: summaryData?.totalRevenue ?? 0,
+    totalBookings: summaryData?.totalBookings ?? 0,
+    averageOccupancy: summaryData?.averageOccupancy ?? 0,
+    totalRefunded: summaryData?.totalRefunded ?? 0,
+    revenueGrowth: summaryData?.revenueGrowth ?? 0,
+    bookingGrowth: summaryData?.bookingGrowth ?? 0,
+    occupancyGrowth: summaryData?.occupancyGrowth ?? 0,
+    refundGrowth: summaryData?.refundGrowth ?? 0,
+  };
   const revenueData =
     Array.isArray(monthlyData) && !monthlyError ? monthlyData : [];
   const roomStats =
@@ -280,33 +274,64 @@ export function SystemReports() {
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-primary/20 bg-linear-to-br from-primary/5 to-card">
+        <Card className="border-green-500/20 bg-linear-to-br from-green-500/5 to-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0">
             <CardTitle className="text-sm font-medium">
-              Tổng doanh thu
+              🟩 Tổng thu (Gross)
             </CardTitle>
-            <div className="rounded-full bg-primary/10 p-2">
-              <IconReceipt className="h-4 w-4 text-primary" />
+            <div className="rounded-full bg-green-500/10 p-2">
+              <IconReceipt className="h-4 w-4 text-green-600" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-primary">
+            <div className="text-2xl font-bold text-green-600">
               {formatCurrency(summaryStats.totalRevenue)}
             </div>
             <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
               {summaryStats.revenueGrowth > 0 ? (
-                <IconTrendingUp className="h-3 w-3 text-primary" />
+                <IconTrendingUp className="h-3 w-3 text-green-600" />
               ) : (
                 <IconTrendingDown className="h-3 w-3 text-destructive" />
               )}
               <span
                 className={
                   summaryStats.revenueGrowth > 0
-                    ? "text-primary font-semibold"
+                    ? "text-green-600 font-semibold"
                     : "text-destructive"
                 }
               >
                 {Math.abs(summaryStats.revenueGrowth)}%
+              </span>
+              <span>so với kỳ trước</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-red-500/20 bg-linear-to-br from-red-500/5 to-card">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0">
+            <CardTitle className="text-sm font-medium">🟥 Tổng hoàn tiền (Refund)</CardTitle>
+            <div className="rounded-full bg-red-500/10 p-2">
+              <IconTrendingDown className="h-4 w-4 text-red-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">
+              {formatCurrency(summaryStats.totalRefunded)}
+            </div>
+            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+              {summaryStats.refundGrowth > 0 ? (
+                <IconTrendingUp className="h-3 w-3 text-destructive" />
+              ) : (
+                <IconTrendingDown className="h-3 w-3 text-green-600" />
+              )}
+              <span
+                className={
+                  summaryStats.refundGrowth > 0
+                    ? "text-destructive font-semibold"
+                    : "text-green-600"
+                }
+              >
+                {Math.abs(summaryStats.refundGrowth)}%
               </span>
               <span>so với kỳ trước</span>
             </div>
@@ -377,36 +402,7 @@ export function SystemReports() {
           </CardContent>
         </Card>
 
-        <Card className="border-primary/20 bg-linear-to-br from-primary/5 to-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0">
-            <CardTitle className="text-sm font-medium">Tổng khách</CardTitle>
-            <div className="rounded-full bg-primary/10 p-2">
-              <IconUsers className="h-4 w-4 text-primary" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-primary">
-              {summaryStats.totalGuests}
-            </div>
-            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-              {summaryStats.guestGrowth > 0 ? (
-                <IconTrendingUp className="h-3 w-3 text-primary" />
-              ) : (
-                <IconTrendingDown className="h-3 w-3 text-destructive" />
-              )}
-              <span
-                className={
-                  summaryStats.guestGrowth > 0
-                    ? "text-primary font-semibold"
-                    : "text-destructive"
-                }
-              >
-                {Math.abs(summaryStats.guestGrowth)}%
-              </span>
-              <span>so với kỳ trước</span>
-            </div>
-          </CardContent>
-        </Card>
+       
       </div>
 
       {/* Charts Section */}

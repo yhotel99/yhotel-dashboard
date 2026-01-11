@@ -2,11 +2,11 @@ export interface ReportSummary {
   totalRevenue: number;
   totalBookings: number;
   averageOccupancy: number;
-  totalGuests: number;
+  totalRefunded: number;
   revenueGrowth: number;
   bookingGrowth: number;
   occupancyGrowth: number;
-  guestGrowth: number;
+  refundGrowth: number;
 }
 
 export interface MonthlyRevenueData {
