@@ -699,13 +699,6 @@ export function SystemReports() {
                             return null;
                           }}
                         />
-                        <Legend
-                          formatter={(value) => (
-                            <span className="text-xs text-muted-foreground">
-                              {value}
-                            </span>
-                          )}
-                        />
                       </PieChart>
                     </ResponsiveContainer>
                   </ChartContainer>
@@ -806,13 +799,6 @@ export function SystemReports() {
                             }
                             return null;
                           }}
-                        />
-                        <Legend
-                          formatter={(value) => (
-                            <span className="text-xs text-muted-foreground">
-                              {value}
-                            </span>
-                          )}
                         />
                       </PieChart>
                     </ResponsiveContainer>
