@@ -5,6 +5,9 @@ import { Toaster } from "@/components/ui/sonner";
 import { SWRProvider } from "@/contexts/swr-context";
 import { getSettingsAction } from "@/actions/settings";
 
+// Force dynamic rendering since we use cookies (Supabase auth)
+export const dynamic = "force-dynamic";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -16,11 +19,19 @@ const geistMono = Geist_Mono({
 });
 
 export async function generateMetadata(): Promise<Metadata> {
-  const settings = await getSettingsAction();
-  return {
-    title: settings?.site_title || "Dashboard Yhotel",
-    description: settings?.site_description || "Dashboard for Yhotel",
-  };
+  try {
+    const settings = await getSettingsAction();
+    return {
+      title: settings?.site_title || "Dashboard Yhotel",
+      description: settings?.site_description || "Dashboard for Yhotel",
+    };
+  } catch {
+    // Silently fail during static generation
+    return {
+      title: "Dashboard Yhotel",
+      description: "Dashboard for Yhotel",
+    };
+  }
 }
 
 export default function RootLayout({

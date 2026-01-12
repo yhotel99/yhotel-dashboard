@@ -92,6 +92,10 @@ export function SettingsForm({ initialData }: SettingsFormProps) {
   const [heroImages, setHeroImages] = useState<ImageValue[]>(
     initialData?.hero_images || []
   );
+  // Track stable IDs for social media entries to maintain stable keys
+  const [socialMediaEntryIds, setSocialMediaEntryIds] = useState<
+    Map<string, string>
+  >(new Map());
 
   const form = useForm<SettingsFormValues>({
     resolver: zodResolver(settingsSchema),
@@ -138,9 +142,58 @@ export function SettingsForm({ initialData }: SettingsFormProps) {
     form.setValue("hero_images", heroImages);
   }, [heroImages, form]);
 
+  // Update stable IDs when social media links change
+  const socialMediaLinks = form.watch("social_media_links");
+  useEffect(() => {
+    const links = socialMediaLinks || {};
+    const currentPlatforms = new Set(Object.keys(links));
+
+    setSocialMediaEntryIds((prev) => {
+      const newMap = new Map(prev);
+
+      // Add IDs for new platforms
+      currentPlatforms.forEach((platform) => {
+        if (!newMap.has(platform)) {
+          const newId = `social_${Date.now()}_${Math.random()
+            .toString(36)
+            .substr(2, 9)}`;
+          newMap.set(platform, newId);
+        }
+      });
+
+      // Remove IDs for deleted platforms
+      Array.from(newMap.keys()).forEach((platform) => {
+        if (!currentPlatforms.has(platform)) {
+          newMap.delete(platform);
+        }
+      });
+
+      return newMap;
+    });
+  }, [socialMediaLinks]);
+
   const handleSubmit = async (data: SettingsFormValues) => {
     setIsSubmitting(true);
     try {
+      // Clean social_media_links: remove entries with temp keys, empty platform names, or empty URLs
+      let cleanedSocialLinks: Record<string, string> | null = null;
+      if (data.social_media_links) {
+        const validLinks: Record<string, string> = {};
+        for (const [platform, url] of Object.entries(data.social_media_links)) {
+          // Skip temp keys, empty platform names, or empty URLs
+          if (
+            !platform.startsWith("_temp_") &&
+            platform.trim() !== "" &&
+            url &&
+            url.trim() !== ""
+          ) {
+            validLinks[platform.trim()] = url.trim();
+          }
+        }
+        cleanedSocialLinks =
+          Object.keys(validLinks).length > 0 ? validLinks : null;
+      }
+
       // Convert empty strings to null
       const cleanedData = {
         ...data,
@@ -149,7 +202,7 @@ export function SettingsForm({ initialData }: SettingsFormProps) {
         contact_phone: data.contact_phone || null,
         contact_address: data.contact_address || null,
         working_hours: data.working_hours || null,
-        social_media_links: data.social_media_links || null,
+        social_media_links: cleanedSocialLinks,
         bank_account_number: data.bank_account_number || null,
         bank_name: data.bank_name || null,
         bank_bin: data.bank_bin || null,
@@ -361,10 +414,69 @@ export function SettingsForm({ initialData }: SettingsFormProps) {
                     const links = field.value || {};
                     const entries = Object.entries(links);
 
+                    // Get stable IDs for each entry (IDs are managed in useEffect)
+                    const getEntryId = (platform: string): string => {
+                      return socialMediaEntryIds.get(platform) || platform;
+                    };
+
+                    // Create entries with stable IDs
+                    const entriesWithStableKeys = entries.map(
+                      ([platform, url]) => ({
+                        id: getEntryId(platform),
+                        platform,
+                        url,
+                        originalPlatform: platform, // Keep track of original for updates
+                      })
+                    );
+
                     const addLink = () => {
-                      const newPlatform = `platform_${Date.now()}`;
-                      const newLinks = { ...links, [newPlatform]: "" };
+                      // Use empty string as key for new platform, user will fill in the name
+                      const tempKey = `_temp_${Date.now()}`;
+                      const newLinks = { ...links, [tempKey]: "" };
                       field.onChange(newLinks);
+                    };
+
+                    const updatePlatformName = (
+                      originalPlatform: string,
+                      newPlatformName: string
+                    ) => {
+                      const newLinks = { ...links };
+                      const currentUrl = newLinks[originalPlatform] || "";
+
+                      // Get the stable ID for the original platform
+                      const entryId = socialMediaEntryIds.get(originalPlatform);
+
+                      // Remove old entry
+                      delete newLinks[originalPlatform];
+
+                      // Determine new platform key
+                      let newPlatformKey: string;
+                      if (newPlatformName.trim() === "") {
+                        // Keep as temp key if empty
+                        newPlatformKey = originalPlatform.startsWith("_temp_")
+                          ? originalPlatform
+                          : `_temp_${Date.now()}`;
+                      } else {
+                        // Use new platform name as key
+                        newPlatformKey = newPlatformName.trim();
+                      }
+
+                      // Add new entry
+                      newLinks[newPlatformKey] = currentUrl;
+
+                      // Update the ID mapping if platform key changed
+                      if (entryId && newPlatformKey !== originalPlatform) {
+                        setSocialMediaEntryIds((prev) => {
+                          const newMap = new Map(prev);
+                          newMap.delete(originalPlatform);
+                          newMap.set(newPlatformKey, entryId);
+                          return newMap;
+                        });
+                      }
+
+                      field.onChange(
+                        Object.keys(newLinks).length > 0 ? newLinks : {}
+                      );
                     };
 
                     const updateLink = (platform: string, url: string) => {
@@ -413,51 +525,55 @@ export function SettingsForm({ initialData }: SettingsFormProps) {
                             </div>
                           ) : (
                             <div className="space-y-3">
-                              {entries.map(([platform, url]) => (
-                                <div
-                                  key={platform}
-                                  className="flex items-start gap-2 p-3 border rounded-lg"
-                                >
-                                  <div className="flex-1 space-y-2">
-                                    <Input
-                                      type="text"
-                                      placeholder="Tên mạng xã hội (VD: Facebook, Instagram, TikTok...)"
-                                      value={platform}
-                                      onChange={(e) => {
-                                        const newPlatform =
-                                          e.target.value.trim();
-                                        if (
-                                          newPlatform &&
-                                          newPlatform !== platform
-                                        ) {
-                                          const newLinks = { ...links };
-                                          delete newLinks[platform];
-                                          newLinks[newPlatform] = url as string;
-                                          field.onChange(newLinks);
-                                        }
-                                      }}
-                                      className="font-medium"
-                                    />
-                                    <Input
-                                      type="url"
-                                      placeholder="URL (VD: https://facebook.com/yhotel)"
-                                      value={url as string}
-                                      onChange={(e) =>
-                                        updateLink(platform, e.target.value)
-                                      }
-                                    />
-                                  </div>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => removeLink(platform)}
-                                    className="text-destructive hover:text-destructive"
+                              {entriesWithStableKeys.map(
+                                ({ id, platform, url, originalPlatform }) => (
+                                  <div
+                                    key={id}
+                                    className="flex items-start gap-2 p-3 border rounded-lg"
                                   >
-                                    <IconTrash className="size-4" />
-                                  </Button>
-                                </div>
-                              ))}
+                                    <div className="flex-1 space-y-2">
+                                      <Input
+                                        type="text"
+                                        placeholder="Tên mạng xã hội (VD: Facebook, Instagram, TikTok...)"
+                                        value={
+                                          platform.startsWith("_temp_")
+                                            ? ""
+                                            : platform
+                                        }
+                                        onChange={(e) => {
+                                          updatePlatformName(
+                                            originalPlatform,
+                                            e.target.value
+                                          );
+                                        }}
+                                        className="font-medium"
+                                      />
+                                      <Input
+                                        type="url"
+                                        placeholder="URL (VD: https://facebook.com/yhotel)"
+                                        value={url as string}
+                                        onChange={(e) =>
+                                          updateLink(
+                                            originalPlatform,
+                                            e.target.value
+                                          )
+                                        }
+                                      />
+                                    </div>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() =>
+                                        removeLink(originalPlatform)
+                                      }
+                                      className="text-destructive hover:text-destructive"
+                                    >
+                                      <IconTrash className="size-4" />
+                                    </Button>
+                                  </div>
+                                )
+                              )}
                             </div>
                           )}
                         </div>

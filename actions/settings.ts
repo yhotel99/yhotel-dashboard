@@ -35,9 +35,24 @@ export async function getSettingsAction(): Promise<Settings | null> {
       settings.hero_images = [];
     }
 
+    // Parse social_media_links from JSONB
+    if (settings.social_media_links && typeof settings.social_media_links === 'string') {
+      try {
+        settings.social_media_links = JSON.parse(settings.social_media_links);
+      } catch {
+        settings.social_media_links = {};
+      }
+    } else if (!settings.social_media_links) {
+      settings.social_media_links = {};
+    }
+
     return settings as Settings;
   } catch (err) {
-    console.error("Error getting settings:", err);
+    // Silently handle dynamic server usage errors during static generation
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    if (!errorMessage.includes('DYNAMIC_SERVER_USAGE') && !errorMessage.includes('cookies')) {
+      console.error("Error getting settings:", err);
+    }
     return null;
   }
 }
