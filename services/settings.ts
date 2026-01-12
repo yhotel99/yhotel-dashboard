@@ -1,0 +1,90 @@
+import { createClient } from "@/lib/supabase/server";
+import type { Settings, SettingsInput } from "@/lib/types";
+
+const SETTINGS_ID = "00000000-0000-0000-0000-000000000001";
+
+/**
+ * Get settings (singleton)
+ */
+export async function getSettings(): Promise<Settings | null> {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("settings")
+      .select("*")
+      .eq("id", SETTINGS_ID)
+      .single();
+
+    if (error || !data) {
+      return null;
+    }
+
+    // Parse hero_images from JSONB to ImageValue[]
+    const settings = data as Record<string, unknown>;
+    if (settings.hero_images && typeof settings.hero_images === 'string') {
+      try {
+        settings.hero_images = JSON.parse(settings.hero_images);
+      } catch {
+        settings.hero_images = [];
+      }
+    } else if (!settings.hero_images) {
+      settings.hero_images = [];
+    }
+
+    return settings as Settings;
+  } catch (err) {
+    console.error("Error getting settings:", err);
+    return null;
+  }
+}
+
+/**
+ * Update settings
+ */
+export async function updateSettings(
+  input: SettingsInput
+): Promise<Settings> {
+  try {
+    const supabase = await createClient();
+    
+    // Prepare update data, convert hero_images array to JSONB
+    const updateData: Record<string, unknown> = {
+      ...input,
+      updated_at: new Date().toISOString(),
+    };
+    
+    if (input.hero_images !== undefined) {
+      updateData.hero_images = input.hero_images ? JSON.stringify(input.hero_images) : '[]';
+    }
+
+    const { data, error } = await supabase
+      .from("settings")
+      .update(updateData)
+      .eq("id", SETTINGS_ID)
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    // Parse hero_images from JSONB to ImageValue[]
+    const settings = data as Record<string, unknown>;
+    if (settings.hero_images && typeof settings.hero_images === 'string') {
+      try {
+        settings.hero_images = JSON.parse(settings.hero_images);
+      } catch {
+        settings.hero_images = [];
+      }
+    } else if (!settings.hero_images) {
+      settings.hero_images = [];
+    }
+
+    return settings as Settings;
+  } catch (err) {
+    const errorMessage =
+      err instanceof Error ? err.message : "Không thể cập nhật cài đặt";
+    throw new Error(errorMessage);
+  }
+}
+

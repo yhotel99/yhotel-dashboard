@@ -542,3 +542,48 @@ export type RoomsResponse = {
 export type PageProps = {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 };
+
+// ============================================================================
+// Settings Types
+// ============================================================================
+
+// Settings type matching database schema (settings table)
+export type Settings = {
+  id: string;
+  site_title: string | null;
+  site_description: string | null;
+  hero_images: ImageValue[] | null;
+  contact_email: string | null;
+  contact_phone: string | null;
+  contact_address: string | null;
+  working_hours: string | null;
+  facebook_url: string | null;
+  instagram_url: string | null;
+  twitter_url: string | null;
+  youtube_url: string | null;
+  bank_account_number: string | null;
+  bank_name: string | null;
+  bank_bin: string | null;
+  bank_account_owner: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+// Settings input type for update operations
+export type SettingsInput = {
+  site_title?: string | null;
+  site_description?: string | null;
+  hero_images?: ImageValue[] | null;
+  contact_email?: string | null;
+  contact_phone?: string | null;
+  contact_address?: string | null;
+  working_hours?: string | null;
+  facebook_url?: string | null;
+  instagram_url?: string | null;
+  twitter_url?: string | null;
+  youtube_url?: string | null;
+  bank_account_number?: string | null;
+  bank_name?: string | null;
+  bank_bin?: string | null;
+  bank_account_owner?: string | null;
+};
