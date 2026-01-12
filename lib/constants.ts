@@ -476,3 +476,19 @@ export const AMENITIES_OPTIONS = [
   { label: "Giặt ủi", value: "laundry" },
   { label: "Hỗ trợ liên hệ Tài Xế", value: "taxi_support" },
 ];
+
+
+export const DASHBOARD_URLS = {
+  DASHBOARD: "/dashboard",
+  ROOMS: "/dashboard/rooms",
+  BOOKINGS: "/dashboard/bookings",
+  RESERVATION: "/dashboard/reservation",
+  CUSTOMERS: "/dashboard/customers",
+  PAYMENTS: "/dashboard/payments",
+  PAYMENT_LOGS: "/dashboard/payment-logs",
+  REFUND_REQUESTS: "/dashboard/refund-requests",
+  GALLERY: "/dashboard/gallery",
+  USERS: "/dashboard/users",
+  BLOGS: "/dashboard/blogs",
+  SETTINGS: "/dashboard/settings",
+} as const;

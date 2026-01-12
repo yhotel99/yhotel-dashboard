@@ -27,9 +27,12 @@ import {
 } from "@/components/ui/sidebar";
 import { User } from "@supabase/supabase-js";
 import { generateGradient, getInitials } from "@/lib/functions";
+import { useRouter } from "next/navigation";
+import { DASHBOARD_URLS, SIDEBAR_URLS } from "@/lib/constants";
 
 export function NavUser({ user }: { user: User }) {
   const { isMobile } = useSidebar();
+  const router = useRouter();
 
   const handleLogout = async () => {
     await logoutAction();
@@ -103,7 +106,9 @@ export function NavUser({ user }: { user: User }) {
                 <IconUserCircle />
                 Account
               </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => router.push(DASHBOARD_URLS.SETTINGS)}
+              >
                 <IconCreditCard />
                 Settings
               </DropdownMenuItem>
