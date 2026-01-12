@@ -1,6 +1,6 @@
 "use server";
 
-import { hasViewPermission } from "@/lib/permissions";
+import { hasViewPermission, getFirstAllowedPage } from "@/lib/permissions";
 import { SIDEBAR_URLS } from "@/lib/constants";
 import { Profile } from "./types";
 import { User } from "@supabase/supabase-js";
@@ -36,30 +36,10 @@ function getResourceFromPath(pathname: string): string | null {
   return null;
 }
 
-// Get first allowed page for a role
-function getFirstAllowedPage(role: string): string {
-  const allowedPages = [
-    { url: SIDEBAR_URLS.DASHBOARD, resource: "dashboard" },
-    { url: SIDEBAR_URLS.RESERVATION, resource: "reservations" },
-    { url: SIDEBAR_URLS.BOOKINGS, resource: "bookings" },
-    { url: SIDEBAR_URLS.CUSTOMERS, resource: "customers" },
-    { url: SIDEBAR_URLS.ROOMS, resource: "rooms" },
-    { url: SIDEBAR_URLS.PAYMENTS, resource: "payments" },
-  ];
-
-  for (const page of allowedPages) {
-    if (hasViewPermission(role, page.resource)) {
-      return page.url;
-    }
-  }
-
-  // Fallback to reservation
-  return SIDEBAR_URLS.RESERVATION;
-}
-
 /**
  * Server action to check route permission status (without redirect)
  * Returns permission status and fallback URL
+ * Now uses async permission checks from database
  */
 export async function checkRoutePermissionStatus(
   pathname: string,
@@ -74,11 +54,11 @@ export async function checkRoutePermissionStatus(
   const resource = getResourceFromPath(pathname);
 
   // If resource is null (not found in mapping), allow access (fallback)
-  // Otherwise, check if user has permission for that resource
-  const hasPermission = !resource || hasViewPermission(profile.role, resource);
+  // Otherwise, check if user has permission for that resource (async from database)
+  const hasPermission = !resource || (await hasViewPermission(profile.role, resource));
 
-  // Get fallback URL (first allowed page for the role)
-  const fallbackUrl = getFirstAllowedPage(profile.role);
+  // Get fallback URL (first allowed page for the role) - now async
+  const fallbackUrl = await getFirstAllowedPage(profile.role);
 
   return { hasPermission, fallbackUrl };
 }

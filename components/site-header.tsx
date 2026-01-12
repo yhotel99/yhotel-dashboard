@@ -16,12 +16,13 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { allNavItems } from "@/lib/constants";
-import { hasViewPermission } from "@/lib/permissions";
 import { useAuth } from "@/contexts/auth-context";
+import { usePermissions } from "@/contexts/permissions-context";
 
 export function SiteHeader() {
   const router = useRouter();
   const { profile } = useAuth();
+  const { hasViewPermission } = usePermissions();
   const [open, setOpen] = useState(false);
 
   // Filter navigation items based on permissions
@@ -32,9 +33,9 @@ export function SiteHeader() {
 
     // Filter all items including dashboard based on permissions
     return allNavItems.filter((item) =>
-      hasViewPermission(profile.role, item.resource)
+      hasViewPermission(item.resource)
     );
-  }, [profile]);
+  }, [profile, hasViewPermission]);
 
   // Handle Command + K keyboard shortcut
   useEffect(() => {

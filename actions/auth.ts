@@ -23,6 +23,7 @@ export async function loginAction(formData: FormData) {
     password,
   });
 
+
   if (error) {
     return { error: "Sai email hoặc mật khẩu" };
   }
@@ -53,8 +54,9 @@ export async function loginAction(formData: FormData) {
   }
 
   const userRole = profile.role;
-  const redirectPath =
-    userRole && hasViewPermission(userRole, "dashboard")
+  // Check permission from database (async)
+  const hasDashboardPermission = userRole && (await hasViewPermission(userRole, "dashboard"));
+  const redirectPath = hasDashboardPermission
       ? "/dashboard"
       : "/dashboard/reservation";
 

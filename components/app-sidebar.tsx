@@ -15,21 +15,22 @@ import {
 } from "@/components/ui/sidebar";
 import Link from "next/link";
 import { useAuth } from "@/contexts/auth-context";
+import { usePermissions } from "@/contexts/permissions-context";
 import { allNavItems, SIDEBAR_URLS } from "@/lib/constants";
-import { hasViewPermission } from "@/lib/permissions";
 import { IconInnerShadowTop } from "@tabler/icons-react";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { currentUser, profile } = useAuth();
+  const { hasViewPermission } = usePermissions();
 
   // Filter nav items based on permissions
   const filteredNavItems = React.useMemo(() => {
     if (!currentUser || !profile) return [];
 
     return allNavItems.filter((item) =>
-      hasViewPermission(profile.role, item.resource)
+      hasViewPermission(item.resource)
     );
-  }, [currentUser, profile]);
+  }, [currentUser, profile, hasViewPermission]);
 
   // Get first allowed page for logo link (fallback to first item or dashboard)
   const logoLink = React.useMemo(() => {

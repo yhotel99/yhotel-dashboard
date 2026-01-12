@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { AuthProvider } from "@/contexts/auth-context";
+import { PermissionsProvider } from "@/contexts/permissions-context";
 import { ClientSync } from "@/components/client-sync";
 import { AppSidebar } from "@/components/app-sidebar";
 import { PermissionGuard } from "@/components/permission-guard";
@@ -24,8 +25,9 @@ export default async function DashboardLayout({
 
   return (
     <AuthProvider>
-      <ClientSync user={user} profile={profile} />
-      <PermissionGuard user={user} profile={profile}>
+      <PermissionsProvider>
+        <ClientSync user={user} profile={profile} />
+        <PermissionGuard user={user} profile={profile}>
         <SidebarProvider
           style={
             {
@@ -45,6 +47,7 @@ export default async function DashboardLayout({
           </SidebarInset>
         </SidebarProvider>
       </PermissionGuard>
+      </PermissionsProvider>
     </AuthProvider>
   );
 }
