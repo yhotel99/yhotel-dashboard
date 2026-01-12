@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { USER_ROLE } from "@/lib/constants";
 import { getSettings, updateSettings } from "@/services/settings";
+import { checkPermission } from "@/services/permissions";
 import { z } from "zod";
 
-const SETTINGS_ID = "yhotel-settings-main";
 
 const settingsInputSchema = z.object({
   site_title: z.string().nullable().optional(),
@@ -29,22 +28,10 @@ const settingsInputSchema = z.object({
     .union([z.string(), z.literal(""), z.null()])
     .optional()
     .transform((val) => (val === "" ? null : val)),
-  facebook_url: z
-    .union([z.string().url(), z.literal(""), z.null()])
-    .optional()
-    .transform((val) => (val === "" ? null : val)),
-  instagram_url: z
-    .union([z.string().url(), z.literal(""), z.null()])
-    .optional()
-    .transform((val) => (val === "" ? null : val)),
-  twitter_url: z
-    .union([z.string().url(), z.literal(""), z.null()])
-    .optional()
-    .transform((val) => (val === "" ? null : val)),
-  youtube_url: z
-    .union([z.string().url(), z.literal(""), z.null()])
-    .optional()
-    .transform((val) => (val === "" ? null : val)),
+  social_media_links: z
+    .record(z.string(), z.string().url())
+    .nullable()
+    .optional(),
   bank_account_number: z
     .union([z.string(), z.literal(""), z.null()])
     .optional()
@@ -65,6 +52,46 @@ const settingsInputSchema = z.object({
 
 export async function GET() {
   try {
+    const supabase = await createClient();
+
+    // Check permissions using permission system
+    const { data: currentUser } = await supabase.auth.getUser();
+    
+    if (!currentUser.user) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", currentUser.user.id)
+      .single();
+
+    if (!profileData?.role) {
+      return NextResponse.json(
+        { error: "Profile not found" },
+        { status: 404 }
+      );
+    }
+
+    // Check if user has view:settings permission
+    const hasPermission = await checkPermission(
+      profileData.role,
+      "view",
+      "settings",
+      supabase
+    );
+
+    if (!hasPermission) {
+      return NextResponse.json(
+        { error: "Permission denied" },
+        { status: 403 }
+      );
+    }
+
     const settings = await getSettings();
     
     if (!settings) {
@@ -91,18 +118,38 @@ export async function PUT(request: NextRequest) {
 
     const supabase = await createClient();
 
-    // Check permissions (only admin and manager can update settings)
+    // Check permissions using permission system
     const { data: currentUser } = await supabase.auth.getUser();
+    
+    if (!currentUser.user) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
     const { data: profileData } = await supabase
       .from("profiles")
       .select("role")
-      .eq("id", currentUser.user?.id)
+      .eq("id", currentUser.user.id)
       .single();
 
-    if (
-      ![USER_ROLE.ADMIN, USER_ROLE.MANAGER].includes(profileData?.role) ||
-      !profileData
-    ) {
+    if (!profileData?.role) {
+      return NextResponse.json(
+        { error: "Profile not found" },
+        { status: 404 }
+      );
+    }
+
+    // Check if user has update:settings permission
+    const hasPermission = await checkPermission(
+      profileData.role,
+      "update",
+      "settings",
+      supabase
+    );
+
+    if (!hasPermission) {
       return NextResponse.json(
         { error: "Permission denied" },
         { status: 403 }

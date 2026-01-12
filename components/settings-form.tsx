@@ -32,6 +32,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { ImageListSelector } from "@/components/image-selector";
 import type { ImageValue } from "@/lib/types";
+import { IconPlus, IconTrash } from "@tabler/icons-react";
 
 const settingsSchema = z.object({
   site_title: z.string().min(1, "Tiêu đề không được để trống"),
@@ -61,18 +62,10 @@ const settingsSchema = z.object({
   working_hours: z
     .union([z.string(), z.literal(""), z.null()])
     .transform((val) => (val === "" ? null : val)),
-  facebook_url: z
-    .union([z.string().url("URL không hợp lệ"), z.literal(""), z.null()])
-    .transform((val) => (val === "" ? null : val)),
-  instagram_url: z
-    .union([z.string().url("URL không hợp lệ"), z.literal(""), z.null()])
-    .transform((val) => (val === "" ? null : val)),
-  twitter_url: z
-    .union([z.string().url("URL không hợp lệ"), z.literal(""), z.null()])
-    .transform((val) => (val === "" ? null : val)),
-  youtube_url: z
-    .union([z.string().url("URL không hợp lệ"), z.literal(""), z.null()])
-    .transform((val) => (val === "" ? null : val)),
+  social_media_links: z
+    .record(z.string(), z.string().url("URL không hợp lệ"))
+    .nullable()
+    .optional(),
   bank_account_number: z
     .union([z.string(), z.literal(""), z.null()])
     .transform((val) => (val === "" ? null : val)),
@@ -110,10 +103,7 @@ export function SettingsForm({ initialData }: SettingsFormProps) {
       contact_phone: initialData?.contact_phone || null,
       contact_address: initialData?.contact_address || null,
       working_hours: initialData?.working_hours || null,
-      facebook_url: initialData?.facebook_url || null,
-      instagram_url: initialData?.instagram_url || null,
-      twitter_url: initialData?.twitter_url || null,
-      youtube_url: initialData?.youtube_url || null,
+      social_media_links: initialData?.social_media_links || {},
       bank_account_number: initialData?.bank_account_number || null,
       bank_name: initialData?.bank_name || null,
       bank_bin: initialData?.bank_bin || null,
@@ -133,10 +123,7 @@ export function SettingsForm({ initialData }: SettingsFormProps) {
         contact_phone: initialData.contact_phone || null,
         contact_address: initialData.contact_address || null,
         working_hours: initialData.working_hours || null,
-        facebook_url: initialData.facebook_url || null,
-        instagram_url: initialData.instagram_url || null,
-        twitter_url: initialData.twitter_url || null,
-        youtube_url: initialData.youtube_url || null,
+        social_media_links: initialData.social_media_links || {},
         bank_account_number: initialData.bank_account_number || null,
         bank_name: initialData.bank_name || null,
         bank_bin: initialData.bank_bin || null,
@@ -162,10 +149,7 @@ export function SettingsForm({ initialData }: SettingsFormProps) {
         contact_phone: data.contact_phone || null,
         contact_address: data.contact_address || null,
         working_hours: data.working_hours || null,
-        facebook_url: data.facebook_url || null,
-        instagram_url: data.instagram_url || null,
-        twitter_url: data.twitter_url || null,
-        youtube_url: data.youtube_url || null,
+        social_media_links: data.social_media_links || null,
         bank_account_number: data.bank_account_number || null,
         bank_name: data.bank_name || null,
         bank_bin: data.bank_bin || null,
@@ -370,80 +354,118 @@ export function SettingsForm({ initialData }: SettingsFormProps) {
               </TabsContent>
 
               <TabsContent value="social" className="space-y-4 mt-6">
-                <div className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="facebook_url"
-                    render={({ field }) => (
+                <FormField
+                  control={form.control}
+                  name="social_media_links"
+                  render={({ field }) => {
+                    const links = field.value || {};
+                    const entries = Object.entries(links);
+
+                    const addLink = () => {
+                      const newPlatform = `platform_${Date.now()}`;
+                      const newLinks = { ...links, [newPlatform]: "" };
+                      field.onChange(newLinks);
+                    };
+
+                    const updateLink = (platform: string, url: string) => {
+                      const newLinks = { ...links };
+                      if (url.trim() === "") {
+                        delete newLinks[platform];
+                      } else {
+                        newLinks[platform] = url.trim();
+                      }
+                      field.onChange(
+                        Object.keys(newLinks).length > 0 ? newLinks : {}
+                      );
+                    };
+
+                    const removeLink = (platform: string) => {
+                      const newLinks = { ...links };
+                      delete newLinks[platform];
+                      field.onChange(
+                        Object.keys(newLinks).length > 0 ? newLinks : {}
+                      );
+                    };
+
+                    return (
                       <FormItem>
-                        <FormLabel>Facebook URL</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="url"
-                            placeholder="VD: https://facebook.com/yhotel"
-                            {...field}
-                            value={field.value || ""}
-                          />
-                        </FormControl>
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <FormLabel>Mạng xã hội</FormLabel>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={addLink}
+                            >
+                              <IconPlus className="mr-2 size-4" />
+                              Thêm mạng xã hội
+                            </Button>
+                          </div>
+                          <FormDescription>
+                            Thêm các liên kết mạng xã hội của bạn. Bạn có thể
+                            thêm bất kỳ mạng xã hội nào.
+                          </FormDescription>
+                          {entries.length === 0 ? (
+                            <div className="text-sm text-muted-foreground text-center py-8 border rounded-lg">
+                              Chưa có mạng xã hội nào. Nhấn &quot;Thêm mạng xã
+                              hội&quot; để bắt đầu.
+                            </div>
+                          ) : (
+                            <div className="space-y-3">
+                              {entries.map(([platform, url]) => (
+                                <div
+                                  key={platform}
+                                  className="flex items-start gap-2 p-3 border rounded-lg"
+                                >
+                                  <div className="flex-1 space-y-2">
+                                    <Input
+                                      type="text"
+                                      placeholder="Tên mạng xã hội (VD: Facebook, Instagram, TikTok...)"
+                                      value={platform}
+                                      onChange={(e) => {
+                                        const newPlatform =
+                                          e.target.value.trim();
+                                        if (
+                                          newPlatform &&
+                                          newPlatform !== platform
+                                        ) {
+                                          const newLinks = { ...links };
+                                          delete newLinks[platform];
+                                          newLinks[newPlatform] = url as string;
+                                          field.onChange(newLinks);
+                                        }
+                                      }}
+                                      className="font-medium"
+                                    />
+                                    <Input
+                                      type="url"
+                                      placeholder="URL (VD: https://facebook.com/yhotel)"
+                                      value={url as string}
+                                      onChange={(e) =>
+                                        updateLink(platform, e.target.value)
+                                      }
+                                    />
+                                  </div>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => removeLink(platform)}
+                                    className="text-destructive hover:text-destructive"
+                                  >
+                                    <IconTrash className="size-4" />
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                         <FormMessage />
                       </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="instagram_url"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Instagram URL</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="url"
-                            placeholder="VD: https://instagram.com/yhotel"
-                            {...field}
-                            value={field.value || ""}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="twitter_url"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Twitter URL</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="url"
-                            placeholder="VD: https://twitter.com/yhotel"
-                            {...field}
-                            value={field.value || ""}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="youtube_url"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>YouTube URL</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="url"
-                            placeholder="VD: https://youtube.com/@yhotel"
-                            {...field}
-                            value={field.value || ""}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                    );
+                  }}
+                />
               </TabsContent>
 
               <TabsContent value="bank" className="space-y-4 mt-6">

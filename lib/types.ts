@@ -557,10 +557,7 @@ export type Settings = {
   contact_phone: string | null;
   contact_address: string | null;
   working_hours: string | null;
-  facebook_url: string | null;
-  instagram_url: string | null;
-  twitter_url: string | null;
-  youtube_url: string | null;
+  social_media_links: Record<string, string> | null;
   bank_account_number: string | null;
   bank_name: string | null;
   bank_bin: string | null;
@@ -578,10 +575,7 @@ export type SettingsInput = {
   contact_phone?: string | null;
   contact_address?: string | null;
   working_hours?: string | null;
-  facebook_url?: string | null;
-  instagram_url?: string | null;
-  twitter_url?: string | null;
-  youtube_url?: string | null;
+  social_media_links?: Record<string, string> | null;
   bank_account_number?: string | null;
   bank_name?: string | null;
   bank_bin?: string | null;

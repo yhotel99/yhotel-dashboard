@@ -31,6 +31,17 @@ export async function getSettings(): Promise<Settings | null> {
       settings.hero_images = [];
     }
 
+    // Parse social_media_links from JSONB (Supabase returns it as object, but ensure it's correct)
+    if (settings.social_media_links && typeof settings.social_media_links === 'string') {
+      try {
+        settings.social_media_links = JSON.parse(settings.social_media_links);
+      } catch {
+        settings.social_media_links = {};
+      }
+    } else if (!settings.social_media_links) {
+      settings.social_media_links = {};
+    }
+
     return settings as Settings;
   } catch (err) {
     console.error("Error getting settings:", err);
@@ -57,6 +68,11 @@ export async function updateSettings(
       updateData.hero_images = input.hero_images ? JSON.stringify(input.hero_images) : '[]';
     }
 
+    // social_media_links is already an object, Supabase will handle JSONB conversion
+    if (input.social_media_links !== undefined) {
+      updateData.social_media_links = input.social_media_links || {};
+    }
+
     const { data, error } = await supabase
       .from("settings")
       .update(updateData)
@@ -78,6 +94,17 @@ export async function updateSettings(
       }
     } else if (!settings.hero_images) {
       settings.hero_images = [];
+    }
+
+    // Parse social_media_links from JSONB (Supabase returns it as object, but ensure it's correct)
+    if (settings.social_media_links && typeof settings.social_media_links === 'string') {
+      try {
+        settings.social_media_links = JSON.parse(settings.social_media_links);
+      } catch {
+        settings.social_media_links = {};
+      }
+    } else if (!settings.social_media_links) {
+      settings.social_media_links = {};
     }
 
     return settings as Settings;

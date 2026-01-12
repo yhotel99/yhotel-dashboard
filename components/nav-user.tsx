@@ -1,10 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import {
   IconCreditCard,
   IconDotsVertical,
   IconLogout,
-  IconNotification,
   IconUserCircle,
 } from "@tabler/icons-react";
 import { logoutAction } from "@/actions/auth";
@@ -28,11 +28,15 @@ import {
 import { User } from "@supabase/supabase-js";
 import { generateGradient, getInitials } from "@/lib/functions";
 import { useRouter } from "next/navigation";
-import { DASHBOARD_URLS, SIDEBAR_URLS } from "@/lib/constants";
+import { DASHBOARD_URLS } from "@/lib/constants";
+import { useAuth } from "@/contexts/auth-context";
+import { AccountDetailDialog } from "@/components/users/account-detail-dialog";
 
 export function NavUser({ user }: { user: User }) {
   const { isMobile } = useSidebar();
   const router = useRouter();
+  const { profile } = useAuth();
+  const [accountDialogOpen, setAccountDialogOpen] = useState(false);
 
   const handleLogout = async () => {
     await logoutAction();
@@ -102,7 +106,7 @@ export function NavUser({ user }: { user: User }) {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setAccountDialogOpen(true)}>
                 <IconUserCircle />
                 Account
               </DropdownMenuItem>
@@ -121,6 +125,13 @@ export function NavUser({ user }: { user: User }) {
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
+
+      <AccountDetailDialog
+        open={accountDialogOpen}
+        onOpenChange={setAccountDialogOpen}
+        user={user}
+        profile={profile}
+      />
     </SidebarMenu>
   );
 }
