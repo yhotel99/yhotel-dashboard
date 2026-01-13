@@ -31,11 +31,13 @@ import { useRouter } from "next/navigation";
 import { DASHBOARD_URLS } from "@/lib/constants";
 import { useAuth } from "@/contexts/auth-context";
 import { AccountDetailDialog } from "@/components/users/account-detail-dialog";
+import { usePermissions } from "@/contexts/permissions-context";
 
 export function NavUser({ user }: { user: User }) {
   const { isMobile } = useSidebar();
   const router = useRouter();
   const { profile } = useAuth();
+  const { hasViewPermission } = usePermissions();
   const [accountDialogOpen, setAccountDialogOpen] = useState(false);
 
   const handleLogout = async () => {
@@ -110,12 +112,14 @@ export function NavUser({ user }: { user: User }) {
                 <IconUserCircle />
                 Account
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => router.push(DASHBOARD_URLS.SETTINGS)}
-              >
-                <IconCreditCard />
-                Settings
-              </DropdownMenuItem>
+              {hasViewPermission("settings") && (
+                <DropdownMenuItem
+                  onClick={() => router.push(DASHBOARD_URLS.SETTINGS)}
+                >
+                  <IconCreditCard />
+                  Settings
+                </DropdownMenuItem>
+              )}
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout}>

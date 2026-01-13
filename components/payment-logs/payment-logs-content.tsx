@@ -8,7 +8,6 @@ import { usePaymentLogs } from "@/hooks/use-payment-logs";
 import type { PaymentLogsResponse, PaymentLogWithBooking } from "@/lib/types";
 import { formatCurrency, formatDateOnly, formatDate } from "@/lib/functions";
 import { useDebounce } from "@/hooks/use-debounce";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -25,6 +24,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Eye } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { PaymentLogStatusBadge } from "./status";
 
 const createColumns = (): ColumnDef<PaymentLogWithBooking>[] => [
   {
@@ -102,13 +102,7 @@ const createColumns = (): ColumnDef<PaymentLogWithBooking>[] => [
     accessorKey: "status",
     header: "Trạng thái",
     cell: ({ row }) => {
-      const status = row.original.status;
-      if (!status) return "-";
-      return (
-        <Badge variant={status === "success" ? "default" : "secondary"}>
-          {status}
-        </Badge>
-      );
+      return <PaymentLogStatusBadge status={row.original.status} />;
     },
     size: 120,
     minSize: 100,
@@ -164,83 +158,87 @@ const createColumns = (): ColumnDef<PaymentLogWithBooking>[] => [
             </DialogHeader>
             <ScrollArea className="max-h-[80vh]">
               <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Mã Booking
-                  </p>
-                  <p className="text-sm">{log.booking_code || "-"}</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Mã Booking
+                    </p>
+                    <p className="text-sm">{log.booking_code || "-"}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Mã Giao Dịch
+                    </p>
+                    <p className="text-sm">{log.transaction_id || "-"}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Khách hàng
+                    </p>
+                    <p className="text-sm">
+                      {log.bookings?.customers?.full_name || "-"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Phòng
+                    </p>
+                    <p className="text-sm">
+                      {log.bookings?.rooms?.name || "-"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Số tiền
+                    </p>
+                    <p className="text-sm">
+                      {log.amount ? formatCurrency(log.amount) : "-"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Ngân hàng
+                    </p>
+                    <p className="text-sm">{log.bank_code || "-"}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Trạng thái
+                    </p>
+                    <div className="text-sm mt-1">
+                      <PaymentLogStatusBadge status={log.status} />
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Thời gian xử lý
+                    </p>
+                    <p className="text-sm">
+                      {log.processed_at ? formatDate(log.processed_at) : "-"}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Mã Giao Dịch
-                  </p>
-                  <p className="text-sm">{log.transaction_id || "-"}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Khách hàng
-                  </p>
-                  <p className="text-sm">
-                    {log.bookings?.customers?.full_name || "-"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Phòng
-                  </p>
-                  <p className="text-sm">{log.bookings?.rooms?.name || "-"}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Số tiền
-                  </p>
-                  <p className="text-sm">
-                    {log.amount ? formatCurrency(log.amount) : "-"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Ngân hàng
-                  </p>
-                  <p className="text-sm">{log.bank_code || "-"}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Trạng thái
-                  </p>
-                  <p className="text-sm">{log.status || "-"}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Thời gian xử lý
-                  </p>
-                  <p className="text-sm">
-                    {log.processed_at ? formatDate(log.processed_at) : "-"}
-                  </p>
-                </div>
+                {log.content && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-2">
+                      Nội dung
+                    </p>
+                    <p className="text-sm bg-muted p-3 rounded-md">
+                      {log.content}
+                    </p>
+                  </div>
+                )}
+                {log.raw_payload && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground mb-2">
+                      Raw Payload
+                    </p>
+                    <pre className="text-xs bg-muted p-3 rounded-md overflow-auto max-h-[300px]">
+                      {JSON.stringify(log.raw_payload, null, 2)}
+                    </pre>
+                  </div>
+                )}
               </div>
-              {log.content && (
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-2">
-                    Nội dung
-                  </p>
-                  <p className="text-sm bg-muted p-3 rounded-md">
-                    {log.content}
-                  </p>
-                </div>
-              )}
-              {log.raw_payload && (
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-2">
-                    Raw Payload
-                  </p>
-                  <pre className="text-xs bg-muted p-3 rounded-md overflow-auto max-h-[300px]">
-                    {JSON.stringify(log.raw_payload, null, 2)}
-                  </pre>
-                </div>
-              )}
-            </div>
             </ScrollArea>
           </DialogContent>
         </Dialog>

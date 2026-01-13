@@ -581,3 +581,11 @@ export type SettingsInput = {
   bank_bin?: string | null;
   bank_account_owner?: string | null;
 };
+
+
+export type PaymentLogStatus =
+| "processing"
+| "skipped"
+| "error"
+| "underpaid"
+| "success";

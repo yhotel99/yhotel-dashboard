@@ -23,6 +23,7 @@ import type { Profile } from "@/lib/types";
 import { formatDateOnly, generateGradient, getInitials } from "@/lib/functions";
 import { RoleBadge } from "./role-badge";
 import { StatusBadge } from "./status-badge";
+import { USER_ROLE } from "@/lib/constants";
 
 interface AccountDetailDialogProps {
   open: boolean;
@@ -171,12 +172,16 @@ export function AccountDetailDialog({
                       </p>
                     </div>
 
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium text-muted-foreground">
-                        User ID
-                      </label>
-                      <p className="text-base font-mono break-all">{user.id}</p>
-                    </div>
+                    {profile.role === USER_ROLE.ADMIN && (
+                      <div className="space-y-1">
+                        <label className="text-sm font-medium text-muted-foreground">
+                          User ID
+                        </label>
+                        <p className="text-base font-mono break-all">
+                          {user.id}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </>
