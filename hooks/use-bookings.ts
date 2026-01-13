@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR, { SWRConfiguration } from "swr";
-import type { BookingRecord, BookingsResponse, PaginationMeta } from "@/lib/types";
+import type { BookingsResponse } from "@/lib/types";
 import { fetcher } from "@/lib/fetcher";
 
 

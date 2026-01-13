@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
     if (search && search.trim() !== "") {
       const trimmedSearch = search.trim();
       query = query.or(
-        `reason.ilike.%${trimmedSearch}%,note.ilike.%${trimmedSearch}%`
+        `id.ilike.%${trimmedSearch}%,reason.ilike.%${trimmedSearch}%,note.ilike.%${trimmedSearch}%`
       );
     }
 

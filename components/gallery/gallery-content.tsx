@@ -33,6 +33,9 @@ import Image from "next/image";
 import type { PreviewItem } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
+const GALLERY_BUCKET = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET;
+const GALLERY_FOLDER = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_FOLDER;
+
 export function GalleryContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -61,8 +64,8 @@ export function GalleryContent() {
     isUploading: isUploadingFiles,
     uploadProgress,
   } = useStorage({
-    bucket: "yhotel",
-    folder: "gallery",
+    bucket: GALLERY_BUCKET,
+    folder: GALLERY_FOLDER,
   });
 
   // Update URL search params when pagination changes

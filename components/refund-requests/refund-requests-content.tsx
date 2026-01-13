@@ -303,9 +303,7 @@ const createColumns = (
               className="flex items-center justify-between gap-1.5 cursor-pointer hover:opacity-80 transition-opacity overflow-hidden"
               onClick={handleCopy}
             >
-              <span className="font-mono text-sm truncate uppercase">
-                {id.slice(0, 8)}
-              </span>
+              <span className="font-mono text-sm truncate uppercase">{id}</span>
               <Copy className="size-3 text-muted-foreground shrink-0" />
             </div>
           </TooltipTrigger>

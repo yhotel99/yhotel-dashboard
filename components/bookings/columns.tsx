@@ -53,7 +53,7 @@ export function createColumns(
           <Tooltip>
             <TooltipTrigger asChild>
               <div
-                className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity"
+                className="flex items-center justify-between cursor-pointer hover:opacity-80 transition-opacity"
                 onClick={handleCopy}
               >
                 <span className="font-semibold text-primary">

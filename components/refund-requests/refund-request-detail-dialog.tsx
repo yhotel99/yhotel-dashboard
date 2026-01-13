@@ -5,7 +5,7 @@ import {
   IconMessage,
   IconNotes,
   IconInfoCircle,
-  IconListDetails
+  IconListDetails,
 } from "@tabler/icons-react";
 import {
   Dialog,
@@ -50,7 +50,7 @@ export function RefundRequestDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="!max-w-3xl h-full flex flex-col">
+      <DialogContent className="!max-w-3xl flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <IconListDetails className="size-5" />
@@ -61,7 +61,7 @@ export function RefundRequestDetailDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 pr-4 max-h-[75vh]">
+        <ScrollArea className="flex-1 pr-4 max-h-[75vh] overflow-y-auto">
           <div className="space-y-6 pb-4">
             {/* Status & Amount */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-muted/50 p-4 rounded-lg">
