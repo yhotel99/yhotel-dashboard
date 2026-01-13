@@ -153,6 +153,15 @@ export function CreateBookingDialog({
     return 0;
   }, [selectedRoom, nights]);
 
+  // Check if room capacity is exceeded
+  const isOverCapacity = useMemo(() => {
+    if (selectedRoom && formValues.total_guests) {
+      const guests = Number(formValues.total_guests);
+      return guests > selectedRoom.max_guests;
+    }
+    return false;
+  }, [selectedRoom, formValues.total_guests]);
+
   // Auto-update total amount when room or dates change
   useEffect(() => {
     if (calculatedTotalAmount > 0) {
@@ -287,88 +296,100 @@ export function CreateBookingDialog({
     event.preventDefault();
     setError(null);
 
-    // Convert dates to ISO strings with default times
-    const checkInISO = getDateISO(formValues.check_in_date, false);
-    const checkOutISO = getDateISO(formValues.check_out_date, true);
-
-    if (!checkInISO || !checkOutISO) {
-      setError("Vui lòng nhập đầy đủ ngày check-in và check-out.");
-      return;
-    }
-
-    const number_of_nights = calculateNightsValue(checkInISO, checkOutISO);
-
-    if (number_of_nights <= 0) {
-      setError("Ngày check-out phải sau ngày check-in.");
-      return;
-    }
-
-    if (!formValues.room_id) {
-      setError("Vui lòng chọn phòng.");
-      return;
-    }
-
-    const totalGuests = Number(formValues.total_guests);
-    if (!Number.isFinite(totalGuests) || totalGuests < 1) {
-      setError("Số khách phải là số nguyên dương.");
-      return;
-    }
-
-    // Validate room exists
-    const selectedRoom = rooms.find((room) => room.id === formValues.room_id);
-    if (!selectedRoom) {
-      setError("Phòng đã chọn không tồn tại.");
-      return;
-    }
-
-    // Use total_amount from form (allows manual editing)
-    const totalAmount = Number(formValues.total_amount || 0);
-    if (!Number.isFinite(totalAmount) || totalAmount < 0) {
-      setError("Tổng tiền không hợp lệ.");
-      return;
-    }
-
-    // Validate advance_payment (parse from formatted string)
-    const advancePayment = parseFormattedNumber(
-      formValues.advance_payment || "0"
-    );
-    if (!Number.isFinite(advancePayment) || advancePayment < 0) {
-      setError("Tiền cọc phải là số không âm.");
-      return;
-    }
-
-    if (advancePayment > totalAmount) {
-      setError("Tiền cọc không được vượt quá tổng tiền.");
-      return;
-    }
-
-    if (!formValues.customer_id) {
-      setError("Vui lòng chọn khách hàng.");
-      return;
-    }
-
-    const payload: BookingInput = {
-      customer_id: formValues.customer_id,
-      room_id: formValues.room_id,
-      check_in: checkInISO,
-      check_out: checkOutISO,
-      number_of_nights,
-      total_guests: totalGuests,
-      notes: formValues.notes.trim() || null,
-      total_amount: totalAmount,
-      advance_payment: advancePayment,
-    };
-
     try {
+      // Validation cơ bản trước khi xử lý dữ liệu
+      if (!formValues.customer_id || !selectedCustomer) {
+        setError("👤 Vui lòng chọn khách hàng trước khi tạo booking.");
+        return;
+      }
+
+      if (!formValues.room_id) {
+        setError("🏠 Vui lòng chọn phòng trước khi tạo booking.");
+        return;
+      }
+
+      if (!formValues.check_in_date || !formValues.check_out_date) {
+        setError("📅 Vui lòng chọn đầy đủ ngày nhận phòng và trả phòng.");
+        return;
+      }
+
+      // Convert dates to ISO strings with default times
+      const checkInISO = getDateISO(formValues.check_in_date, false);
+      const checkOutISO = getDateISO(formValues.check_out_date, true);
+
+      if (!checkInISO || !checkOutISO) {
+        setError("📅 Định dạng ngày tháng không hợp lệ. Vui lòng chọn lại.");
+        return;
+      }
+
+      const number_of_nights = calculateNightsValue(checkInISO, checkOutISO);
+
+      if (number_of_nights <= 0) {
+        setError("📅 Ngày trả phòng phải sau ngày nhận phòng ít nhất 1 ngày.");
+        return;
+      }
+
+      // Validate room exists and is available
+      const selectedRoom = rooms.find((room) => room.id === formValues.room_id);
+      if (!selectedRoom) {
+        setError("🏠 Phòng đã chọn không tồn tại hoặc không khả dụng.");
+        return;
+      }
+
+      const totalGuests = Number(formValues.total_guests);
+      if (!Number.isFinite(totalGuests) || totalGuests < 1) {
+        setError("👥 Số lượng khách phải từ 1 người trở lên.");
+        return;
+      }
+
+      if (totalGuests > selectedRoom.max_guests) {
+        setError(`👥 Phòng này chỉ cho phép tối đa ${selectedRoom.max_guests} khách. Vui lòng chọn phòng khác hoặc giảm số khách.`);
+        return;
+      }
+
+      // Validate total amount
+      const totalAmount = Number(formValues.total_amount || 0);
+      if (!Number.isFinite(totalAmount) || totalAmount <= 0) {
+        setError("💰 Tổng tiền phải lớn hơn 0. Vui lòng kiểm tra giá phòng.");
+        return;
+      }
+
+      // Validate advance payment
+      const advancePayment = parseFormattedNumber(
+        formValues.advance_payment || "0"
+      );
+      if (!Number.isFinite(advancePayment) || advancePayment < 0) {
+        setError("💰 Tiền cọc phải là số không âm.");
+        return;
+      }
+
+      if (advancePayment > totalAmount) {
+        setError("💰 Tiền cọc không được vượt quá tổng tiền phòng.");
+        return;
+      }
+
+      const payload: BookingInput = {
+        customer_id: formValues.customer_id,
+        room_id: formValues.room_id,
+        check_in: checkInISO,
+        check_out: checkOutISO,
+        number_of_nights,
+        total_guests: totalGuests,
+        notes: formValues.notes.trim() || null,
+        total_amount: totalAmount,
+        advance_payment: advancePayment,
+      };
+
       setIsSubmitting(true);
       await onCreate(payload);
       resetForm();
       onOpenChange(false);
     } catch (err) {
-      const rawMessage =
-        err instanceof Error ? err.message : "Không thể tạo booking";
+      console.error("Booking creation error:", err);
 
-      // Translate error messages
+      const rawMessage = err instanceof Error ? err.message : "Không thể tạo booking";
+
+      // Translate error messages to user-friendly format
       const message = translateBookingError(rawMessage);
       setError(message);
       setIsSubmitting(false);
@@ -507,7 +528,18 @@ export function CreateBookingDialog({
                 min={1}
                 value={formValues.total_guests}
                 onChange={handleInputChange("total_guests")}
+                className={isOverCapacity ? "border-destructive" : ""}
               />
+              {selectedRoom && (
+                <p className="text-xs text-muted-foreground">
+                  Phòng này cho phép tối đa {selectedRoom.max_guests} khách
+                  {isOverCapacity && (
+                    <span className="text-destructive font-medium">
+                      {" "}• Vượt quá sức chứa!
+                    </span>
+                  )}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">

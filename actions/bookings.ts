@@ -17,6 +17,15 @@ import { formatDateTimePretty } from "@/lib/functions";
  */
 async function createBookingSecure(input: BookingInput): Promise<string> {
   try {
+    console.log("Creating booking with data:", {
+      customer_id: input.customer_id,
+      room_id: input.room_id,
+      check_in: input.check_in,
+      check_out: input.check_out,
+      total_amount: input.total_amount,
+      advance_payment: input.advance_payment,
+    });
+
     const supabase = await createClient();
     const { data: bookingId, error } = await supabase.rpc(
       "create_booking_secure",
@@ -35,16 +44,18 @@ async function createBookingSecure(input: BookingInput): Promise<string> {
     );
 
     if (error) {
+      console.error("Database error creating booking:", error);
       throw new Error(error.message);
     }
 
     if (!bookingId) {
-      throw new Error("Không thể tạo booking");
+      throw new Error("Không thể tạo booking - không nhận được ID booking");
     }
 
+    console.log("Booking created successfully with ID:", bookingId);
     return bookingId;
   } catch (err) {
-    console.error("Error creating booking:", err);
+    console.error("Error in createBookingSecure:", err);
     throw err;
   }
 }
@@ -131,16 +142,34 @@ async function updateBookingStatusInternal(
  */
 export async function createBooking(input: BookingInput) {
   try {
+    console.log("Starting booking creation process...");
+
+    // Validate input data
+    if (!input.customer_id) {
+      throw new Error("customer_id is required");
+    }
+    if (!input.room_id) {
+      throw new Error("room_id is required");
+    }
+    if (!input.check_in || !input.check_out) {
+      throw new Error("check_in and check_out dates are required");
+    }
+    if (input.total_amount <= 0) {
+      throw new Error("total_amount must be greater than 0");
+    }
+
     // Create booking using secure RPC function
     const bookingId = await createBookingSecure(input);
 
     // Revalidate bookings page after creating
     revalidatePath("/dashboard/bookings");
 
+    console.log("Booking creation completed successfully");
     return bookingId;
   } catch (err) {
+    console.error("Error in createBooking:", err);
     const errorMessage =
-      err instanceof Error ? err.message : "Không thể tạo booking";
+      err instanceof Error ? err.message : "Lỗi hệ thống không xác định";
     throw new Error(errorMessage);
   }
 }

@@ -180,21 +180,60 @@ export function formatTimeForInput(
  * @returns Translated error message
  */
 export function translateBookingError(rawMessage: string): string {
+  // Lỗi về phòng không khả dụng
   if (
     rawMessage.includes("Room is not available for the selected date/time") ||
-    rawMessage.includes(
-      'conflicting key value violates exclusion constraint "bookings_no_overlap"'
-    )
+    rawMessage.includes('conflicting key value violates exclusion constraint "bookings_no_overlap"')
   ) {
-    return "Phòng không khả dụng cho khoảng thời gian đã chọn. Vui lòng chọn phòng hoặc thời gian khác.";
+    return "🚫 Phòng này đã có người đặt trong khoảng thời gian bạn chọn. Vui lòng chọn phòng khác hoặc thay đổi thời gian.";
   }
+
+  // Lỗi về ngày tháng
   if (rawMessage.includes("check_out must be later than check_in")) {
-    return "Ngày check-out phải sau ngày check-in.";
+    return "📅 Ngày trả phòng phải sau ngày nhận phòng. Vui lòng kiểm tra lại lịch đặt.";
   }
   if (rawMessage.includes("number_of_nights must be greater than 0")) {
-    return "Số đêm phải lớn hơn 0.";
+    return "📅 Số đêm lưu trú phải lớn hơn 0. Vui lòng kiểm tra ngày nhận/trả phòng.";
   }
-  return rawMessage;
+
+  // Lỗi về số tiền
+  if (rawMessage.includes("amount must be >= 0")) {
+    return "💰 Số tiền phải lớn hơn hoặc bằng 0. Vui lòng kiểm tra lại tổng tiền và tiền cọc.";
+  }
+  if (rawMessage.includes("advance_payment cannot exceed total_amount")) {
+    return "💰 Tiền cọc không được vượt quá tổng tiền phòng. Vui lòng giảm tiền cọc hoặc tăng tổng tiền.";
+  }
+
+  // Lỗi về dữ liệu không tồn tại
+  if (rawMessage.includes("Customer not found") || rawMessage.includes("customer_id")) {
+    return "👤 Khách hàng không tồn tại. Vui lòng chọn khách hàng khác.";
+  }
+  if (rawMessage.includes("Room not found") || rawMessage.includes("room_id")) {
+    return "🏠 Phòng không tồn tại. Vui lòng chọn phòng khác.";
+  }
+
+  // Lỗi về quyền truy cập
+  if (rawMessage.includes("permission denied") || rawMessage.includes("access denied")) {
+    return "🔒 Bạn không có quyền thực hiện thao tác này. Vui lòng liên hệ quản trị viên.";
+  }
+
+  // Lỗi về kết nối database
+  if (rawMessage.includes("connection") || rawMessage.includes("timeout")) {
+    return "🌐 Lỗi kết nối mạng. Vui lòng thử lại sau.";
+  }
+
+  // Lỗi chung về dữ liệu không hợp lệ
+  if (rawMessage.includes("invalid") || rawMessage.includes("null value")) {
+    return "⚠️ Dữ liệu nhập không hợp lệ. Vui lòng kiểm tra lại thông tin.";
+  }
+
+  // Lỗi hệ thống
+  if (rawMessage.includes("internal error") || rawMessage.includes("unexpected error")) {
+    return "🚨 Lỗi hệ thống. Vui lòng thử lại hoặc liên hệ bộ phận kỹ thuật.";
+  }
+
+  // Nếu không match được lỗi nào, trả về message gốc nhưng làm cho nó thân thiện hơn
+  return `❌ Có lỗi xảy ra: ${rawMessage}. Vui lòng thử lại hoặc liên hệ hỗ trợ.`;
 }
 
 /**

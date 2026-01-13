@@ -123,16 +123,30 @@ export function BookingsContent({
     async (input: BookingInput) => {
       try {
         await createBookingAction(input);
-        toast.success("Đã tạo booking thành công");
+        toast.success("✅ Đã tạo booking thành công!", {
+          position: "top-center",
+          duration: 3000,
+        });
         await mutate();
       } catch (err) {
+        console.error("Booking creation failed:", err);
         const rawMessage =
           err instanceof Error ? err.message : "Không thể tạo booking";
+
         // Translate error message for toast
         const translatedMessage = translateBookingError(rawMessage);
+
         toast.error(translatedMessage, {
           position: "top-center",
+          duration: 5000, // Hiển thị lâu hơn để người dùng đọc
+          action: {
+            label: "Đóng",
+            onClick: () => {},
+          },
         });
+
+        // Re-throw error để dialog có thể hiển thị error nếu cần
+        throw err;
       }
     },
     [mutate]
