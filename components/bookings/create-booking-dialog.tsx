@@ -343,7 +343,9 @@ export function CreateBookingDialog({
       }
 
       if (totalGuests > selectedRoom.max_guests) {
-        setError(`👥 Phòng này chỉ cho phép tối đa ${selectedRoom.max_guests} khách. Vui lòng chọn phòng khác hoặc giảm số khách.`);
+        setError(
+          `👥 Phòng này chỉ cho phép tối đa ${selectedRoom.max_guests} khách. Vui lòng chọn phòng khác hoặc giảm số khách.`
+        );
         return;
       }
 
@@ -387,7 +389,8 @@ export function CreateBookingDialog({
     } catch (err) {
       console.error("Booking creation error:", err);
 
-      const rawMessage = err instanceof Error ? err.message : "Không thể tạo booking";
+      const rawMessage =
+        err instanceof Error ? err.message : "Không thể tạo booking";
 
       // Translate error messages to user-friendly format
       const message = translateBookingError(rawMessage);
@@ -535,7 +538,8 @@ export function CreateBookingDialog({
                   Phòng này cho phép tối đa {selectedRoom.max_guests} khách
                   {isOverCapacity && (
                     <span className="text-destructive font-medium">
-                      {" "}• Vượt quá sức chứa!
+                      {" "}
+                      • Vượt quá sức chứa!
                     </span>
                   )}
                 </p>
@@ -562,6 +566,11 @@ export function CreateBookingDialog({
                         : undefined
                     }
                     onSelect={handleDateSelect("check_in_date")}
+                    disabled={(date) => {
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      return date < today;
+                    }}
                   />
                 </PopoverContent>
               </Popover>
@@ -590,6 +599,10 @@ export function CreateBookingDialog({
                         : undefined
                     }
                     onSelect={handleDateSelect("check_out_date")}
+                    disabled={(date) => {
+                      const checkIn = parseISO(formValues.check_in_date);
+                      return date <= checkIn;
+                    }}
                   />
                 </PopoverContent>
               </Popover>
@@ -666,12 +679,12 @@ export function CreateBookingDialog({
           open={isCreateCustomerDialogOpen}
           onOpenChange={setIsCreateCustomerDialogOpen}
           onCreate={async (input) => {
-            try {
-              const newCustomer = await createCustomerAction(input);
-              handleCreateCustomerSuccess(newCustomer);
-            } catch (err) {
+            const result = await createCustomerAction(input);
+            if (result.ok) {
+              handleCreateCustomerSuccess(result.data);
+            } else {
               // Error is handled by CreateCustomerDialog
-              throw err;
+              throw new Error(result.message);
             }
           }}
         />

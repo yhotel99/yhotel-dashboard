@@ -61,27 +61,21 @@ export function CheckoutDialog({
   const fetchBookingDetails = async () => {
     if (!room.currentBooking?.id) return;
 
-    try {
-      setIsLoading(true);
-      const bookingData = await getBookingByIdForCheckoutAction(
-        room.currentBooking.id
-      );
+    setIsLoading(true);
+    const result = await getBookingByIdForCheckoutAction(
+      room.currentBooking.id
+    );
 
-      if (bookingData) {
-        setBooking(bookingData);
-      } else {
-        setBooking(null);
-      }
-    } catch (error) {
+    if (result.ok) {
+      setBooking(result.data);
+    } else {
       toast.error("Không thể tải thông tin booking", {
-        description:
-          error instanceof Error
-            ? error.message
-            : "Có lỗi xảy ra khi tải thông tin",
+        description: result.message,
       });
-    } finally {
-      setIsLoading(false);
+      setBooking(null);
     }
+
+    setIsLoading(false);
   };
 
   // Fetch booking details when dialog opens

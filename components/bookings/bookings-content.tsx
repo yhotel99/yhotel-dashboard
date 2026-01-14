@@ -121,20 +121,13 @@ export function BookingsContent({
 
   const handleCreate = React.useCallback(
     async (input: BookingInput) => {
-      try {
-        await createBookingAction(input);
-        toast.success("✅ Đã tạo booking thành công!", {
-          position: "top-center",
-          duration: 3000,
-        });
-        await mutate();
-      } catch (err) {
-        console.error("Booking creation failed:", err);
-        const rawMessage =
-          err instanceof Error ? err.message : "Không thể tạo booking";
+      const result = await createBookingAction(input);
+
+      if (!result.ok) {
+        console.error("Booking creation failed:", result.message);
 
         // Translate error message for toast
-        const translatedMessage = translateBookingError(rawMessage);
+        const translatedMessage = translateBookingError(result.message);
 
         toast.error(translatedMessage, {
           position: "top-center",
@@ -145,9 +138,15 @@ export function BookingsContent({
           },
         });
 
-        // Re-throw error để dialog có thể hiển thị error nếu cần
-        throw err;
+        // Throw error để dialog có thể hiển thị error nếu cần
+        throw new Error(result.message);
       }
+
+      toast.success("✅ Đã tạo booking thành công!", {
+        position: "top-center",
+        duration: 3000,
+      });
+      await mutate();
     },
     [mutate]
   );

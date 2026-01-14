@@ -428,12 +428,12 @@ export function QuickBookingDialog({
           open={isCreateCustomerDialogOpen}
           onOpenChange={setIsCreateCustomerDialogOpen}
           onCreate={async (input) => {
-            try {
-              const newCustomer = await createCustomerAction(input);
-              handleCreateCustomerSuccess(newCustomer);
-            } catch (err) {
+            const result = await createCustomerAction(input);
+            if (result.ok) {
+              handleCreateCustomerSuccess(result.data);
+            } else {
               // Error is handled by CreateCustomerDialog
-              throw err;
+              throw new Error(result.message);
             }
           }}
         />

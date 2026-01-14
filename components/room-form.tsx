@@ -8,7 +8,6 @@ import {
   createRoom as createRoomAction,
   updateRoom as updateRoomAction,
 } from "@/actions/rooms";
-
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -43,6 +42,7 @@ import {
   roomStatusLabels,
 } from "@/lib/constants";
 import { MultiSelect } from "@/components/multi-select";
+import { mutate } from "swr";
 
 // Room type enum matching database
 export const roomTypeEnum = [
@@ -188,6 +188,7 @@ export function RoomForm({
         toast.success("Cập nhật phòng thành công!", {
           description: `Phòng ${roomData.name} đã được cập nhật thành công.`,
         });
+        mutate(["room", roomId]);
       } else {
         // Create room with images
         await createRoomAction(
@@ -198,6 +199,7 @@ export function RoomForm({
         toast.success("Tạo phòng thành công!", {
           description: `Phòng ${roomData.name} đã được tạo thành công.`,
         });
+        mutate(["rooms"]);
       }
 
       // Redirect to rooms page

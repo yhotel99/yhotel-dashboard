@@ -366,3 +366,22 @@ export function formatDateTimePretty(isoString: string, options: {
   // Format mặc định (full)
   return showIcons ? `⏰ ${timeStr} | 📅 ${dateStr}` : `${timeStr} | ${dateStr}`;
 }
+
+
+
+export function mapBookingError(code: string): string {
+ switch (code) {
+   case "ROOM_NOT_AVAILABLE":
+     return "Phòng đã được đặt trong thời gian này";
+   case "INVALID_DATE_RANGE":
+     return "Ngày check-out phải sau check-in";
+   case "INVALID_NIGHTS":
+     return "Số đêm không hợp lệ";
+   case "INVALID_AMOUNT":
+     return "Số tiền không hợp lệ";
+   case "ADVANCE_EXCEEDS_TOTAL":
+     return "Tiền cọc không được lớn hơn tổng tiền";
+   default:
+     return "Không thể tạo booking";
+ }
+}

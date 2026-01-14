@@ -41,21 +41,22 @@ export function BookingNotesDialog({
   const handleSave = async () => {
     if (!booking) return;
 
-    try {
-      setIsSaving(true);
-      const updatedBooking = await updateBookingAction(booking.id, {
-        notes: notes.trim() || null,
-      });
-      onSave(updatedBooking);
+    setIsSaving(true);
+    const result = await updateBookingAction(booking.id, {
+      notes: notes.trim() || null,
+    });
+
+    if (result.ok) {
+      onSave(result.data);
       toast.success("Đã lưu ghi chú");
       onOpenChange(false);
-    } catch (error) {
+    } else {
       toast.error("Không thể lưu ghi chú", {
-        description: error instanceof Error ? error.message : "Có lỗi xảy ra",
+        description: result.message,
       });
-    } finally {
-      setIsSaving(false);
     }
+
+    setIsSaving(false);
   };
 
   return (

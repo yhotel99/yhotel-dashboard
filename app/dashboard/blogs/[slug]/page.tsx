@@ -73,8 +73,12 @@ export default function ViewBlogPage() {
     const fetchBlog = async () => {
       if (!slug) return;
       setIsLoading(true);
-      const blogData = await getBlogBySlugAction(slug);
-      setBlog(blogData);
+      const result = await getBlogBySlugAction(slug);
+      if (result.ok) {
+        setBlog(result.data);
+      } else {
+        setBlog(null);
+      }
       setIsLoading(false);
     };
 

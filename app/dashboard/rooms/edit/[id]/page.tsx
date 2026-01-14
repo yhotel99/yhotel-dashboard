@@ -1,9 +1,8 @@
 "use client";
 
 import { useRouter, useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import useSWR from "swr";
 import { IconArrowLeft } from "@tabler/icons-react";
-
 import { Button } from "@/components/ui/button";
 import { RoomForm, type RoomFormValues } from "@/components/room-form";
 import { getRoomById } from "@/actions/rooms";
@@ -13,20 +12,23 @@ export default function EditRoomPage() {
   const router = useRouter();
   const params = useParams();
   const roomId = params.id as string;
-  const [room, setRoom] = useState<RoomWithImages | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchRoom = async () => {
-      if (!roomId) return;
-      setIsLoading(true);
-      const roomData = await getRoomById(roomId);
-      setRoom(roomData);
-      setIsLoading(false);
-    };
-
-    fetchRoom();
-  }, [roomId]);
+  const { data: room, isLoading } = useSWR<RoomWithImages>(
+    roomId ? [`room`, roomId] : null,
+    async (key) => {
+      const [, id] = key as [string, string];
+      const result = await getRoomById(id);
+      if (result.ok) {
+        return result.data;
+      }
+      throw new Error(result.message);
+    },
+    {
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      revalidateOnMount: true,
+    }
+  );
 
   const defaultValues: Partial<RoomFormValues> | undefined = room
     ? {

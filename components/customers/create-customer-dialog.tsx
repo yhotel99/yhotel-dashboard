@@ -19,12 +19,13 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { CustomerInput } from "@/lib/types";
+import type { CustomerInput, CustomerType } from "@/lib/types";
 import { toast } from "sonner";
 import { translateCustomerError } from "@/lib/functions";
 import {
   CUSTOMER_ERROR_PATTERNS,
   CUSTOMER_SOURCE,
+  CUSTOMER_TYPE,
   customerSourceLabels,
 } from "@/lib/constants";
 import {
@@ -41,7 +42,7 @@ type CreateCustomerFormState = {
   phone: string;
   nationality: string;
   id_card: string;
-  customer_type: "regular" | "vip" | "blacklist";
+  customer_type: CustomerType;
   date_of_birth: string;
   source: string;
 };
@@ -52,7 +53,7 @@ const initialCreateCustomerState: CreateCustomerFormState = {
   phone: "",
   nationality: "",
   id_card: "",
-  customer_type: "regular",
+  customer_type: CUSTOMER_TYPE.REGULAR,
   date_of_birth: "",
   source: "",
 };
@@ -277,6 +278,7 @@ export function CreateCustomerDialog({
                 </PopoverTrigger>
                 <PopoverContent align="start" className="w-auto p-2">
                   <Calendar
+                    key={formValues.date_of_birth || "default"}
                     mode="single"
                     selected={
                       formValues.date_of_birth
@@ -285,6 +287,17 @@ export function CreateCustomerDialog({
                     }
                     onSelect={handleDateSelect("date_of_birth")}
                     captionLayout="dropdown"
+                    defaultMonth={
+                      formValues.date_of_birth
+                        ? (() => {
+                            try {
+                              return parseISO(formValues.date_of_birth);
+                            } catch {
+                              return new Date();
+                            }
+                          })()
+                        : new Date()
+                    }
                   />
                 </PopoverContent>
               </Popover>

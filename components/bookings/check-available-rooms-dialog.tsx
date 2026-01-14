@@ -61,24 +61,23 @@ export function CheckAvailableRoomsDialog({
       return;
     }
 
-    try {
-      setIsLoading(true);
-      setHasSearched(true);
-      const rooms = await getAvailableRoomsAction(checkInISO, checkOutISO);
-      setAvailableRooms(rooms);
-      if (rooms.length === 0) {
+    setIsLoading(true);
+    setHasSearched(true);
+    const result = await getAvailableRoomsAction(checkInISO, checkOutISO);
+
+    if (result.ok) {
+      setAvailableRooms(result.data);
+      if (result.data.length === 0) {
         toast.info("Không có phòng trống trong khoảng thời gian này");
       } else {
-        toast.success(`Tìm thấy ${rooms.length} phòng trống`);
+        toast.success(`Tìm thấy ${result.data.length} phòng trống`);
       }
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Không thể tìm phòng trống";
-      toast.error(errorMessage);
+    } else {
+      toast.error(result.message);
       setAvailableRooms([]);
-    } finally {
-      setIsLoading(false);
     }
+
+    setIsLoading(false);
   };
 
   const handleOpenChange = (newOpen: boolean) => {

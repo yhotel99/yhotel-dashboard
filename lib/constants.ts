@@ -492,3 +492,10 @@ export const DASHBOARD_URLS = {
   BLOGS: "/dashboard/blogs",
   SETTINGS: "/dashboard/settings",
 } as const;
+
+
+export const CUSTOMER_TYPE = {
+  REGULAR: "regular",
+  VIP: "vip",
+  BLACKLIST: "blacklist",
+} as const;

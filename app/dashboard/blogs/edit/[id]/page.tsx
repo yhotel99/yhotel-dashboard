@@ -20,8 +20,12 @@ export default function EditBlogPage() {
     const fetchBlog = async () => {
       if (!blogId) return;
       setIsLoading(true);
-      const blogData = await getBlogByIdAction(blogId);
-      setBlog(blogData);
+      const result = await getBlogByIdAction(blogId);
+      if (result.ok) {
+        setBlog(result.data);
+      } else {
+        setBlog(null);
+      }
       setIsLoading(false);
     };
 

@@ -8,32 +8,19 @@ import type {
   ImageValue,
   RoomWithImages,
   Room,
+  RoomFromRPC,
+  RoomImageWithData,
+  RoomImageInput,
+  Result,
+  ResultVoid,
 } from "@/lib/types";
 
-/**
- * Get available rooms for a date range
- * @param checkIn - Check-in date (ISO string)
- * @param checkOut - Check-out date (ISO string)
- * @returns Array of available rooms
- */
-type RoomFromRPC = {
-  id: string;
-  name: string;
-  description: string | null;
-  room_type: Room["room_type"];
-  price_per_night: string | number;
-  max_guests: number;
-  amenities: string[] | unknown;
-  status: Room["status"];
-  deleted_at: string | null;
-  created_at: string;
-  updated_at: string;
-};
+
 
 export async function getAvailableRoomsAction(
   checkIn: string,
   checkOut: string
-): Promise<Room[]> {
+): Promise<Result<Room[]>> {
   try {
     const supabase = await createClient();
     // Use type assertion to bypass Supabase type checking
@@ -43,7 +30,10 @@ export async function getAvailableRoomsAction(
     })) as { data: RoomFromRPC[] | null; error: { message: string } | null };
 
     if (error) {
-      throw new Error(error.message);
+      return {
+        ok: false,
+        message: error.message || "Không thể lấy danh sách phòng trống",
+      };
     }
 
     // Cast to expected type and map to Room type
@@ -65,10 +55,16 @@ export async function getAvailableRoomsAction(
       updated_at: room.updated_at,
     }));
 
-    return rooms;
+    return {
+      ok: true,
+      data: rooms,
+    };
   } catch (err) {
     console.error("Error getting available rooms:", err);
-    throw err;
+    return {
+      ok: false,
+      message: "Không thể lấy danh sách phòng trống",
+    };
   }
 }
 
@@ -82,7 +78,7 @@ export async function createRoom(
   input: RoomInput,
   thumbnail?: ImageValue,
   imageList?: ImageValue[]
-) {
+): Promise<ResultVoid> {
   try {
     const supabase = await createClient();
 
@@ -93,18 +89,16 @@ export async function createRoom(
       .single();
 
     if (error) {
-      throw new Error(error.message);
+      return {
+        ok: false,
+        message: error.message || "Không thể tạo phòng",
+      };
     }
 
     const roomId = data.id;
 
     // Create room_images records
-    const roomImagesToInsert: Array<{
-      room_id: string;
-      image_id: string;
-      position: number;
-      is_main: boolean;
-    }> = [];
+    const roomImagesToInsert: RoomImageInput[] = [];
 
     // Handle thumbnail (main image)
     if (thumbnail?.id) {
@@ -137,16 +131,20 @@ export async function createRoom(
 
       if (roomImagesError) {
         console.warn("Failed to insert room_images:", roomImagesError);
-        // Don't throw error, room is already created
+        // Don't return error, room is already created
       }
     }
 
     // Revalidate rooms page after creating
     revalidatePath("/dashboard/rooms");
+    return { ok: true };
   } catch (err) {
     const errorMessage =
       err instanceof Error ? err.message : "Không thể tạo phòng";
-    throw new Error(errorMessage);
+    return {
+      ok: false,
+      message: errorMessage,
+    };
   }
 }
 
@@ -162,7 +160,7 @@ export async function updateRoom(
   input: Partial<RoomInput>,
   thumbnail?: ImageValue,
   imageList?: ImageValue[]
-) {
+): Promise<ResultVoid> {
   try {
     const supabase = await createClient();
 
@@ -170,7 +168,10 @@ export async function updateRoom(
     const { error } = await supabase.from("rooms").update(input).eq("id", id);
 
     if (error) {
-      throw new Error(error.message);
+      return {
+        ok: false,
+        message: error.message || "Không thể cập nhật phòng",
+      };
     }
 
     // Only update images if thumbnail or imageList is provided
@@ -189,12 +190,7 @@ export async function updateRoom(
       }
 
       // Create new room_images records
-      const roomImagesToInsert: Array<{
-        room_id: string;
-        image_id: string;
-        position: number;
-        is_main: boolean;
-      }> = [];
+      const roomImagesToInsert: RoomImageInput[] = [];
 
       // Handle thumbnail (main image) - only if provided
       if (thumbnail?.id) {
@@ -227,17 +223,21 @@ export async function updateRoom(
 
         if (roomImagesError) {
           console.warn("Failed to insert room_images:", roomImagesError);
-          // Don't throw error, room is already updated
+          // Don't return error, room is already updated
         }
       }
     }
 
     // Revalidate rooms page after updating
     revalidatePath("/dashboard/rooms");
+    return { ok: true };
   } catch (err) {
     const errorMessage =
       err instanceof Error ? err.message : "Không thể cập nhật phòng";
-    throw new Error(errorMessage);
+    return {
+      ok: false,
+      message: errorMessage,
+    };
   }
 }
 
@@ -246,7 +246,10 @@ export async function updateRoom(
  * @param id - Room ID
  * @param status - New status
  */
-export async function updateRoomStatus(id: string, status: RoomStatus) {
+export async function updateRoomStatus(
+  id: string,
+  status: RoomStatus
+): Promise<ResultVoid> {
   try {
     const supabase = await createClient();
 
@@ -256,17 +259,24 @@ export async function updateRoomStatus(id: string, status: RoomStatus) {
       .eq("id", id);
 
     if (error) {
-      throw new Error(error.message);
+      return {
+        ok: false,
+        message: error.message || "Không thể cập nhật trạng thái phòng",
+      };
     }
 
     // Revalidate rooms page after updating status
     revalidatePath("/dashboard/rooms");
+    return { ok: true };
   } catch (err) {
     const errorMessage =
       err instanceof Error
         ? err.message
         : "Không thể cập nhật trạng thái phòng";
-    throw new Error(errorMessage);
+    return {
+      ok: false,
+      message: errorMessage,
+    };
   }
 }
 
@@ -274,7 +284,7 @@ export async function updateRoomStatus(id: string, status: RoomStatus) {
  * Delete room (soft delete)
  * @param id - Room ID
  */
-export async function deleteRoom(id: string) {
+export async function deleteRoom(id: string): Promise<ResultVoid> {
   try {
     const supabase = await createClient();
     const { error } = await supabase
@@ -283,15 +293,22 @@ export async function deleteRoom(id: string) {
       .eq("id", id);
 
     if (error) {
-      throw new Error(error.message);
+      return {
+        ok: false,
+        message: error.message || "Không thể xóa phòng",
+      };
     }
 
     // Revalidate rooms page after deleting
     revalidatePath("/dashboard/rooms");
+    return { ok: true };
   } catch (err) {
     const errorMessage =
       err instanceof Error ? err.message : "Không thể xóa phòng";
-    throw new Error(errorMessage);
+    return {
+      ok: false,
+      message: errorMessage,
+    };
   }
 }
 
@@ -300,7 +317,9 @@ export async function deleteRoom(id: string) {
  * @param id - Room ID
  * @returns Room with images or null
  */
-export async function getRoomById(id: string): Promise<RoomWithImages | null> {
+export async function getRoomById(
+  id: string
+): Promise<Result<RoomWithImages>> {
   try {
     const supabase = await createClient();
 
@@ -326,22 +345,17 @@ export async function getRoomById(id: string): Promise<RoomWithImages | null> {
       .single();
 
     if (error || !data) {
-      return null;
+      return {
+        ok: false,
+        message: "Không tìm thấy phòng",
+      };
     }
 
     const roomData = {
       ...data,
       amenities: Array.isArray(data.amenities) ? data.amenities : [],
     } as Room & {
-      room_images?: Array<{
-        image_id: string;
-        is_main: boolean;
-        position: number;
-        images: {
-          id: string;
-          url: string;
-        } | null;
-      }>;
+      room_images?: RoomImageWithData[];
     };
 
     // Process room_images to extract thumbnail and images
@@ -377,11 +391,18 @@ export async function getRoomById(id: string): Promise<RoomWithImages | null> {
     const { room_images, ...roomWithoutImages } = roomData;
 
     return {
-      ...(roomWithoutImages as Room),
-      thumbnail,
-      images,
-    } as RoomWithImages;
-  } catch {
-    return null;
+      ok: true,
+      data: {
+        ...(roomWithoutImages as Room),
+        thumbnail,
+        images,
+      } as RoomWithImages,
+    };
+  } catch (err) {
+    console.error("Error fetching room by ID:", err);
+    return {
+      ok: false,
+      message: "Không thể lấy thông tin phòng",
+    };
   }
 }

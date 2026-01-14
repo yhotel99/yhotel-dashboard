@@ -2,6 +2,37 @@
 import type { RoomMapStatus } from "@/lib/constants";
 
 // ============================================================================
+// Result Types (for error handling without throwing)
+// ============================================================================
+
+/**
+ * Error result type (reusable)
+ */
+export type ResultError = { ok: false; message: string };
+
+/**
+ * Success result type with data
+ * @template T - The data type returned on success
+ */
+export type ResultSuccess<T> = { ok: true; data: T };
+
+/**
+ * Success result type without data (void operations)
+ */
+export type ResultSuccessVoid = { ok: true };
+
+/**
+ * Result type for operations that return data
+ * @template T - The data type returned on success
+ */
+export type Result<T> = ResultSuccess<T> | ResultError;
+
+/**
+ * Result type for operations that don't return data (void operations)
+ */
+export type ResultVoid = ResultSuccessVoid | ResultError;
+
+// ============================================================================
 // User & Profile Types
 // ============================================================================
 
@@ -75,6 +106,17 @@ export type ImageValue = {
 export type GalleryImage = {
   id: string;
   url: string;
+};
+
+// Room image with nested image data (from database query)
+export type RoomImageWithData = {
+  image_id: string;
+  is_main: boolean;
+  position: number;
+  images: {
+    id: string;
+    url: string;
+  } | null;
 };
 
 // Extended room type with images
@@ -589,3 +631,31 @@ export type PaymentLogStatus =
 | "error"
 | "underpaid"
 | "success";
+
+/**
+ * Get available rooms for a date range
+ * @param checkIn - Check-in date (ISO string)
+ * @param checkOut - Check-out date (ISO string)
+ * @returns Array of available rooms
+ */
+export type RoomFromRPC = {
+  id: string;
+  name: string;
+  description: string | null;
+  room_type: Room["room_type"];
+  price_per_night: string | number;
+  max_guests: number;
+  amenities: string[] | unknown;
+  status: Room["status"];
+  deleted_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+
+export type RoomImageInput = {
+  room_id: string;
+  image_id: string;
+  position: number;
+  is_main: boolean;
+};
