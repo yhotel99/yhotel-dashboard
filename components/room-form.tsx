@@ -33,8 +33,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Textarea } from "@/components/ui/textarea";
 import { ImageSelector, ImageListSelector } from "@/components/image-selector";
+import { RoomDescriptionEditor } from "@/components/room-description-editor";
 import { formatCurrency } from "@/lib/functions";
 import {
   AMENITIES_OPTIONS,
@@ -410,10 +410,10 @@ export function RoomForm({
                 <FormItem>
                   <FormLabel>Mô tả</FormLabel>
                   <FormControl>
-                    <Textarea
+                    <RoomDescriptionEditor
+                      content={field.value ?? ""}
+                      onChange={field.onChange}
                       placeholder="Mô tả chi tiết về phòng..."
-                      {...field}
-                      value={field.value ?? ""}
                     />
                   </FormControl>
                   <FormDescription>
