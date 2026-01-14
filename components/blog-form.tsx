@@ -5,7 +5,10 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
-import { createBlog as createBlogAction, updateBlog as updateBlogAction } from "@/actions/blogs";
+import {
+  createBlog as createBlogAction,
+  updateBlog as updateBlogAction,
+} from "@/actions/blogs";
 import type { BlogInput } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -292,11 +295,22 @@ export function BlogForm({ mode, blogId, defaultValues }: BlogFormProps) {
                 type="button"
                 variant="outline"
                 onClick={() => router.back()}
+                disabled={form.formState.isSubmitting}
               >
                 Hủy
               </Button>
-              <Button type="submit" className="min-w-[140px]">
-                {mode === "create" ? "Tạo blog" : "Cập nhật"}
+              <Button
+                type="submit"
+                className="min-w-[140px]"
+                disabled={form.formState.isSubmitting}
+              >
+                {form.formState.isSubmitting
+                  ? mode === "create"
+                    ? "Đang tạo..."
+                    : "Đang cập nhật..."
+                  : mode === "create"
+                  ? "Tạo blog"
+                  : "Cập nhật"}
               </Button>
             </div>
           </form>

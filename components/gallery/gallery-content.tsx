@@ -94,6 +94,7 @@ export function GalleryContent() {
   // Delete confirmation dialog state
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [imageIdToDelete, setImageIdToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [previewItems, setPreviewItems] = useState<PreviewItem[]>([]);
 
@@ -185,9 +186,10 @@ export function GalleryContent() {
 
   // Confirm delete image
   const handleConfirmDelete = useCallback(async () => {
-    if (!imageIdToDelete) return;
+    if (!imageIdToDelete || isDeleting) return;
 
     try {
+      setIsDeleting(true);
       await deleteGalleryImageAction(imageIdToDelete);
 
       // Refresh gallery data
@@ -202,8 +204,10 @@ export function GalleryContent() {
       toast.error("Xóa hình ảnh thất bại", {
         description: errorMessage,
       });
+    } finally {
+      setIsDeleting(false);
     }
-  }, [imageIdToDelete, mutate]);
+  }, [imageIdToDelete, isDeleting, mutate]);
 
   // Remove preview image
   const handleRemovePreview = useCallback((id: string) => {
@@ -507,7 +511,18 @@ export function GalleryContent() {
 
       {/* Delete Confirmation Dialog */}
       {isDeleteDialogOpen && (
-        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <Dialog
+          open={isDeleteDialogOpen}
+          onOpenChange={(open) => {
+            if (!open) {
+              setIsDeleteDialogOpen(false);
+              setImageIdToDelete(null);
+              setIsDeleting(false);
+            } else {
+              setIsDeleteDialogOpen(open);
+            }
+          }}
+        >
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Xác nhận xóa hình ảnh</DialogTitle>
@@ -522,12 +537,18 @@ export function GalleryContent() {
                 onClick={() => {
                   setIsDeleteDialogOpen(false);
                   setImageIdToDelete(null);
+                  setIsDeleting(false);
                 }}
+                disabled={isDeleting}
               >
                 Hủy
               </Button>
-              <Button variant="destructive" onClick={handleConfirmDelete}>
-                Xác nhận xóa
+              <Button
+                variant="destructive"
+                onClick={handleConfirmDelete}
+                disabled={isDeleting || !imageIdToDelete}
+              >
+                {isDeleting ? "Đang xóa..." : "Xác nhận xóa"}
               </Button>
             </DialogFooter>
           </DialogContent>

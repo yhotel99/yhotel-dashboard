@@ -499,3 +499,10 @@ export const CUSTOMER_TYPE = {
   VIP: "vip",
   BLACKLIST: "blacklist",
 } as const;
+
+
+export const BLOG_STATUS = {
+  DRAFT: "draft",
+  PUBLISHED: "published",
+  ARCHIVED: "archived",
+} as const;

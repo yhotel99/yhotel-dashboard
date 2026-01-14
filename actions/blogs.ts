@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { Blog, BlogInput, BlogStatus, Result, ResultVoid } from "@/lib/types";
+import { BLOG_STATUS } from "@/lib/constants";
 
 /**
  * Create a new blog
@@ -83,11 +84,13 @@ export async function updateBlogStatus(
 ): Promise<{ ok: true } | { ok: false; message: string }> {
   const supabase = await createClient();
 
-  const { error } = await supabase
-    .from("blogs")
-    .update({ status })
-    .eq("id", id);
 
+    const { error } = await supabase
+      .from("blogs")
+      .update({ status, published_at: status === BLOG_STATUS.PUBLISHED ? new Date().toISOString() : null })
+      .eq("id", id);
+
+  
   if (error) {
     console.error("Error updating blog status:", error);
     return {
