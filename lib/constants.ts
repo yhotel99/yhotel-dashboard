@@ -155,7 +155,7 @@ export const PAYMENT_METHOD = {
 /**
  * Payment method labels mapping
  */
-export const paymentMethodLabels: Record<
+export const paymentMethodLabels: Record< 
   (typeof PAYMENT_METHOD)[keyof typeof PAYMENT_METHOD],
   string
 > = {
