@@ -309,6 +309,7 @@ export function RoomForm({
                         placeholder="VD: 500000"
                         {...field}
                         value={field.value ?? ""}
+                        min={0}
                       />
                     </FormControl>
                     <FormDescription>
