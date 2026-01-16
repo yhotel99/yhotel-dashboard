@@ -130,12 +130,14 @@ export function NavUser({ user }: { user: User }) {
         </DropdownMenu>
       </SidebarMenuItem>
 
-      <AccountDetailDialog
-        open={accountDialogOpen}
-        onOpenChange={setAccountDialogOpen}
-        user={user}
-        profile={profile}
-      />
+      {profile && accountDialogOpen && (
+        <AccountDetailDialog
+          open={accountDialogOpen}
+          onOpenChange={setAccountDialogOpen}
+          user={user}
+          profile={profile}
+        />
+      )}
     </SidebarMenu>
   );
 }

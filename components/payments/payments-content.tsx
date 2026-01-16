@@ -2,73 +2,12 @@
 
 import { useMemo, useEffect, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { ColumnDef } from "@tanstack/react-table";
 
 import { DataTable } from "@/components/data-table";
 import { usePayments } from "@/hooks/use-payments";
-import type { PaymentsResponse, PaymentWithBooking } from "@/lib/types";
-import { PaymentStatusBadge } from "@/components/payments/status";
-import { formatCurrency, formatDateOnly } from "@/lib/functions";
-import { paymentTypeLabels } from "@/lib/constants";
+import type { PaymentsResponse } from "@/lib/types";
 import { useDebounce } from "@/hooks/use-debounce";
-
-const createColumns = (): ColumnDef<PaymentWithBooking>[] => [
-  {
-    accessorKey: "Khách hàng",
-    header: "Khách hàng",
-    cell: ({ row }) => row.original.bookings?.customers?.full_name ?? "-",
-    size: 150,
-    minSize: 120,
-  },
-  {
-    accessorKey: "Phòng",
-    header: "Phòng",
-    cell: ({ row }) => row.original.bookings?.rooms?.name ?? "-",
-    size: 100,
-    minSize: 80,
-  },
-  {
-    accessorKey: "Số tiền",
-    header: "Số tiền",
-    cell: ({ row }) => formatCurrency(row.original.amount),
-    size: 120,
-    minSize: 100,
-  },
-  {
-    accessorKey: "Loại thanh toán",
-    header: "Loại thanh toán",
-    cell: ({ row }) =>
-      paymentTypeLabels[
-        row.original.payment_type as keyof typeof paymentTypeLabels
-      ] ?? row.original.payment_type,
-    size: 130,
-    minSize: 120,
-  },
-  {
-    accessorKey: "Trạng thái",
-    header: "Trạng thái",
-    cell: ({ row }) => (
-      <PaymentStatusBadge status={row.original.payment_status} />
-    ),
-    size: 130,
-    minSize: 120,
-  },
-  {
-    accessorKey: "Ngày thanh toán",
-    header: "Ngày thanh toán",
-    cell: ({ row }) =>
-      row.original.paid_at ? formatDateOnly(row.original.paid_at) : "-",
-    size: 150,
-    minSize: 130,
-  },
-  {
-    accessorKey: "Ngày tạo",
-    header: "Ngày tạo",
-    cell: ({ row }) => formatDateOnly(row.original.created_at),
-    size: 150,
-    minSize: 130,
-  },
-];
+import { createPaymentsColumns } from "./columns";
 
 export function PaymentsContent({
   initialData,
@@ -160,7 +99,7 @@ export function PaymentsContent({
     updateSearchParams,
   ]);
 
-  const columns = useMemo(() => createColumns(), []);
+  const columns = useMemo(() => createPaymentsColumns(), []);
 
   return (
     <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">

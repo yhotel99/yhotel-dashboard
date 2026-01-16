@@ -12,46 +12,58 @@ import { StatusBadge } from "@/components/bookings/status";
 import { formatCurrency, formatDateOnly } from "@/lib/functions";
 import { BookingRecord } from "@/lib/types";
 
+// Column definitions constants
+const CUSTOMER_BOOKING_COLUMNS = {
+  BOOKING_CODE: { accessorKey: "Mã booking", header: "Mã booking" },
+  ROOM: { accessorKey: "Phòng", header: "Phòng" },
+  CHECK_IN: { accessorKey: "Ngày check-in", header: "Check-in" },
+  CHECK_OUT: { accessorKey: "Ngày check-out", header: "Check-out" },
+  NUMBER_OF_NIGHTS: { accessorKey: "Số đêm", header: "Số đêm" },
+  TOTAL_AMOUNT: { accessorKey: "Tổng tiền", header: "Tổng tiền" },
+  ADVANCE_PAYMENT: { accessorKey: "Tiền đặt cọc", header: "Tiền cọc" },
+  STATUS: { accessorKey: "Trạng thái", header: "Trạng thái" },
+} as const;
+
 const createColumns = (): ColumnDef<BookingRecord>[] => [
   {
-    accessorKey: "Mã booking",
-    header: "Mã booking",
+    accessorKey: CUSTOMER_BOOKING_COLUMNS.BOOKING_CODE.accessorKey,
+    header: CUSTOMER_BOOKING_COLUMNS.BOOKING_CODE.header,
     cell: ({ row }) =>
       row.original.booking_code || row.original.id.slice(0, 8).toUpperCase(),
   },
   {
-    accessorKey: "Phòng",
-    header: "Phòng",
+    accessorKey: CUSTOMER_BOOKING_COLUMNS.ROOM.accessorKey,
+    header: CUSTOMER_BOOKING_COLUMNS.ROOM.header,
     cell: ({ row }) => row.original.rooms?.name ?? "-",
   },
   {
-    accessorKey: "Ngày check-in",
-    header: "Check-in",
+    accessorKey: CUSTOMER_BOOKING_COLUMNS.CHECK_IN.accessorKey,
+    header: CUSTOMER_BOOKING_COLUMNS.CHECK_IN.header,
     cell: ({ row }) => formatDateOnly(row.original.check_in),
   },
   {
-    accessorKey: "Ngày check-out",
-    header: "Check-out",
+    accessorKey: CUSTOMER_BOOKING_COLUMNS.CHECK_OUT.accessorKey,
+    header: CUSTOMER_BOOKING_COLUMNS.CHECK_OUT.header,
     cell: ({ row }) => formatDateOnly(row.original.check_out),
   },
   {
-    accessorKey: "Số đêm",
-    header: "Số đêm",
+    accessorKey: CUSTOMER_BOOKING_COLUMNS.NUMBER_OF_NIGHTS.accessorKey,
+    header: CUSTOMER_BOOKING_COLUMNS.NUMBER_OF_NIGHTS.header,
     cell: ({ row }) => `${row.original.number_of_nights} đêm`,
   },
   {
-    accessorKey: "Tổng tiền",
-    header: "Tổng tiền",
+    accessorKey: CUSTOMER_BOOKING_COLUMNS.TOTAL_AMOUNT.accessorKey,
+    header: CUSTOMER_BOOKING_COLUMNS.TOTAL_AMOUNT.header,
     cell: ({ row }) => formatCurrency(row.original.total_amount),
   },
   {
-    accessorKey: "Tiền đặt cọc",
-    header: "Tiền cọc",
+    accessorKey: CUSTOMER_BOOKING_COLUMNS.ADVANCE_PAYMENT.accessorKey,
+    header: CUSTOMER_BOOKING_COLUMNS.ADVANCE_PAYMENT.header,
     cell: ({ row }) => formatCurrency(row.original.advance_payment || 0),
   },
   {
-    accessorKey: "Trạng thái",
-    header: "Trạng thái",
+    accessorKey: CUSTOMER_BOOKING_COLUMNS.STATUS.accessorKey,
+    header: CUSTOMER_BOOKING_COLUMNS.STATUS.header,
     cell: ({ row }) => <StatusBadge status={row.original.status} />,
   },
 ];

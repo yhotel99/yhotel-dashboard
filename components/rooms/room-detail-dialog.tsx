@@ -1,0 +1,161 @@
+"use client";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import type { Room } from "@/lib/types";
+import { Badge } from "@/components/ui/badge";
+import {
+  roomTypeLabels,
+  roomStatusLabels,
+  AMENITIES_OPTIONS,
+} from "@/lib/constants";
+import { formatCurrency } from "@/lib/functions";
+import { IconHome, IconCalendar, IconTag } from "@tabler/icons-react";
+import Image from "next/image";
+
+interface RoomDetailDialogProps {
+  room: Room;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+export function RoomDetailDialog({
+  room,
+  open,
+  onOpenChange,
+}: RoomDetailDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl!">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <IconHome className="size-5" />
+            Chi tiết phòng
+          </DialogTitle>
+          <DialogDescription>
+            Thông tin chi tiết về phòng{" "}
+            <span className="font-semibold">{room.name}</span>
+          </DialogDescription>
+        </DialogHeader>
+        <ScrollArea className="max-h-[80vh] scrollbar-hide pb-2">
+          <div className="space-y-6">
+            {/* Room Info */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Tên phòng
+                </p>
+                <p className="text-sm font-semibold">{room.name}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Loại phòng
+                </p>
+                <p className="text-sm">
+                  {roomTypeLabels[room.room_type] || "Chưa phân loại"}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                  Sức chứa
+                </p>
+                <p className="text-sm">{room.max_guests} người</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                  Giá mỗi đêm
+                </p>
+                <p className="text-sm font-semibold text-green-600">
+                  {formatCurrency(room.price_per_night)}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Trạng thái
+                </p>
+                <div className="text-sm mt-1">
+                  <Badge variant="outline">
+                    {roomStatusLabels[room.status]}
+                  </Badge>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                  <IconCalendar className="size-4" />
+                  Ngày tạo
+                </p>
+                <p className="text-sm">
+                  {new Date(room.created_at).toLocaleDateString("vi-VN")}
+                </p>
+              </div>
+            </div>
+
+            {/* Amenities */}
+            {room.amenities && room.amenities.length > 0 && (
+              <div>
+                <p className="text-sm font-medium text-muted-foreground flex items-center gap-1 mb-2">
+                  <IconTag className="size-4" />
+                  Tiện nghi
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {room.amenities.map((amenity, index) => (
+                    <Badge key={index} variant="outline" className="text-xs">
+                      {
+                        AMENITIES_OPTIONS.find(
+                          (option) => option.value === amenity
+                        )?.label
+                      }
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Thumbnail */}
+            {room.thumbnail && (
+              <div>
+                <p className="text-sm font-medium text-muted-foreground mb-2">
+                  Hình ảnh
+                </p>
+                <div className="aspect-video bg-muted rounded-md overflow-hidden">
+                  <Image
+                    src={
+                      typeof room.thumbnail === "string"
+                        ? room.thumbnail
+                        : room.thumbnail.url
+                    }
+                    alt={`Room ${room.name}`}
+                    width={800}
+                    height={400}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* System Info */}
+            <div className="border-t pt-4">
+              <div className="grid grid-cols-2 gap-4 text-xs text-muted-foreground">
+                <div>
+                  <p>ID: {room.id}</p>
+                </div>
+                <div>
+                  <p>
+                    Cập nhật:{" "}
+                    {new Date(room.updated_at).toLocaleString("vi-VN")}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </ScrollArea>
+      </DialogContent>
+    </Dialog>
+  );
+}

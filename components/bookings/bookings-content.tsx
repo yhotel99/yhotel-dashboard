@@ -30,7 +30,7 @@ import type {
   BookingsResponse,
 } from "@/lib/types";
 import { useDebounce } from "@/hooks/use-debounce";
-import { createColumns } from "@/components/bookings/columns";
+import { createColumns, COLUMNS } from "@/components/bookings/columns";
 import { CreateBookingDialog } from "@/components/bookings/create-booking-dialog";
 import { EditBookingDialog } from "@/components/bookings/edit-booking-dialog";
 import { CheckAvailableRoomsDialog } from "@/components/bookings/check-available-rooms-dialog";
@@ -329,6 +329,10 @@ export function BookingsContent({
           onLimitChange={(newLimit) => updateSearchParams(1, newLimit, search)}
           serverSearch={localSearch}
           onSearchChange={setLocalSearch}
+          initialColumnVisibility={{
+            [COLUMNS.NUMBER_OF_NIGHTS.accessorKey]: false,
+            [COLUMNS.TOTAL_GUESTS.accessorKey]: false,
+          }}
         />
       </div>
 

@@ -10,6 +10,18 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
+// Column definitions constants
+export const BLOG_COLUMNS = {
+  IMAGE: { accessorKey: "Ảnh", header: "Ảnh" },
+  TITLE: { accessorKey: "Tiêu đề", header: "Tiêu đề" },
+  SLUG: { accessorKey: "slug", header: "Slug" },
+  STATUS: { accessorKey: "Trạng thái", header: "Trạng thái" },
+  AUTHOR: { accessorKey: "Tác giả", header: "Tác giả" },
+  PUBLISHED_AT: { accessorKey: "Ngày xuất bản", header: "Ngày xuất bản" },
+  CREATED_AT: { accessorKey: "Ngày tạo", header: "Ngày tạo" },
+  ACTIONS: { accessorKey: "Hành động", header: "Hành động" },
+} as const;
+
 export function createColumns(
   onEdit: (blog: Blog) => void,
   onDelete: (blog: Blog) => void,
@@ -17,8 +29,8 @@ export function createColumns(
 ): ColumnDef<Blog>[] {
   return [
     {
-      accessorKey: "Ảnh",
-      header: "Ảnh",
+      accessorKey: BLOG_COLUMNS.IMAGE.accessorKey,
+      header: BLOG_COLUMNS.IMAGE.header,
       cell: ({ row }) => (
         <div className="relative aspect-video xl:w-18 w-14 xl:h-14 h-10 rounded-md border overflow-hidden">
           {row.original.featured_image ? (
@@ -39,29 +51,49 @@ export function createColumns(
           )}
         </div>
       ),
-      size: 100,
-      minSize: 80,
+      size: 50,
+      minSize: 50,
+      maxSize: 80,
     },
     {
-      accessorKey: "Tiêu đề",
-      header: "Tiêu đề",
+      accessorKey: BLOG_COLUMNS.TITLE.accessorKey,
+      header: BLOG_COLUMNS.TITLE.header,
+      cell: ({ row }) => {
+        const title = row.original.title;
+        const excerpt = row.original.excerpt;
+        return (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex flex-col gap-1 cursor-pointer">
+                <span className="font-medium line-clamp-1 truncate block">
+                  {title}
+                </span>
+                {excerpt && (
+                  <span className="text-xs text-muted-foreground line-clamp-1">
+                    {excerpt}
+                  </span>
+                )}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-xs">
+              <div className="space-y-2">
+                <p className="font-medium">{title}</p>
+                {excerpt && (
+                  <p className="text-sm text-muted-foreground">{excerpt}</p>
+                )}
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        );
+      },
       enableHiding: false,
-      size: 250,
-      minSize: 200,
-      cell: ({ row }) => (
-        <div className="flex flex-col gap-1">
-          <span className="font-medium line-clamp-1">{row.original.title}</span>
-          {row.original.excerpt && (
-            <span className="text-xs text-muted-foreground line-clamp-1 ">
-              {row.original.excerpt}
-            </span>
-          )}
-        </div>
-      ),
+      size: 180,
+      minSize: 180,
+      maxSize: 200,
     },
     {
-      accessorKey: "slug",
-      header: "Slug",
+      accessorKey: BLOG_COLUMNS.SLUG.accessorKey,
+      header: BLOG_COLUMNS.SLUG.header,
       cell: ({ row }) => (
         <Tooltip>
           <TooltipTrigger asChild>
@@ -78,8 +110,8 @@ export function createColumns(
       minSize: 150,
     },
     {
-      accessorKey: "Trạng thái",
-      header: "Trạng thái",
+      accessorKey: BLOG_COLUMNS.STATUS.accessorKey,
+      header: BLOG_COLUMNS.STATUS.header,
       cell: ({ row }) => (
         <BlogStatusCell
           blogId={row.original.id}
@@ -87,19 +119,19 @@ export function createColumns(
           onChangeStatus={onChangeStatus}
         />
       ),
-      size: 180,
+      size: 120,
       minSize: 100,
     },
     {
-      accessorKey: "Tác giả",
-      header: "Tác giả",
+      accessorKey: BLOG_COLUMNS.AUTHOR.accessorKey,
+      header: BLOG_COLUMNS.AUTHOR.header,
       cell: ({ row }) => row.original.author?.full_name || "-",
       size: 120,
       minSize: 100,
     },
     {
-      accessorKey: "Ngày xuất bản",
-      header: "Ngày xuất bản",
+      accessorKey: BLOG_COLUMNS.PUBLISHED_AT.accessorKey,
+      header: BLOG_COLUMNS.PUBLISHED_AT.header,
       cell: ({ row }) =>
         row.original.published_at
           ? formatDateOnly(row.original.published_at)
@@ -108,14 +140,16 @@ export function createColumns(
       minSize: 100,
     },
     {
-      accessorKey: "Ngày tạo",
-      header: "Ngày tạo",
+      accessorKey: BLOG_COLUMNS.CREATED_AT.accessorKey,
+      header: BLOG_COLUMNS.CREATED_AT.header,
       cell: ({ row }) => formatDateOnly(row.original.created_at),
       size: 120,
       minSize: 100,
     },
     {
-      id: "Hành động",
+      id: "actions",
+      accessorKey: BLOG_COLUMNS.ACTIONS.accessorKey,
+      header: BLOG_COLUMNS.ACTIONS.header,
       cell: ({ row }) => (
         <BlogActionsCell
           blog={row.original}
@@ -123,9 +157,9 @@ export function createColumns(
           onDelete={onDelete}
         />
       ),
-      size: 40,
+      size: 60,
       minSize: 40,
-      maxSize: 50,
+      maxSize: 60,
     },
   ];
 }

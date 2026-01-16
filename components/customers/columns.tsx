@@ -127,7 +127,9 @@ export function createColumns(
       minSize: 60,
     },
     {
-      id: "Hành động",
+      id: "actions",
+      accessorKey: "Hành động",
+      header: "Hành động",
       cell: ({ row }) => (
         <ActionsCell
           customer={row.original}

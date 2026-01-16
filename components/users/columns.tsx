@@ -40,7 +40,9 @@ export function createColumns(
       cell: ({ row }) => formatDate(row.original.created_at),
     },
     {
-      id: "Hành động",
+      id: "actions",
+      accessorKey: "Hành động",
+      header: "Hành động",
       cell: ({ row }) => (
         <UserActionsCell
           userName={row.original.full_name}

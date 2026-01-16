@@ -6,7 +6,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
 import { useDebounce } from "@/hooks/use-debounce";
-import { createColumns } from "@/components/blogs/columns";
+import { BLOG_COLUMNS, createColumns } from "@/components/blogs/columns";
 import { DeleteBlogDialog } from "@/components/blogs/delete-blog-dialog";
 import { toast } from "sonner";
 import { useBlogs } from "@/hooks/use-blogs";
@@ -184,6 +184,11 @@ export function BlogsContent({ initialData }: { initialData: BlogsResponse }) {
           onLimitChange={(newLimit) => updateSearchParams(1, newLimit, search)}
           serverSearch={localSearch}
           onSearchChange={setLocalSearch}
+          initialColumnVisibility={{
+            [BLOG_COLUMNS.CREATED_AT.accessorKey]: false,
+            [BLOG_COLUMNS.PUBLISHED_AT.accessorKey]: false,
+            [BLOG_COLUMNS.SLUG.accessorKey]: false,
+          }}
         />
       </div>
 

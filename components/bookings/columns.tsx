@@ -18,6 +18,21 @@ import {
 import { Copy } from "lucide-react";
 import { toast } from "sonner";
 
+// Column definitions constants
+export const COLUMNS = {
+  BOOKING_CODE: { accessorKey: "Mã booking", header: "Mã booking" },
+  CUSTOMER_NAME: { accessorKey: "Khách hàng", header: "Khách hàng" },
+  ROOM_NAME: { accessorKey: "Số phòng", header: "Số phòng" },
+  CHECK_IN: { accessorKey: "Ngày check-in", header: "Check-in" },
+  CHECK_OUT: { accessorKey: "Ngày check-out", header: "Check-out" },
+  NUMBER_OF_NIGHTS: { accessorKey: "Số đêm", header: "Số đêm" },
+  TOTAL_GUESTS: { accessorKey: "Số khách", header: "Số khách" },
+  TOTAL_AMOUNT: { accessorKey: "Tổng tiền", header: "Tổng tiền" },
+  ADVANCE_PAYMENT: { accessorKey: "Tiền đặt cọc", header: "Tiền đặt cọc" },
+  STATUS: { accessorKey: "Trạng thái", header: "Trạng thái" },
+  NOTES: { accessorKey: "Ghi chú", header: "Ghi chú" },
+} as const;
+
 export function createColumns(
   updateStatus: (id: string, status: BookingStatus) => Promise<void>,
   handlers?: {
@@ -39,8 +54,8 @@ export function createColumns(
 ): ColumnDef<BookingRecord>[] {
   return [
     {
-      accessorKey: "Mã booking",
-      header: "Mã booking",
+      accessorKey: COLUMNS.BOOKING_CODE.accessorKey,
+      header: COLUMNS.BOOKING_CODE.header,
       cell: ({ row }) => {
         const bookingCode = row.original.booking_code;
         const handleCopy = (e: React.MouseEvent) => {
@@ -75,57 +90,103 @@ export function createColumns(
       },
     },
     {
-      accessorKey: "Tên khách hàng",
-      header: "Khách hàng",
+      accessorKey: COLUMNS.CUSTOMER_NAME.accessorKey,
+      header: COLUMNS.CUSTOMER_NAME.header,
       cell: ({ row }) => row.original.customers?.full_name ?? "-",
+      size: 100,
+      minSize: 100,
+      maxSize: 140,
     },
     {
-      accessorKey: "Số phòng",
-      header: "Số phòng",
-      cell: ({ row }) => row.original.rooms?.name ?? "-",
+      accessorKey: COLUMNS.ROOM_NAME.accessorKey,
+      header: COLUMNS.ROOM_NAME.header,
+      cell: ({ row }) => {
+        const roomName = row.original.rooms?.name ?? "-";
+        return (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="max-w-[160px] truncate font-medium">
+                {roomName}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{roomName}</p>
+            </TooltipContent>
+          </Tooltip>
+        );
+      },
+      size: 140,
+      minSize: 100,
+      maxSize: 140,
     },
     {
-      accessorKey: "Ngày check-in",
-      header: "Check-in",
+      accessorKey: COLUMNS.CHECK_IN.accessorKey,
+      header: COLUMNS.CHECK_IN.header,
       cell: ({ row }) => formatDateOnly(row.original.check_in),
+      size: 120,
+      minSize: 100,
+      maxSize: 140,
     },
     {
-      accessorKey: "Ngày check-out",
-      header: "Check-out",
+      accessorKey: COLUMNS.CHECK_OUT.accessorKey,
+      header: COLUMNS.CHECK_OUT.header,
       cell: ({ row }) => formatDateOnly(row.original.check_out),
+      size: 120,
+      minSize: 100,
+      maxSize: 140,
     },
     {
-      accessorKey: "Số đêm",
-      header: "Số đêm",
+      accessorKey: COLUMNS.NUMBER_OF_NIGHTS.accessorKey,
+      header: COLUMNS.NUMBER_OF_NIGHTS.header,
       cell: ({ row }) => `${row.original.number_of_nights} đêm`,
+      size: 80,
+      minSize: 80,
+      maxSize: 120,
     },
     {
-      accessorKey: "Số khách",
-      header: "Số khách",
+      accessorKey: COLUMNS.TOTAL_GUESTS.accessorKey,
+      header: COLUMNS.TOTAL_GUESTS.header,
       cell: ({ row }) => `${row.original.total_guests} người`,
+      size: 80,
+      minSize: 80,
+      maxSize: 120,
     },
     {
-      accessorKey: "Tổng tiền",
-      header: "Tổng tiền",
+      accessorKey: COLUMNS.TOTAL_AMOUNT.accessorKey,
+      header: COLUMNS.TOTAL_AMOUNT.header,
       cell: ({ row }) => formatCurrency(row.original.total_amount),
+      size: 120,
+      minSize: 100,
+      maxSize: 140,
     },
     {
-      accessorKey: "Tiền đặt cọc",
-      header: "Tiền đặt cọc",
+      accessorKey: COLUMNS.ADVANCE_PAYMENT.accessorKey,
+      header: COLUMNS.ADVANCE_PAYMENT.header,
       cell: ({ row }) => formatCurrency(row.original.advance_payment),
+      size: 120,
+      minSize: 100,
+      maxSize: 140,
     },
     {
-      accessorKey: "Trạng thái",
-      header: "Trạng thái",
+      accessorKey: COLUMNS.STATUS.accessorKey,
+      header: COLUMNS.STATUS.header,
       cell: ({ row }) => <StatusBadge status={row.original.status} />,
+      size: 120,
+      minSize: 80,
+      maxSize: 120,
     },
     {
-      accessorKey: "Ghi chú",
-      header: "Ghi chú",
+      accessorKey: COLUMNS.NOTES.accessorKey,
+      header: COLUMNS.NOTES.header,
       cell: ({ row }) => <NotesCell notes={row.original.notes} />,
+      size: 80,
+      minSize: 80,
+      maxSize: 120,
     },
     {
-      id: "Hành động",
+      id: "actions",
+      accessorKey: "Hành động",
+      header: "Hành động",
       cell: ({ row }) => {
         const defaultCancelledBooking =
           handlers?.cancelledBooking ||
@@ -170,7 +231,7 @@ export function createColumns(
           />
         );
       },
-      size: 80,
+      size: 50,
       minSize: 40,
       maxSize: 100,
     },

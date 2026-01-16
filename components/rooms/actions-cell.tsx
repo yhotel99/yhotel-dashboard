@@ -2,7 +2,7 @@ import { useRouter } from "next/navigation";
 import {
   IconDotsVertical,
   IconEdit,
-  IconRefresh,
+  IconEye,
   IconTrash,
 } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
@@ -18,11 +18,12 @@ import { Room } from "@/lib/types";
 export function RoomActionsCell({
   room,
   onDelete,
-  onChangeStatus,
+  onViewDetail,
 }: {
   room: Room;
   onDelete: (room: Room) => void;
   onChangeStatus?: (room: Room) => void;
+  onViewDetail?: (room: Room) => void;
 }) {
   const router = useRouter();
 
@@ -39,18 +40,19 @@ export function RoomActionsCell({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-44">
+        {onViewDetail && (
+          <DropdownMenuItem onClick={() => onViewDetail(room)}>
+            <IconEye className="mr-2 size-4" />
+            Xem chi tiết
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem
           onClick={() => router.push(`/dashboard/rooms/edit/${room.id}`)}
         >
           <IconEdit className="mr-2 size-4" />
           Chỉnh sửa
         </DropdownMenuItem>
-        {onChangeStatus && (
-          <DropdownMenuItem onClick={() => onChangeStatus(room)}>
-            <IconRefresh className="mr-2 size-4" />
-            Thay đổi trạng thái
-          </DropdownMenuItem>
-        )}
+
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onClick={() => onDelete(room)}>
           <IconTrash className="mr-2 size-4" />

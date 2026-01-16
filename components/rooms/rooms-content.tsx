@@ -4,7 +4,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { IconPlus } from "@tabler/icons-react";
 import { useMemo, useEffect, useCallback, useState } from "react";
 import { useDebounce } from "@/hooks/use-debounce";
-
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
 import { useRooms } from "@/hooks/use-rooms";
@@ -13,8 +12,9 @@ import {
   deleteRoom as deleteRoomAction,
 } from "@/actions/rooms";
 import { toast } from "sonner";
-import { createColumns } from "@/components/rooms/columns";
+import { createColumns, ROOMS_COLUMNS } from "@/components/rooms/columns";
 import { DeleteRoomDialog } from "@/components/rooms/delete-room-dialog";
+import { RoomDetailDialog } from "@/components/rooms/room-detail-dialog";
 import type { Room, RoomsResponse } from "@/lib/types";
 
 export function RoomsContent({ initialData }: { initialData: RoomsResponse }) {
@@ -92,6 +92,8 @@ export function RoomsContent({ initialData }: { initialData: RoomsResponse }) {
   // Delete room dialog state
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [roomToDelete, setRoomToDelete] = useState<Room | null>(null);
+  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
 
   // Handle empty page after deletion or invalid page number
   useEffect(() => {
@@ -170,10 +172,20 @@ export function RoomsContent({ initialData }: { initialData: RoomsResponse }) {
     [mutate]
   );
 
+  const handleViewDetail = useCallback((room: Room) => {
+    setSelectedRoom(room);
+    setIsDetailDialogOpen(true);
+  }, []);
+
   // Create columns with delete and change status handlers
   const columns = useMemo(
-    () => createColumns(handleDeleteClick, handleInlineStatusChange),
-    [handleDeleteClick, handleInlineStatusChange]
+    () =>
+      createColumns(
+        handleDeleteClick,
+        handleInlineStatusChange,
+        handleViewDetail
+      ),
+    [handleDeleteClick, handleInlineStatusChange, handleViewDetail]
   );
 
   return (
@@ -209,6 +221,9 @@ export function RoomsContent({ initialData }: { initialData: RoomsResponse }) {
           onLimitChange={(newLimit) => updateSearchParams(1, newLimit, search)}
           serverSearch={localSearch}
           onSearchChange={setLocalSearch}
+          initialColumnVisibility={{
+            [ROOMS_COLUMNS.AMENITIES.accessorKey]: false,
+          }}
         ></DataTable>
       </div>
 
@@ -218,6 +233,19 @@ export function RoomsContent({ initialData }: { initialData: RoomsResponse }) {
           open={isDeleteDialogOpen}
           onOpenChange={setIsDeleteDialogOpen}
           onConfirm={handleConfirmDelete}
+        />
+      )}
+
+      {selectedRoom && (
+        <RoomDetailDialog
+          room={selectedRoom}
+          open={isDetailDialogOpen}
+          onOpenChange={(open) => {
+            setIsDetailDialogOpen(open);
+            if (!open) {
+              setSelectedRoom(null);
+            }
+          }}
         />
       )}
     </div>

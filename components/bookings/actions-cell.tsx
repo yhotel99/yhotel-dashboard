@@ -37,7 +37,9 @@ import { ChangeBookingStatusDialog } from "./change-booking-status-dialog";
 import { TransferRoomDialog } from "./transfer-room-dialog";
 import { MarkAdvancePaymentDialog } from "./mark-advance-payment-dialog";
 import { CreateRefundRequestDialog } from "./create-refund-request-dialog";
+import { BookingDetailDialog } from "./booking-detail-dialog";
 import { BOOKING_STATUS } from "@/lib/constants";
+import { IconEye } from "@tabler/icons-react";
 
 // Context to update booking status from action cells
 export const UpdateBookingStatusContext = React.createContext<
@@ -99,6 +101,7 @@ export function BookingActionsCell({
   checkedInBooking,
   checkedOutBooking,
   cancelledBooking,
+  onViewDetails,
 }: {
   booking: BookingRecord;
   customerId: string | null;
@@ -116,12 +119,14 @@ export function BookingActionsCell({
   checkedInBooking: (bookingId: string) => Promise<void>;
   checkedOutBooking: (bookingId: string) => Promise<void>;
   cancelledBooking: (bookingId: string) => Promise<void>;
+  onViewDetails?: (booking: BookingRecord) => void;
 }) {
   const [openCancel, setOpenCancel] = useState(false);
   const [openChangeStatus, setOpenChangeStatus] = useState(false);
   const [openTransfer, setOpenTransfer] = useState(false);
   const [openMarkAdvancePayment, setOpenMarkAdvancePayment] = useState(false);
   const [openRefundRequest, setOpenRefundRequest] = useState(false);
+  const [openDetail, setOpenDetail] = useState(false);
   const [advancePaymentStatus, setAdvancePaymentStatus] = useState<{
     hasAdvancePayment: boolean;
     isPaid: boolean;
@@ -199,6 +204,11 @@ export function BookingActionsCell({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuItem onClick={() => setOpenDetail(true)}>
+            <IconEye className="mr-2 size-4" />
+            Xem chi tiết
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => onEdit(booking)}>
             <IconEdit className="mr-2 size-4" />
             Chỉnh sửa
@@ -290,6 +300,14 @@ export function BookingActionsCell({
         <CreateRefundRequestDialog
           open={openRefundRequest}
           onOpenChange={setOpenRefundRequest}
+          booking={booking}
+        />
+      )}
+
+      {openDetail && (
+        <BookingDetailDialog
+          open={openDetail}
+          onOpenChange={setOpenDetail}
           booking={booking}
         />
       )}

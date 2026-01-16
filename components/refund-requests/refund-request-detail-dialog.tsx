@@ -50,43 +50,37 @@ export function RefundRequestDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="!max-w-3xl flex flex-col">
+      <DialogContent className="max-w-3xl!">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <IconListDetails className="size-5" />
-            Chi tiết yêu cầu hoàn tiền
+            <span className="font-bold">Chi tiết yêu cầu hoàn tiền</span>
+            <Badge
+              variant="outline"
+              className={`${
+                refundRequestStatusColors[refundRequest.status]
+              } border text-sm px-3 py-1`}
+            >
+              {refundRequestStatusLabels[refundRequest.status]}
+            </Badge>
           </DialogTitle>
           <DialogDescription>
-            Thông tin mã yêu cầu: {refundRequest.id.toUpperCase()}
+            Thông tin mã yêu cầu:{" "}
+            <span className="font-bold">{refundRequest.id.toUpperCase()}</span>
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 pr-4 max-h-[75vh] overflow-y-auto">
+        <ScrollArea className="flex-1 pr-4 max-h-[75vh] overflow-y-auto scrollbar-hide">
           <div className="space-y-6 pb-4">
             {/* Status & Amount */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-muted/50 p-4 rounded-lg">
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-muted-foreground">
-                  Số tiền hoàn trả
-                </label>
-                <p className="text-2xl font-bold text-primary">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-muted/50 py-2 rounded-lg">
+              <div className="flex items-center gap-2 text-center">
+                <span className="text-xl text-foreground font-semibold">
+                  Số tiền hoàn trả:
+                </span>
+                <span className="text-xl font-bold text-primary">
                   {formatCurrency(refundRequest.amount)}
-                </p>
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-muted-foreground text-right block">
-                  Trạng thái
-                </label>
-                <div className="flex justify-end">
-                  <Badge
-                    variant="outline"
-                    className={`${
-                      refundRequestStatusColors[refundRequest.status]
-                    } border text-sm px-3 py-1`}
-                  >
-                    {refundRequestStatusLabels[refundRequest.status]}
-                  </Badge>
-                </div>
+                </span>
               </div>
             </div>
 
@@ -126,10 +120,10 @@ export function RefundRequestDetailDialog({
 
                 <div className="space-y-1">
                   <label className="text-sm font-medium text-muted-foreground">
-                    Mã booking (ID)
+                    Người yêu cầu
                   </label>
-                  <p className="text-base font-mono text-sm uppercase">
-                    {refundRequest.booking_id}
+                  <p className="text-base font-medium">
+                    {refundRequest.request_by_profile?.full_name || "-"}
                   </p>
                 </div>
               </div>
@@ -166,6 +160,61 @@ export function RefundRequestDetailDialog({
               </div>
             </div>
 
+            {/* Processing Information */}
+            {(refundRequest.approved_by || refundRequest.refunded_by) && (
+              <>
+                {" "}
+                <Separator />
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <IconInfoCircle className="size-4" />
+                    Thông tin xử lý yêu cầu
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {refundRequest.approved_by && (
+                      <div className="space-y-2 bg-green-50 border border-green-200 rounded-lg p-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                          <span className="text-sm font-medium text-green-800">
+                            Đã duyệt
+                          </span>
+                        </div>
+                        <div className="space-y-1 ml-5">
+                          <label className="text-xs font-medium text-muted-foreground">
+                            Người duyệt
+                          </label>
+                          <p className="text-sm font-medium">
+                            {refundRequest.approved_by_profile?.full_name ||
+                              "-"}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {refundRequest.refunded_by && (
+                      <div className="space-y-2 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                          <span className="text-sm font-medium text-blue-800">
+                            Đã hoàn tiền
+                          </span>
+                        </div>
+                        <div className="space-y-1 ml-5">
+                          <label className="text-xs font-medium text-muted-foreground">
+                            Người thực hiện
+                          </label>
+                          <p className="text-sm font-medium">
+                            {refundRequest.refunded_by_profile?.full_name ||
+                              "-"}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+
             <Separator />
 
             {/* Timestamps & Profiles */}
@@ -183,41 +232,6 @@ export function RefundRequestDetailDialog({
                     {formatDateOnly(refundRequest.created_at)}
                   </p>
                 </div>
-
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-muted-foreground">
-                    Người yêu cầu
-                  </label>
-                  <p className="text-base font-medium">
-                    {refundRequest.request_by_profile?.full_name || "-"}
-                  </p>
-                </div>
-
-                {refundRequest.approved_by && (
-                  <>
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium text-muted-foreground">
-                        Người duyệt
-                      </label>
-                      <p className="text-base">
-                        {refundRequest.approved_by_profile?.full_name || "-"}
-                      </p>
-                    </div>
-                  </>
-                )}
-
-                {refundRequest.refunded_by && (
-                  <>
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium text-muted-foreground">
-                        Người thực hiện hoàn tiền
-                      </label>
-                      <p className="text-base">
-                        {refundRequest.refunded_by_profile?.full_name || "-"}
-                      </p>
-                    </div>
-                  </>
-                )}
 
                 <div className="space-y-1">
                   <label className="text-sm font-medium text-muted-foreground">

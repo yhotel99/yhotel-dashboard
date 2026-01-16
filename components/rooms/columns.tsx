@@ -14,37 +14,53 @@ import { formatCurrency } from "@/lib/functions";
 import { Room } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
+// Column definitions constants
+export const ROOMS_COLUMNS = {
+  IMAGE: { accessorKey: "Ảnh", header: "Ảnh" },
+  NAME: { accessorKey: "Tên phòng", header: "Tên phòng" },
+  ROOM_TYPE: { accessorKey: "Loại phòng", header: "Loại phòng" },
+  STATUS: { accessorKey: "Trạng thái", header: "Trạng thái" },
+  PRICE_PER_NIGHT: { accessorKey: "Giá mỗi đêm", header: "Giá mỗi đêm" },
+  MAX_GUESTS: { accessorKey: "Số khách tối đa", header: "Số khách tối đa" },
+  AMENITIES: { accessorKey: "Tiện ích", header: "Tiện ích" },
+  ACTIONS: { accessorKey: "Hành động", header: "Hành động" },
+} as const;
+
 export function createColumns(
   onDelete: (room: Room) => void,
-  onChangeStatus?: (roomId: string, newStatus: Room["status"]) => void
+  onChangeStatus?: (roomId: string, newStatus: Room["status"]) => void,
+  onViewDetail?: (room: Room) => void
 ): ColumnDef<Room>[] {
   return [
     {
-      accessorKey: "Ảnh",
-      header: "Ảnh",
+      accessorKey: ROOMS_COLUMNS.IMAGE.accessorKey,
+      header: ROOMS_COLUMNS.IMAGE.header,
       cell: ({ row }) => (
         <ThumbnailCell thumbnailUrl={row.original.thumbnail?.url} />
       ),
-      size: 70,
+      size: 50,
       minSize: 50,
+      maxSize: 70,
     },
     {
-      accessorKey: "Tên phòng",
-      header: "Tên phòng",
+      accessorKey: ROOMS_COLUMNS.NAME.accessorKey,
+      header: ROOMS_COLUMNS.NAME.header,
       cell: ({ row }) => row.original.name,
-      size: 100,
+      size: 120,
       minSize: 80,
+      maxSize: 120,
     },
     {
-      accessorKey: "Loại phòng",
-      header: "Loại phòng",
+      accessorKey: ROOMS_COLUMNS.ROOM_TYPE.accessorKey,
+      header: ROOMS_COLUMNS.ROOM_TYPE.header,
       cell: ({ row }) => roomTypeLabels[row.original.room_type],
-      size: 100,
-      minSize: 80,
+      size: 70,
+      minSize: 60,
+      maxSize: 100,
     },
     {
-      accessorKey: "Trạng thái",
-      header: "Trạng thái",
+      accessorKey: ROOMS_COLUMNS.STATUS.accessorKey,
+      header: ROOMS_COLUMNS.STATUS.header,
       cell: ({ row }) => (
         <RoomStatusCell
           roomId={row.original.id}
@@ -52,26 +68,29 @@ export function createColumns(
           onChangeStatus={onChangeStatus}
         />
       ),
-      size: 100,
+      size: 90,
       minSize: 80,
+      maxSize: 100,
     },
     {
-      accessorKey: "Giá mỗi đêm",
-      header: "Giá mỗi đêm",
+      accessorKey: ROOMS_COLUMNS.PRICE_PER_NIGHT.accessorKey,
+      header: ROOMS_COLUMNS.PRICE_PER_NIGHT.header,
       cell: ({ row }) => formatCurrency(row.original.price_per_night),
-      size: 120,
-      minSize: 100,
+      size: 80,
+      minSize: 80,
+      maxSize: 100,
     },
     {
-      accessorKey: "Số khách tối đa",
-      header: "Số khách tối đa",
+      accessorKey: ROOMS_COLUMNS.MAX_GUESTS.accessorKey,
+      header: ROOMS_COLUMNS.MAX_GUESTS.header,
       cell: ({ row }) => `${row.original.max_guests} người`,
-      size: 120,
-      minSize: 100,
+      size: 70,
+      minSize: 70,
+      maxSize: 100,
     },
     {
-      accessorKey: "Tiện ích",
-      header: "Tiện ích",
+      accessorKey: ROOMS_COLUMNS.AMENITIES.accessorKey,
+      header: ROOMS_COLUMNS.AMENITIES.header,
       cell: ({ row }) => {
         const amenities = Array.isArray(row.original.amenities)
           ? row.original.amenities
@@ -82,13 +101,19 @@ export function createColumns(
       minSize: 120,
     },
     {
-      id: "Hành động",
+      id: "actions",
+      accessorKey: ROOMS_COLUMNS.ACTIONS.accessorKey,
+      header: ROOMS_COLUMNS.ACTIONS.header,
       cell: ({ row }) => (
-        <RoomActionsCell room={row.original} onDelete={onDelete} />
+        <RoomActionsCell
+          room={row.original}
+          onDelete={onDelete}
+          onViewDetail={onViewDetail}
+        />
       ),
-      size: 40,
+      size: 60,
       minSize: 40,
-      maxSize: 50,
+      maxSize: 60,
     },
   ];
 }
