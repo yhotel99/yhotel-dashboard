@@ -70,11 +70,6 @@ export function UsersContent({
     [router, searchParams]
   );
 
-  // Sync local search with URL search
-  React.useEffect(() => {
-    setLocalSearch(search);
-  }, [search]);
-
   // Debounce search
   React.useEffect(() => {
     const timer = setTimeout(() => {

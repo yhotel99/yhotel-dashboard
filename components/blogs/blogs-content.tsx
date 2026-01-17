@@ -80,7 +80,6 @@ export function BlogsContent({ initialData }: { initialData: BlogsResponse }) {
     fallbackData: initialData,
   });
 
-  console.log({ initialData });
 
   const handleEditBlog = React.useCallback(
     (blog: Blog) => {

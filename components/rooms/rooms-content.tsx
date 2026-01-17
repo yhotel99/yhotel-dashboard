@@ -70,10 +70,6 @@ export function RoomsContent({ initialData }: { initialData: RoomsResponse }) {
   // Debounce search value - update URL after user stops typing
   const debouncedSearch = useDebounce(localSearch, 500);
 
-  // Sync local search with URL search param when it changes externally
-  useEffect(() => {
-    setLocalSearch(search);
-  }, [search]);
 
   // Update URL when debounced search changes
   useEffect(() => {
