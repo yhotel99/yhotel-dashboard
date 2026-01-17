@@ -6,7 +6,6 @@ import {
   IconTrendingUp,
   IconTrendingDown,
   IconChartBar,
-  IconUsers,
   IconBed,
   IconReceipt,
 } from "@tabler/icons-react";
@@ -54,7 +53,6 @@ import {
   PieChart,
   Pie,
   Cell,
-  Legend,
 } from "recharts";
 
 import { formatCurrency } from "@/lib/functions";
@@ -187,7 +185,6 @@ export function SystemReports() {
   const {
     data: summaryData,
     isLoading: isLoadingSummary,
-    error: summaryError,
   } = useSWR<SummaryResponse>(summaryUrl, fetcher);
   const {
     data: monthlyData,
@@ -638,7 +635,7 @@ export function SystemReports() {
                           cy="50%"
                           labelLine={false}
                           label={({ label, percent }) =>
-                            `${label}: ${(percent * 100).toFixed(0)}%`
+                            percent > 0 ? `${label}: ${(percent * 100).toFixed(0)}%` : ''
                           }
                           outerRadius={100}
                           innerRadius={60}
@@ -739,7 +736,7 @@ export function SystemReports() {
                           cy="50%"
                           labelLine={false}
                           label={({ label, percent }) =>
-                            `${label}: ${(percent * 100).toFixed(0)}%`
+                            percent > 0 ? `${label}: ${(percent * 100).toFixed(0)}%` : ''
                           }
                           outerRadius={100}
                           innerRadius={60}
