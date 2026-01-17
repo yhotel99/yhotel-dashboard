@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-
 import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
 import {
@@ -17,7 +16,7 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/auth-context";
 import { usePermissions } from "@/contexts/permissions-context";
 import { allNavItems, SIDEBAR_URLS } from "@/lib/constants";
-import { IconInnerShadowTop } from "@tabler/icons-react";
+import Image from "next/image";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { currentUser, profile } = useAuth();
@@ -51,7 +50,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               className="data-[slot=sidebar-menu-button]:p-1.5!"
             >
               <Link href={logoLink}>
-                <IconInnerShadowTop className="size-5!" />
+                <Image src="/favicon.ico" alt="YHotel" width={24} height={24} className="rounded-full border-2 border-primary" />
                 <span className="text-base font-semibold">YHotel</span>
               </Link>
             </SidebarMenuButton>
