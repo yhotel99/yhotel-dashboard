@@ -74,7 +74,6 @@ export function createColumns(
                 <span className="font-semibold text-primary">
                   {bookingCode}
                 </span>
-                <Copy className="size-3 text-muted-foreground shrink-0" />
               </div>
             </TooltipTrigger>
             <TooltipContent>

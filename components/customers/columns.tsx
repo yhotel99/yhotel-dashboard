@@ -55,7 +55,6 @@ export function createColumns(
                 <span className="text-blue-700 underline truncate">
                   {email}
                 </span>
-                <Copy className="size-3 text-muted-foreground shrink-0" />
               </div>
             </TooltipTrigger>
             <TooltipContent>

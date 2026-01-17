@@ -58,7 +58,6 @@ export function createRefundRequestColumns(
                 <span className="font-mono text-sm truncate uppercase">
                   {id}
                 </span>
-                <Copy className="size-3 text-muted-foreground shrink-0" />
               </div>
             </TooltipTrigger>
             <TooltipContent>
