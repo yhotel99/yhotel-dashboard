@@ -4,7 +4,7 @@ import type { Customer } from "@/lib/types";
 export function StatusBadge({
   customerType,
 }: {
-  customerType: Customer["customer_type"];
+  customerType: Customer["customer_type"] | null | undefined;
 }) {
   const typeConfig = {
     regular: {
@@ -24,7 +24,9 @@ export function StatusBadge({
     },
   };
 
-  const config = typeConfig[customerType];
+  // Default to 'regular' if customerType is null, undefined, or invalid
+  const safeCustomerType = customerType || "regular";
+  const config = typeConfig[safeCustomerType] || typeConfig.regular;
 
   return (
     <Badge variant={config.variant} className={config.className}>
