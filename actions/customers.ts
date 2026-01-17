@@ -20,10 +20,11 @@ export async function createCustomerAction(
     .single();
 
   if (error) {
+
     console.error("Error creating customer:", error);
     return {
       ok: false,
-      message: "Không thể tạo khách hàng",
+      message: error.message,
     };
   }
 

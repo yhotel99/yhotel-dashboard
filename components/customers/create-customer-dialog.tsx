@@ -168,6 +168,7 @@ export function CreateCustomerDialog({
         err instanceof Error ? err.message : "Không thể tạo khách hàng";
 
       const errorMessage = translateCustomerError(rawMessage);
+      console.log({ err });
       setError(errorMessage);
       setIsSubmitting(false);
 

@@ -95,7 +95,7 @@ export async function updateBlogStatus(
     console.error("Error updating blog status:", error);
     return {
       ok: false,
-      message: "Không thể cập nhật trạng thái blog",
+      message: error.message,
     };
   }
 
