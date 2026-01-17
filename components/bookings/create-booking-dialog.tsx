@@ -30,8 +30,7 @@ import { Label } from "@/components/ui/label";
 import { IconSearch, IconPlus } from "@tabler/icons-react";
 import type { BookingInput } from "@/lib/types";
 import { useRooms } from "@/hooks/use-rooms";
-import { useCustomers } from "@/hooks/use-customers";
-import { createCustomerAction } from "@/actions/customers";
+import { searchCustomersAction, createCustomerAction } from "@/actions/customers";
 import { useDebounce } from "@/hooks/use-debounce";
 import { CreateCustomerDialog } from "@/components/customers/create-customer-dialog";
 import type { Customer } from "@/lib/types";
@@ -97,6 +96,7 @@ export function CreateBookingDialog({
   );
   const [isCreateCustomerDialogOpen, setIsCreateCustomerDialogOpen] =
     useState(false);
+  const [searchCustomers, setSearchCustomers] = useState<Customer[]>([]);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchResultsRef = useRef<HTMLDivElement>(null);
   const { rooms, mutate: refetch } = useRooms({
@@ -114,15 +114,23 @@ export function CreateBookingDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  // Use separate hook for search results
-  const { customers: searchCustomers } = useCustomers({
-    page: 1,
-    limit: 10,
-    search:
-      debouncedSearch.trim().length >= SEARCH_CUSTOMER_MIN_LENGTH
-        ? debouncedSearch
-        : "",
-  });
+  // Search customers using server action (no stats, only basic info)
+  useEffect(() => {
+    const searchCustomers = async () => {
+      if (debouncedSearch.trim().length >= SEARCH_CUSTOMER_MIN_LENGTH) {
+        const result = await searchCustomersAction(debouncedSearch, 10);
+        if (result.ok) {
+          setSearchCustomers(result.data);
+        } else {
+          setSearchCustomers([]);
+        }
+      } else {
+        setSearchCustomers([]);
+      }
+    };
+
+    searchCustomers();
+  }, [debouncedSearch]);
 
   // Convert dates to ISO strings with default times
   const checkInISO = useMemo(

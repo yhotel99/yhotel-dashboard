@@ -6,6 +6,62 @@ import type { CustomerInput, Customer, Result, ResultVoid } from "@/lib/types";
 import { BOOKING_STATUS } from "@/lib/constants";
 
 /**
+ * Search customers (simple search without stats - for booking dialogs)
+ * Only returns basic customer info: id, full_name, email, phone
+ * @param search - Search term
+ * @param limit - Maximum number of results (default: 10)
+ * @returns Array of customer records (basic info only, no stats)
+ */
+export async function searchCustomersAction(
+  search: string,
+  limit: number = 10
+): Promise<Result<Customer[]>> {
+  try {
+    if (!search || search.trim().length < 2) {
+      return {
+        ok: true,
+        data: [],
+      };
+    }
+
+    const supabase = await createClient();
+    const trimmedSearch = search.trim();
+
+    // Simple query - only basic customer fields, no stats
+    const { data, error } = await supabase
+      .from("customers")
+      .select("id, full_name, email, phone, customer_type, source, created_at, updated_at, deleted_at")
+      .is("deleted_at", null)
+      .or(
+        `full_name.ilike.%${trimmedSearch}%,email.ilike.%${trimmedSearch}%,phone.ilike.%${trimmedSearch}%`
+      )
+      .order("created_at", { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      console.error("Error searching customers:", error);
+      return {
+        ok: false,
+        message: error.message,
+      };
+    }
+
+    return {
+      ok: true,
+      data: (data || []) as Customer[],
+    };
+  } catch (err) {
+    const errorMessage =
+      err instanceof Error ? err.message : "Không thể tìm kiếm khách hàng";
+    console.error("Error searching customers:", err);
+    return {
+      ok: false,
+      message: errorMessage,
+    };
+  }
+}
+
+/**
  * Create a new customer
  * @param input - Customer input data
  */

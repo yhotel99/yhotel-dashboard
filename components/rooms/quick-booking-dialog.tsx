@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useMemo, type FormEvent } from "react";
+import { useState, useRef, useMemo, useEffect, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -20,9 +20,8 @@ import {
   calculateNightsValue,
   formatCurrency,
 } from "@/lib/functions";
-import { useCustomers } from "@/hooks/use-customers";
 import { useDebounce } from "@/hooks/use-debounce";
-import { createCustomerAction } from "@/actions/customers";
+import { searchCustomersAction, createCustomerAction } from "@/actions/customers";
 import { CreateCustomerDialog } from "@/components/customers/create-customer-dialog";
 import {
   Popover,
@@ -69,37 +68,34 @@ export function QuickBookingDialog({
   );
   const [isCreateCustomerDialogOpen, setIsCreateCustomerDialogOpen] =
     useState(false);
+  const [searchCustomers, setSearchCustomers] = useState<Customer[]>([]);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchResultsRef = useRef<HTMLDivElement>(null);
 
   const debouncedSearch = useDebounce(customerSearch, 300);
-  // Use separate hook for search results
-  const { customers: searchCustomers } = useCustomers({
-    page: 1,
-    limit: 10,
-    search:
-      debouncedSearch.trim().length >= SEARCH_CUSTOMER_MIN_LENGTH
-        ? debouncedSearch
-        : "",
-  });
 
-  // Calculate search results and visibility
-  const searchLength = customerSearch.trim().length;
-  const debouncedLength = debouncedSearch.trim().length;
+  // Search customers using server action (no stats, only basic info)
+  useEffect(() => {
+    const searchCustomers = async () => {
+      if (debouncedSearch.trim().length >= SEARCH_CUSTOMER_MIN_LENGTH) {
+        const result = await searchCustomersAction(debouncedSearch, 10);
+        if (result.ok) {
+          setSearchCustomers(result.data);
+        } else {
+          setSearchCustomers([]);
+        }
+      } else {
+        setSearchCustomers([]);
+      }
+    };
+
+    searchCustomers();
+  }, [debouncedSearch]);
+
+  // Calculate if we should show search results
   const shouldShowResults =
-    searchLength >= SEARCH_CUSTOMER_MIN_LENGTH &&
-    debouncedLength >= SEARCH_CUSTOMER_MIN_LENGTH;
-
-  // Memoize search results
-  const searchResults = useMemo(() => {
-    if (shouldShowResults) {
-      return searchCustomers;
-    }
-    return [];
-  }, [searchCustomers, shouldShowResults]);
-
-  // Calculate if we should show search results (computed value, not state)
-  const showSearchResults = shouldShowResults && !selectedCustomer;
+    debouncedSearch.trim().length >= SEARCH_CUSTOMER_MIN_LENGTH &&
+    !selectedCustomer;
 
   // Note: showSearchResults is now computed, so we don't need to manage it with state
   // The search results will automatically hide when selectedCustomer is set
@@ -276,40 +272,35 @@ export function QuickBookingDialog({
                   </Button>
                 </div>
               </div>
-              {!selectedCustomer &&
-                showSearchResults &&
-                searchResults.length > 0 && (
-                  <div
-                    ref={searchResultsRef}
-                    className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border bg-popover shadow-md"
-                  >
-                    {searchResults.map((customer) => (
-                      <button
-                        key={customer.id}
-                        type="button"
-                        onClick={() => handleCustomerSelect(customer)}
-                        className="w-full px-4 py-2 text-left hover:bg-accent hover:text-accent-foreground"
-                      >
-                        <div className="font-medium">{customer.full_name}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {customer.phone && `${customer.phone} • `}
-                          {customer.email}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              {!selectedCustomer &&
-                showSearchResults &&
-                debouncedSearch.trim().length >= SEARCH_CUSTOMER_MIN_LENGTH &&
-                searchResults.length === 0 && (
-                  <div
-                    ref={searchResultsRef}
-                    className="absolute z-50 mt-1 w-full rounded-md border bg-popover p-4 text-center text-sm text-muted-foreground shadow-md"
-                  >
-                    Không tìm thấy khách hàng
-                  </div>
-                )}
+              {shouldShowResults && searchCustomers.length > 0 && (
+                <div
+                  ref={searchResultsRef}
+                  className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border bg-popover shadow-md"
+                >
+                  {searchCustomers.map((customer) => (
+                    <button
+                      key={customer.id}
+                      type="button"
+                      onClick={() => handleCustomerSelect(customer)}
+                      className="w-full px-4 py-2 text-left hover:bg-accent hover:text-accent-foreground"
+                    >
+                      <div className="font-medium">{customer.full_name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {customer.phone && `${customer.phone} • `}
+                        {customer.email}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {shouldShowResults && searchCustomers.length === 0 && (
+                <div
+                  ref={searchResultsRef}
+                  className="absolute z-50 mt-1 w-full rounded-md border bg-popover p-4 text-center text-sm text-muted-foreground shadow-md"
+                >
+                  Không tìm thấy khách hàng
+                </div>
+              )}
             </div>
             {selectedCustomer && (
               <p className="text-xs text-muted-foreground">
