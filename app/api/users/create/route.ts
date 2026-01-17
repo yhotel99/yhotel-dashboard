@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate role (only manager and staff when creating)
-    if (role !== "manager" && role !== "staff") {
+    if (role !== USER_ROLE.MANAGER && role !== USER_ROLE.STAFF) {
       return NextResponse.json(
         {
           error:
