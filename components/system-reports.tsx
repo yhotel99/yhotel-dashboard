@@ -61,10 +61,11 @@ import { paymentMethodLabels } from "@/lib/constants";
 import { Download } from "lucide-react";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
-import { endOfMonth, startOfMonth } from "date-fns";
+import { endOfMonth, startOfMonth, format } from "date-fns";
 import Link from "next/link";
 import { PaymentStatusBadge } from "@/components/payments/status";
 import type { PaymentWithBooking } from "@/lib/types";
+import Papa from "papaparse";
 
 const chartConfig = {
   revenue: {
@@ -238,6 +239,136 @@ export function SystemReports() {
   );
   const isLoadingReports = isLoadingSummary || isLoadingMonthly;
 
+  // Export report to CSV using PapaParse
+  const exportReport = () => {
+    const sections: string[] = [];
+    const papaConfig = {
+      delimiter: ",",
+      header: false,
+      skipEmptyLines: false,
+    };
+
+    // Header section
+    sections.push(
+      Papa.unparse(
+        [
+          ["BÁO CÁO HỆ THỐNG"],
+          [`Thời gian: ${format(dateRange.from, "dd/MM/yyyy")} - ${format(dateRange.to, "dd/MM/yyyy")}`],
+          [`Ngày xuất: ${format(new Date(), "dd/MM/yyyy HH:mm:ss")}`],
+          [""],
+        ],
+        papaConfig
+      )
+    );
+
+    // Summary Statistics
+    const summaryData = [
+      ["Chỉ số", "Giá trị", "Tăng trưởng (%)"],
+      ["Tổng thu (Gross)", formatCurrency(summaryStats.totalRevenue), `${summaryStats.revenueGrowth.toFixed(2)}`],
+      ["Tổng đặt phòng", summaryStats.totalBookings.toString(), `${summaryStats.bookingGrowth.toFixed(2)}`],
+      ["Tỷ lệ lấp đầy trung bình", `${summaryStats.averageOccupancy.toFixed(2)}%`, `${summaryStats.occupancyGrowth.toFixed(2)}`],
+      ["Tổng hoàn tiền", formatCurrency(summaryStats.totalRefunded), `${summaryStats.refundGrowth.toFixed(2)}`],
+    ];
+    sections.push(
+      Papa.unparse([["=== TỔNG QUAN ==="], ...summaryData, [""]], papaConfig)
+    );
+
+    // Monthly Revenue
+    if (revenueData.length > 0) {
+      const monthlyData = [
+        ["Tháng", "Doanh thu", "Số đặt phòng"],
+        ...revenueData.map((item) => [
+          item.month,
+          formatCurrency(item.revenue),
+          item.bookings.toString(),
+        ]),
+      ];
+      sections.push(
+        Papa.unparse([["=== DOANH THU THEO THÁNG ==="], ...monthlyData, [""]], papaConfig)
+      );
+    }
+
+    // Room Statistics
+    if (roomStats.length > 0) {
+      const totalRoomStats = roomStats.reduce((sum, stat) => sum + stat.count, 0);
+      const roomStatsData = [
+        ["Loại phòng", "Số lượng", "Tỷ lệ (%)"],
+        ...roomStats.map((stat) => {
+          const percentage = totalRoomStats > 0 ? ((stat.count / totalRoomStats) * 100).toFixed(2) : "0";
+          return [stat.label, stat.count.toString(), percentage];
+        }),
+      ];
+      sections.push(
+        Papa.unparse([["=== PHÂN BỔ THEO LOẠI PHÒNG ==="], ...roomStatsData, [""]], papaConfig)
+      );
+    }
+
+    // Customer Sources
+    if (customerSources.length > 0) {
+      const totalCustomerSources = customerSources.reduce((sum, source) => sum + source.count, 0);
+      const customerSourcesData = [
+        ["Nguồn khách", "Số đặt phòng", "Tỷ lệ (%)"],
+        ...customerSources.map((source) => {
+          const percentage = totalCustomerSources > 0 ? ((source.count / totalCustomerSources) * 100).toFixed(2) : "0";
+          return [source.label, source.count.toString(), percentage];
+        }),
+      ];
+      sections.push(
+        Papa.unparse([["=== PHÂN BỔ THEO NGUỒN KHÁCH ==="], ...customerSourcesData, [""]], papaConfig)
+      );
+    }
+
+    // Room Statuses
+    if (roomStatuses.length > 0) {
+      const roomStatusesData = [
+        ["Tình trạng", "Số lượng", "Tỷ lệ (%)"],
+        ...roomStatuses.map((status) => {
+          const percentage = totalRooms > 0 ? ((status.count / totalRooms) * 100).toFixed(2) : "0";
+          return [status.label, status.count.toString(), percentage];
+        }),
+      ];
+      sections.push(
+        Papa.unparse([["=== TÌNH TRẠNG PHÒNG ==="], ...roomStatusesData, [""]], papaConfig)
+      );
+    }
+
+    // Recent Payments
+    if (recentPaymentsData?.data && recentPaymentsData.data.length > 0) {
+      const paymentsData = [
+        ["Khách hàng", "Phòng", "Số tiền", "Phương thức", "Trạng thái", "Ngày"],
+        ...recentPaymentsData.data.map((payment) => {
+          const customerName = payment.bookings?.customers?.full_name || "N/A";
+          const roomName = payment.bookings?.rooms?.name || "N/A";
+          const amount = formatCurrency(payment.amount);
+          const paymentMethod = paymentMethodLabels[payment.payment_method] || payment.payment_method;
+          const status = payment.payment_status;
+          const date = payment.paid_at
+            ? format(new Date(payment.paid_at), "dd/MM/yyyy")
+            : format(new Date(payment.created_at), "dd/MM/yyyy");
+          return [customerName, roomName, amount, paymentMethod, status, date];
+        }),
+      ];
+      sections.push(
+        Papa.unparse([["=== GIAO DỊCH GẦN ĐÂY ==="], ...paymentsData], papaConfig)
+      );
+    }
+
+    // Combine all sections
+    const csvContent = sections.join("\n");
+
+    // Create and download file with BOM for Excel UTF-8 support
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const fileName = `bao-cao-${format(dateRange.from, "yyyyMMdd")}-${format(dateRange.to, "yyyyMMdd")}-${format(new Date(), "yyyyMMdd-HHmmss")}.csv`;
+    link.setAttribute("href", url);
+    link.setAttribute("download", fileName);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="flex flex-col gap-6 px-4 py-6 lg:px-6">
       {/* Header */}
@@ -263,7 +394,13 @@ export function SystemReports() {
             showCompare={false}
             locale="vi-VN"
           />
-          <Button variant="outline" size="icon" title="Xuất báo cáo">
+          <Button 
+            variant="outline" 
+            size="icon" 
+            title="Xuất báo cáo"
+            onClick={exportReport}
+            disabled={isLoadingReports || isLoadingRoomStats || isLoadingCustomerSources || isLoadingRoomStatus || isLoadingRecentPayments}
+          >
             <Download className="h-4 w-4" />
           </Button>
         </div>
