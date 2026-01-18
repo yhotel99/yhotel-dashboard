@@ -1,4 +1,4 @@
-import { parse, formatISO } from "date-fns";
+import { parse, formatISO, format, parseISO } from "date-fns";
 
 // 🎨 Hàm tạo màu gradient ổn định dựa vào user.id
 export function generateGradient(id: string) {
@@ -67,6 +67,21 @@ export function formatDateOnly(dateString: string): string {
     month: "2-digit",
     year: "numeric",
   });
+}
+
+/**
+ * Format date string for display (dd/MM/yyyy)
+ * Used for date picker display values
+ * @param value - Date string (ISO or YYYY-MM-DD format)
+ * @returns Formatted date string (dd/MM/yyyy) or null if invalid
+ */
+export function formatDisplayDate(value: string | null | undefined): string | null {
+  if (!value) return null;
+  try {
+    return format(parseISO(value), "dd/MM/yyyy");
+  } catch {
+    return null;
+  }
 }
 
 // Helper để parse date + time và convert sang ISO string

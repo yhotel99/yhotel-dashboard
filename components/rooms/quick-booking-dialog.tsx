@@ -19,6 +19,7 @@ import {
   getDateISO,
   calculateNightsValue,
   formatCurrency,
+  formatDisplayDate,
 } from "@/lib/functions";
 import { useDebounce } from "@/hooks/use-debounce";
 import { searchCustomersAction, createCustomerAction } from "@/actions/customers";
@@ -125,15 +126,6 @@ export function QuickBookingDialog({
   const handleCreateCustomerSuccess = (customer: Customer) => {
     handleCustomerSelect(customer);
     setIsCreateCustomerDialogOpen(false);
-  };
-
-  const formatDisplayDate = (value: string) => {
-    if (!value) return null;
-    try {
-      return format(parseISO(value), "dd/MM/yyyy");
-    } catch {
-      return null;
-    }
   };
 
   const handleDateSelect =
