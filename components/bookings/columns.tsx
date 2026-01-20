@@ -178,9 +178,9 @@ export function createColumns(
       accessorKey: COLUMNS.NOTES.accessorKey,
       header: COLUMNS.NOTES.header,
       cell: ({ row }) => <NotesCell notes={row.original.notes} />,
-      size: 80,
-      minSize: 80,
-      maxSize: 120,
+      size: 60,
+      minSize: 60,
+      maxSize: 80,
     },
     {
       id: "actions",
@@ -230,9 +230,9 @@ export function createColumns(
           />
         );
       },
-      size: 50,
-      minSize: 40,
-      maxSize: 100,
+      size: 90,
+      minSize: 80,
+      maxSize: 90,
     },
   ];
 }
