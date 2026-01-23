@@ -82,6 +82,17 @@ function validateRefundAmount(
   totalRefunded: number,
   available: number
 ): void {
+  // Basic validation: amount must be a valid number
+  if (typeof amount !== "number" || isNaN(amount)) {
+    throw new Error("Số tiền không hợp lệ");
+  }
+
+  // Basic validation: amount must be positive
+  if (amount <= 0) {
+    throw new Error("Số tiền hoàn lại phải lớn hơn 0");
+  }
+
+  // Validation: amount must not exceed available refund amount
   if (amount > available) {
     throw new Error(
       `Số tiền hoàn lại không được vượt quá số tiền có thể hoàn lại. ` +
