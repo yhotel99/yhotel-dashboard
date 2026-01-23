@@ -36,6 +36,18 @@ export function formatCurrency(amount: number): string {
 }
 
 /**
+ * Format number to Vietnamese locale with VNĐ suffix
+ * @param amount - Number to format
+ * @returns Formatted number string with VNĐ suffix (e.g., "1.000.000 VNĐ")
+ */
+export function formatVND(amount: number): string {
+  return `${new Intl.NumberFormat("vi-VN", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount)} VNĐ`;
+}
+
+/**
  * Format date with time (for TIMESTAMPTZ)
  * @param dateString - ISO date string
  * @returns Formatted date string with time or "-" if invalid

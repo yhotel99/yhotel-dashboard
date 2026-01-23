@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import type { Profile } from "@/lib/types";
 
-export function RoleBadge({ role }: { role: Profile["role"] }) {
+export function RoleBadge({ variant, role }: { variant?: "outline" | "default", role: Profile["role"] }) {
   const roleConfig = {
     admin: {
       label: "Quản trị viên",
@@ -23,7 +23,7 @@ export function RoleBadge({ role }: { role: Profile["role"] }) {
   const config = roleConfig[role];
 
   return (
-    <Badge variant={config.variant} className={config.className}>
+    <Badge variant={variant || config.variant} className={config.className}>
       {config.label}
     </Badge>
   );
