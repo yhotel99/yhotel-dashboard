@@ -1,4 +1,5 @@
 import { parse, formatISO, format, parseISO } from "date-fns";
+import { CUSTOMER_ERROR_PATTERNS } from "@/lib/constants";
 
 // 🎨 Hàm tạo màu gradient ổn định dựa vào user.id
 export function generateGradient(id: string) {
@@ -90,8 +91,6 @@ export function getDateTimeISO(date: string, time: string): string | null {
   const dt = parse(`${date} ${time}`, "yyyy-MM-dd HH:mm", new Date());
   return isNaN(dt.getTime()) ? null : formatISO(dt);
 }
-
-import { CUSTOMER_ERROR_PATTERNS } from "@/lib/constants";
 
 /**
  * Utility functions for booking operations

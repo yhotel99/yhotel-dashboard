@@ -96,27 +96,6 @@ export function CreateRefundRequestDialog({
     }
   }, [open, booking.id]);
 
-  // Debug: Log payments when they change
-  React.useEffect(() => {
-    if (open && !isLoadingPayments) {
-      console.log("CreateRefundRequestDialog - Booking ID:", booking.id);
-      console.log("CreateRefundRequestDialog - All payments:", allPayments);
-      console.log(
-        "CreateRefundRequestDialog - Payment statuses:",
-        allPayments.map((p) => ({
-          id: p.id,
-          status: p.payment_status,
-          amount: p.amount,
-          booking_id: p.booking_id,
-        }))
-      );
-      console.log(
-        "CreateRefundRequestDialog - PAYMENT_STATUS.PAID:",
-        PAYMENT_STATUS.PAID
-      );
-    }
-  }, [allPayments, isLoadingPayments, open, booking.id]);
-
   // Filter eligible payments (only PAID, exclude REFUNDED)
   const paidPayments = React.useMemo(() => {
     const eligible = allPayments.filter((p) => {
@@ -126,18 +105,8 @@ export function CreateRefundRequestDialog({
       const isNotCancelled = status !== PAYMENT_STATUS.CANCELLED;
       const isNotFailed = status !== PAYMENT_STATUS.FAILED;
 
-      if (!isPaid) {
-        console.log(
-          `Payment ${p.id} not eligible: status is "${status}", expected "${PAYMENT_STATUS.PAID}"`
-        );
-      }
-
       return isPaid && isNotRefunded && isNotCancelled && isNotFailed;
     });
-    console.log(
-      "CreateRefundRequestDialog - Eligible payments for refund:",
-      eligible
-    );
     return eligible;
   }, [allPayments]);
 
@@ -265,9 +234,9 @@ export function CreateRefundRequestDialog({
                           value={
                             field.value && field.value > 0
                               ? new Intl.NumberFormat("vi-VN", {
-                                  minimumFractionDigits: 0,
-                                  maximumFractionDigits: 0,
-                                }).format(field.value)
+                                minimumFractionDigits: 0,
+                                maximumFractionDigits: 0,
+                              }).format(field.value)
                               : ""
                           }
                           onChange={(e) => {
