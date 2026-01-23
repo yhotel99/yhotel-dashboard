@@ -151,7 +151,7 @@ export async function createBooking(
       p_check_out: input.check_out,
       p_number_of_nights: input.number_of_nights ?? 0,
       p_total_amount: input.total_amount,
-      p_payment_method: PAYMENT_METHOD.PAY_AT_HOTEL,
+      p_payment_method: input.payment_method ?? PAYMENT_METHOD.PAY_AT_HOTEL,
       p_total_guests: input.total_guests ?? 1,
       p_notes: input.notes ?? null,
       p_advance_payment: input.advance_payment ?? 0,

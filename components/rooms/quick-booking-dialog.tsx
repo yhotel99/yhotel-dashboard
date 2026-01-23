@@ -13,8 +13,16 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { IconSearch, IconPlus } from "@tabler/icons-react";
-import type { BookingInput, Customer } from "@/lib/types";
+import type { BookingInput, Customer, PaymentMethod } from "@/lib/types";
 import type { RoomWithBooking } from "@/lib/types";
+import { PAYMENT_METHOD, paymentMethodLabels } from "@/lib/constants";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   getDateISO,
   calculateNightsValue,
@@ -37,6 +45,7 @@ type QuickBookingFormState = {
   check_in_date: string;
   check_out_date: string;
   total_guests: string;
+  payment_method: string;
 };
 
 const initialFormState: QuickBookingFormState = {
@@ -44,6 +53,7 @@ const initialFormState: QuickBookingFormState = {
   check_in_date: "",
   check_out_date: "",
   total_guests: "1",
+  payment_method: PAYMENT_METHOD.PAY_AT_HOTEL,
 };
 
 const SEARCH_CUSTOMER_MIN_LENGTH = 2;
@@ -117,8 +127,7 @@ export function QuickBookingDialog({
     setSelectedCustomer(customer);
     setFormValues((prev) => ({ ...prev, customer_id: customer.id }));
     setCustomerSearch(
-      `${customer.full_name}${customer.phone ? ` - ${customer.phone}` : ""}${
-        customer.email ? ` (${customer.email})` : ""
+      `${customer.full_name}${customer.phone ? ` - ${customer.phone}` : ""}${customer.email ? ` (${customer.email})` : ""
       }`
     );
   };
@@ -208,6 +217,7 @@ export function QuickBookingDialog({
       notes: null,
       total_amount: totalAmount,
       advance_payment: 0,
+      payment_method: formValues.payment_method as PaymentMethod,
     };
 
     try {
@@ -369,6 +379,28 @@ export function QuickBookingDialog({
             <p className="text-xs text-muted-foreground">
               Tối đa: {room.max_guests} người
             </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="payment_method">Phương thức thanh toán *</Label>
+            <Select
+              value={formValues.payment_method}
+              onValueChange={(v) =>
+                setFormValues((prev) => ({ ...prev, payment_method: v }))
+              }
+            >
+              <SelectTrigger id="payment_method" className="w-full">
+                <SelectValue placeholder="Chọn phương thức thanh toán" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={PAYMENT_METHOD.PAY_AT_HOTEL}>
+                  {paymentMethodLabels[PAYMENT_METHOD.PAY_AT_HOTEL]}
+                </SelectItem>
+                <SelectItem value={PAYMENT_METHOD.BANK_TRANSFER}>
+                  {paymentMethodLabels[PAYMENT_METHOD.BANK_TRANSFER]}
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Display nights and total amount */}

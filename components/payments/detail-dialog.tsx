@@ -9,12 +9,13 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Eye } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { PaymentWithBooking } from "@/lib/types";
 import { formatCurrency, formatDateOnly } from "@/lib/functions";
 import { PaymentStatusBadge } from "./status";
-import { paymentTypeLabels } from "@/lib/constants";
+import { paymentTypeLabels, paymentMethodLabels } from "@/lib/constants";
 
 interface PaymentDetailDialogProps {
   payment: PaymentWithBooking;
@@ -93,6 +94,18 @@ export function PaymentDetailDialog({ payment }: PaymentDetailDialogProps) {
                     payment.payment_type as keyof typeof paymentTypeLabels
                   ] ?? payment.payment_type}
                 </p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Phương thức thanh toán
+                </p>
+                <Badge
+                  variant="outline"
+                  className="bg-primary/10 text-primary border-primary/20"
+                >
+                  {paymentMethodLabels[payment.payment_method] ||
+                    payment.payment_method}
+                </Badge>
               </div>
               <div>
                 <p className="text-sm font-medium text-muted-foreground">

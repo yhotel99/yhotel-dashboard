@@ -2,15 +2,16 @@
 
 import { ColumnDef } from "@tanstack/react-table";
 import { formatCurrency, formatDateOnly } from "@/lib/functions";
-import type { PaymentWithBooking } from "@/lib/types";
+import type { PaymentMethod, PaymentWithBooking } from "@/lib/types";
 import { PaymentStatusBadge } from "./status";
 import { PaymentDetailDialog } from "./detail-dialog";
-import { paymentTypeLabels } from "@/lib/constants";
+import { paymentMethodLabels, paymentTypeLabels } from "@/lib/constants";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Badge } from "../ui/badge";
 
 // Column definitions constants
 export const PAYMENTS_COLUMNS = {
@@ -18,6 +19,7 @@ export const PAYMENTS_COLUMNS = {
   ROOM_NAME: { accessorKey: "Phòng", header: "Phòng" },
   AMOUNT: { accessorKey: "Số tiền", header: "Số tiền" },
   PAYMENT_TYPE: { accessorKey: "Loại thanh toán", header: "Loại thanh toán" },
+  PAYMENT_METHOD: { accessorKey: "Phương thức thanh toán", header: "Phương thức thanh toán" },
   PAYMENT_STATUS: { accessorKey: "Trạng thái", header: "Trạng thái" },
   PAID_AT: { accessorKey: "Ngày thanh toán", header: "Ngày thanh toán" },
   CREATED_AT: { accessorKey: "Ngày tạo", header: "Ngày tạo" },
@@ -83,8 +85,22 @@ export function createPaymentsColumns(): ColumnDef<PaymentWithBooking>[] {
       header: PAYMENTS_COLUMNS.PAYMENT_TYPE.header,
       cell: ({ row }) =>
         paymentTypeLabels[
-          row.original.payment_type as keyof typeof paymentTypeLabels
+        row.original.payment_type as keyof typeof paymentTypeLabels
         ] ?? row.original.payment_type,
+      size: 100,
+      minSize: 100,
+      maxSize: 120,
+    },
+    {
+      accessorKey: PAYMENTS_COLUMNS.PAYMENT_METHOD.accessorKey,
+      header: PAYMENTS_COLUMNS.PAYMENT_METHOD.header,
+      cell: ({ row }) => <Badge
+        variant="outline"
+        className="bg-primary/10 text-primary border-primary/20"
+      >
+        {paymentMethodLabels[row.original.payment_method as PaymentMethod] ||
+          row.original.payment_method}
+      </Badge>,
       size: 100,
       minSize: 100,
       maxSize: 120,
