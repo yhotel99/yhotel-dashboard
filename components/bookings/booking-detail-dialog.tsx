@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import type { BookingRecord } from "@/lib/types";
+import type { BookingRecord, PaymentWithBooking, PaymentsResponse } from "@/lib/types";
 import { formatCurrency, formatDateOnly } from "@/lib/functions";
 import { StatusBadge } from "@/components/bookings/status";
 import {
@@ -21,6 +21,10 @@ import {
   PhoneIcon,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import useSWR from "swr";
+import { fetcher } from "@/lib/fetcher";
+import { PAYMENT_TYPE } from "@/lib/constants";
+import { PaymentStatusBadge } from "@/components/payments/status";
 
 interface BookingDetailDialogProps {
   open: boolean;
@@ -33,6 +37,30 @@ export function BookingDetailDialog({
   onOpenChange,
   booking,
 }: BookingDetailDialogProps) {
+  const bookingId = booking?.id ?? null;
+  const paymentsUrl =
+    open && bookingId
+      ? `/api/payments?bookingId=${bookingId}&page=1&limit=50`
+      : null;
+
+  const { data: paymentsResponse, isLoading: isPaymentsLoading } =
+    useSWR<PaymentsResponse>(paymentsUrl, fetcher, {
+      revalidateOnFocus: false,
+    });
+
+  const payments = paymentsResponse?.data ?? [];
+
+  const getLatestPaymentByType = (paymentType: string): PaymentWithBooking | null => {
+    const matched = payments.filter((p) => p.payment_type === paymentType);
+    if (matched.length === 0) return null;
+    return matched.sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    )[0]!;
+  };
+
+  const advancePayment = getLatestPaymentByType(PAYMENT_TYPE.ADVANCE_PAYMENT);
+  const roomChargePayment = getLatestPaymentByType(PAYMENT_TYPE.ROOM_CHARGE);
+
   if (!booking) return null;
 
   return (
@@ -47,7 +75,7 @@ export function BookingDetailDialog({
             <StatusBadge status={booking.status} />
           </DialogTitle>
           <DialogDescription>
-            Thông tin chi tiết về booking này
+            Thông tin chi tiết về booking
           </DialogDescription>
         </DialogHeader>
 
@@ -179,6 +207,88 @@ export function BookingDetailDialog({
                   </p>
                 </div>
               </div>
+
+              {(isPaymentsLoading || roomChargePayment || advancePayment) && (
+                <div className="pl-7 space-y-3 mt-4">
+                  {/* Trạng thái tiền phòng */}
+                  {isPaymentsLoading ? (
+                    <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-1">
+                          <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+                            Trạng thái tiền phòng
+                          </p>
+                          <p className="text-base font-bold text-blue-700 dark:text-blue-300">
+                            Đang tải...
+                          </p>
+                        </div>
+                        <div className="shrink-0">
+                          <Badge variant="outline" className="whitespace-nowrap bg-white dark:bg-gray-900">
+                            Đang tải...
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    roomChargePayment && (
+                      <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-1">
+                            <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+                              Trạng thái tiền phòng
+                            </p>
+                            <p className="text-base font-bold text-blue-700 dark:text-blue-300">
+                              {formatCurrency(roomChargePayment.amount)}
+                            </p>
+                          </div>
+                          <div className="shrink-0">
+                            <PaymentStatusBadge status={roomChargePayment.payment_status} />
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  )}
+
+                  {/* Trạng thái tiền cọc */}
+                  {isPaymentsLoading ? (
+                    <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-1">
+                          <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+                            Trạng thái tiền cọc
+                          </p>
+                          <p className="text-base font-bold text-amber-700 dark:text-amber-300">
+                            Đang tải...
+                          </p>
+                        </div>
+                        <div className="shrink-0">
+                          <Badge variant="outline" className="whitespace-nowrap bg-white dark:bg-gray-900">
+                            Đang tải...
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    advancePayment && (
+                      <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-1">
+                            <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+                              Trạng thái tiền cọc
+                            </p>
+                            <p className="text-base font-bold text-amber-700 dark:text-amber-300">
+                              {formatCurrency(advancePayment.amount)}
+                            </p>
+                          </div>
+                          <div className="shrink-0">
+                            <PaymentStatusBadge status={advancePayment.payment_status} />
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Timestamps */}
