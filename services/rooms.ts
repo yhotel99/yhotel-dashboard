@@ -70,121 +70,7 @@ export async function getAvailableRooms(
   }
 }
 
-/**
- * Search rooms with pagination and search
- * @param search - Search term
- * @param page - Page number
- * @param limit - Items per page
- * @returns Object containing rooms array and pagination metadata
- */
-export async function searchRooms({
-  search,
-  page,
-  limit,
-}: {
-  search: string | null;
-  page: number;
-  limit: number;
-}): Promise<{
-  data: Room[];
-  pagination: PaginationMeta;
-}> {
-  try {
-    const supabase = await createClient();
 
-    // Calculate offset
-    const from = (page - 1) * limit;
-    const to = from + limit - 1;
-
-    // Build query with room_images join - only fetch thumbnail (is_main = true)
-    let query = supabase
-      .from("rooms")
-      .select(
-        `
-        *,
-        room_images!inner (
-          image_id,
-          is_main,
-          images (
-            id,
-            url
-          )
-        )
-      `,
-        { count: "exact" }
-      )
-      .is("deleted_at", null)
-      .eq("room_images.is_main", true);
-
-    // Add search filter if search term exists
-    if (search && search.trim() !== "") {
-      query = query.ilike("name", `%${search.trim()}%`);
-    }
-
-    // Fetch data with pagination
-    const { data, error, count } = await query
-      .order("created_at", { ascending: false })
-      .range(from, to);
-
-    if (error) {
-      throw new Error(error.message);
-    }
-
-    // Process rooms to extract thumbnails
-    type RoomWithImagesData = Room & {
-      room_images?: Array<{
-        image_id: string;
-        is_main: boolean;
-        position: number;
-        images: {
-          id: string;
-          url: string;
-        } | null;
-      }>;
-    };
-
-    const roomsData = (data || []).map((room: RoomWithImagesData) => {
-      const roomImages = room.room_images || [];
-
-      // Get thumbnail - query already filtered for is_main = true, so take first item
-      const thumbnailRoomImage = roomImages[0];
-      const thumbnail =
-        thumbnailRoomImage && thumbnailRoomImage.images
-          ? {
-              id: thumbnailRoomImage.images.id,
-              url: thumbnailRoomImage.images.url,
-            }
-          : undefined;
-
-      // Remove room_images from room data
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { room_images, ...roomWithoutImages } = room;
-
-      return {
-        ...roomWithoutImages,
-        amenities: Array.isArray(room.amenities) ? room.amenities : [],
-        thumbnail,
-      } as Room;
-    });
-
-    const total = count || 0;
-    const totalPages = Math.ceil(total / limit);
-
-    return {
-      data: roomsData,
-      pagination: {
-        total,
-        page,
-        limit,
-        totalPages,
-      },
-    };
-  } catch (err) {
-    const errorMessage =
-      err instanceof Error ? err.message : "Không thể tải danh sách phòng";
-    throw new Error(errorMessage);
-  }
-}
 
 /**
  * Create a new room
@@ -553,13 +439,15 @@ export async function getRoomsListWithPagination({
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
-    // Build query with room_images join - only fetch thumbnail (is_main = true)
+    // Build query with room_images join
+    // We don't use !inner or top-level filter on is_main to avoid duplicating room rows
+    // in the result set, which would break server-side pagination.
     let query = supabase
       .from("rooms")
       .select(
         `
         *,
-        room_images!inner (
+        room_images (
           image_id,
           is_main,
           images (
@@ -570,17 +458,18 @@ export async function getRoomsListWithPagination({
       `,
         { count: "exact" }
       )
-      .is("deleted_at", null)
-      .eq("room_images.is_main", true);
+      .is("deleted_at", null);
 
     // Add search filter if search term exists
     if (search && search.trim() !== "") {
       query = query.ilike("name", `%${search.trim()}%`);
     }
 
-    // Fetch data with pagination
+    // Fetch data with server-side pagination
+    // Added .order("id") to ensure stable sorting when created_at is identical
     const { data, error, count } = await query
       .order("created_at", { ascending: false })
+      .order("id", { ascending: true })
       .range(from, to);
 
     if (error) {
@@ -602,8 +491,8 @@ export async function getRoomsListWithPagination({
     const roomsData = (data || []).map((room: RoomWithImagesData) => {
       const roomImages = room.room_images || [];
 
-      // Get thumbnail - query already filtered for is_main = true, so take first item
-      const thumbnailRoomImage = roomImages[0];
+      // Get thumbnail - find the one marked as main
+      const thumbnailRoomImage = roomImages.find((ri) => ri.is_main === true);
       const thumbnail =
         thumbnailRoomImage && thumbnailRoomImage.images
           ? {

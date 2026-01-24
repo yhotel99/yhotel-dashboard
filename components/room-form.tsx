@@ -152,10 +152,10 @@ export function RoomForm({
     ),
     defaultValues: defaultValues
       ? {
-          ...defaultFormValues,
-          ...defaultValues,
-          amenities: defaultValues.amenities ?? [],
-        }
+        ...defaultFormValues,
+        ...defaultValues,
+        amenities: defaultValues.amenities ?? [],
+      }
       : defaultFormValues,
   });
 
@@ -188,7 +188,6 @@ export function RoomForm({
         toast.success("Cập nhật phòng thành công!", {
           description: `Phòng ${roomData.name} đã được cập nhật thành công.`,
         });
-        mutate(["room", roomId]);
       } else {
         // Create room with images
         await createRoomAction(
@@ -199,19 +198,17 @@ export function RoomForm({
         toast.success("Tạo phòng thành công!", {
           description: `Phòng ${roomData.name} đã được tạo thành công.`,
         });
-        mutate(["rooms"]);
       }
 
       // Redirect to rooms page
       router.push("/dashboard/rooms");
-      router.refresh();
     } catch (error) {
       const errorMessage =
         error instanceof Error
           ? error.message
           : mode === "edit"
-          ? "Không thể cập nhật phòng"
-          : "Không thể tạo phòng";
+            ? "Không thể cập nhật phòng"
+            : "Không thể tạo phòng";
       toast.error(
         mode === "edit" ? "Cập nhật phòng thất bại" : "Tạo phòng thất bại",
         {
@@ -479,8 +476,8 @@ export function RoomForm({
                     ? "Đang cập nhật..."
                     : "Đang tạo..."
                   : mode === "edit"
-                  ? "Cập nhật phòng"
-                  : "Tạo phòng"}
+                    ? "Cập nhật phòng"
+                    : "Tạo phòng"}
               </Button>
             </div>
           </form>

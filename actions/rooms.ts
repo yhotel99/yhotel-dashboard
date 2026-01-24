@@ -136,7 +136,7 @@ export async function createRoom(
     }
 
     // Revalidate rooms page after creating
-    revalidatePath("/dashboard/rooms");
+    revalidatePath("/dashboard/rooms", "page");
     return { ok: true };
   } catch (err) {
     const errorMessage =
@@ -229,7 +229,7 @@ export async function updateRoom(
     }
 
     // Revalidate rooms page after updating
-    revalidatePath("/dashboard/rooms");
+    revalidatePath("/dashboard/rooms", "page");
     return { ok: true };
   } catch (err) {
     const errorMessage =
