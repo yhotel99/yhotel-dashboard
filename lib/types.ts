@@ -240,6 +240,7 @@ export type BookingInput = {
   notes?: string | null;
   total_amount: number;
   advance_payment?: number;
+  payment_method?: PaymentMethod;
   actual_check_in?: string | null;
   actual_check_out?: string | null;
 };

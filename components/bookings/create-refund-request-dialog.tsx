@@ -23,10 +23,11 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { createRefundRequestAction } from "@/actions/refund-requests";
+import { createRefundRequestAction, getRefundRequestsByBookingIdAction } from "@/actions/refund-requests";
 import { getPaymentsByBookingIdAction } from "@/actions/payments";
-import type { BookingRecord, PaymentWithBooking } from "@/lib/types";
-import { PAYMENT_STATUS } from "@/lib/constants";
+import type { BookingRecord, PaymentWithBooking, RefundRequest } from "@/lib/types";
+import { PAYMENT_STATUS, REFUND_REQUEST_STATUS } from "@/lib/constants";
+import { formatVND } from "@/lib/functions";
 import { toast } from "sonner";
 
 const createRefundRequestSchema = (maxAmount: number) =>
@@ -39,9 +40,7 @@ const createRefundRequestSchema = (maxAmount: number) =>
       .positive("Số tiền phải lớn hơn 0")
       .max(
         maxAmount,
-        `Số tiền không được vượt quá ${new Intl.NumberFormat("vi-VN").format(
-          maxAmount
-        )} VNĐ`
+        `Số tiền không được vượt quá ${formatVND(maxAmount)}`
       ),
     reason: z.string().optional(),
     note: z.string().optional(),
@@ -63,38 +62,50 @@ export function CreateRefundRequestDialog({
   const [allPayments, setAllPayments] = React.useState<PaymentWithBooking[]>(
     []
   );
+  const [refundRequests, setRefundRequests] = React.useState<RefundRequest[]>(
+    []
+  );
   const [isLoadingPayments, setIsLoadingPayments] = React.useState(false);
   const [paymentsError, setPaymentsError] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [hasFetchedData, setHasFetchedData] = React.useState(false);
 
-  // Fetch payments when dialog opens
+  // Fetch payments and refund requests when dialog opens
   React.useEffect(() => {
-    if (open && booking.id) {
-      const fetchPayments = async () => {
+    if (open && booking.id && !hasFetchedData) {
+      const fetchData = async () => {
         try {
           setIsLoadingPayments(true);
           setPaymentsError(null);
-          const payments = await getPaymentsByBookingIdAction(booking.id);
+          const [payments, refunds] = await Promise.all([
+            getPaymentsByBookingIdAction(booking.id),
+            getRefundRequestsByBookingIdAction(booking.id),
+          ]);
           setAllPayments(payments);
+          setRefundRequests(refunds);
+          setHasFetchedData(true);
         } catch (error) {
           const errorMessage =
             error instanceof Error
               ? error.message
-              : "Không thể tải danh sách thanh toán";
+              : "Không thể tải thông tin thanh toán";
           setPaymentsError(errorMessage);
           setAllPayments([]);
+          setRefundRequests([]);
         } finally {
           setIsLoadingPayments(false);
         }
       };
 
-      fetchPayments();
-    } else {
+      fetchData();
+    } else if (!open) {
       // Reset when dialog closes
+      setHasFetchedData(false);
       setAllPayments([]);
+      setRefundRequests([]);
       setPaymentsError(null);
     }
-  }, [open, booking.id]);
+  }, [open, booking.id, hasFetchedData]);
 
   // Filter eligible payments (only PAID, exclude REFUNDED)
   const paidPayments = React.useMemo(() => {
@@ -115,10 +126,22 @@ export function CreateRefundRequestDialog({
     return paidPayments.reduce((sum, payment) => sum + payment.amount, 0);
   }, [paidPayments]);
 
-  // Create schema with max amount validation
+  // Calculate total refunded amount
+  const totalRefundedAmount = React.useMemo(() => {
+    return refundRequests
+      .filter((r) => r.status === REFUND_REQUEST_STATUS.REFUNDED)
+      .reduce((sum, refund) => sum + (refund.amount || 0), 0);
+  }, [refundRequests]);
+
+  // Calculate available refund amount
+  const availableRefundAmount = React.useMemo(() => {
+    return Math.max(0, totalPaidAmount - totalRefundedAmount);
+  }, [totalPaidAmount, totalRefundedAmount]);
+
+  // Create schema with max amount validation (using available refund amount)
   const refundRequestSchema = React.useMemo(
-    () => createRefundRequestSchema(totalPaidAmount),
-    [totalPaidAmount]
+    () => createRefundRequestSchema(availableRefundAmount),
+    [availableRefundAmount]
   );
 
   type RefundRequestFormValues = z.infer<typeof refundRequestSchema>;
@@ -144,12 +167,10 @@ export function CreateRefundRequestDialog({
     try {
       setIsSubmitting(true);
 
-      // Validate amount against total paid amount
-      if (values.amount > totalPaidAmount) {
+      // Validate amount against available refund amount
+      if (values.amount > availableRefundAmount) {
         form.setError("amount", {
-          message: `Số tiền không được vượt quá ${new Intl.NumberFormat(
-            "vi-VN"
-          ).format(totalPaidAmount)} VNĐ`,
+          message: `Số tiền không được vượt quá ${formatVND(availableRefundAmount)}`,
         });
         return;
       }
@@ -164,6 +185,10 @@ export function CreateRefundRequestDialog({
       });
 
       toast.success("Đã tạo yêu cầu hoàn tiền thành công");
+
+      // Reset fetch flag so data will be refreshed when dialog opens again
+      setHasFetchedData(false);
+
       onOpenChange(false);
       onSuccess?.();
     } catch (error) {
@@ -210,8 +235,44 @@ export function CreateRefundRequestDialog({
                   </span>
                 )}
               </div>
+            ) : availableRefundAmount <= 0 ? (
+              <div className="text-sm text-destructive">
+                Không thể hoàn tiền. Tổng đã hoàn tiền đã đạt giới hạn.
+                <div className="mt-2 text-xs space-y-1">
+                  <div>
+                    Tổng đã thanh toán: {formatVND(totalPaidAmount)}
+                  </div>
+                  <div>
+                    Đã hoàn tiền: {formatVND(totalRefundedAmount)}
+                  </div>
+                </div>
+              </div>
             ) : (
               <>
+                <div className="text-sm space-y-1 p-3 bg-muted rounded-md">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">
+                      Tổng đã thanh toán:
+                    </span>
+                    <span className="font-medium">
+                      {formatVND(totalPaidAmount)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Đã hoàn tiền:</span>
+                    <span className="font-medium">
+                      {formatVND(totalRefundedAmount)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between pt-1 border-t">
+                    <span className="text-muted-foreground">
+                      Có thể hoàn lại:
+                    </span>
+                    <span className="font-semibold text-primary">
+                      {formatVND(availableRefundAmount)}
+                    </span>
+                  </div>
+                </div>
                 <FormField
                   control={form.control}
                   name="amount"
@@ -220,11 +281,7 @@ export function CreateRefundRequestDialog({
                       <FormLabel>
                         Số tiền hoàn lại{" "}
                         <span className="text-muted-foreground text-xs font-normal">
-                          (Tối đa:{" "}
-                          {new Intl.NumberFormat("vi-VN").format(
-                            totalPaidAmount
-                          )}{" "}
-                          VNĐ)
+                          (Tối đa: {formatVND(availableRefundAmount)})
                         </span>
                       </FormLabel>
                       <FormControl>
@@ -305,7 +362,10 @@ export function CreateRefundRequestDialog({
               <Button
                 type="submit"
                 disabled={
-                  isSubmitting || isLoadingPayments || paidPayments.length === 0
+                  isSubmitting ||
+                  isLoadingPayments ||
+                  paidPayments.length === 0 ||
+                  availableRefundAmount <= 0
                 }
               >
                 {isSubmitting ? "Đang xử lý..." : "Tạo yêu cầu"}

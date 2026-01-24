@@ -18,7 +18,6 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import type { User } from "@supabase/supabase-js";
 import type { Profile } from "@/lib/types";
 import { formatDateOnly, generateGradient, getInitials } from "@/lib/functions";
 import { RoleBadge } from "./role-badge";
@@ -28,17 +27,15 @@ import { USER_ROLE } from "@/lib/constants";
 interface AccountDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  user: User | null;
   profile: Profile | null;
 }
 
 export function AccountDetailDialog({
   open,
   onOpenChange,
-  user,
   profile,
 }: AccountDetailDialogProps) {
-  if (!user) return null;
+  if (!profile) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -61,29 +58,23 @@ export function AccountDetailDialog({
                 <AvatarFallback
                   className="rounded-lg text-white font-semibold text-xl"
                   style={{
-                    backgroundImage: generateGradient(user.id),
+                    backgroundImage: generateGradient(profile.id),
                     backgroundSize: "cover",
                     backgroundPosition: "center",
                   }}
                 >
-                  {getInitials(
-                    user.user_metadata?.full_name || profile?.full_name
-                  )}
+                  {getInitials(profile.full_name)}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
                 <h3 className="text-xl font-semibold">
-                  {user.user_metadata?.full_name ||
-                    profile?.full_name ||
-                    "Người dùng"}
+                  {profile.full_name || "Người dùng"}
                 </h3>
-                <p className="text-muted-foreground">{user.email}</p>
-                {profile && (
-                  <div className="flex items-center gap-2 mt-2">
-                    <RoleBadge role={profile.role} />
-                    <StatusBadge status={profile.status} />
-                  </div>
-                )}
+                <p className="text-muted-foreground">{profile.email}</p>
+                <div className="flex items-center gap-2 mt-2">
+                  <RoleBadge variant="outline" role={profile.role} />
+                  <StatusBadge status={profile.status} />
+                </div>
               </div>
             </div>
 
@@ -97,7 +88,7 @@ export function AccountDetailDialog({
                     Họ và tên
                   </label>
                   <p className="text-base font-medium">
-                    {user.user_metadata?.full_name || profile?.full_name || "-"}
+                    {profile.full_name || "-"}
                   </p>
                 </div>
 
@@ -106,10 +97,10 @@ export function AccountDetailDialog({
                     <IconMail className="size-4" />
                     Email
                   </label>
-                  <p className="text-base">{user.email || "-"}</p>
+                  <p className="text-base">{profile.email || "-"}</p>
                 </div>
 
-                {profile?.phone && (
+                {profile.phone && (
                   <div className="space-y-1">
                     <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                       <IconPhone className="size-4" />
@@ -119,73 +110,56 @@ export function AccountDetailDialog({
                   </div>
                 )}
 
-                {profile && (
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                      <IconShield className="size-4" />
-                      Vai trò
-                    </label>
-                    <div>
-                      <RoleBadge role={profile.role} />
-                    </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <IconShield className="size-4" />
+                    Vai trò
+                  </label>
+                  <div>
+                    <RoleBadge role={profile.role} />
                   </div>
-                )}
+                </div>
+              </div>
+            </div>
 
-                {profile && (
+            <Separator />
+
+            {/* System Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Thông tin hệ thống</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <IconCalendar className="size-4" />
+                    Ngày tạo tài khoản
+                  </label>
+                  <p className="text-base">
+                    {formatDateOnly(profile.created_at)}
+                  </p>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <IconCalendar className="size-4" />
+                    Cập nhật lần cuối
+                  </label>
+                  <p className="text-base">
+                    {formatDateOnly(profile.updated_at)}
+                  </p>
+                </div>
+
+                {profile.role === USER_ROLE.ADMIN && (
                   <div className="space-y-1">
                     <label className="text-sm font-medium text-muted-foreground">
-                      Trạng thái
+                      User ID
                     </label>
-                    <div>
-                      <StatusBadge status={profile.status} />
-                    </div>
+                    <p className="text-base font-mono break-all">
+                      {profile.id}
+                    </p>
                   </div>
                 )}
               </div>
             </div>
-
-            {profile && (
-              <>
-                <Separator />
-
-                {/* System Information */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Thông tin hệ thống</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                        <IconCalendar className="size-4" />
-                        Ngày tạo tài khoản
-                      </label>
-                      <p className="text-base">
-                        {formatDateOnly(profile.created_at)}
-                      </p>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                        <IconCalendar className="size-4" />
-                        Cập nhật lần cuối
-                      </label>
-                      <p className="text-base">
-                        {formatDateOnly(profile.updated_at)}
-                      </p>
-                    </div>
-
-                    {profile.role === USER_ROLE.ADMIN && (
-                      <div className="space-y-1">
-                        <label className="text-sm font-medium text-muted-foreground">
-                          User ID
-                        </label>
-                        <p className="text-base font-mono break-all">
-                          {user.id}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </>
-            )}
           </div>
         </ScrollArea>
 

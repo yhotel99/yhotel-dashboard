@@ -25,18 +25,16 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { User } from "@supabase/supabase-js";
 import { generateGradient, getInitials } from "@/lib/functions";
 import { useRouter } from "next/navigation";
 import { DASHBOARD_URLS } from "@/lib/constants";
-import { useAuth } from "@/contexts/auth-context";
 import { AccountDetailDialog } from "@/components/users/account-detail-dialog";
 import { usePermissions } from "@/contexts/permissions-context";
+import type { Profile } from "@/lib/types";
 
-export function NavUser({ user }: { user: User }) {
+export function NavUser({ profile }: { profile: Profile }) {
   const { isMobile } = useSidebar();
   const router = useRouter();
-  const { profile } = useAuth();
   const { hasViewPermission } = usePermissions();
   const [accountDialogOpen, setAccountDialogOpen] = useState(false);
 
@@ -57,20 +55,20 @@ export function NavUser({ user }: { user: User }) {
                 <AvatarFallback
                   className="rounded-full text-white font-semibold"
                   style={{
-                    backgroundImage: generateGradient(user.id),
+                    backgroundImage: generateGradient(profile.id),
                     backgroundSize: "cover",
                     backgroundPosition: "center",
                   }}
                 >
-                  {getInitials(user.user_metadata?.full_name)}
+                  {getInitials(profile.full_name)}
                 </AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">
-                  {user.user_metadata.full_name}
+                  {profile.full_name}
                 </span>
                 <span className="text-muted-foreground truncate text-xs">
-                  {user.email}
+                  {profile.email}
                 </span>
               </div>
               <IconDotsVertical className="ml-auto size-4" />
@@ -88,20 +86,20 @@ export function NavUser({ user }: { user: User }) {
                   <AvatarFallback
                     className="rounded-full text-white font-semibold"
                     style={{
-                      backgroundImage: generateGradient(user.id),
+                      backgroundImage: generateGradient(profile.id),
                       backgroundSize: "cover",
                       backgroundPosition: "center",
                     }}
                   >
-                    {getInitials(user.user_metadata?.full_name)}
+                    {getInitials(profile.full_name)}
                   </AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">
-                    {user.user_metadata.full_name}
+                    {profile.full_name}
                   </span>
                   <span className="text-muted-foreground truncate text-xs">
-                    {user.email}
+                    {profile.email}
                   </span>
                 </div>
               </div>
@@ -130,11 +128,10 @@ export function NavUser({ user }: { user: User }) {
         </DropdownMenu>
       </SidebarMenuItem>
 
-      {profile && accountDialogOpen && (
+      {accountDialogOpen && (
         <AccountDetailDialog
           open={accountDialogOpen}
           onOpenChange={setAccountDialogOpen}
-          user={user}
           profile={profile}
         />
       )}

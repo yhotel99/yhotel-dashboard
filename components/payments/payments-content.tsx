@@ -7,7 +7,7 @@ import { DataTable } from "@/components/data-table";
 import { usePayments } from "@/hooks/use-payments";
 import type { PaymentsResponse } from "@/lib/types";
 import { useDebounce } from "@/hooks/use-debounce";
-import { createPaymentsColumns } from "./columns";
+import { createPaymentsColumns, PAYMENTS_COLUMNS } from "./columns";
 
 export function PaymentsContent({
   initialData,
@@ -130,6 +130,9 @@ export function PaymentsContent({
           onLimitChange={(newLimit) => updateSearchParams(1, newLimit, search)}
           serverSearch={localSearch}
           onSearchChange={setLocalSearch}
+          initialColumnVisibility={{
+            [PAYMENTS_COLUMNS.PAYMENT_METHOD.accessorKey]: false,
+          }}
         />
       </div>
     </div>

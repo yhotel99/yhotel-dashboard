@@ -29,12 +29,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { IconSearch, IconPlus } from "@tabler/icons-react";
-import type { BookingInput } from "@/lib/types";
+import type { BookingInput, PaymentMethod } from "@/lib/types";
 import { useRooms } from "@/hooks/use-rooms";
 import { searchCustomersAction, createCustomerAction } from "@/actions/customers";
 import { useDebounce } from "@/hooks/use-debounce";
 import { CreateCustomerDialog } from "@/components/customers/create-customer-dialog";
 import type { Customer, Room } from "@/lib/types";
+import { PAYMENT_METHOD, PAYMENT_TYPE, paymentMethodLabels } from "@/lib/constants";
 import {
   formatCurrency,
   getDateISO,
@@ -61,6 +62,7 @@ type CreateBookingFormState = {
   total_guests: string;
   total_amount: string;
   advance_payment: string;
+  payment_method: string;
   notes: string;
 };
 
@@ -72,6 +74,7 @@ const initialCreateBookingState: CreateBookingFormState = {
   total_guests: "1",
   total_amount: "0",
   advance_payment: "0",
+  payment_method: PAYMENT_METHOD.PAY_AT_HOTEL,
   notes: "",
 };
 
@@ -300,16 +303,16 @@ export function CreateBookingDialog({
 
   const handleInputChange =
     (field: keyof CreateBookingFormState) =>
-    (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      const { value } = event.target;
-      // Format advance_payment with thousand separators
-      if (field === "advance_payment") {
-        const formatted = formatNumberWithSeparators(value);
-        setFormValues((prev) => ({ ...prev, [field]: formatted }));
-      } else {
-        setFormValues((prev) => ({ ...prev, [field]: value }));
-      }
-    };
+      (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const { value } = event.target;
+        // Format advance_payment with thousand separators
+        if (field === PAYMENT_TYPE.ADVANCE_PAYMENT) {
+          const formatted = formatNumberWithSeparators(value);
+          setFormValues((prev) => ({ ...prev, [field]: formatted }));
+        } else {
+          setFormValues((prev) => ({ ...prev, [field]: value }));
+        }
+      };
 
   const resetForm = useCallback(() => {
     setFormValues(initialCreateBookingState);
@@ -324,8 +327,7 @@ export function CreateBookingDialog({
     setSelectedCustomer(customer);
     setFormValues((prev) => ({ ...prev, customer_id: customer.id }));
     setCustomerSearch(
-      `${customer.full_name}${customer.phone ? ` - ${customer.phone}` : ""}${
-        customer.email ? ` (${customer.email})` : ""
+      `${customer.full_name}${customer.phone ? ` - ${customer.phone}` : ""}${customer.email ? ` (${customer.email})` : ""
       }`
     );
   };
@@ -414,6 +416,7 @@ export function CreateBookingDialog({
         notes: formValues.notes.trim() || null,
         total_amount: totalAmount,
         advance_payment: advancePayment,
+        payment_method: formValues.payment_method as PaymentMethod,
       };
 
       setIsSubmitting(true);
@@ -674,6 +677,28 @@ export function CreateBookingDialog({
               <p className="text-xs text-muted-foreground">
                 Tối đa: {formatCurrency(Number(formValues.total_amount || 0))}
               </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="payment_method">Phương thức thanh toán *</Label>
+              <Select
+                value={formValues.payment_method}
+                onValueChange={(v) =>
+                  setFormValues((prev) => ({ ...prev, payment_method: v }))
+                }
+              >
+                <SelectTrigger id="payment_method" className="w-full">
+                  <SelectValue placeholder="Chọn phương thức thanh toán" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={PAYMENT_METHOD.PAY_AT_HOTEL}>
+                    {paymentMethodLabels[PAYMENT_METHOD.PAY_AT_HOTEL]}
+                  </SelectItem>
+                  <SelectItem value={PAYMENT_METHOD.BANK_TRANSFER}>
+                    {paymentMethodLabels[PAYMENT_METHOD.BANK_TRANSFER]}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
