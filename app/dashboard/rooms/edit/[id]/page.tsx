@@ -24,24 +24,26 @@ export default function EditRoomPage() {
       throw new Error(result.message);
     },
     {
-      revalidateOnFocus: true,
-      revalidateOnReconnect: true,
       revalidateOnMount: true,
+      revalidateIfStale: true,
+      revalidateOnFocus: false,   // tránh giật form
+      revalidateOnReconnect: true,
+      dedupingInterval: 0,
     }
   );
 
   const defaultValues: Partial<RoomFormValues> | undefined = room
     ? {
-        name: room.name,
-        description: room.description || "",
-        room_type: room.room_type,
-        status: room.status,
-        price_per_night: room.price_per_night.toString(),
-        max_guests: room.max_guests.toString(),
-        amenities: room.amenities,
-        thumbnail: room.thumbnail,
-        images: room.images,
-      }
+      name: room.name,
+      description: room.description || "",
+      room_type: room.room_type,
+      status: room.status,
+      price_per_night: room.price_per_night.toString(),
+      max_guests: room.max_guests.toString(),
+      amenities: room.amenities,
+      thumbnail: room.thumbnail,
+      images: room.images,
+    }
     : undefined;
 
   if (isLoading) {

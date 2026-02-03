@@ -110,6 +110,18 @@ const CUSTOMER_SOURCE_COLORS = [
   "hsl(0, 0%, 60%)", // Grey for Website
 ];
 
+// Colors for pie chart - Countries (more colors for many countries)
+const COUNTRY_COLORS = [
+  "hsl(var(--primary))",
+  "hsl(217, 91%, 60%)",
+  "hsl(142, 76%, 36%)",
+  "hsl(47, 96%, 53%)",
+  "hsl(330, 81%, 60%)",
+  "hsl(262, 83%, 58%)",
+  "hsl(187, 92%, 45%)",
+  "hsl(25, 95%, 53%)",
+];
+
 // Types for API responses
 type SummaryResponse = {
   totalRevenue: number;
@@ -136,6 +148,12 @@ type RoomStatsResponse = {
 
 type CustomerSourceResponse = {
   source: string;
+  label: string;
+  count: number;
+}[];
+
+type CountryStatsResponse = {
+  country: string;
   label: string;
   count: number;
 }[];
@@ -181,6 +199,7 @@ export function SystemReports() {
   }`;
   const roomStatsUrl = "/api/reports/room-stats";
   const customerSourcesUrl = "/api/reports/customer-sources";
+  const countryStatsUrl = "/api/reports/country-stats";
 
   // Use SWR for all data fetching
   const {
@@ -202,6 +221,11 @@ export function SystemReports() {
     isLoading: isLoadingCustomerSources,
     error: customerSourcesError,
   } = useSWR<CustomerSourceResponse>(customerSourcesUrl, fetcher);
+  const {
+    data: countryStatsData,
+    isLoading: isLoadingCountryStats,
+    error: countryStatsError,
+  } = useSWR<CountryStatsResponse>(countryStatsUrl, fetcher);
   const {
     data: roomStatusData,
     isLoading: isLoadingRoomStatus,
@@ -229,6 +253,8 @@ export function SystemReports() {
     Array.isArray(customerSourcesData) && !customerSourcesError
       ? customerSourcesData
       : [];
+  const countryStats =
+    Array.isArray(countryStatsData) && !countryStatsError ? countryStatsData : [];
   const roomStatuses =
     Array.isArray(roomStatusData) && !roomStatusError ? roomStatusData : [];
 
@@ -315,6 +341,21 @@ export function SystemReports() {
       ];
       sections.push(
         Papa.unparse([["=== PHÂN BỔ THEO NGUỒN KHÁCH ==="], ...customerSourcesData, [""]], papaConfig)
+      );
+    }
+
+    // Country Statistics
+    if (countryStats.length > 0) {
+      const totalCountryStats = countryStats.reduce((sum, stat) => sum + stat.count, 0);
+      const countryStatsData = [
+        ["Quốc gia", "Số đặt phòng", "Tỷ lệ (%)"],
+        ...countryStats.map((stat) => {
+          const percentage = totalCountryStats > 0 ? ((stat.count / totalCountryStats) * 100).toFixed(2) : "0";
+          return [stat.label, stat.count.toString(), percentage];
+        }),
+      ];
+      sections.push(
+        Papa.unparse([["=== PHÂN BỔ THEO QUỐC GIA ==="], ...countryStatsData, [""]], papaConfig)
       );
     }
 
@@ -739,7 +780,7 @@ export function SystemReports() {
         </Card>
 
         {/* Charts Grid - Room Types and Customer Sources */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Room Statistics Chart */}
           <Card className="border-primary/20 bg-linear-to-br from-primary/5 via-card to-card">
             <CardHeader>
@@ -896,6 +937,106 @@ export function SystemReports() {
                             if (active && payload && payload.length) {
                               const data = payload[0].payload;
                               const total = customerSources.reduce(
+                                (sum, stat) => sum + stat.count,
+                                0
+                              );
+                              const percentage =
+                                total > 0
+                                  ? ((data.count / total) * 100).toFixed(1)
+                                  : 0;
+                              return (
+                                <div className="rounded-lg border border-primary/20 bg-background p-3 shadow-lg">
+                                  <div className="mb-2">
+                                    <p className="text-sm font-semibold text-primary">
+                                      {data.label}
+                                    </p>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <div className="flex items-center justify-between gap-4">
+                                      <span className="text-xs text-muted-foreground">
+                                        Số lượng
+                                      </span>
+                                      <span className="text-sm font-bold text-primary">
+                                        {data.count} đặt phòng
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center justify-between gap-4">
+                                      <span className="text-xs text-muted-foreground">
+                                        Tỷ lệ
+                                      </span>
+                                      <span className="text-sm font-semibold text-primary/80">
+                                        {percentage}%
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Country Statistics Chart */}
+          <Card className="border-primary/20 bg-linear-to-br from-primary/5 via-card to-card">
+            <CardHeader>
+              <CardTitle className="text-2xl">Quốc gia</CardTitle>
+              <CardDescription className="text-base mt-1">
+                Phân bổ số lượng đặt phòng theo quốc tịch khách
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="px-2 sm:px-6">
+              {isLoadingCountryStats ? (
+                <div className="h-[350px] flex items-center justify-center">
+                  <p className="text-muted-foreground">Đang tải dữ liệu...</p>
+                </div>
+              ) : countryStats.length === 0 ? (
+                <div className="h-[350px] flex items-center justify-center">
+                  <p className="text-muted-foreground">Không có dữ liệu</p>
+                </div>
+              ) : (
+                <div className="flex justify-center">
+                  <ChartContainer
+                    config={chartConfig}
+                    className="h-[350px] w-full"
+                  >
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={countryStats}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ label, percent }) =>
+                            percent > 0 ? `${label}: ${(percent * 100).toFixed(0)}%` : ''
+                          }
+                          outerRadius={100}
+                          innerRadius={60}
+                          fill="#8884d8"
+                          dataKey="count"
+                        >
+                          {countryStats.map((_, index) => (
+                            <Cell
+                              key={`cell-${index}`}
+                              fill={
+                                COUNTRY_COLORS[
+                                  index % COUNTRY_COLORS.length
+                                ]
+                              }
+                            />
+                          ))}
+                        </Pie>
+                        <ChartTooltip
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              const data = payload[0].payload;
+                              const total = countryStats.reduce(
                                 (sum, stat) => sum + stat.count,
                                 0
                               );
