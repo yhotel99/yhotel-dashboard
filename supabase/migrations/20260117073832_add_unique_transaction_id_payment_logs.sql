@@ -1,0 +1,3 @@
+ALTER TABLE payment_logs
+ADD CONSTRAINT payment_logs_transaction_id_unique
+UNIQUE (transaction_id);
