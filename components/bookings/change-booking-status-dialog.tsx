@@ -44,11 +44,11 @@ function getAllowedStatusTransitions(
 ): BookingStatus[] {
   switch (currentStatus) {
     case BOOKING_STATUS.PENDING:
-      return [BOOKING_STATUS.CONFIRMED, BOOKING_STATUS.CANCELLED];
+      return [BOOKING_STATUS.CONFIRMED];
     case BOOKING_STATUS.CONFIRMED:
-      return [BOOKING_STATUS.CHECKED_IN, BOOKING_STATUS.CANCELLED];
+      return [BOOKING_STATUS.CHECKED_IN];
     case BOOKING_STATUS.CHECKED_IN:
-      return [BOOKING_STATUS.CHECKED_OUT, BOOKING_STATUS.CANCELLED];
+      return [BOOKING_STATUS.CHECKED_OUT];
     case BOOKING_STATUS.CHECKED_OUT:
       return [
         // Once checked out, cannot change status
