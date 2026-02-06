@@ -119,7 +119,7 @@ export function PaymentLogDetailDialog({
                 <p className="text-sm font-medium text-muted-foreground mb-2">
                   Raw Payload
                 </p>
-                <pre className="text-xs bg-muted p-3 rounded-md overflow-auto max-h-[300px]">
+                <pre className="text-xs bg-muted p-3 rounded-md overflow-auto max-h-[300px] max-w-full whitespace-pre-wrap break-words">
                   {JSON.stringify(paymentLog.raw_payload, null, 2)}
                 </pre>
               </div>

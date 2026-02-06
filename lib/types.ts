@@ -631,7 +631,8 @@ export type PaymentLogStatus =
 | "skipped"
 | "error"
 | "underpaid"
-| "success";
+| "success"
+| "unmatched";
 
 /**
  * Get available rooms for a date range

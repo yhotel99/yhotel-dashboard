@@ -38,6 +38,12 @@ const statusConfig: Record<
     className:
       "border-orange-500 text-orange-600 dark:border-orange-500/70 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/20",
   },
+  unmatched: {
+    label: "Không khớp",
+    variant: "outline",
+    className:
+      "border-purple-500 text-purple-600 dark:border-purple-500/70 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/20",
+  },
 };
 
 export function PaymentLogStatusBadge({ status }: { status: string | null }) {
