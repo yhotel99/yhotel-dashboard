@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   IconCalendar,
   IconMessage,
@@ -24,11 +25,13 @@ import {
   REFUND_REQUEST_STATUS,
   refundRequestStatusLabels,
 } from "@/lib/constants";
+import { getRefundRequestDetailAction } from "@/actions/refund-requests";
+import { Loader2 } from "lucide-react";
 
 interface RefundRequestDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  refundRequest: RefundRequestWithRelations | null;
+  refundRequestId: string | null;
 }
 
 // Refund request status colors
@@ -44,9 +47,37 @@ const refundRequestStatusColors: Record<string, string> = {
 export function RefundRequestDetailDialog({
   open,
   onOpenChange,
-  refundRequest,
+  refundRequestId,
 }: RefundRequestDetailDialogProps) {
-  if (!refundRequest) return null;
+  const [refundRequest, setRefundRequest] =
+    useState<RefundRequestWithRelations | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open || !refundRequestId) return;
+    let cancelled = false;
+    const run = async () => {
+      setIsLoading(true);
+      setError(null);
+      setRefundRequest(null);
+      try {
+        const data = await getRefundRequestDetailAction(refundRequestId);
+        if (!cancelled) {
+          setRefundRequest(data);
+          if (!data) setError("Không tìm thấy yêu cầu hoàn tiền");
+        }
+      } catch {
+        if (!cancelled) setError("Không thể tải chi tiết");
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, refundRequestId]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -54,23 +85,40 @@ export function RefundRequestDetailDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <IconListDetails className="size-5" />
-            <span className="font-bold">Chi tiết yêu cầu hoàn tiền</span>
-            <Badge
-              variant="outline"
-              className={`${
-                refundRequestStatusColors[refundRequest.status]
-              } border text-sm px-3 py-1`}
-            >
-              {refundRequestStatusLabels[refundRequest.status]}
-            </Badge>
+            <span className="font-bold">
+              {isLoading ? "Đang tải..." : "Chi tiết yêu cầu hoàn tiền"}
+            </span>
+            {refundRequest && (
+              <Badge
+                variant="outline"
+                className={`${
+                  refundRequestStatusColors[refundRequest.status]
+                } border text-sm px-3 py-1`}
+              >
+                {refundRequestStatusLabels[refundRequest.status]}
+              </Badge>
+            )}
           </DialogTitle>
-          <DialogDescription>
-            Thông tin mã yêu cầu:{" "}
-            <span className="font-bold">{refundRequest.id.toUpperCase()}</span>
-          </DialogDescription>
+          {refundRequest && (
+            <DialogDescription>
+              Thông tin mã yêu cầu:{" "}
+              <span className="font-bold">{refundRequest.id.toUpperCase()}</span>
+            </DialogDescription>
+          )}
         </DialogHeader>
 
-        <ScrollArea className="flex-1 pr-4 max-h-[75vh] overflow-y-auto scrollbar-hide">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="size-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : error || !refundRequest ? (
+          <div className="py-8 text-center text-muted-foreground">
+            {error ?? "Không có dữ liệu"}
+          </div>
+        ) : (
+          <>
+
+            <ScrollArea className="flex-1 pr-4 max-h-[75vh] overflow-y-auto scrollbar-hide">
           <div className="space-y-6 pb-4">
             {/* Status & Amount */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-muted/50 py-2 rounded-lg">
@@ -244,13 +292,15 @@ export function RefundRequestDetailDialog({
               </div>
             </div>
           </div>
-        </ScrollArea>
+            </ScrollArea>
 
-        <div className="flex justify-end pt-4">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Đóng
-          </Button>
-        </div>
+            <div className="flex justify-end pt-4">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Đóng
+              </Button>
+            </div>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );

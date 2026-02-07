@@ -14,14 +14,12 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Copy } from "lucide-react";
 import { toast } from "sonner";
 
 // Column definitions constants
 export const REFUND_COLUMNS = {
   REQUEST_ID: { accessorKey: "Mã yêu cầu", header: "Mã yêu cầu" },
   CUSTOMER_NAME: { accessorKey: "Khách hàng", header: "Khách hàng" },
-  ROOM_NAME: { accessorKey: "Phòng", header: "Phòng" },
   AMOUNT: { accessorKey: "Số tiền", header: "Số tiền" },
   STATUS: { accessorKey: "Trạng thái", header: "Trạng thái" },
   CREATED_AT: { accessorKey: "Ngày tạo", header: "Ngày tạo" },
@@ -80,14 +78,6 @@ export function createRefundRequestColumns(
       cell: ({ row }) => row.original.bookings?.customers?.full_name ?? "-",
       size: 140,
       minSize: 120,
-    },
-    {
-      accessorKey: REFUND_COLUMNS.ROOM_NAME.accessorKey,
-      header: REFUND_COLUMNS.ROOM_NAME.header,
-      cell: ({ row }) => row.original.bookings?.rooms?.name ?? "-",
-      size: 140,
-      minSize: 120,
-      maxSize: 140,
     },
     {
       accessorKey: REFUND_COLUMNS.AMOUNT.accessorKey,

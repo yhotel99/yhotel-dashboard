@@ -261,6 +261,19 @@ export type TransferBookingInput = {
   advance_payment?: number;
 };
 
+// Multi-room booking input (nhiều phòng, thanh toán 1 lần)
+export type MultiBookingInput = {
+  customer_id: string;
+  room_items: Array<{ room_id: string; amount: number }>;
+  check_in: string;
+  check_out: string;
+  number_of_nights: number;
+  total_guests: number;
+  notes?: string | null;
+  payment_method: PaymentMethod;
+  advance_payment: number;
+};
+
 // ============================================================================
 // Payment Types
 // ============================================================================

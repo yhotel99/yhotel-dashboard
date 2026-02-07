@@ -8,6 +8,7 @@ import { DataTable } from "@/components/data-table";
 import { useBookings } from "@/hooks/use-bookings";
 import {
   createBooking as createBookingAction,
+  createMultiBooking as createMultiBookingAction,
   updateBooking as updateBookingAction,
   updateBookingStatusAction,
   confirmBookingEmailAction,
@@ -23,6 +24,7 @@ import {
 import type {
   BookingStatus,
   BookingInput,
+  MultiBookingInput,
   BookingRecord,
   UpdateBookingInput,
   TransferBookingInput,
@@ -31,6 +33,7 @@ import type {
 import { useDebounce } from "@/hooks/use-debounce";
 import { createColumns, COLUMNS } from "@/components/bookings/columns";
 import { CreateBookingDialog } from "@/components/bookings/create-booking-dialog";
+import { CreateMultiBookingDialog } from "@/components/bookings/create-multi-booking-dialog";
 import { EditBookingDialog } from "@/components/bookings/edit-booking-dialog";
 import { CheckAvailableRoomsDialog } from "@/components/bookings/check-available-rooms-dialog";
 import { translateBookingError } from "@/lib/functions";
@@ -107,6 +110,8 @@ export function BookingsContent({
   // Use checkAdvancePaymentStatusAction and markAdvancePaymentAsPaidAction from actions
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = React.useState(false);
+  const [isMultiBookingDialogOpen, setIsMultiBookingDialogOpen] =
+    React.useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
   const [editingBookingId, setEditingBookingId] = React.useState<string | null>(
     null
@@ -116,6 +121,10 @@ export function BookingsContent({
 
   const handleCreateBooking = () => {
     setIsCreateDialogOpen(true);
+  };
+
+  const handleCreateMultiBooking = () => {
+    setIsMultiBookingDialogOpen(true);
   };
 
   const handleCreate = React.useCallback(
@@ -133,7 +142,7 @@ export function BookingsContent({
           duration: 5000, // Hiển thị lâu hơn để người dùng đọc
           action: {
             label: "Đóng",
-            onClick: () => {},
+            onClick: () => { },
           },
         });
 
@@ -142,6 +151,29 @@ export function BookingsContent({
       }
 
       toast.success("✅ Đã tạo booking thành công!", {
+        position: "top-center",
+        duration: 3000,
+      });
+      await mutate();
+    },
+    [mutate]
+  );
+
+  const handleCreateMulti = React.useCallback(
+    async (input: MultiBookingInput) => {
+      const result = await createMultiBookingAction(input);
+
+      if (!result.ok) {
+        const translatedMessage = translateBookingError(result.message);
+        toast.error(translatedMessage, {
+          position: "top-center",
+          duration: 5000,
+          action: { label: "Đóng", onClick: () => { } },
+        });
+        throw new Error(result.message);
+      }
+
+      toast.success("✅ Đã tạo đặt nhiều phòng thành công!", {
         position: "top-center",
         duration: 3000,
       });
@@ -303,10 +335,17 @@ export function BookingsContent({
             <IconSearch className="size-4" />
             Kiểm tra
           </Button>
-          <Button onClick={handleCreateBooking} className="gap-2">
+          <Button
+            onClick={handleCreateMultiBooking}
+            className="gap-2"
+          >
+            <IconPlus className="size-4" />
+            Đặt nhiều phòng
+          </Button>
+          {/* <Button onClick={handleCreateBooking} className="gap-2">
             <IconPlus className="size-4" />
             Tạo booking mới
-          </Button>
+          </Button> */}
         </div>
       </div>
 
@@ -340,6 +379,14 @@ export function BookingsContent({
           open={isCreateDialogOpen}
           onOpenChange={setIsCreateDialogOpen}
           onCreate={handleCreate}
+        />
+      )}
+
+      {isMultiBookingDialogOpen && (
+        <CreateMultiBookingDialog
+          open={isMultiBookingDialogOpen}
+          onOpenChange={setIsMultiBookingDialogOpen}
+          onCreate={handleCreateMulti}
         />
       )}
 

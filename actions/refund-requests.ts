@@ -6,7 +6,9 @@ import type {
   RefundRequestInput,
   RefundRequest,
   RefundRequestStatus,
+  RefundRequestWithRelations,
 } from "@/lib/types";
+import { getRefundRequestById } from "@/services/refund-requests";
 import { REFUND_REQUEST_STATUS, PAYMENT_STATUS } from "@/lib/constants";
 import { formatVND } from "@/lib/functions";
 
@@ -157,6 +159,15 @@ export async function createRefundRequestAction(
       err instanceof Error ? err.message : "Không thể tạo yêu cầu hoàn tiền";
     throw new Error(errorMessage);
   }
+}
+
+/**
+ * Chi tiết 1 yêu cầu hoàn tiền (gọi API/service riêng, có tên phòng từ booking_rooms).
+ */
+export async function getRefundRequestDetailAction(
+  id: string
+): Promise<RefundRequestWithRelations | null> {
+  return getRefundRequestById(id);
 }
 
 /**

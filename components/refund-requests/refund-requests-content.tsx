@@ -23,8 +23,9 @@ export function RefundRequestsContent({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [localSearch, setLocalSearch] = useState("");
-  const [selectedRefundRequest, setSelectedRefundRequest] =
-    useState<RefundRequestWithRelations | null>(null);
+  const [selectedRefundRequestId, setSelectedRefundRequestId] = useState<
+    string | null
+  >(null);
   const [openDetailDialog, setOpenDetailDialog] = useState(false);
 
   // Get pagination and search from URL params
@@ -126,7 +127,7 @@ export function RefundRequestsContent({
 
   const handleViewDetail = useCallback(
     (refundRequest: RefundRequestWithRelations) => {
-      setSelectedRefundRequest(refundRequest);
+      setSelectedRefundRequestId(refundRequest.id);
       setOpenDetailDialog(true);
     },
     []
@@ -181,8 +182,11 @@ export function RefundRequestsContent({
       {openDetailDialog && (
         <RefundRequestDetailDialog
           open={openDetailDialog}
-          onOpenChange={setOpenDetailDialog}
-          refundRequest={selectedRefundRequest}
+          onOpenChange={(open) => {
+            setOpenDetailDialog(open);
+            if (!open) setSelectedRefundRequestId(null);
+          }}
+          refundRequestId={selectedRefundRequestId}
         />
       )}
     </div>

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type {
   BookingInput,
+  MultiBookingInput,
   UpdateBookingInput,
   TransferBookingInput,
   BookingStatus,
@@ -177,6 +178,60 @@ export async function createBooking(
   revalidatePath("/dashboard/bookings");
 
   console.log("Booking creation completed successfully");
+  return {
+    ok: true,
+    data: { bookingId: data.booking_id },
+  };
+}
+
+/**
+ * Create multi-room booking (nhiều phòng, thanh toán 1 lần)
+ * Uses create_multi_booking_secure RPC
+ */
+export async function createMultiBooking(
+  input: MultiBookingInput
+): Promise<Result<{ bookingId: string }>> {
+  if (!input.customer_id) {
+    return { ok: false, message: "Vui lòng chọn khách hàng" };
+  }
+  if (!input.room_items?.length) {
+    return { ok: false, message: "Vui lòng chọn ít nhất một phòng" };
+  }
+  if (!input.check_in || !input.check_out) {
+    return { ok: false, message: "Vui lòng chọn ngày check-in và check-out" };
+  }
+
+  const supabase = await createClient();
+  const roomItemsJson = input.room_items.map((item) => ({
+    room_id: item.room_id,
+    amount: item.amount,
+  }));
+
+  const { data, error } = await supabase.rpc("create_multi_booking_secure", {
+    p_customer_id: input.customer_id,
+    p_room_items: roomItemsJson,
+    p_check_in: input.check_in,
+    p_check_out: input.check_out,
+    p_number_of_nights: input.number_of_nights,
+    p_total_guests: input.total_guests ?? 1,
+    p_notes: input.notes ?? null,
+    p_payment_method: input.payment_method ?? PAYMENT_METHOD.PAY_AT_HOTEL,
+    p_advance_payment: input.advance_payment ?? 0,
+  });
+
+  if (error) {
+    console.error("System DB error:", error);
+    return { ok: false, message: "Hệ thống đang bận, vui lòng thử lại" };
+  }
+
+  if (!data?.ok) {
+    return {
+      ok: false,
+      message: mapBookingError(data.error_code ?? "UNKNOWN"),
+    };
+  }
+
+  revalidatePath("/dashboard/bookings");
   return {
     ok: true,
     data: { bookingId: data.booking_id },

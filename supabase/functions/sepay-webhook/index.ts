@@ -4,29 +4,71 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type"
 };
+
+
+/* ================== AUTH HELPERS ================== */
+function extractSepayApiKey(req: Request) {
+  const raw = req.headers.get("authorization");
+  if (!raw) return null;
+
+  console.log(raw)
+
+  // SePay spec: "Authorization: Apikey <KEY>"
+  const prefix = "Apikey ";
+  if (!raw.startsWith(prefix)) return null;
+
+  return raw.slice(prefix.length).trim();
+}
+
+function safeEqual(a: string, b: string) {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) {
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return diff === 0;
+}
+
 serve(async (req)=>{
   if (req.method === "OPTIONS") {
     return new Response("ok", {
       headers: corsHeaders
     });
   }
+
+  // Only allow POST
+  if (req.method !== "POST") {
+    return new Response("Method Not Allowed", { status: 405 });
+  }
+
   try {
-    /* ================== AUTH ================== */ const expectedApiKey = Deno.env.get("SEPAY_WEBHOOK_API_KEY") || Deno.env.get("PAY2S_WEBHOOK_API_KEY");
-    if (expectedApiKey) {
-      const apiKey = req.headers.get("x-api-key") || req.headers.get("apikey") || req.headers.get("Authorization");
-      if (!apiKey || !apiKey.includes(expectedApiKey)) {
-        return new Response(JSON.stringify({
-          error: "Unauthorized"
-        }), {
+    /* ================== AUTH ================== */
+    const expectedApiKey = Deno.env.get("SEPAY_WEBHOOK_API_KEY");
+    if (!expectedApiKey) {
+      throw new Error("Missing SEPAY_WEBHOOK_API_KEY");
+    }
+
+    const incomingKey = extractSepayApiKey(req);
+
+    if (!incomingKey || !safeEqual(incomingKey, expectedApiKey)) {
+      console.warn("Unauthorized webhook", {
+        ip: req.headers.get("x-forwarded-for"),
+        ua: req.headers.get("user-agent"),
+      });
+
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        {
           status: 401,
           headers: {
             ...corsHeaders,
-            "Content-Type": "application/json"
-          }
-        });
-      }
+            "Content-Type": "application/json",
+          },
+        }
+      );
     }
-    /* ================== SUPABASE ================== */ const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+    /* ================== SUPABASE ================== */ 
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
     if (!supabaseUrl || !supabaseServiceKey) {
       throw new Error("Thiếu cấu hình Supabase");
@@ -49,7 +91,8 @@ serve(async (req)=>{
     const transactionId = transaction.referenceCode || String(transaction.id);
     const content = transaction.content?.trim() || "";
     console.log("👉 Processing SEPay transaction:", transactionId);
-    /* ========== UPSERT LOG: processing ========== */ await supabase.from("payment_logs").upsert({
+    /* ========== UPSERT LOG: processing ========== */ 
+    await supabase.from("payment_logs").upsert({
       transaction_id: transactionId,
       amount: transaction.transferAmount,
       content: content,
@@ -78,15 +121,15 @@ serve(async (req)=>{
     }
     /* ========== VALIDATE CONTENT ========== */ if (!content) {
       await supabase.from("payment_logs").update({
-        status: "error",
-        reason: "Missing transfer content"
+        status: "unmatched",
+        reason: "No transfer content"
       }).eq("transaction_id", transactionId);
       return new Response(JSON.stringify({
-        success: false,
+        success: true,
         result: {
           transaction_id: transactionId,
-          status: "error",
-          reason: "Missing content"
+          status: "unmatched",
+          reason: "No transfer content"
         }
       }), {
         status: 200,
@@ -99,8 +142,31 @@ serve(async (req)=>{
     // Extract booking code from content (format: YH + YYYYMMDD + 6 alphanumeric chars = 16 chars total)
     // Example: "YH20260113A1CD0F   Ma giao dich  Trace427638" -> "YH20260113A1CD0F"
     const bookingCodeMatch = content.match(/^YH[A-Z0-9]{14}\b/);
-    const bookingCode = bookingCodeMatch ? bookingCodeMatch[0] : content.trim().split(/\s+/)[0];
-    /* ========== FIND BOOKING ========== */ const { data: booking, error: bookingError } = await supabase.from("bookings").select(`
+    const bookingCode = bookingCodeMatch?.[0] ?? null;
+      /* ========== NO BOOKING CODE → UNMATCHED ========== */
+    if (!bookingCode) {
+      await supabase
+        .from("payment_logs")
+        .update({
+          status: "unmatched",
+          reason: "No valid YH booking code in content",
+          booking_code: null,
+        })
+        .eq("transaction_id", transactionId);
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          result: {
+            transaction_id: transactionId,
+            status: "unmatched",
+          },
+        }),
+        { status: 200, headers: corsHeaders }
+      );
+    }
+    /* ========== FIND BOOKING ========== */ 
+    const { data: booking, error: bookingError } = await supabase.from("bookings").select(`
         id,
         booking_code,
         status,
@@ -110,17 +176,31 @@ serve(async (req)=>{
         customers ( full_name, email ),
         rooms ( name )
       `).eq("booking_code", bookingCode).is("deleted_at", null).maybeSingle();
-    if (!booking || bookingError) {
+
+    if (bookingError) {
       await supabase.from("payment_logs").update({
         booking_code: bookingCode,
         status: "error",
+        reason: "Booking query failed"
+      }).eq("transaction_id", transactionId);
+
+      return new Response(JSON.stringify({
+        success: false,
+        error: "Booking query failed"
+      }), { status: 500, headers: corsHeaders });
+    }
+
+    if (!booking) {
+      await supabase.from("payment_logs").update({
+        booking_code: bookingCode,
+        status: "unmatched",
         reason: "Booking not found"
       }).eq("transaction_id", transactionId);
       return new Response(JSON.stringify({
-        success: false,
+        success: true,
         result: {
           transaction_id: transactionId,
-          status: "error",
+          status: "unmatched",
           reason: "Booking not found"
         }
       }), {
@@ -131,7 +211,8 @@ serve(async (req)=>{
         }
       });
     }
-    /* ========== AMOUNT CHECK ========== */ const receivedAmount = Number(transaction.transferAmount);
+    /* ========== AMOUNT CHECK ========== */ 
+    const receivedAmount = Number(transaction.transferAmount);
     const expectedAmount = Number(booking.total_amount);
     console.log({
       receivedAmount,
@@ -149,7 +230,7 @@ serve(async (req)=>{
         reason: `Paid ${receivedAmount}, expected ${expectedAmount}, thiếu ${missingAmount}`
       }).eq("transaction_id", transactionId);
       return new Response(JSON.stringify({
-        success: false,
+        success: true,
         result: {
           transaction_id: transactionId,
           status: "underpaid",

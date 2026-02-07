@@ -407,6 +407,8 @@ export function mapBookingError(code: string): string {
      return "Số tiền không hợp lệ";
    case "ADVANCE_EXCEEDS_TOTAL":
      return "Tiền cọc không được lớn hơn tổng tiền";
+   case "NO_ROOMS":
+     return "Vui lòng chọn ít nhất một phòng";
    default:
      return "Không thể tạo booking";
  }

@@ -258,3 +258,15 @@ INSERT INTO room_images (room_id, image_id, position, is_main, created_at)
 SELECT room2.id, room2_image.id, 0, true, now()
 FROM room2, room2_image
 ON CONFLICT DO NOTHING;
+
+-- Room 3-10: Thêm nhiều phòng để test đặt nhiều phòng
+INSERT INTO rooms (name, description, room_type, price_per_night, max_guests, amenities, status, created_at, updated_at)
+VALUES
+  ('Phòng Standard 101', 'Phòng tiêu chuẩn ấm cúng, giá hợp lý.', 'standard', 800000, 2, '["wifi_high_speed", "parking"]'::jsonb, 'available', now(), now()),
+  ('Phòng Standard 102', 'Phòng tiêu chuẩn view nội thị.', 'standard', 750000, 2, '["wifi_high_speed"]'::jsonb, 'available', now(), now()),
+  ('Phòng Superior 201', 'Phòng superior view biển.', 'superior', 1300000, 2, '["wifi_high_speed", "parking", "breakfast_service"]'::jsonb, 'available', now(), now()),
+  ('Phòng Deluxe 202', 'Phòng deluxe không gian rộng.', 'deluxe', 1600000, 3, '["wifi_high_speed", "parking", "coffee", "breakfast_service", "laundry"]'::jsonb, 'available', now(), now()),
+  ('Phòng Family 301', 'Phòng gia đình lớn, phù hợp 4-5 người.', 'family', 2200000, 5, '["wifi_high_speed", "parking", "breakfast_service", "laundry", "taxi_support"]'::jsonb, 'available', now(), now()),
+  ('Phòng Family 302', 'Phòng gia đình có ban công.', 'family', 2400000, 5, '["wifi_high_speed", "parking", "coffee", "breakfast_service"]'::jsonb, 'available', now(), now()),
+  ('Phòng Deluxe 203', 'Phòng deluxe góc tầng view đẹp.', 'deluxe', 1800000, 4, '["wifi_high_speed", "parking", "coffee", "breakfast_service"]'::jsonb, 'available', now(), now()),
+  ('Phòng Standard 103', 'Phòng tiêu chuẩn gần thang máy.', 'standard', 700000, 2, '["wifi_high_speed", "parking"]'::jsonb, 'available', now(), now());

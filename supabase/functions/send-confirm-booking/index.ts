@@ -1,21 +1,69 @@
+// Setup type definitions for built-in Supabase Runtime APIs
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+
+/* =======================
+   Types
+======================= */
+interface RequestPayload {
+  booking_code: string;
+}
+
+export interface BookingEmailPayload {
+  customer_name?: string;
+  customer_email?: string;
+
+  hotel_name?: string;
+  booking_code: string;
+  room_type: string;
+
+  check_in: string;
+  check_out: string;
+  total_price?: string;
+
+  hotline?: string;
+  support_email?: string;
+}
+
+/* =======================
+   Env
+======================= */
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-// 👉 Hàm format
-function formatDateTimePretty(isoString, options = {}) {
-  const { timeZone = 7, showIcons = true, format = "full" } = options;
+
+/* =======================
+   Utils
+======================= */
+function formatDateTimePretty(
+  isoString: string,
+  options: {
+    timeZone?: number;
+    showIcons?: boolean;
+    format?: "full" | "time" | "date";
+  } = {},
+): string {
+  const {
+    timeZone = 7,
+    showIcons = true,
+    format = "full",
+  } = options;
+
   const date = new Date(isoString);
   if (isNaN(date.getTime())) {
-    return showIcons ? "⏰ --:-- | 📅 Ngày không hợp lệ" : "--:-- | Ngày không hợp lệ";
+    return showIcons
+      ? "⏰ --:-- | 📅 Ngày không hợp lệ"
+      : "--:-- | Ngày không hợp lệ";
   }
-  const localDate = new Date(date.getTime() + timeZone * 60 * 60 * 1000);
+
+  const localDate = new Date(date.getTime() + timeZone * 3600 * 1000);
+
   const hours = localDate.getUTCHours().toString().padStart(2, "0");
   const minutes = localDate.getUTCMinutes().toString().padStart(2, "0");
-  const day = localDate.getUTCDate();
-  const month = localDate.getUTCMonth() + 1;
+  const day = localDate.getUTCDate().toString().padStart(2, "0");
+  const month = (localDate.getUTCMonth() + 1).toString().padStart(2, "0");
   const year = localDate.getUTCFullYear();
+
   const weekdays = [
     "Chủ Nhật",
     "Thứ Hai",
@@ -23,133 +71,202 @@ function formatDateTimePretty(isoString, options = {}) {
     "Thứ Tư",
     "Thứ Năm",
     "Thứ Sáu",
-    "Thứ Bảy"
+    "Thứ Bảy",
   ];
+
   const weekday = weekdays[localDate.getUTCDay()];
   const timeStr = `${hours}:${minutes}`;
-  const dateStr = `${weekday}, ${day.toString().padStart(2, "0")}/${month.toString().padStart(2, "0")}/${year}`;
+  const dateStr = `${weekday}, ${day}/${month}/${year}`;
+
   if (format === "time") return showIcons ? `⏰ ${timeStr}` : timeStr;
   if (format === "date") return showIcons ? `📅 ${dateStr}` : dateStr;
-  return showIcons ? `⏰ ${timeStr} | 📅 ${dateStr}` : `${timeStr} | ${dateStr}`;
+
+  return showIcons
+    ? `⏰ ${timeStr} | 📅 ${dateStr}`
+    : `${timeStr} | ${dateStr}`;
 }
-Deno.serve(async (req)=>{
+
+/* =======================
+   Email Template
+======================= */
+export function renderBookingConfirmationHTML(
+  payload: BookingEmailPayload,
+) {
+  const {
+    customer_name = "Quý khách",
+    hotel_name = "YHotel",
+    booking_code,
+    room_type,
+    check_in,
+    check_out,
+    total_price = "—",
+    hotline = "0909 000 000",
+    support_email = "contact@yhotel.vn",
+  } = payload;
+
+  return `<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Xác nhận đặt phòng</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f6f8;font-family:Arial">
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:20px 0">
+    <tr>
+      <td align="center">
+        <table width="600" style="background:#fff;border-radius:6px">
+          <tr>
+            <td style="background:#0d6efd;color:#fff;padding:20px">
+              <h1 style="margin:0;font-size:20px">XÁC NHẬN ĐẶT PHÒNG</h1>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:24px;font-size:14px;line-height:1.6;color:#333">
+              <p>Kính chào <strong>${customer_name}</strong>,</p>
+
+              <p>
+                Cảm ơn Quý khách đã đặt phòng tại <strong>${hotel_name}</strong>.
+                Thông tin chi tiết:
+              </p>
+
+              <table width="100%" style="border-collapse:collapse;margin:16px 0">
+                <tr>
+                  <td style="border:1px solid #ddd;padding:8px">Mã đặt phòng</td>
+                  <td style="border:1px solid #ddd;padding:8px"><strong>${booking_code}</strong></td>
+                </tr>
+                <tr>
+                  <td style="border:1px solid #ddd;padding:8px">Loại phòng</td>
+                  <td style="border:1px solid #ddd;padding:8px">${room_type}</td>
+                </tr>
+                <tr>
+                  <td style="border:1px solid #ddd;padding:8px">Nhận phòng</td>
+                  <td style="border:1px solid #ddd;padding:8px">${check_in}</td>
+                </tr>
+                <tr>
+                  <td style="border:1px solid #ddd;padding:8px">Trả phòng</td>
+                  <td style="border:1px solid #ddd;padding:8px">${check_out}</td>
+                </tr>
+                <tr>
+                  <td style="border:1px solid #ddd;padding:8px">Tổng tiền</td>
+                  <td style="border:1px solid #ddd;padding:8px"><strong>${total_price}</strong></td>
+                </tr>
+              </table>
+
+              <p>
+                📞 ${hotline}<br/>
+                📧 ${support_email}
+              </p>
+
+              <p>
+                Trân trọng,<br/>
+                <strong>${hotel_name}</strong>
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="background:#f1f1f1;padding:12px;text-align:center;font-size:12px;color:#666">
+              Email này được gửi tự động, vui lòng không phản hồi
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+/* =======================
+   Handler
+======================= */
+Deno.serve(async (req: Request) => {
   try {
     if (req.method !== "POST") {
-      return new Response(JSON.stringify({
-        error: "Method not allowed"
-      }), {
-        status: 405
+      return new Response(JSON.stringify({ error: "Method not allowed" }), {
+        status: 405,
       });
     }
-    const body = await req.json();
-    if (!body?.booking_code) {
-      return new Response(JSON.stringify({
-        error: "booking_code required"
-      }), {
-        status: 400
-      });
-    }
+
     if (!SUPABASE_URL || !SERVICE_ROLE_KEY || !RESEND_API_KEY) {
-      return new Response(JSON.stringify({
-        error: "Missing environment variables"
-      }), {
-        status: 500
+      return new Response(
+        JSON.stringify({ error: "Missing environment variables" }),
+        { status: 500 },
+      );
+    }
+
+    const body: RequestPayload = await req.json();
+    if (!body?.booking_code) {
+      return new Response(JSON.stringify({ error: "booking_code required" }), {
+        status: 400,
       });
     }
+
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
-    // 1️⃣ Lấy booking theo booking_code
-    const { data: booking, error: findErr } = await supabase.from("bookings").select(`
+
+    const { data: booking, error } = await supabase
+      .from("bookings")
+      .select(`
         id,
         booking_code,
         room:room_id(name),
         check_in,
         check_out,
+        total_amount,
         customer:customer_id(email, full_name)
-      `).eq("booking_code", body.booking_code).single();
-    if (findErr || !booking) {
-      return new Response(JSON.stringify({
-        error: "Booking not found"
-      }), {
-        status: 404
+      `)
+      .eq("booking_code", body.booking_code)
+      .single();
+
+    if (error || !booking) {
+      return new Response(JSON.stringify({ error: "Booking not found" }), {
+        status: 404,
       });
     }
-    // 2️⃣ Xác nhận booking qua RPC
-    const { error: confirmErr } = await supabase.rpc("confirm_booking_secure", {
-      p_booking_id: booking.id
+
+    await supabase.rpc("confirm_booking_secure", {
+      p_booking_id: booking.id,
     });
-    if (confirmErr) {
-      return new Response(JSON.stringify({
-        error: confirmErr.message
-      }), {
-        status: 500
-      });
-    }
-    // 🎨 Pretty datetime
-    const checkInFormatted = formatDateTimePretty(booking.check_in);
-    const checkOutFormatted = formatDateTimePretty(booking.check_out);
-    // 3️⃣ Gửi email
-    // 📧 Email HTML
-    const html = `
-      <div style="font-family: Arial; line-height: 1.6;">
-        <h2>🎉 Xác nhận đặt phòng thành công</h2>
 
-        <p>Xin chào <strong>${booking.customer?.full_name ?? "-"}</strong>,</p>
+    const html = renderBookingConfirmationHTML({
+      customer_name: booking.customer?.full_name,
+      customer_email: booking.customer?.email,
+      booking_code: booking.booking_code,
+      room_type: booking.room?.name ?? "-",
+      check_in: formatDateTimePretty(booking.check_in),
+      check_out: formatDateTimePretty(booking.check_out),
+      total_price: booking.total_amount
+    });
 
-        <p>Cảm ơn bạn đã đặt phòng tại chúng tôi.</p>
-
-        <h3>📌 Thông tin đặt phòng</h3>
-
-        <ul>
-          <li><strong>🔑 Mã đặt phòng:</strong> ${booking.booking_code}</li>
-          <li><strong>🏨 Phòng:</strong> ${booking.room?.name ?? "-"}</li>
-          <li><strong>📥 Check-in:</strong> ${checkInFormatted}</li>
-          <li><strong>📤 Check-out:</strong> ${checkOutFormatted}</li>
-        </ul>
-
-        <p>Chúng tôi sẽ liên hệ nếu cần thêm thông tin.</p>
-
-        <p>Trân trọng,<br><strong>YHotel Booking Team</strong></p>
-      </div>
-    `;
     const resend = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${RESEND_API_KEY}`,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         from: "YHotel Booking <noreply@yhotel.vn>",
-        to: [
-          booking.customer?.email ?? "-"
-        ],
+        to: [booking.customer?.email],
         subject: `Xác nhận đặt phòng – ${booking.booking_code}`,
-        html
-      })
+        html,
+      }),
     });
-    const result = await resend.json();
+
     if (!resend.ok) {
-      return new Response(JSON.stringify({
-        error: "Email failed",
-        result
-      }), {
-        status: 500
+      return new Response(JSON.stringify({ error: "Send email failed" }), {
+        status: 500,
       });
     }
-    return new Response(JSON.stringify({
-      success: true,
-      booking,
-      email: result
-    }), {
-      headers: {
-        "Content-Type": "application/json"
-      }
+
+    return new Response(JSON.stringify({ success: true }), {
+      headers: { "Content-Type": "application/json" },
     });
-  } catch (e) {
-    console.error(e);
-    return new Response(JSON.stringify({
-      error: "Internal server error"
-    }), {
-      status: 500
+  } catch (err) {
+    console.error(err);
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
+      status: 500,
     });
   }
 });
