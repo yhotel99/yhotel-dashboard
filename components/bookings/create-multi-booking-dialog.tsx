@@ -261,7 +261,7 @@ export function CreateMultiBookingDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="min-w-2xl max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="min-w-2xl max-w-4xl max-h-[90vh] flex flex-col overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Đặt nhiều phòng - Thanh toán 1 lần</DialogTitle>
           <DialogDescription>
@@ -269,7 +269,7 @@ export function CreateMultiBookingDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 gap-4">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 gap-4">
           <div className="grid gap-4 md:grid-cols-2 shrink-0">
             <div className="space-y-2 md:col-span-2">
               <Label>Khách hàng *</Label>
@@ -402,7 +402,7 @@ export function CreateMultiBookingDialog({
             </div>
           </div>
 
-          <div className="flex-1 flex flex-col min-h-0 space-y-2">
+          <div className="flex-1 flex flex-col space-y-2">
             <Label>Chọn phòng trống *</Label>
             <p className="text-xs text-muted-foreground">
               Danh sách phòng trống theo khoảng ngày check-in / check-out đã chọn.
@@ -421,37 +421,39 @@ export function CreateMultiBookingDialog({
                 Không có phòng trống trong khoảng thời gian này
               </p>
             ) : (
-              <ScrollArea className="flex-1 border rounded-md">
-                <div className="p-3 space-y-2 max-h-[300px]">
-                  {availableRooms.map((room) => (
-                    <div
-                      key={room.id}
-                      className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50"
-                    >
-                      <Checkbox
-                        checked={selectedRoomIds.has(room.id)}
-                        onCheckedChange={() => toggleRoom(room.id)}
-                      />
-                      <div className="flex-1">
-                        <div className="font-medium">{room.name}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {roomTypeLabels[room.room_type]} • Tối đa{" "}
-                          {room.max_guests} khách
+              <div className="flex-1 flex flex-col min-h-0 min-w-0 space-y-2 overflow-hidden">
+                <ScrollArea className="flex-1 border rounded-md">
+                  <div className="p-3 space-y-2 h-[320px]">
+                    {availableRooms.map((room) => (
+                      <div
+                        key={room.id}
+                        className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50"
+                      >
+                        <Checkbox
+                          checked={selectedRoomIds.has(room.id)}
+                          onCheckedChange={() => toggleRoom(room.id)}
+                        />
+                        <div className="flex-1">
+                          <div className="font-medium">{room.name}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {roomTypeLabels[room.room_type]} • Tối đa{" "}
+                            {room.max_guests} khách
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-semibold">
+                            {formatCurrency(room.price_per_night)}/đêm
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {nights} đêm ={" "}
+                            {formatCurrency(room.price_per_night * nights)}
+                          </div>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="font-semibold">
-                          {formatCurrency(room.price_per_night)}/đêm
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {nights} đêm ={" "}
-                          {formatCurrency(room.price_per_night * nights)}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </div>
             )}
           </div>
 
