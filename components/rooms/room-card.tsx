@@ -189,25 +189,21 @@ export function RoomCard({ room, onStatusChange }: RoomCardProps) {
   const handleCreateBooking = async (
     input: Parameters<typeof createBookingAction>[0]
   ) => {
-    try {
-      await createBookingAction(input);
-      toast.success("Đặt phòng thành công", {
-        description: `Phòng ${room.name} đã được đặt thành công.`,
-      });
-      setIsQuickBookingOpen(false);
-      onStatusChange?.();
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Không thể tạo booking";
+    const result = await createBookingAction(input);
 
-      // Translate error messages
-      const translatedMessage = translateBookingError(errorMessage);
-
+    if (!result.ok) {
+      const translatedMessage = translateBookingError(result.message);
       toast.error("Đặt phòng thất bại", {
         description: translatedMessage,
       });
-      throw error;
+      throw new Error(result.message);
     }
+
+    toast.success("Đặt phòng thành công", {
+      description: `Phòng ${room.name} đã được đặt thành công.`,
+    });
+    setIsQuickBookingOpen(false);
+    onStatusChange?.();
   };
 
   const handleCheckout = () => {
