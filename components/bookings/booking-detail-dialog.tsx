@@ -23,7 +23,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
-import { PAYMENT_TYPE } from "@/lib/constants";
+import { BANK_ACCOUNT, PAYMENT_TYPE } from "@/lib/constants";
 import { PaymentStatusBadge } from "@/components/payments/status";
 
 interface BookingDetailDialogProps {
@@ -205,6 +205,63 @@ export function BookingDetailDialog({
                   <p className="font-medium text-blue-600">
                     {formatCurrency(booking.advance_payment)}
                   </p>
+                </div>
+              </div>
+
+              {/* QR Code Payment */}
+              <div className="pl-7 mt-4">
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
+                  <div className="flex flex-col md:flex-row gap-6">
+                    {/* QR Code */}
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="bg-white p-3 rounded-lg shadow-md">
+                        <img
+                          src={`https://qr.sepay.vn/img?acc=${BANK_ACCOUNT.ACC}&bank=${BANK_ACCOUNT.BANK}&amount=${booking.total_amount}&des=${encodeURIComponent(booking.booking_code)}&template=compact`}
+                          alt="QR Code thanh toán"
+                          className="size-48"
+                        />
+                      </div>
+                      <p className="text-xs text-center text-muted-foreground max-w-[200px]">
+                        Quét mã QR để thanh toán
+                      </p>
+                    </div>
+
+                    {/* Bank Info */}
+                    <div className="flex-1 space-y-3">
+                      <h4 className="font-semibold text-base">Thông tin chuyển khoản</h4>
+                      <div className="space-y-2">
+                        <div className="flex items-start gap-2">
+                          <span className="text-sm text-muted-foreground min-w-[100px]">Ngân hàng:</span>
+                          <span className="font-medium">{BANK_ACCOUNT.BANK}</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="text-sm text-muted-foreground min-w-[100px]">Số tài khoản:</span>
+                          <span className="font-mono font-bold text-lg">{BANK_ACCOUNT.ACC}</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="text-sm text-muted-foreground min-w-[100px]">Chủ tài khoản:</span>
+                          <span className="font-medium">{BANK_ACCOUNT.ACCOUNT_NAME}</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="text-sm text-muted-foreground min-w-[100px]">Số tiền:</span>
+                          <span className="font-bold text-green-600 text-lg">
+                            {formatCurrency(booking.total_amount)}
+                          </span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="text-sm text-muted-foreground min-w-[100px]">Nội dung:</span>
+                          <span className="font-mono font-bold text-blue-600">
+                            {booking.booking_code}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded p-3 mt-4">
+                        <p className="text-xs text-amber-800 dark:text-amber-200">
+                          ⚠️ Lưu ý: Vui lòng nhập đúng nội dung chuyển khoản để hệ thống tự động xác nhận thanh toán
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 

@@ -506,3 +506,10 @@ export const BLOG_STATUS = {
   PUBLISHED: "published",
   ARCHIVED: "archived",
 } as const;
+
+
+export const BANK_ACCOUNT = {
+  ACC: "01801807326",
+  BANK: "TPBank",
+  ACCOUNT_NAME: "CÔNG TY CỔ PHẦN KHÁCH SẠN YQ"
+} as const
