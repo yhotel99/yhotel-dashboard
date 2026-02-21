@@ -13,6 +13,8 @@ import {
 import { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { SIDEBAR_URLS } from "@/lib/constants";
+import { useRealtimeContext } from "@/contexts/realtime-context";
+import { Badge } from "@/components/ui/badge";
 
 export function NavMain({
   items,
@@ -24,6 +26,7 @@ export function NavMain({
   }[];
 }) {
   const pathname = usePathname();
+  const { newBookingsCount } = useRealtimeContext();
 
   return (
     <SidebarGroup>
@@ -38,6 +41,10 @@ export function NavMain({
               (item.url !== SIDEBAR_URLS.DASHBOARD &&
                 item.url.length > 1 &&
                 pathname.startsWith(`${item.url}/`));
+            
+            // Show badge for bookings page
+            const showBadge = item.url === SIDEBAR_URLS.BOOKINGS && newBookingsCount > 0;
+
             return (
               <Link href={item.url} key={item.title}>
                 <SidebarMenuItem>
@@ -48,6 +55,14 @@ export function NavMain({
                   >
                     {item.icon && <item.icon />}
                     <span>{item.title}</span>
+                    {showBadge && (
+                      <Badge 
+                        variant="destructive" 
+                        className="ml-auto size-5 shrink-0 items-center justify-center rounded-full p-0 text-xs"
+                      >
+                        {newBookingsCount > 9 ? "9+" : newBookingsCount}
+                      </Badge>
+                    )}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </Link>

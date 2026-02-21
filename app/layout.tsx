@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { SWRProvider } from "@/contexts/swr-context";
+import { RealtimeProvider } from "@/components/realtime-provider";
 import { getSettingsAction } from "@/actions/settings";
 
 // Force dynamic rendering since we use cookies (Supabase auth)
@@ -44,7 +45,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <SWRProvider>{children}</SWRProvider>
+        <RealtimeProvider>
+          <SWRProvider>{children}</SWRProvider>
+        </RealtimeProvider>
         <Toaster />
       </body>
     </html>

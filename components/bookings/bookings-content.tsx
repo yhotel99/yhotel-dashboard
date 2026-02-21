@@ -38,6 +38,7 @@ import { EditBookingDialog } from "@/components/bookings/edit-booking-dialog";
 import { CheckAvailableRoomsDialog } from "@/components/bookings/check-available-rooms-dialog";
 import { translateBookingError } from "@/lib/functions";
 import { toast } from "sonner";
+import { useRealtimeContext } from "@/contexts/realtime-context";
 
 export function BookingsContent({
   initialData,
@@ -49,6 +50,9 @@ export function BookingsContent({
   const [localSearch, setLocalSearch] = React.useState("");
   const [isCheckAvailableRoomsDialogOpen, setIsCheckAvailableRoomsDialogOpen] =
     React.useState(false);
+  
+  // Reset booking count và refresh data khi vào trang bookings
+  const { resetBookingCount, shouldRefreshBookings, markBookingsRefreshed } = useRealtimeContext();
 
   // Get pagination and search from URL params
   const page = React.useMemo(() => {
@@ -106,6 +110,20 @@ export function BookingsContent({
     limit,
     fallbackData: initialData,
   });
+
+  // Reset count khi vào trang
+  React.useEffect(() => {
+    resetBookingCount();
+  }, [resetBookingCount]);
+
+  // Auto refresh khi có booking mới và user vào trang
+  React.useEffect(() => {
+    if (shouldRefreshBookings) {
+      console.log("🔄 Refreshing bookings data...");
+      mutate();
+      markBookingsRefreshed();
+    }
+  }, [shouldRefreshBookings, mutate, markBookingsRefreshed]);
 
   // Use checkAdvancePaymentStatusAction and markAdvancePaymentAsPaidAction from actions
 
