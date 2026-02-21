@@ -11,6 +11,11 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { StatusBadge } from "@/components/bookings/status";
 import { formatCurrency, formatDateOnly } from "@/lib/functions";
 import { BookingRecord } from "@/lib/types";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // Column definitions constants
 const CUSTOMER_BOOKING_COLUMNS = {
@@ -28,13 +33,41 @@ const createColumns = (): ColumnDef<BookingRecord>[] => [
   {
     accessorKey: CUSTOMER_BOOKING_COLUMNS.BOOKING_CODE.accessorKey,
     header: CUSTOMER_BOOKING_COLUMNS.BOOKING_CODE.header,
-    cell: ({ row }) =>
-      row.original.booking_code || row.original.id.slice(0, 8).toUpperCase(),
+    cell: ({ row }) => {
+      const bookingCode =
+        row.original.booking_code || row.original.id.slice(0, 8).toUpperCase();
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="max-w-[140px] truncate font-semibold text-primary cursor-default">
+              {bookingCode}
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{bookingCode}</p>
+          </TooltipContent>
+        </Tooltip>
+      );
+    },
   },
   {
     accessorKey: CUSTOMER_BOOKING_COLUMNS.ROOM.accessorKey,
     header: CUSTOMER_BOOKING_COLUMNS.ROOM.header,
-    cell: ({ row }) => row.original.rooms?.name ?? "-",
+    cell: ({ row }) => {
+      const roomName = row.original.rooms?.name ?? "-";
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="max-w-[200px] truncate font-medium">
+              {roomName}
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{roomName}</p>
+          </TooltipContent>
+        </Tooltip>
+      );
+    },
   },
   {
     accessorKey: CUSTOMER_BOOKING_COLUMNS.CHECK_IN.accessorKey,

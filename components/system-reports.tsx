@@ -122,6 +122,13 @@ const COUNTRY_COLORS = [
   "hsl(25, 95%, 53%)",
 ];
 
+// Colors for pie chart - Payment Methods
+const PAYMENT_METHOD_COLORS = [
+  "hsl(142, 76%, 36%)", // Green for pay_at_hotel
+  "hsl(217, 91%, 60%)", // Blue for bank_transfer
+  "hsl(0, 0%, 60%)", // Grey for unknown
+];
+
 // Types for API responses
 type SummaryResponse = {
   totalRevenue: number;
@@ -154,6 +161,12 @@ type CustomerSourceResponse = {
 
 type CountryStatsResponse = {
   country: string;
+  label: string;
+  count: number;
+}[];
+
+type PaymentMethodStatsResponse = {
+  method: string;
   label: string;
   count: number;
 }[];
@@ -200,6 +213,9 @@ export function SystemReports() {
   const roomStatsUrl = "/api/reports/room-stats";
   const customerSourcesUrl = "/api/reports/customer-sources";
   const countryStatsUrl = "/api/reports/country-stats";
+  const paymentMethodsUrl = `/api/reports/payment-methods?fromDate=${encodeURIComponent(
+    fromISO
+  )}&toDate=${encodeURIComponent(toISO)}`;
 
   // Use SWR for all data fetching
   const {
@@ -226,6 +242,11 @@ export function SystemReports() {
     isLoading: isLoadingCountryStats,
     error: countryStatsError,
   } = useSWR<CountryStatsResponse>(countryStatsUrl, fetcher);
+  const {
+    data: paymentMethodsData,
+    isLoading: isLoadingPaymentMethods,
+    error: paymentMethodsError,
+  } = useSWR<PaymentMethodStatsResponse>(paymentMethodsUrl, fetcher);
   const {
     data: roomStatusData,
     isLoading: isLoadingRoomStatus,
@@ -255,6 +276,10 @@ export function SystemReports() {
       : [];
   const countryStats =
     Array.isArray(countryStatsData) && !countryStatsError ? countryStatsData : [];
+  const paymentMethods =
+    Array.isArray(paymentMethodsData) && !paymentMethodsError
+      ? paymentMethodsData
+      : [];
   const roomStatuses =
     Array.isArray(roomStatusData) && !roomStatusError ? roomStatusData : [];
 
@@ -359,6 +384,21 @@ export function SystemReports() {
       );
     }
 
+    // Payment Methods
+    if (paymentMethods.length > 0) {
+      const totalPaymentMethods = paymentMethods.reduce((sum, method) => sum + method.count, 0);
+      const paymentMethodsData = [
+        ["Phương thức thanh toán", "Số đặt phòng", "Tỷ lệ (%)"],
+        ...paymentMethods.map((method) => {
+          const percentage = totalPaymentMethods > 0 ? ((method.count / totalPaymentMethods) * 100).toFixed(2) : "0";
+          return [method.label, method.count.toString(), percentage];
+        }),
+      ];
+      sections.push(
+        Papa.unparse([["=== PHÂN BỔ THEO PHƯƠNG THỨC THANH TOÁN ==="], ...paymentMethodsData, [""]], papaConfig)
+      );
+    }
+
     // Room Statuses
     if (roomStatuses.length > 0) {
       const roomStatusesData = [
@@ -440,7 +480,7 @@ export function SystemReports() {
             size="icon" 
             title="Xuất báo cáo"
             onClick={exportReport}
-            disabled={isLoadingReports || isLoadingRoomStats || isLoadingCustomerSources || isLoadingRoomStatus || isLoadingRecentPayments}
+            disabled={isLoadingReports || isLoadingRoomStats || isLoadingCustomerSources || isLoadingCountryStats || isLoadingPaymentMethods || isLoadingRoomStatus || isLoadingRecentPayments}
           >
             <Download className="h-4 w-4" />
           </Button>
@@ -780,7 +820,7 @@ export function SystemReports() {
         </Card>
 
         {/* Charts Grid - Room Types and Customer Sources */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Room Statistics Chart */}
           <Card className="border-primary/20 bg-linear-to-br from-primary/5 via-card to-card">
             <CardHeader>
@@ -982,7 +1022,10 @@ export function SystemReports() {
               )}
             </CardContent>
           </Card>
+        </div>
 
+        {/* Charts Grid - Country and Payment Methods */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Country Statistics Chart */}
           <Card className="border-primary/20 bg-linear-to-br from-primary/5 via-card to-card">
             <CardHeader>
@@ -1037,6 +1080,106 @@ export function SystemReports() {
                             if (active && payload && payload.length) {
                               const data = payload[0].payload;
                               const total = countryStats.reduce(
+                                (sum, stat) => sum + stat.count,
+                                0
+                              );
+                              const percentage =
+                                total > 0
+                                  ? ((data.count / total) * 100).toFixed(1)
+                                  : 0;
+                              return (
+                                <div className="rounded-lg border border-primary/20 bg-background p-3 shadow-lg">
+                                  <div className="mb-2">
+                                    <p className="text-sm font-semibold text-primary">
+                                      {data.label}
+                                    </p>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <div className="flex items-center justify-between gap-4">
+                                      <span className="text-xs text-muted-foreground">
+                                        Số lượng
+                                      </span>
+                                      <span className="text-sm font-bold text-primary">
+                                        {data.count} đặt phòng
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center justify-between gap-4">
+                                      <span className="text-xs text-muted-foreground">
+                                        Tỷ lệ
+                                      </span>
+                                      <span className="text-sm font-semibold text-primary/80">
+                                        {percentage}%
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Payment Methods Chart */}
+          <Card className="border-primary/20 bg-linear-to-br from-primary/5 via-card to-card">
+            <CardHeader>
+              <CardTitle className="text-2xl">Phương thức thanh toán</CardTitle>
+              <CardDescription className="text-base mt-1">
+                Phân bổ số lượng đặt phòng theo phương thức thanh toán
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="px-2 sm:px-6">
+              {isLoadingPaymentMethods ? (
+                <div className="h-[350px] flex items-center justify-center">
+                  <p className="text-muted-foreground">Đang tải dữ liệu...</p>
+                </div>
+              ) : paymentMethods.length === 0 ? (
+                <div className="h-[350px] flex items-center justify-center">
+                  <p className="text-muted-foreground">Không có dữ liệu</p>
+                </div>
+              ) : (
+                <div className="flex justify-center">
+                  <ChartContainer
+                    config={chartConfig}
+                    className="h-[350px] w-full"
+                  >
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={paymentMethods}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ label, percent }) =>
+                            percent > 0 ? `${label}: ${(percent * 100).toFixed(0)}%` : ''
+                          }
+                          outerRadius={100}
+                          innerRadius={60}
+                          fill="#8884d8"
+                          dataKey="count"
+                        >
+                          {paymentMethods.map((_, index) => (
+                            <Cell
+                              key={`cell-${index}`}
+                              fill={
+                                PAYMENT_METHOD_COLORS[
+                                  index % PAYMENT_METHOD_COLORS.length
+                                ]
+                              }
+                            />
+                          ))}
+                        </Pie>
+                        <ChartTooltip
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              const data = payload[0].payload;
+                              const total = paymentMethods.reduce(
                                 (sum, stat) => sum + stat.count,
                                 0
                               );
