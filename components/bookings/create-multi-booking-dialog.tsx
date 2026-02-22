@@ -21,7 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { IconSearch, IconPlus } from "@tabler/icons-react";
+import { IconSearch, IconPlus, IconEye } from "@tabler/icons-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
@@ -35,6 +35,7 @@ import { getAvailableRoomsAction } from "@/actions/rooms";
 import { searchCustomersAction, createCustomerAction } from "@/actions/customers";
 import { useDebounce } from "@/hooks/use-debounce";
 import { CreateCustomerDialog } from "@/components/customers/create-customer-dialog";
+import { RoomDetailDialog } from "@/components/rooms/room-detail-dialog";
 import type { Customer, Room } from "@/lib/types";
 import {
   PAYMENT_METHOD,
@@ -93,6 +94,8 @@ export function CreateMultiBookingDialog({
   const [selectedRoomIds, setSelectedRoomIds] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedRoomForDetail, setSelectedRoomForDetail] = useState<Room | null>(null);
+  const [isRoomDetailOpen, setIsRoomDetailOpen] = useState(false);
   const lastSearchRef = useRef<string>("");
   const debouncedSearch = useDebounce(customerSearch, 300);
 
@@ -198,6 +201,12 @@ export function CreateMultiBookingDialog({
       if (field === "check_in") setCheckInDate(date ? format(date, "yyyy-MM-dd") : "");
       else setCheckOutDate(date ? format(date, "yyyy-MM-dd") : "");
     };
+
+  const handleViewRoomDetail = (room: Room, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedRoomForDetail(room);
+    setIsRoomDetailOpen(true);
+  };
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -449,14 +458,26 @@ export function CreateMultiBookingDialog({
                             {room.max_guests} khách
                           </div>
                         </div>
-                        <div className="text-right">
-                          <div className="font-semibold">
-                            {formatCurrency(room.price_per_night)}/đêm
+                        <div className="text-right flex items-center gap-2">
+                          <div>
+                            <div className="font-semibold">
+                              {formatCurrency(room.price_per_night)}/đêm
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {nights} đêm ={" "}
+                              {formatCurrency(room.price_per_night * nights)}
+                            </div>
                           </div>
-                          <div className="text-xs text-muted-foreground">
-                            {nights} đêm ={" "}
-                            {formatCurrency(room.price_per_night * nights)}
-                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="size-8 shrink-0"
+                            onClick={(e) => handleViewRoomDetail(room, e)}
+                            title="Xem chi tiết phòng"
+                          >
+                            <IconEye className="size-4" />
+                          </Button>
                         </div>
                       </div>
                     ))}
@@ -550,6 +571,19 @@ export function CreateMultiBookingDialog({
               handleCustomerSelect(result.data);
               setIsCreateCustomerDialogOpen(false);
             } else throw new Error(result.message);
+          }}
+        />
+      )}
+
+      {selectedRoomForDetail && (
+        <RoomDetailDialog
+          room={selectedRoomForDetail}
+          open={isRoomDetailOpen}
+          onOpenChange={(open) => {
+            setIsRoomDetailOpen(open);
+            if (!open) {
+              setSelectedRoomForDetail(null);
+            }
           }}
         />
       )}

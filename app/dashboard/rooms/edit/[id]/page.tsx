@@ -28,7 +28,6 @@ export default function EditRoomPage() {
       revalidateIfStale: true,
       revalidateOnFocus: false,   // tránh giật form
       revalidateOnReconnect: true,
-      dedupingInterval: 0,
     }
   );
 

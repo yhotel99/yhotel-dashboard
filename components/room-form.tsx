@@ -199,6 +199,7 @@ export function RoomForm({
           data.thumbnail,
           data.images && data.images.length > 0 ? data.images : undefined
         );
+        await mutate(["room", roomId]);
         toast.success("Cập nhật phòng thành công!", {
           description: `Phòng ${roomData.name} đã được cập nhật thành công.`,
         });
