@@ -1,4 +1,4 @@
-import { createAuditLog, AuditLogData } from '@/services/audit-logs';
+import { createAuditLog } from '@/services/audit-logs';
 import { headers } from 'next/headers';
 
 // Helper to get request metadata

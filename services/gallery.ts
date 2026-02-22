@@ -1,6 +1,6 @@
 
 import { createClient } from "@/lib/supabase/server";
-import type { GalleryImage, GalleryImagesResponse, PaginationMeta } from "@/lib/types";
+import type { GalleryImage, GalleryImagesResponse } from "@/lib/types";
 
 /**
  * Search gallery images with pagination

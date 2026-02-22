@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -23,24 +23,20 @@ interface BookingNotesDialogProps {
   onSave: (updatedBooking: BookingRecord) => void;
 }
 
-export function BookingNotesDialog({
-  open,
-  onOpenChange,
+// Internal component that resets when booking changes via key prop
+function BookingNotesForm({
   booking,
   onSave,
-}: BookingNotesDialogProps) {
-  const [notes, setNotes] = useState("");
+  onCancel,
+}: {
+  booking: BookingRecord;
+  onSave: (updatedBooking: BookingRecord) => void;
+  onCancel: () => void;
+}) {
+  const [notes, setNotes] = useState(booking.notes || "");
   const [isSaving, setIsSaving] = useState(false);
 
-  useEffect(() => {
-    if (booking) {
-      setNotes(booking.notes || "");
-    }
-  }, [booking]);
-
   const handleSave = async () => {
-    if (!booking) return;
-
     setIsSaving(true);
     const result = await updateBookingAction(booking.id, {
       notes: notes.trim() || null,
@@ -49,7 +45,7 @@ export function BookingNotesDialog({
     if (result.ok) {
       onSave(result.data);
       toast.success("Đã lưu ghi chú");
-      onOpenChange(false);
+      onCancel();
     } else {
       toast.error("Không thể lưu ghi chú", {
         description: result.message,
@@ -60,6 +56,42 @@ export function BookingNotesDialog({
   };
 
   return (
+    <>
+      <div className="space-y-4 py-4">
+        <div className="space-y-2">
+          <Label htmlFor="notes">Ghi chú</Label>
+          <Textarea
+            id="notes"
+            placeholder="Nhập ghi chú..."
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={5}
+          />
+        </div>
+      </div>
+      <DialogFooter>
+        <Button
+          variant="outline"
+          onClick={onCancel}
+          disabled={isSaving}
+        >
+          Hủy
+        </Button>
+        <Button onClick={handleSave} disabled={isSaving}>
+          {isSaving ? "Đang lưu..." : "Lưu"}
+        </Button>
+      </DialogFooter>
+    </>
+  );
+}
+
+export function BookingNotesDialog({
+  open,
+  onOpenChange,
+  booking,
+  onSave,
+}: BookingNotesDialogProps) {
+  return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
@@ -68,30 +100,14 @@ export function BookingNotesDialog({
             Thêm hoặc chỉnh sửa ghi chú cho booking này
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="notes">Ghi chú</Label>
-            <Textarea
-              id="notes"
-              placeholder="Nhập ghi chú..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={5}
-            />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isSaving}
-          >
-            Hủy
-          </Button>
-          <Button onClick={handleSave} disabled={isSaving}>
-            {isSaving ? "Đang lưu..." : "Lưu"}
-          </Button>
-        </DialogFooter>
+        {booking && (
+          <BookingNotesForm
+            key={booking.id}
+            booking={booking}
+            onSave={onSave}
+            onCancel={() => onOpenChange(false)}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );

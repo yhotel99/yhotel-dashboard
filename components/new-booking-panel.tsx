@@ -17,25 +17,42 @@ export function NewBookingPanel() {
     useRealtimeContext();
   const [isVisible, setIsVisible] = useState(false);
   const lastCountRef = useRef(0);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    // Chỉ hiện panel khi có booking MỚI (count tăng lên)
-    if (hasNewBooking && newBookingsCount > lastCountRef.current) {
-      setIsVisible(true);
-      lastCountRef.current = newBookingsCount;
+    // Check if new booking arrived
+    const hasNewBookingArrived = hasNewBooking && newBookingsCount > lastCountRef.current;
 
-      // Tự động ẩn sau 10 giây
-      const timer = setTimeout(() => {
+    if (hasNewBookingArrived) {
+      // Update last count
+      lastCountRef.current = newBookingsCount;
+      
+      // Show panel
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsVisible(true);
+
+      // Clear existing timer
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+
+      // Auto hide after 10 seconds
+      timerRef.current = setTimeout(() => {
         setIsVisible(false);
       }, 10000);
-
-      return () => clearTimeout(timer);
     }
     
-    // Reset ref khi count về 0
+    // Reset when count goes to 0
     if (newBookingsCount === 0) {
       lastCountRef.current = 0;
+      setIsVisible(false);
     }
+
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
   }, [hasNewBooking, newBookingsCount]);
 
   const handleViewNow = () => {

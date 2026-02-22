@@ -18,10 +18,10 @@ export interface AuditLogData {
   userId?: string;
   userEmail?: string;
   changes?: {
-    before?: Record<string, any>;
-    after?: Record<string, any>;
+    before?: Record<string, unknown>;
+    after?: Record<string, unknown>;
   };
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   ipAddress?: string;
   userAgent?: string;
 }
@@ -68,13 +68,19 @@ export async function getAuditLogs(filters?: {
   action?: AuditAction;
   startDate?: string;
   endDate?: string;
+  page?: number;
   limit?: number;
 }) {
   try {
     const supabase = await createClient();
+    const page = filters?.page || 1;
+    const limit = filters?.limit || 20;
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
     let query = supabase
       .from('audit_logs')
-      .select('*')
+      .select('*', { count: 'exact' })
       .order('created_at', { ascending: false });
 
     if (filters?.entityType) {
@@ -95,18 +101,30 @@ export async function getAuditLogs(filters?: {
     if (filters?.endDate) {
       query = query.lte('created_at', filters.endDate);
     }
-    if (filters?.limit) {
-      query = query.limit(filters.limit);
-    }
 
-    const { data, error } = await query;
+    // Apply pagination
+    query = query.range(from, to);
+
+    const { data, error, count } = await query;
 
     if (error) {
       console.error('Failed to fetch audit logs:', error);
       return { success: false, error };
     }
 
-    return { success: true, data };
+    const total = count || 0;
+    const totalPages = Math.ceil(total / limit);
+
+    return { 
+      success: true, 
+      data,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages,
+      }
+    };
   } catch (error) {
     console.error('Audit log fetch error:', error);
     return { success: false, error };

@@ -599,6 +599,9 @@ function SidebarMenuBadge({
   )
 }
 
+// Generate random width outside component to avoid impure function in render
+const getRandomWidth = () => `${Math.floor(Math.random() * 40) + 50}%`;
+
 function SidebarMenuSkeleton({
   className,
   showIcon = false,
@@ -606,10 +609,8 @@ function SidebarMenuSkeleton({
 }: React.ComponentProps<"div"> & {
   showIcon?: boolean
 }) {
-  // Random width between 50 to 90%.
-  const width = React.useMemo(() => {
-    return `${Math.floor(Math.random() * 40) + 50}%`
-  }, [])
+  // Use useState with lazy initialization to generate width only once
+  const [width] = React.useState(getRandomWidth);
 
   return (
     <div

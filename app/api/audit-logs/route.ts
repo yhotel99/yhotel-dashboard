@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { getAuditLogs } from '@/services/audit-logs';
+import { getAuditLogs, type AuditAction } from '@/services/audit-logs';
 import { createClient } from '@/lib/supabase/server';
 
 export async function GET(request: NextRequest) {
@@ -17,21 +17,27 @@ export async function GET(request: NextRequest) {
 
     // Get query parameters
     const searchParams = request.nextUrl.searchParams;
+    
+    // Get action with proper type handling
+    const actionParam = searchParams.get('action');
+    const action = actionParam as AuditAction | undefined;
+    
     const filters = {
       entityType: searchParams.get('entityType') || undefined,
       entityId: searchParams.get('entityId') || undefined,
       userId: searchParams.get('userId') || undefined,
-      action: searchParams.get('action') as any || undefined,
+      action: action || undefined,
       startDate: searchParams.get('startDate') || undefined,
       endDate: searchParams.get('endDate') || undefined,
-      limit: parseInt(searchParams.get('limit') || '50'),
+      page: parseInt(searchParams.get('page') || '1'),
+      limit: parseInt(searchParams.get('limit') || '20'),
     };
 
     const result = await getAuditLogs(filters);
 
     if (!result.success) {
       // Check if table doesn't exist
-      const error = result.error as any;
+      const error = result.error as { message?: string } | undefined;
       const errorMessage = error?.message || String(error || 'Unknown error');
       if (errorMessage.includes('relation "audit_logs" does not exist')) {
         return Response.json(
@@ -55,6 +61,7 @@ export async function GET(request: NextRequest) {
     return Response.json({
       success: true,
       data: result.data || [],
+      pagination: result.pagination,
     });
   } catch (error) {
     console.error('Audit logs API error:', error);
