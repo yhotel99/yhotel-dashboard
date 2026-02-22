@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { PAYMENT_STATUS, PAYMENT_TYPE } from "@/lib/constants";
 import type { PaymentWithBooking } from "@/lib/types";
+import { logPaymentUpdate } from "@/lib/audit-helpers";
 
 /**
  * Check advance payment status by booking ID
@@ -61,6 +62,15 @@ export async function markAdvancePaymentAsPaidAction(
 ): Promise<void> {
   try {
     const supabase = await createClient();
+    
+    // Get payment info (only needed fields)
+    const { data: payment } = await supabase
+      .from("payments")
+      .select("id, payment_status")
+      .eq("booking_id", bookingId)
+      .eq("payment_type", PAYMENT_TYPE.ADVANCE_PAYMENT)
+      .single();
+
     const now = new Date().toISOString();
     const { error } = await supabase
       .from("payments")
@@ -73,6 +83,21 @@ export async function markAdvancePaymentAsPaidAction(
 
     if (error) {
       throw new Error(error.message);
+    }
+
+    // Log audit trail
+    if (payment) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await logPaymentUpdate(
+          payment.id,
+          user.id,
+          user.email!,
+          { payment_status: payment.payment_status },
+          { payment_status: PAYMENT_STATUS.PAID, paid_at: now },
+          { bookingId, paymentType: PAYMENT_TYPE.ADVANCE_PAYMENT }
+        );
+      }
     }
 
     // Revalidate payments page after updating

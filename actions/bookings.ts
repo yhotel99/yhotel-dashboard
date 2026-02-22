@@ -14,6 +14,7 @@ import type {
 } from "@/lib/types";
 import { BOOKING_STATUS, PAYMENT_METHOD } from "@/lib/constants";
 import { mapBookingError } from "@/lib/functions";
+import { logBookingUpdate, logBookingCancel } from "@/lib/audit-helpers";
 
 
 
@@ -79,6 +80,14 @@ async function updateBookingStatusInternal(
   }
 ): Promise<ResultVoid> {
   const supabase = await createClient();
+  
+  // Get old status
+  const { data: oldData } = await supabase
+    .from("bookings")
+    .select("status")
+    .eq("id", bookingId)
+    .single();
+
   const updateData: Record<string, unknown> = { status };
 
   if (additionalData?.actual_check_in !== undefined) {
@@ -99,6 +108,22 @@ async function updateBookingStatusInternal(
       ok: false,
       message: "Không thể cập nhật trạng thái booking",
     };
+  }
+
+  // Log audit trail
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user && oldData) {
+    await logBookingUpdate(
+      bookingId,
+      user.id,
+      user.email!,
+      { status: oldData.status },
+      updateData,
+      { 
+        action: 'status_change',
+        ...additionalData 
+      }
+    );
   }
 
   return { ok: true };
@@ -246,6 +271,15 @@ export async function updateBooking(
   input: UpdateBookingInput
 ): Promise<Result<BookingRecord>> {
   const supabase = await createClient();
+  
+  // Get old data (only fields being updated)
+  const fieldsToSelect = Object.keys(input).join(',');
+  const { data: oldData } = await supabase
+    .from("bookings")
+    .select(fieldsToSelect)
+    .eq("id", bookingId)
+    .single();
+
   const { data, error } = await supabase
     .from("bookings")
     .update(input)
@@ -266,6 +300,19 @@ export async function updateBooking(
       ok: false,
       message: "Không tìm thấy booking để cập nhật",
     };
+  }
+
+  // Log audit trail
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    await logBookingUpdate(
+      bookingId,
+      user.id,
+      user.email!,
+      oldData || {},
+      input,
+      { updatedFields: Object.keys(input) }
+    );
   }
 
   // Revalidate bookings page after updating
@@ -362,6 +409,18 @@ export async function cancelBookingAction(
       ok: false,
       message: "Không thể hủy booking",
     };
+  }
+
+  // Log audit trail
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    await logBookingCancel(
+      bookingId,
+      user.id,
+      user.email!,
+      'Cancelled by user',
+      { action: 'cancel_booking' }
+    );
   }
 
   // Revalidate bookings page after cancelling

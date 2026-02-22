@@ -11,6 +11,7 @@ import type {
 import { getRefundRequestById } from "@/services/refund-requests";
 import { REFUND_REQUEST_STATUS, PAYMENT_STATUS } from "@/lib/constants";
 import { formatVND } from "@/lib/functions";
+import { logRefundProcess } from "@/lib/audit-helpers";
 
 /**
  * Calculate total refunded amount for a booking
@@ -219,20 +220,21 @@ export async function updateRefundRequestStatusAction(
       throw new Error("Không thể xác thực người dùng");
     }
 
+    // Get refund request details (only needed fields)
+    const { data: refundRequest, error: fetchError } = await supabase
+      .from("refund_requests")
+      .select("amount, booking_id, status")
+      .eq("id", id)
+      .single();
+
+    if (fetchError || !refundRequest) {
+      throw new Error(
+        fetchError?.message || "Không tìm thấy yêu cầu hoàn tiền"
+      );
+    }
+
     // If status is being changed to REFUNDED, validate total refunded amount
     if (status === REFUND_REQUEST_STATUS.REFUNDED) {
-      const { data: refundRequest, error: fetchError } = await supabase
-        .from("refund_requests")
-        .select("amount, booking_id")
-        .eq("id", id)
-        .single();
-
-      if (fetchError || !refundRequest) {
-        throw new Error(
-          fetchError?.message || "Không tìm thấy yêu cầu hoàn tiền"
-        );
-      }
-
       // Validate refund amount
       const { totalPaid, totalRefunded, available } =
         await getAvailableRefundAmount(refundRequest.booking_id, id);
@@ -252,6 +254,48 @@ export async function updateRefundRequestStatusAction(
     });
 
     if (error) throw new Error(error.message);
+
+    // Log audit trail for approve/reject/refunded
+    if (status === REFUND_REQUEST_STATUS.APPROVED) {
+      await logRefundProcess(
+        id,
+        refundRequest.booking_id,
+        user.id,
+        user.email!,
+        refundRequest.amount,
+        'approved',
+        { 
+          oldStatus: refundRequest.status,
+          newStatus: status 
+        }
+      );
+    } else if (status === REFUND_REQUEST_STATUS.REJECTED) {
+      await logRefundProcess(
+        id,
+        refundRequest.booking_id,
+        user.id,
+        user.email!,
+        refundRequest.amount,
+        'rejected',
+        { 
+          oldStatus: refundRequest.status,
+          newStatus: status 
+        }
+      );
+    } else if (status === REFUND_REQUEST_STATUS.REFUNDED) {
+      await logRefundProcess(
+        id,
+        refundRequest.booking_id,
+        user.id,
+        user.email!,
+        refundRequest.amount,
+        'refunded',
+        { 
+          oldStatus: refundRequest.status,
+          newStatus: status 
+        }
+      );
+    }
 
     // Revalidate refund requests page
     revalidatePath("/dashboard/refund-requests");

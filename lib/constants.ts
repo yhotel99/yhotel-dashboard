@@ -8,6 +8,7 @@ import {
   IconReceiptRefund,
   IconNews,
   IconHistory,
+  IconFileText,
 } from "@tabler/icons-react";
 import { HotelIcon, Images, User2, UserCircle } from "lucide-react";
 
@@ -286,6 +287,7 @@ export const SIDEBAR_URLS = {
   PAYMENTS: "/dashboard/payments",
   PAYMENT_LOGS: "/dashboard/payment-logs",
   REFUND_REQUESTS: "/dashboard/refund-requests",
+  AUDIT_LOGS: "/dashboard/audit-logs",
   GALLERY: "/dashboard/gallery",
   USERS: "/dashboard/users",
   BLOGS: "/dashboard/blogs",
@@ -394,6 +396,7 @@ export const PATH_TO_RESOURCE: Record<string, string> = {
   [SIDEBAR_URLS.PAYMENTS]: "payments",
   [SIDEBAR_URLS.PAYMENT_LOGS]: "payment-logs",
   [SIDEBAR_URLS.REFUND_REQUESTS]: "refund-requests",
+  [SIDEBAR_URLS.AUDIT_LOGS]: "audit-logs",
   [SIDEBAR_URLS.GALLERY]: "gallery",
   [SIDEBAR_URLS.USERS]: "users",
   [SIDEBAR_URLS.BLOGS]: "blogs",
@@ -450,6 +453,12 @@ export const allNavItems = [
     resource: "refund-requests",
   },
   {
+    title: "Nhật Ký Hệ Thống",
+    url: SIDEBAR_URLS.AUDIT_LOGS,
+    icon: IconFileText,
+    resource: "audit-logs",
+  },
+  {
     title: "Bộ Sưu Tập Ảnh",
     url: SIDEBAR_URLS.GALLERY,
     icon: Images,
@@ -489,6 +498,7 @@ export const DASHBOARD_URLS = {
   PAYMENTS: "/dashboard/payments",
   PAYMENT_LOGS: "/dashboard/payment-logs",
   REFUND_REQUESTS: "/dashboard/refund-requests",
+  AUDIT_LOGS: "/dashboard/audit-logs",
   GALLERY: "/dashboard/gallery",
   USERS: "/dashboard/users",
   BLOGS: "/dashboard/blogs",

@@ -14,6 +14,7 @@ import type {
   Result,
   ResultVoid,
 } from "@/lib/types";
+import { logPriceUpdate } from "@/lib/audit-helpers";
 
 
 
@@ -164,6 +165,17 @@ export async function updateRoom(
   try {
     const supabase = await createClient();
 
+    // Get old price if being updated (only query if needed)
+    let oldPrice = null;
+    if (input.price_per_night !== undefined) {
+      const { data } = await supabase
+        .from("rooms")
+        .select("price_per_night")
+        .eq("id", id)
+        .single();
+      oldPrice = data?.price_per_night;
+    }
+
     // Update room data
     const { error } = await supabase.from("rooms").update(input).eq("id", id);
 
@@ -172,6 +184,21 @@ export async function updateRoom(
         ok: false,
         message: error.message || "Không thể cập nhật phòng",
       };
+    }
+
+    // Log price change if applicable
+    if (input.price_per_night !== undefined && oldPrice !== null) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await logPriceUpdate(
+          id,
+          user.id,
+          user.email!,
+          oldPrice,
+          input.price_per_night,
+          { action: 'update_room_price' }
+        );
+      }
     }
 
     // Only update images if thumbnail or imageList is provided
