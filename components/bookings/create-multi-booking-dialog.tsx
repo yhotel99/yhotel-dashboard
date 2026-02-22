@@ -427,16 +427,25 @@ export function CreateMultiBookingDialog({
                     {availableRooms.map((room) => (
                       <div
                         key={room.id}
-                        className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50"
+                        className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors"
+                        onClick={() => toggleRoom(room.id)}
                       >
-                        <Checkbox
-                          checked={selectedRoomIds.has(room.id)}
-                          onCheckedChange={() => toggleRoom(room.id)}
-                        />
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedRoomIds.has(room.id)}
+                            onCheckedChange={() => toggleRoom(room.id)}
+                          />
+                        </div>
                         <div className="flex-1">
                           <div className="font-medium">{room.name}</div>
                           <div className="text-xs text-muted-foreground">
-                            {roomTypeLabels[room.room_type]} • Tối đa{" "}
+                            {room.room_number && (
+                              <span>Số phòng: <strong>{room.room_number}</strong> • </span>
+                            )}
+                            {room.floor_number !== null && room.floor_number !== undefined && (
+                              <span>Tầng <strong>{room.floor_number}</strong> • </span>
+                            )}
+                            <strong>{roomTypeLabels[room.room_type]}</strong> • Tối đa{" "}
                             {room.max_guests} khách
                           </div>
                         </div>

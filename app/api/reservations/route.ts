@@ -16,6 +16,8 @@ export async function GET() {
     const { data, error } = await supabase
       .from("room_status_view")
       .select("*")
+      .order("floor_number", { ascending: true, nullsFirst: false })
+      .order("room_number", { ascending: true, nullsFirst: false })
       .order("name", { ascending: true });
 
     if (error) {
@@ -38,6 +40,8 @@ export async function GET() {
           max_guests: item.max_guests,
           amenities: Array.isArray(item.amenities) ? item.amenities : [],
           status: item.status as Room["status"],
+          room_number: item.room_number || null,
+          floor_number: item.floor_number || null,
           deleted_at: item.deleted_at,
           created_at: item.created_at,
           updated_at: item.updated_at,

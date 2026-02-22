@@ -23,6 +23,8 @@ type RoomFromRPC = {
   max_guests: number;
   amenities: string[] | unknown;
   status: Room["status"];
+  room_number?: string | null;
+  floor_number?: number | null;
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
@@ -58,6 +60,8 @@ export async function getAvailableRooms(
       max_guests: room.max_guests,
       amenities: Array.isArray(room.amenities) ? room.amenities : [],
       status: room.status,
+      room_number: room.room_number || null,
+      floor_number: room.floor_number || null,
       deleted_at: room.deleted_at,
       created_at: room.created_at,
       updated_at: room.updated_at,

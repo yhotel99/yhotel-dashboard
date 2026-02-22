@@ -51,6 +51,8 @@ export async function getAvailableRoomsAction(
       max_guests: room.max_guests,
       amenities: Array.isArray(room.amenities) ? room.amenities : [],
       status: room.status,
+      room_number: room.room_number || null,
+      floor_number: room.floor_number || null,
       deleted_at: room.deleted_at,
       created_at: room.created_at,
       updated_at: room.updated_at,

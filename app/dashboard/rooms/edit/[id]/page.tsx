@@ -41,6 +41,8 @@ export default function EditRoomPage() {
       price_per_night: room.price_per_night.toString(),
       max_guests: room.max_guests.toString(),
       amenities: room.amenities,
+      room_number: room.room_number || "",
+      floor_number: room.floor_number?.toString() || "",
       thumbnail: room.thumbnail,
       images: room.images,
     }

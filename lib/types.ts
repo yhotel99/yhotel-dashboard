@@ -75,6 +75,8 @@ export type Room = {
   max_guests: number;
   amenities: string[];
   status: RoomStatus;
+  room_number?: string | null;
+  floor_number?: number | null;
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
@@ -90,6 +92,8 @@ export type RoomInput = {
   max_guests: number;
   amenities: string[];
   status: RoomStatus;
+  room_number?: string | null;
+  floor_number?: number | null;
 };
 
 // ============================================================================
@@ -139,6 +143,8 @@ export type RoomStatusViewData = {
   max_guests: number;
   amenities: string[];
   status: string;
+  room_number: string | null;
+  floor_number: number | null;
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
@@ -662,6 +668,8 @@ export type RoomFromRPC = {
   max_guests: number;
   amenities: string[] | unknown;
   status: Room["status"];
+  room_number?: string | null;
+  floor_number?: number | null;
   deleted_at: string | null;
   created_at: string;
   updated_at: string;

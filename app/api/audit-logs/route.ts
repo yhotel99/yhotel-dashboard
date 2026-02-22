@@ -31,7 +31,8 @@ export async function GET(request: NextRequest) {
 
     if (!result.success) {
       // Check if table doesn't exist
-      const errorMessage = result.error?.message || String(result.error);
+      const error = result.error as any;
+      const errorMessage = error?.message || String(error || 'Unknown error');
       if (errorMessage.includes('relation "audit_logs" does not exist')) {
         return Response.json(
           { 

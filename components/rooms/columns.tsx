@@ -18,6 +18,8 @@ import { cn } from "@/lib/utils";
 export const ROOMS_COLUMNS = {
   IMAGE: { accessorKey: "Ảnh", header: "Ảnh" },
   NAME: { accessorKey: "Tên phòng", header: "Tên phòng" },
+  ROOM_NUMBER: { accessorKey: "Số phòng", header: "Số phòng" },
+  FLOOR_NUMBER: { accessorKey: "Số tầng", header: "Số tầng" },
   ROOM_TYPE: { accessorKey: "Loại phòng", header: "Loại phòng" },
   STATUS: { accessorKey: "Trạng thái", header: "Trạng thái" },
   PRICE_PER_NIGHT: { accessorKey: "Giá mỗi đêm", header: "Giá mỗi đêm" },
@@ -49,6 +51,22 @@ export function createColumns(
       size: 120,
       minSize: 80,
       maxSize: 120,
+    },
+    {
+      accessorKey: ROOMS_COLUMNS.ROOM_NUMBER.accessorKey,
+      header: ROOMS_COLUMNS.ROOM_NUMBER.header,
+      cell: ({ row }) => row.original.room_number || "-",
+      size: 80,
+      minSize: 60,
+      maxSize: 100,
+    },
+    {
+      accessorKey: ROOMS_COLUMNS.FLOOR_NUMBER.accessorKey,
+      header: ROOMS_COLUMNS.FLOOR_NUMBER.header,
+      cell: ({ row }) => row.original.floor_number ? `Tầng ${row.original.floor_number}` : "-",
+      size: 70,
+      minSize: 60,
+      maxSize: 90,
     },
     {
       accessorKey: ROOMS_COLUMNS.ROOM_TYPE.accessorKey,

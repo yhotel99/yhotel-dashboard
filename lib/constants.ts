@@ -9,8 +9,30 @@ import {
   IconNews,
   IconHistory,
   IconFileText,
+  IconWifi,
+  IconParking,
+  IconSnowflake,
+  IconFridge,
+  IconCoffee,
+  IconLock,
+  IconBuildingSkyscraper,
+  IconWind,
+  IconBottle,
+  IconToolsKitchen2,
+  IconIroning,
+  IconCar,
+  IconMapPin,
+  IconClock24,
+  IconTeapot,
 } from "@tabler/icons-react";
-import { HotelIcon, Images, User2, UserCircle } from "lucide-react";
+import { 
+  HotelIcon, 
+  Images, 
+  User2, 
+  UserCircle, 
+  Bath,
+  ShowerHead,
+} from "lucide-react";
 
 /**
  * Room type labels mapping
@@ -480,12 +502,24 @@ export const allNavItems = [
 
 
 export const AMENITIES_OPTIONS = [
-  { label: "WiFi Tốc độ cao", value: "wifi_high_speed" },
-  { label: "Bãi đỗ xe", value: "parking" },
-  { label: "Cà phê", value: "coffee" },
-  { label: "Có phục vụ bữa sáng", value: "breakfast_service" },
-  { label: "Giặt ủi", value: "laundry" },
-  { label: "Hỗ trợ liên hệ Tài Xế", value: "taxi_support" },
+  { label: "WiFi Tốc độ cao", value: "wifi_high_speed", icon: IconWifi },
+  { label: "Bãi đỗ xe", value: "parking", icon: IconParking },
+  { label: "Điều hòa", value: "air_conditioning", icon: IconSnowflake },
+  { label: "Tủ lạnh nhỏ", value: "mini_fridge", icon: IconFridge },
+  { label: "Trà & Cà phê", value: "tea_coffee", icon: IconCoffee },
+  { label: "Cà phê", value: "coffee", icon: IconCoffee },
+  { label: "Tủ sắt", value: "safe_box", icon: IconLock },
+  { label: "Ban công", value: "balcony", icon: IconBuildingSkyscraper },
+  { label: "Phòng tắm đứng", value: "shower", icon: Bath },
+  { label: "Vòi sen", value: "shower_head", icon: ShowerHead },
+  { label: "Máy sấy tóc", value: "hair_dryer", icon: IconWind },
+  { label: "Ấm đun nước siêu tốc", value: "electric_kettle", icon: IconTeapot },
+  { label: "Nước uống đóng chai miễn phí", value: "free_bottled_water", icon: IconBottle },
+  { label: "Có phục vụ bữa sáng", value: "breakfast_service", icon: IconToolsKitchen2 },
+  { label: "Bàn tiếp tân 24h", value: "reception_24h", icon: IconClock24 },
+  { label: "Giặt ủi", value: "laundry", icon: IconIroning },
+  { label: "Hỗ trợ liên hệ Tài Xế", value: "taxi_support", icon: IconCar },
+  { label: "Hỗ trợ liên hệ Tour du lịch", value: "tour_support", icon: IconMapPin },
 ];
 
 

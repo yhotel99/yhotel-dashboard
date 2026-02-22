@@ -77,6 +77,16 @@ const baseRoomFormSchema = z.object({
     }),
   status: z.enum(roomStatusEnum),
   amenities: z.array(z.string()),
+  room_number: z.string().optional(),
+  floor_number: z
+    .string()
+    .optional()
+    .refine(
+      (val) => !val || !isNaN(Number(val)),
+      {
+        message: "Số tầng phải là số",
+      }
+    ),
   images: z
     .array(
       z.object({
@@ -142,6 +152,8 @@ export function RoomForm({
     max_guests: "2",
     status: ROOM_STATUS.AVAILABLE,
     amenities: [],
+    room_number: "",
+    floor_number: "",
     thumbnail: undefined,
     images: undefined,
   };
@@ -175,6 +187,8 @@ export function RoomForm({
         max_guests: Number(data.max_guests),
         status: data.status,
         amenities: data.amenities,
+        room_number: data.room_number || null,
+        floor_number: data.floor_number ? Number(data.floor_number) : null,
       };
 
       if (mode === "edit") {
@@ -289,6 +303,45 @@ export function RoomForm({
                     </Select>
                     <FormDescription>
                       Loại phòng xác định mức giá và tiện ích
+                    </FormDescription>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="room_number"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Số phòng</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="VD: 101, 102, A01..."
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Số phòng để dễ dàng quản lý và tra cứu
+                    </FormDescription>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="floor_number"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Số tầng</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="VD: 1, 2, 3..."
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Tầng mà phòng này nằm ở
                     </FormDescription>
                   </FormItem>
                 )}

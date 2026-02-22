@@ -56,25 +56,12 @@ const statusFilters: Array<{
   },
 ];
 
-// Nhóm phòng theo tầng (giả sử tên phòng có format số tầng ở đầu, ví dụ: 101, 201, STD201)
-function extractFloor(roomName: string): number {
-  // Tìm số đầu tiên trong tên phòng
-  const match = roomName.match(/(\d+)/);
-  if (match) {
-    const num = parseInt(match[1], 10);
-    // Nếu số >= 100, lấy chữ số đầu tiên làm tầng (101 -> 1, 201 -> 2)
-    if (num >= 100) {
-      return Math.floor(num / 100);
-    }
-    return num;
-  }
-  return 0;
-}
-
+// Nhóm phòng theo tầng dựa vào floor_number
 function groupRoomsByFloor(rooms: RoomWithBooking[]) {
   const grouped = new Map<number, RoomWithBooking[]>();
   rooms.forEach((room) => {
-    const floor = extractFloor(room.name);
+    // Sử dụng floor_number từ database, nếu không có thì đặt vào tầng 0
+    const floor = room.floor_number ?? 0;
     if (!grouped.has(floor)) {
       grouped.set(floor, []);
     }
@@ -87,7 +74,7 @@ function groupRoomsByFloor(rooms: RoomWithBooking[]) {
   return sortedFloors.map(([floor, rooms]) => ({
     floor,
     rooms,
-    label: `Tầng ${floor}`,
+    label: floor === 0 ? "Chưa xác định tầng" : `Tầng ${floor}`,
   }));
 }
 

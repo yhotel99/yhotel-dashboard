@@ -17,11 +17,16 @@ export function AmenitiesCell({ amenities }: { amenities: string[] }) {
 
   return (
     <div className="flex gap-1 flex-wrap items-center">
-      {visibleAmenities.map((amenity, index) => (
-        <Badge key={index} variant="outline" className="text-xs">
-          {AMENITIES_OPTIONS.find((option) => option.value === amenity)?.label}
-        </Badge>
-      ))}
+      {visibleAmenities.map((amenity, index) => {
+        const option = AMENITIES_OPTIONS.find((opt) => opt.value === amenity);
+        const Icon = option?.icon;
+        return (
+          <Badge key={index} variant="outline" className="text-xs flex items-center gap-1">
+            {Icon && <Icon className="size-3" />}
+            {option?.label}
+          </Badge>
+        );
+      })}
       {remainingCount > 0 && (
         <Tooltip>
           <TooltipTrigger asChild>
@@ -33,15 +38,18 @@ export function AmenitiesCell({ amenities }: { amenities: string[] }) {
             <div className="flex flex-col gap-1">
               <p className="font-semibold mb-1">Tiện ích khác:</p>
               <div className="flex flex-wrap gap-1">
-                {remainingAmenities.map((amenity, index) => (
-                  <Badge key={index} variant="secondary" className="text-xs">
-                    {
-                      AMENITIES_OPTIONS.find(
-                        (option) => option.value === amenity
-                      )?.label
-                    }
-                  </Badge>
-                ))}
+                {remainingAmenities.map((amenity, index) => {
+                  const option = AMENITIES_OPTIONS.find(
+                    (opt) => opt.value === amenity
+                  );
+                  const Icon = option?.icon;
+                  return (
+                    <Badge key={index} variant="secondary" className="text-xs flex items-center gap-1">
+                      {Icon && <Icon className="size-3" />}
+                      {option?.label}
+                    </Badge>
+                  );
+                })}
               </div>
             </div>
           </TooltipContent>

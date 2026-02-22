@@ -62,6 +62,22 @@ export function RoomDetailDialog({
                 </p>
               </div>
               <div>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Số phòng
+                </p>
+                <p className="text-sm">{room.room_number || "-"}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Số tầng
+                </p>
+                <p className="text-sm">
+                  {room.floor_number !== null && room.floor_number !== undefined
+                    ? `Tầng ${room.floor_number}`
+                    : "-"}
+                </p>
+              </div>
+              <div>
                 <p className="text-sm font-medium text-muted-foreground flex items-center gap-1">
                   Sức chứa
                 </p>
