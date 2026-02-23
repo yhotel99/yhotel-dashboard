@@ -280,7 +280,7 @@ export function CreateMultiBookingDialog({
 
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 gap-4">
           <div className="grid gap-4 md:grid-cols-2 shrink-0">
-            <div className="space-y-2 md:col-span-2">
+            <div className="space-y-2 md:col-span-2 relative">
               <Label>Khách hàng *</Label>
               <div className="relative">
                 <IconSearch className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -313,13 +313,13 @@ export function CreateMultiBookingDialog({
                 </p>
               )}
               {displaySearchResults.length > 0 && !selectedCustomer && (
-                <div className="absolute z-50 mt-1 max-h-48 w-full overflow-auto rounded-md border bg-popover shadow-md">
+                <div className="absolute z-50 mt-1 max-h-48 w-full overflow-auto rounded-md border bg-popover shadow-xl">
                   {displaySearchResults.map((c) => (
                     <button
                       key={c.id}
                       type="button"
                       onClick={() => handleCustomerSelect(c)}
-                      className="w-full px-4 py-2 text-left hover:bg-accent"
+                      className="w-full px-4 py-3 text-left hover:bg-accent"
                     >
                       <div className="font-medium">{c.full_name}</div>
                       <div className="text-xs text-muted-foreground">
