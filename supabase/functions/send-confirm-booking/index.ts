@@ -86,6 +86,19 @@ function formatDateTimePretty(
     : `${timeStr} | ${dateStr}`;
 }
 
+function formatCurrencyVND(amount?: string | number): string {
+  if (amount === undefined || amount === null) return "";
+
+  const numeric = Number(amount);
+
+  if (Number.isNaN(numeric)) return "";
+
+  return numeric.toLocaleString("vi-VN", {
+    style: "currency",
+    currency: "VND",
+  });
+}
+
 /* =======================
    Email Template
 ======================= */
@@ -100,8 +113,8 @@ export function renderBookingConfirmationHTML(
     check_in,
     check_out,
     total_price = "—",
-    hotline = "0909 000 000",
-    support_email = "contact@yhotel.vn",
+    hotline = "0787 913 388",
+    support_email = "hello@yhotel.vn",
   } = payload;
 
   return `<!DOCTYPE html>
@@ -137,7 +150,7 @@ export function renderBookingConfirmationHTML(
                   <td style="border:1px solid #ddd;padding:8px"><strong>${booking_code}</strong></td>
                 </tr>
                 <tr>
-                  <td style="border:1px solid #ddd;padding:8px">Loại phòng</td>
+                  <td style="border:1px solid #ddd;padding:8px">Phòng</td>
                   <td style="border:1px solid #ddd;padding:8px">${room_type}</td>
                 </tr>
                 <tr>
@@ -150,7 +163,7 @@ export function renderBookingConfirmationHTML(
                 </tr>
                 <tr>
                   <td style="border:1px solid #ddd;padding:8px">Tổng tiền</td>
-                  <td style="border:1px solid #ddd;padding:8px"><strong>${total_price}</strong></td>
+                  <td style="border:1px solid #ddd;padding:8px"><strong>${formatCurrencyVND(total_price)}</strong></td>
                 </tr>
               </table>
 
@@ -211,11 +224,14 @@ Deno.serve(async (req: Request) => {
       .select(`
         id,
         booking_code,
-        room:room_id(name),
         check_in,
         check_out,
         total_amount,
-        customer:customer_id(email, full_name)
+        customer:customer_id(email, full_name),
+        booking_rooms(
+          room:room_id(name),
+          amount
+        )
       `)
       .eq("booking_code", body.booking_code)
       .single();
@@ -226,6 +242,11 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    const roomNames = (booking.booking_rooms ?? [])
+  .map((br: { room?: { name?: string } }) => br.room?.name)
+  .filter(Boolean);
+const room_type = roomNames.length > 0 ? roomNames.join(", ") : "-";
+
     await supabase.rpc("confirm_booking_secure", {
       p_booking_id: booking.id,
     });
@@ -234,7 +255,7 @@ Deno.serve(async (req: Request) => {
       customer_name: booking.customer?.full_name,
       customer_email: booking.customer?.email,
       booking_code: booking.booking_code,
-      room_type: booking.room?.name ?? "-",
+      room_type: room_type,
       check_in: formatDateTimePretty(booking.check_in),
       check_out: formatDateTimePretty(booking.check_out),
       total_price: booking.total_amount
