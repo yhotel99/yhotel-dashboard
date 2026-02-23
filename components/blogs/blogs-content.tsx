@@ -65,7 +65,7 @@ export function BlogsContent({ initialData }: { initialData: BlogsResponse }) {
   );
 
   // Debounce search
-  const debouncedSearch = useDebounce(localSearch, 500);
+  const debouncedSearch = useDebounce(localSearch, 300);
 
   React.useEffect(() => {
     if (debouncedSearch !== search) {

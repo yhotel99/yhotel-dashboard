@@ -16,7 +16,7 @@ export function AuditLogsContent() {
   const [refreshKey, setRefreshKey] = useState(0);
   
   // Debounce entity ID search (500ms delay)
-  const debouncedEntityId = useDebounce(entityId, 500);
+  const debouncedEntityId = useDebounce(entityId, 300);
 
   const handleRefresh = () => {
     setRefreshKey(prev => prev + 1);

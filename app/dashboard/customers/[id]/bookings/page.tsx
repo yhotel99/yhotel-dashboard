@@ -153,7 +153,7 @@ export default function CustomerBookingsPage() {
   );
 
   // Debounce search
-  const debouncedSearch = useDebounce(localSearch, 500);
+  const debouncedSearch = useDebounce(localSearch, 300);
 
   useEffect(() => {
     if (debouncedSearch !== search) {

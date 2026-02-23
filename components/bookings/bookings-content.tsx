@@ -72,7 +72,7 @@ export function BookingsContent({
   }, [searchParams]);
 
   // Debounce search
-  const debouncedSearch = useDebounce(localSearch, 500);
+  const debouncedSearch = useDebounce(localSearch, 300);
 
   // Update search params
   const updateSearchParams = React.useCallback(
