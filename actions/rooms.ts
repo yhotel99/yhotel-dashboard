@@ -436,3 +436,54 @@ export async function getRoomById(
     };
   }
 }
+
+
+/**
+ * Get multiple rooms by IDs
+ * @param ids - Array of room IDs
+ * @returns Array of rooms with basic info (without images for performance)
+ */
+export async function getRoomsByIds(
+  ids: string[]
+): Promise<Result<Room[]>> {
+  try {
+    if (!ids || ids.length === 0) {
+      return {
+        ok: true,
+        data: [],
+      };
+    }
+
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+      .from("rooms")
+      .select("*")
+      .in("id", ids)
+      .is("deleted_at", null);
+
+    if (error) {
+      return {
+        ok: false,
+        message: error.message || "Không thể lấy danh sách phòng",
+      };
+    }
+
+    const rooms: Room[] = (data || []).map((room) => ({
+      ...room,
+      amenities: Array.isArray(room.amenities) ? room.amenities : [],
+    }));
+
+    return {
+      ok: true,
+      data: rooms,
+    };
+  } catch (err) {
+    const errorMessage =
+      err instanceof Error ? err.message : "Không thể lấy danh sách phòng";
+    return {
+      ok: false,
+      message: errorMessage,
+    };
+  }
+}
