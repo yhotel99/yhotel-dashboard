@@ -36,6 +36,7 @@ export default function EditRoomPage() {
       name: room.name,
       description: room.description || "",
       room_type: room.room_type,
+      category_code: room.category_code || undefined,
       status: room.status,
       price_per_night: room.price_per_night.toString(),
       max_guests: room.max_guests.toString(),

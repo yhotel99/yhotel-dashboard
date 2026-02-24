@@ -13,10 +13,11 @@ import { Badge } from "@/components/ui/badge";
 import {
   roomTypeLabels,
   roomStatusLabels,
+  roomCategoryCodeLabels,
   AMENITIES_OPTIONS,
 } from "@/lib/constants";
 import { formatCurrency } from "@/lib/functions";
-import { IconHome, IconCalendar, IconTag } from "@tabler/icons-react";
+import { IconHome, IconTag } from "@tabler/icons-react";
 import Image from "next/image";
 
 interface RoomDetailDialogProps {
@@ -63,6 +64,18 @@ export function RoomDetailDialog({
               </div>
               <div>
                 <p className="text-sm font-medium text-muted-foreground">
+                  Phân loại
+                </p>
+                <p className="text-sm">
+                  {room.category_code
+                    ? roomCategoryCodeLabels[
+                        room.category_code as keyof typeof roomCategoryCodeLabels
+                      ] || room.category_code
+                    : "-"}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">
                   Số phòng
                 </p>
                 <p className="text-sm">{room.room_number || "-"}</p>
@@ -100,15 +113,6 @@ export function RoomDetailDialog({
                     {roomStatusLabels[room.status]}
                   </Badge>
                 </div>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                  <IconCalendar className="size-4" />
-                  Ngày tạo
-                </p>
-                <p className="text-sm">
-                  {new Date(room.created_at).toLocaleDateString("vi-VN")}
-                </p>
               </div>
             </div>
 
@@ -166,8 +170,8 @@ export function RoomDetailDialog({
                 </div>
                 <div>
                   <p>
-                    Cập nhật:{" "}
-                    {new Date(room.updated_at).toLocaleString("vi-VN")}
+                    Ngày tạo:{" "}
+                    {new Date(room.created_at).toLocaleString("vi-VN")}
                   </p>
                 </div>
               </div>

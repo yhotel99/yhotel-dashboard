@@ -22,7 +22,7 @@ import type { Customer } from "@/lib/types";
 import { formatCurrency, formatDateOnly } from "@/lib/functions";
 import { StatusBadge } from "./status-badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { customerSourceLabels } from "@/lib/constants";
+import { customerSourceLabels, nationalityLabels } from "@/lib/constants";
 
 interface CustomerDetailDialogProps {
   open: boolean;
@@ -115,7 +115,11 @@ export function CustomerDetailDialog({
                       <IconWorld className="size-4" />
                       Quốc tịch
                     </label>
-                    <p className="text-base">{customer.nationality ?? "-"}</p>
+                    <p className="text-base">
+                      {customer.nationality
+                        ? nationalityLabels[customer.nationality as keyof typeof nationalityLabels] || customer.nationality
+                        : "-"}
+                    </p>
                   </div>
 
                   <div className="space-y-1">

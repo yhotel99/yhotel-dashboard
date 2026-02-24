@@ -553,9 +553,89 @@ export const BLOG_STATUS = {
   ARCHIVED: "archived",
 } as const;
 
+/**
+ * Nationality codes and labels
+ */
+export const NATIONALITY = {
+  VIETNAM: "Vietnam",
+  USA: "USA",
+  JAPAN: "Japan",
+  SOUTH_KOREA: "South Korea",
+  CHINA: "China",
+  THAILAND: "Thailand",
+  SINGAPORE: "Singapore",
+  MALAYSIA: "Malaysia",
+  AUSTRALIA: "Australia",
+  UK: "UK",
+  FRANCE: "France",
+  GERMANY: "Germany",
+  CANADA: "Canada",
+  TAIWAN: "Taiwan",
+  HONG_KONG: "Hong Kong",
+  INDIA: "India",
+  INDONESIA: "Indonesia",
+  PHILIPPINES: "Philippines",
+  OTHER: "Other",
+} as const;
+
+/**
+ * Nationality labels mapping
+ */
+export const nationalityLabels: Record<
+  (typeof NATIONALITY)[keyof typeof NATIONALITY],
+  string
+> = {
+  [NATIONALITY.VIETNAM]: "Việt Nam",
+  [NATIONALITY.USA]: "Hoa Kỳ",
+  [NATIONALITY.JAPAN]: "Nhật Bản",
+  [NATIONALITY.SOUTH_KOREA]: "Hàn Quốc",
+  [NATIONALITY.CHINA]: "Trung Quốc",
+  [NATIONALITY.THAILAND]: "Thái Lan",
+  [NATIONALITY.SINGAPORE]: "Singapore",
+  [NATIONALITY.MALAYSIA]: "Malaysia",
+  [NATIONALITY.AUSTRALIA]: "Úc",
+  [NATIONALITY.UK]: "Anh",
+  [NATIONALITY.FRANCE]: "Pháp",
+  [NATIONALITY.GERMANY]: "Đức",
+  [NATIONALITY.CANADA]: "Canada",
+  [NATIONALITY.TAIWAN]: "Đài Loan",
+  [NATIONALITY.HONG_KONG]: "Hồng Kông",
+  [NATIONALITY.INDIA]: "Ấn Độ",
+  [NATIONALITY.INDONESIA]: "Indonesia",
+  [NATIONALITY.PHILIPPINES]: "Philippines",
+  [NATIONALITY.OTHER]: "Khác",
+};
+
 
 export const BANK_ACCOUNT = {
   ACC: "01801807326",
   BANK: "TPBank",
   ACCOUNT_NAME: "CÔNG TY CỔ PHẦN KHÁCH SẠN YQ"
 } as const
+
+/**
+ * Room category codes for classification
+ */
+export const ROOM_CATEGORY_CODE = {
+  URBAN_COMPACT_QUEEN: "URBAN_COMPACT_QUEEN",
+  URBAN_COMPACT_TWIN: "URBAN_COMPACT_TWIN",
+  URBAN_BALCONY_QUEEN: "URBAN_BALCONY_QUEEN",
+  DELUXE_BALCONY_QUEEN: "DELUXE_BALCONY_QUEEN",
+  PREMIUM_CITY_VIEW: "PREMIUM_CITY_VIEW",
+  EXEC_BALCONY_SUITE: "EXEC_BALCONY_SUITE",
+} as const;
+
+/**
+ * Room category code labels mapping
+ */
+export const roomCategoryCodeLabels: Record<
+  (typeof ROOM_CATEGORY_CODE)[keyof typeof ROOM_CATEGORY_CODE],
+  string
+> = {
+  [ROOM_CATEGORY_CODE.URBAN_COMPACT_QUEEN]: "Urban Compact Queen",
+  [ROOM_CATEGORY_CODE.URBAN_COMPACT_TWIN]: "Urban Compact Twin Single",
+  [ROOM_CATEGORY_CODE.URBAN_BALCONY_QUEEN]: "Urban Balcony Queen",
+  [ROOM_CATEGORY_CODE.DELUXE_BALCONY_QUEEN]: "Deluxe Balcony Queen",
+  [ROOM_CATEGORY_CODE.PREMIUM_CITY_VIEW]: "Premium City View Queen",
+  [ROOM_CATEGORY_CODE.EXEC_BALCONY_SUITE]: "Executive Balcony Suite",
+};
