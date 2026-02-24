@@ -330,24 +330,11 @@ export function RoomForm({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value={ROOM_CATEGORY_CODE.URBAN_COMPACT_QUEEN}>
-                          {roomCategoryCodeLabels[ROOM_CATEGORY_CODE.URBAN_COMPACT_QUEEN]}
-                        </SelectItem>
-                        <SelectItem value={ROOM_CATEGORY_CODE.URBAN_COMPACT_TWIN}>
-                          {roomCategoryCodeLabels[ROOM_CATEGORY_CODE.URBAN_COMPACT_TWIN]}
-                        </SelectItem>
-                        <SelectItem value={ROOM_CATEGORY_CODE.URBAN_BALCONY_QUEEN}>
-                          {roomCategoryCodeLabels[ROOM_CATEGORY_CODE.URBAN_BALCONY_QUEEN]}
-                        </SelectItem>
-                        <SelectItem value={ROOM_CATEGORY_CODE.DELUXE_BALCONY_QUEEN}>
-                          {roomCategoryCodeLabels[ROOM_CATEGORY_CODE.DELUXE_BALCONY_QUEEN]}
-                        </SelectItem>
-                        <SelectItem value={ROOM_CATEGORY_CODE.PREMIUM_CITY_VIEW}>
-                          {roomCategoryCodeLabels[ROOM_CATEGORY_CODE.PREMIUM_CITY_VIEW]}
-                        </SelectItem>
-                        <SelectItem value={ROOM_CATEGORY_CODE.EXEC_BALCONY_SUITE}>
-                          {roomCategoryCodeLabels[ROOM_CATEGORY_CODE.EXEC_BALCONY_SUITE]}
-                        </SelectItem>
+                        {Object.values(ROOM_CATEGORY_CODE).map((code) => (
+                          <SelectItem key={code} value={code}>
+                            {roomCategoryCodeLabels[code]}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormDescription>
