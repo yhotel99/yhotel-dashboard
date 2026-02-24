@@ -553,6 +553,59 @@ export const BLOG_STATUS = {
   ARCHIVED: "archived",
 } as const;
 
+/**
+ * Nationality codes and labels
+ */
+export const NATIONALITY = {
+  VIETNAM: "Vietnam",
+  USA: "USA",
+  JAPAN: "Japan",
+  SOUTH_KOREA: "South Korea",
+  CHINA: "China",
+  THAILAND: "Thailand",
+  SINGAPORE: "Singapore",
+  MALAYSIA: "Malaysia",
+  AUSTRALIA: "Australia",
+  UK: "UK",
+  FRANCE: "France",
+  GERMANY: "Germany",
+  CANADA: "Canada",
+  TAIWAN: "Taiwan",
+  HONG_KONG: "Hong Kong",
+  INDIA: "India",
+  INDONESIA: "Indonesia",
+  PHILIPPINES: "Philippines",
+  OTHER: "Other",
+} as const;
+
+/**
+ * Nationality labels mapping
+ */
+export const nationalityLabels: Record<
+  (typeof NATIONALITY)[keyof typeof NATIONALITY],
+  string
+> = {
+  [NATIONALITY.VIETNAM]: "Việt Nam",
+  [NATIONALITY.USA]: "Hoa Kỳ",
+  [NATIONALITY.JAPAN]: "Nhật Bản",
+  [NATIONALITY.SOUTH_KOREA]: "Hàn Quốc",
+  [NATIONALITY.CHINA]: "Trung Quốc",
+  [NATIONALITY.THAILAND]: "Thái Lan",
+  [NATIONALITY.SINGAPORE]: "Singapore",
+  [NATIONALITY.MALAYSIA]: "Malaysia",
+  [NATIONALITY.AUSTRALIA]: "Úc",
+  [NATIONALITY.UK]: "Anh",
+  [NATIONALITY.FRANCE]: "Pháp",
+  [NATIONALITY.GERMANY]: "Đức",
+  [NATIONALITY.CANADA]: "Canada",
+  [NATIONALITY.TAIWAN]: "Đài Loan",
+  [NATIONALITY.HONG_KONG]: "Hồng Kông",
+  [NATIONALITY.INDIA]: "Ấn Độ",
+  [NATIONALITY.INDONESIA]: "Indonesia",
+  [NATIONALITY.PHILIPPINES]: "Philippines",
+  [NATIONALITY.OTHER]: "Khác",
+};
+
 
 export const BANK_ACCOUNT = {
   ACC: "01801807326",

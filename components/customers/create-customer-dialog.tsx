@@ -27,6 +27,8 @@ import {
   CUSTOMER_SOURCE,
   CUSTOMER_TYPE,
   customerSourceLabels,
+  NATIONALITY,
+  nationalityLabels,
 } from "@/lib/constants";
 import {
   Popover,
@@ -247,13 +249,21 @@ export function CreateCustomerDialog({
             </div>
             <div className="space-y-2">
               <Label htmlFor="nationality">Quốc tịch</Label>
-              <Input
-                id="nationality"
-                type="text"
-                placeholder="Nhập quốc tịch"
+              <Select
                 value={formValues.nationality}
-                onChange={handleInputChange("nationality")}
-              />
+                onValueChange={handleSelectChange("nationality")}
+              >
+                <SelectTrigger id="nationality" className="w-full">
+                  <SelectValue placeholder="Chọn quốc tịch" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[320px]">
+                  {Object.values(NATIONALITY).map((code) => (
+                    <SelectItem key={code} value={code}>
+                      {nationalityLabels[code]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="id_card">CMND/Hộ chiếu</Label>
