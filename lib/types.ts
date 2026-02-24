@@ -234,6 +234,10 @@ export type BookingRecord = {
   } | null;
   rooms?: {
     name: string;
+    items?: Array<{
+      id: string;
+      name: string;
+    }>;
   } | null;
 };
 

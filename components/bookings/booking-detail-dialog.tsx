@@ -25,6 +25,8 @@ import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
 import { BANK_ACCOUNT, PAYMENT_TYPE } from "@/lib/constants";
 import { PaymentStatusBadge } from "@/components/payments/status";
+import type { Room } from "@/lib/types";
+import { getRoomsByIds } from "@/actions/rooms";
 
 interface BookingDetailDialogProps {
   open: boolean;
@@ -47,6 +49,23 @@ export function BookingDetailDialog({
     useSWR<PaymentsResponse>(paymentsUrl, fetcher, {
       revalidateOnFocus: false,
     });
+
+  // Fetch room data separately for all rooms in booking
+  const roomIds = booking?.rooms?.items?.map(item => item.id) ?? [];
+  
+  const { data: roomsData, isLoading: isRoomLoading } = useSWR<Room[]>(
+    open && roomIds.length > 0 ? ["rooms", ...roomIds] : null,
+    async () => {
+      const result = await getRoomsByIds(roomIds);
+      if (result.ok) {
+        return result.data;
+      }
+      throw new Error(result.message);
+    },
+    {
+      revalidateOnFocus: false,
+    }
+  );
 
   const payments = paymentsResponse?.data ?? [];
 
@@ -110,12 +129,57 @@ export function BookingDetailDialog({
             <div className="space-y-3">
               <h3 className="text-lg font-semibold flex items-center gap-2">
                 <MapPinIcon className="size-5" />
-                Thông tin phòng
+                Thông tin phòng {roomIds.length > 1 && `(${roomIds.length} phòng)`}
               </h3>
-              <div className="pl-7">
-                <p className="text-sm text-muted-foreground">Số phòng</p>
-                <p className="font-medium">{booking.rooms?.name || "N/A"}</p>
-              </div>
+              {isRoomLoading ? (
+                <div className="pl-7 text-sm text-muted-foreground">
+                  Đang tải thông tin phòng...
+                </div>
+              ) : roomsData && roomsData.length > 0 ? (
+                <div className="pl-7 space-y-4">
+                  {roomsData.map((room, index) => (
+                    <div key={room.id} className="space-y-2">
+                      {roomsData.length > 1 && (
+                        <p className="text-sm font-semibold text-muted-foreground">
+                          Phòng {index + 1}
+                        </p>
+                      )}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Tên phòng</p>
+                          <p className="font-medium">{room.name}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Số phòng</p>
+                          <p className="font-medium">{room.room_number || "-"}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Số tầng</p>
+                          <p className="font-medium">
+                            {room.floor_number !== null && room.floor_number !== undefined
+                              ? `Tầng ${room.floor_number}`
+                              : "-"}
+                          </p>
+                        </div>
+                      </div>
+                      {index < roomsData.length - 1 && (
+                        <Separator className="mt-3" />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="pl-7">
+                  <p className="text-sm text-muted-foreground">Danh sách phòng</p>
+                  <div className="space-y-1 mt-1">
+                    {booking.rooms?.items?.map((item, index) => (
+                      <p key={item.id} className="font-medium">
+                        {index + 1}. {item.name}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <Separator />
