@@ -559,3 +559,30 @@ export const BANK_ACCOUNT = {
   BANK: "TPBank",
   ACCOUNT_NAME: "CÔNG TY CỔ PHẦN KHÁCH SẠN YQ"
 } as const
+
+/**
+ * Room category codes for classification
+ */
+export const ROOM_CATEGORY_CODE = {
+  URBAN_COMPACT_QUEEN: "URBAN_COMPACT_QUEEN",
+  URBAN_COMPACT_TWIN: "URBAN_COMPACT_TWIN",
+  URBAN_BALCONY_QUEEN: "URBAN_BALCONY_QUEEN",
+  DELUXE_BALCONY_QUEEN: "DELUXE_BALCONY_QUEEN",
+  PREMIUM_CITY_VIEW: "PREMIUM_CITY_VIEW",
+  EXEC_BALCONY_SUITE: "EXEC_BALCONY_SUITE",
+} as const;
+
+/**
+ * Room category code labels mapping
+ */
+export const roomCategoryCodeLabels: Record<
+  (typeof ROOM_CATEGORY_CODE)[keyof typeof ROOM_CATEGORY_CODE],
+  string
+> = {
+  [ROOM_CATEGORY_CODE.URBAN_COMPACT_QUEEN]: "Urban Compact Queen",
+  [ROOM_CATEGORY_CODE.URBAN_COMPACT_TWIN]: "Urban Compact Twin Single",
+  [ROOM_CATEGORY_CODE.URBAN_BALCONY_QUEEN]: "Urban Balcony Queen",
+  [ROOM_CATEGORY_CODE.DELUXE_BALCONY_QUEEN]: "Deluxe Balcony Queen",
+  [ROOM_CATEGORY_CODE.PREMIUM_CITY_VIEW]: "Premium City View Queen",
+  [ROOM_CATEGORY_CODE.EXEC_BALCONY_SUITE]: "Executive Balcony Suite",
+};

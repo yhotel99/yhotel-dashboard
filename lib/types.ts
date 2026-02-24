@@ -71,6 +71,7 @@ export type Room = {
   name: string;
   description: string | null;
   room_type: RoomType;
+  category_code?: string | null;
   price_per_night: number;
   max_guests: number;
   amenities: string[];
@@ -88,6 +89,7 @@ export type RoomInput = {
   name: string;
   description?: string | null;
   room_type: RoomType;
+  category_code?: string | null;
   price_per_night: number;
   max_guests: number;
   amenities: string[];
@@ -664,6 +666,7 @@ export type RoomFromRPC = {
   name: string;
   description: string | null;
   room_type: Room["room_type"];
+  category_code?: string | null;
   price_per_night: string | number;
   max_guests: number;
   amenities: string[] | unknown;

@@ -44,6 +44,7 @@ export async function getAvailableRoomsAction(
       name: room.name,
       description: room.description,
       room_type: room.room_type,
+      category_code: room.category_code || null,
       price_per_night:
         typeof room.price_per_night === "string"
           ? parseFloat(room.price_per_night)

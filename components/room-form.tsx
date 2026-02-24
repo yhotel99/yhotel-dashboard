@@ -40,6 +40,8 @@ import {
   AMENITIES_OPTIONS,
   ROOM_STATUS,
   roomStatusLabels,
+  ROOM_CATEGORY_CODE,
+  roomCategoryCodeLabels,
 } from "@/lib/constants";
 import { MultiSelect } from "@/components/multi-select";
 import { mutate } from "swr";
@@ -63,6 +65,7 @@ const baseRoomFormSchema = z.object({
   name: z.string().min(1, "Tên phòng là bắt buộc"),
   description: z.string().optional(),
   room_type: z.enum(roomTypeEnum),
+  category_code: z.string().optional(),
   price_per_night: z
     .string()
     .min(1, "Giá mỗi đêm là bắt buộc")
@@ -148,6 +151,7 @@ export function RoomForm({
     name: "",
     description: "",
     room_type: "standard",
+    category_code: undefined,
     price_per_night: "0",
     max_guests: "2",
     status: ROOM_STATUS.AVAILABLE,
@@ -183,6 +187,7 @@ export function RoomForm({
         name: data.name,
         description: data.description || null,
         room_type: data.room_type,
+        category_code: data.category_code || null,
         price_per_night: Number(data.price_per_night),
         max_guests: Number(data.max_guests),
         status: data.status,
@@ -304,6 +309,49 @@ export function RoomForm({
                     </Select>
                     <FormDescription>
                       Loại phòng xác định mức giá và tiện ích
+                    </FormDescription>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="category_code"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Phân loại phòng</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl className="w-full">
+                        <SelectTrigger>
+                          <SelectValue placeholder="Chọn phân loại" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value={ROOM_CATEGORY_CODE.URBAN_COMPACT_QUEEN}>
+                          {roomCategoryCodeLabels[ROOM_CATEGORY_CODE.URBAN_COMPACT_QUEEN]}
+                        </SelectItem>
+                        <SelectItem value={ROOM_CATEGORY_CODE.URBAN_COMPACT_TWIN}>
+                          {roomCategoryCodeLabels[ROOM_CATEGORY_CODE.URBAN_COMPACT_TWIN]}
+                        </SelectItem>
+                        <SelectItem value={ROOM_CATEGORY_CODE.URBAN_BALCONY_QUEEN}>
+                          {roomCategoryCodeLabels[ROOM_CATEGORY_CODE.URBAN_BALCONY_QUEEN]}
+                        </SelectItem>
+                        <SelectItem value={ROOM_CATEGORY_CODE.DELUXE_BALCONY_QUEEN}>
+                          {roomCategoryCodeLabels[ROOM_CATEGORY_CODE.DELUXE_BALCONY_QUEEN]}
+                        </SelectItem>
+                        <SelectItem value={ROOM_CATEGORY_CODE.PREMIUM_CITY_VIEW}>
+                          {roomCategoryCodeLabels[ROOM_CATEGORY_CODE.PREMIUM_CITY_VIEW]}
+                        </SelectItem>
+                        <SelectItem value={ROOM_CATEGORY_CODE.EXEC_BALCONY_SUITE}>
+                          {roomCategoryCodeLabels[ROOM_CATEGORY_CODE.EXEC_BALCONY_SUITE]}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Phân loại chi tiết để quản lý phòng dễ dàng hơn
                     </FormDescription>
                   </FormItem>
                 )}
