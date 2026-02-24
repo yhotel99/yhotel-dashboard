@@ -141,6 +141,7 @@ export type RoomStatusViewData = {
   name: string;
   description: string | null;
   room_type: RoomType;
+  category_code?: string | null;
   price_per_night: string;
   max_guests: number;
   amenities: string[];
