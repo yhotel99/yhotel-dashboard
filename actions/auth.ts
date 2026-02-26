@@ -2,10 +2,8 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getProfileByIdAction } from "@/actions/profiles";
-import { USER_STATUS } from "@/lib/constants";
-import { revalidatePath } from "next/cache";
-import { getFirstAllowedPage } from "@/lib/permissions";
+import { SIDEBAR_URLS, USER_ROLE, USER_STATUS } from "@/lib/constants";
+import { getProfileById } from "@/services/profiles";
 
 export async function loginAction(formData: FormData) {
   const email = String(formData.get("email") || "").trim();
@@ -33,7 +31,7 @@ export async function loginAction(formData: FormData) {
       return { error: "Đăng nhập thất bại" };
     }
 
-    const profile = await getProfileByIdAction(user.id);
+    const profile = await getProfileById(user.id);
 
     if (!profile) {
       await supabase.auth.signOut();
@@ -55,11 +53,10 @@ export async function loginAction(formData: FormData) {
 
     // Get first allowed page based on role permissions
     // This checks permissions once and returns the best redirect path
-    const redirectPath = await getFirstAllowedPage(profile.role);
+    // const redirectPath = await getFirstAllowedPage(profile.role);
 
-    // Revalidate to ensure fresh data after login
-    revalidatePath('/dashboard', 'layout');
-    redirect(redirectPath);
+    const redirectUrl = profile.role === USER_ROLE.ADMIN ? SIDEBAR_URLS.DASHBOARD : SIDEBAR_URLS.RESERVATION
+    redirect(redirectUrl)
   } catch (error) {
     console.error("Unexpected login error:", error);
     // Don't redirect on error, return error message
@@ -73,6 +70,5 @@ export async function loginAction(formData: FormData) {
 export async function logoutAction() {
   const supabase = await createClient();
   await supabase.auth.signOut();
-  revalidatePath('/dashboard', 'layout');
   redirect('/login');
 }
