@@ -2,9 +2,8 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { ROLE_REDIRECT, SIDEBAR_URLS, USER_ROLE, USER_STATUS } from "@/lib/constants";
+import { ROLE_REDIRECT, SIDEBAR_URLS, USER_STATUS } from "@/lib/constants";
 import { getProfileById } from "@/services/profiles";
-import { getFirstAllowedPage } from "@/lib/permissions";
 
 export async function loginAction(formData: FormData) {
   const email = String(formData.get("email") || "").trim();
