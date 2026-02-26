@@ -23,9 +23,12 @@ export async function hasViewPermission(
 
 /**
  * Get first allowed page for a role
- * This function is now async because it needs to check permissions from database
+ * OPTIMIZED: Fetch permissions once and check all pages
  */
 export async function getFirstAllowedPage(role: string): Promise<string> {
+  // Fetch permissions once for this role
+  const permissions = await permissionsService.getPermissionsByRole(role);
+
   const allowedPages = [
     { url: SIDEBAR_URLS.DASHBOARD, resource: "dashboard" },
     { url: SIDEBAR_URLS.RESERVATION, resource: "reservations" },
@@ -35,8 +38,10 @@ export async function getFirstAllowedPage(role: string): Promise<string> {
     { url: SIDEBAR_URLS.PAYMENTS, resource: "payments" },
   ];
 
+  // Check all pages with cached permissions (no additional DB queries)
   for (const page of allowedPages) {
-    if (await hasViewPermission(role, page.resource)) {
+    const permissionName = `view:${page.resource}`;
+    if (permissions.has(permissionName)) {
       return page.url;
     }
   }

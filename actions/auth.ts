@@ -4,8 +4,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getProfileByIdAction } from "@/actions/profiles";
 import { USER_STATUS } from "@/lib/constants";
-import { hasViewPermission } from "@/lib/permissions";
 import { revalidatePath } from "next/cache";
+import { getFirstAllowedPage } from "@/lib/permissions";
 
 export async function loginAction(formData: FormData) {
   const email = String(formData.get("email") || "").trim();
@@ -53,12 +53,9 @@ export async function loginAction(formData: FormData) {
       return { error: msg };
     }
 
-    const userRole = profile.role;
-    // Check permission from database (async)
-    const hasDashboardPermission = userRole && (await hasViewPermission(userRole, "dashboard"));
-    const redirectPath = hasDashboardPermission
-        ? "/dashboard"
-        : "/dashboard/reservation";
+    // Get first allowed page based on role permissions
+    // This checks permissions once and returns the best redirect path
+    const redirectPath = await getFirstAllowedPage(profile.role);
 
     // Revalidate to ensure fresh data after login
     revalidatePath('/dashboard', 'layout');
