@@ -639,3 +639,11 @@ export const roomCategoryCodeLabels: Record<
   [ROOM_CATEGORY_CODE.PREMIUM_CITY_VIEW]: "Premium City View Queen",
   [ROOM_CATEGORY_CODE.EXEC_BALCONY_SUITE]: "Executive Balcony Suite",
 };
+
+
+
+export const ROLE_REDIRECT: Record<string, string> = {
+    [USER_ROLE.ADMIN]: SIDEBAR_URLS.DASHBOARD,
+    [USER_ROLE.MANAGER]: SIDEBAR_URLS.DASHBOARD,
+    [USER_ROLE.STAFF]: SIDEBAR_URLS.RESERVATION,
+  };
