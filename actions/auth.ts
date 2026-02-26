@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { SIDEBAR_URLS, USER_ROLE, USER_STATUS } from "@/lib/constants";
+import { ROLE_REDIRECT, SIDEBAR_URLS, USER_STATUS } from "@/lib/constants";
 import { getProfileById } from "@/services/profiles";
 
 export async function loginAction(formData: FormData) {
@@ -52,17 +52,21 @@ export async function loginAction(formData: FormData) {
     }
 
     // Get first allowed page based on role permissions
-    // This checks permissions once and returns the best redirect path
-    // const redirectPath = await getFirstAllowedPage(profile.role);
+    // const redirectPath = await getFirstAllowedPage(profile.role); if too many role ( current role: 3 )
 
-    const redirectUrl = profile.role === USER_ROLE.ADMIN ? SIDEBAR_URLS.DASHBOARD : SIDEBAR_URLS.RESERVATION
-    redirect(redirectUrl)
+  const redirectPath =
+    ROLE_REDIRECT[profile.role] ?? SIDEBAR_URLS.RESERVATION;
+
+    
+    redirect(redirectPath);
   } catch (error) {
-    console.error("Unexpected login error:", error);
-    // Don't redirect on error, return error message
-    if (error instanceof Error && error.message === "NEXT_REDIRECT") {
-      throw error; // Re-throw redirect errors
+    // NEXT_REDIRECT is not an error, it's how Next.js handles redirects
+    if (error instanceof Error && error.message.includes("NEXT_REDIRECT")) {
+      throw error; // Re-throw redirect to let Next.js handle it
     }
+    
+    // Only log actual errors
+    console.error("Unexpected login error:", error);
     return { error: "Đã xảy ra lỗi khi đăng nhập. Vui lòng thử lại." };
   }
 }
