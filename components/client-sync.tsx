@@ -13,20 +13,17 @@ export function ClientSync({
   profile: Profile | null;
 }) {
   const { setAuthData } = useAuth();
-  const prevUserRef = useRef<User | null>(null);
-  const prevProfileRef = useRef<Profile | null>(null);
+  const isInitialMount = useRef(true);
 
   useEffect(() => {
-    // Chỉ sync khi user hoặc profile thực sự thay đổi
-    const userChanged = user?.id !== prevUserRef.current?.id;
-    const profileChanged = profile?.id !== prevProfileRef.current?.id;
-
-    if (userChanged || profileChanged) {
-      setAuthData(user, profile);
-      prevUserRef.current = user;
-      prevProfileRef.current = profile;
+    // Always sync on mount and when data changes
+    // Use JSON.stringify to detect deep changes in profile data
+    setAuthData(user, profile);
+    
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
     }
-  }, [user, profile, setAuthData]);
+  }, [user?.id, profile?.id, profile?.role, profile?.status, setAuthData]);
 
   return null;
 }

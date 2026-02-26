@@ -37,6 +37,7 @@ export function LoginForm({
     if (result?.error) {
       setError(result.error);
       toast.error(result.error);
+      // Form automatically keeps values - no need to do anything
     }
   }
 
@@ -58,6 +59,7 @@ export function LoginForm({
                 placeholder="Enter your email"
                 required
                 maxLength={254}
+                autoComplete="email"
               />
             </div>
             <div className="space-y-2">
@@ -69,9 +71,14 @@ export function LoginForm({
                 placeholder="Enter your password"
                 required
                 maxLength={128}
+                autoComplete="current-password"
               />
             </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
+            {error && (
+              <div className="rounded-md bg-destructive/10 p-3">
+                <p className="text-sm text-destructive">{error}</p>
+              </div>
+            )}
             <SubmitButton />
           </form>
         </CardContent>

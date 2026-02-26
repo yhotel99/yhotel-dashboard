@@ -33,7 +33,7 @@ export function PermissionGuard({
     }
 
     checkPermission();
-  }, [pathname, user, profile]);
+  }, [pathname, user?.id, profile?.role]);
 
   // Show loading state while checking permission
   if (hasPermission === null) {

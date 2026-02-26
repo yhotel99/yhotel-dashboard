@@ -11,7 +11,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Badge } from "../ui/badge";
+import { Badge } from "@/components/ui/badge";
 
 // Column definitions constants
 export const PAYMENTS_COLUMNS = {

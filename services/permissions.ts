@@ -3,11 +3,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
  * Get all permissions for a specific role from database
+ * Returns a Set for O(1) lookup performance
  */
 export async function getPermissionsByRole(
   role: string,
   supabase?: SupabaseClient
-): Promise<string[]> {
+): Promise<Set<string>> {
   const client = supabase || (await createClient());
 
   const { data, error } = await client
@@ -22,7 +23,7 @@ export async function getPermissionsByRole(
 
   if (error) {
     console.error("Error fetching permissions:", error);
-    return [];
+    return new Set();
   }
 
   type RolePermissionRow = {
@@ -34,7 +35,7 @@ export async function getPermissionsByRole(
     }[] | null;
   };
 
-  return (data || [])
+  const permissions = (data || [])
     .map((item: RolePermissionRow) => {
       // Handle both array and object formats from Supabase
       const permission = Array.isArray(item.permissions) 
@@ -43,6 +44,8 @@ export async function getPermissionsByRole(
       return permission?.name;
     })
     .filter((name: string | undefined): name is string => !!name);
+
+  return new Set(permissions);
 }
 
 /**
@@ -68,21 +71,24 @@ export async function getCurrentUserPermissions(): Promise<string[]> {
     return [];
   }
 
-  return getPermissionsByRole(profile.role, supabase);
+  const permissionsSet = await getPermissionsByRole(profile.role, supabase);
+  return Array.from(permissionsSet);
 }
 
 /**
  * Check if a role has a specific permission
+ * Optimized: fetch permissions once and check in Set
  */
 export async function checkPermission(
   role: string,
   action: string,
   resource: string,
-  supabase?: SupabaseClient
+  supabase?: SupabaseClient,
+  permissionsCache?: Set<string>
 ): Promise<boolean> {
   const permissionName = `${action}:${resource}`;
-  const permissions = await getPermissionsByRole(role, supabase);
-  return permissions.includes(permissionName);
+  const permissions = permissionsCache || await getPermissionsByRole(role, supabase);
+  return permissions.has(permissionName);
 }
 
 /**
@@ -91,9 +97,10 @@ export async function checkPermission(
 export async function hasViewPermission(
   role: string,
   resource: string,
-  supabase?: SupabaseClient
+  supabase?: SupabaseClient,
+  permissionsCache?: Set<string>
 ): Promise<boolean> {
-  return checkPermission(role, "view", resource, supabase);
+  return checkPermission(role, "view", resource, supabase, permissionsCache);
 }
 
 /**
