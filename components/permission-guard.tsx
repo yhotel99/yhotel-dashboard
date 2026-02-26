@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { checkRoutePermissionStatus } from "@/lib/server-actions";
 import { usePathname } from "next/navigation";
 import { PermissionDenied } from "@/components/permission-denied";
@@ -16,28 +16,34 @@ export function PermissionGuard({
   children,
   user,
   profile,
+  initialPermission = true,
 }: {
   children: React.ReactNode;
   user: User | null;
   profile: Profile | null;
+  initialPermission?: boolean;
 }) {
   const pathname = usePathname();
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [hasPermission, setHasPermission] = useState<boolean | null>(initialPermission);
   const [fallbackUrl, setFallbackUrl] = useState<string>("/dashboard");
+  const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
-    async function checkPermission() {
+    startTransition(async () => {
       const result = await checkRoutePermissionStatus(pathname, user, profile);
       setHasPermission(result.hasPermission);
       setFallbackUrl(result.fallbackUrl);
-    }
-
-    checkPermission();
-  }, [pathname, user, profile]);
+    });
+  }, [pathname, user?.id, profile?.id, profile?.role]);
 
   // Show loading state while checking permission
-  if (hasPermission === null) {
-    return null;
+  // Use a minimal loading to avoid flash
+  if (hasPermission === null || isPending) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
   }
 
   // Show permission denied if user doesn't have permission

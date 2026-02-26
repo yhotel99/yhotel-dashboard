@@ -7,6 +7,7 @@ import { PermissionGuard } from "@/components/permission-guard";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { getProfileByIdAction } from "@/actions/profiles";
+import { checkRoutePermissionStatus } from "@/lib/server-actions";
 
 export default async function DashboardLayout({
   children,
@@ -23,11 +24,20 @@ export default async function DashboardLayout({
     profile = await getProfileByIdAction(user.id);
   }
 
+  // Pre-check permission on server to avoid flash
+  // This is optional but improves UX
+  const pathname = "/dashboard"; // Default check for dashboard
+  const permissionCheck = await checkRoutePermissionStatus(pathname, user, profile);
+
   return (
-    <AuthProvider>
+    <AuthProvider initialUser={user} initialProfile={profile}>
       <PermissionsProvider>
         <ClientSync user={user} profile={profile} />
-        <PermissionGuard user={user} profile={profile}>
+        <PermissionGuard 
+          user={user} 
+          profile={profile}
+          initialPermission={permissionCheck.hasPermission}
+        >
         <SidebarProvider
           style={
             {

@@ -1,28 +1,43 @@
 "use client";
 
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, ReactNode, useCallback } from "react";
 import type { User } from "@supabase/supabase-js";
 import type { Profile } from "@/lib/types";
 
 interface AuthContextType {
   currentUser: User | null;
   profile: Profile | null;
+  isLoading: boolean;
   setAuthData: (user: User | null, profile: Profile | null) => void;
+  setLoading: (loading: boolean) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
+export function AuthProvider({ 
+  children,
+  initialUser = null,
+  initialProfile = null,
+}: { 
+  children: ReactNode;
+  initialUser?: User | null;
+  initialProfile?: Profile | null;
+}) {
+  const [currentUser, setCurrentUser] = useState<User | null>(initialUser);
+  const [profile, setProfile] = useState<Profile | null>(initialProfile);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  const setAuthData = (user: User | null, profile: Profile | null) => {
+  const setAuthData = useCallback((user: User | null, profile: Profile | null) => {
     setCurrentUser(user);
     setProfile(profile);
-  };
+  }, []);
+
+  const setLoading = useCallback((loading: boolean) => {
+    setIsLoading(loading);
+  }, []);
 
   return (
-    <AuthContext.Provider value={{ currentUser, profile, setAuthData }}>
+    <AuthContext.Provider value={{ currentUser, profile, isLoading, setAuthData, setLoading }}>
       {children}
     </AuthContext.Provider>
   );
