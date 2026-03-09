@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -9,6 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { IconLoader2 } from "@tabler/icons-react";
 
 interface CancelBookingConfirmDialogProps {
   open: boolean;
@@ -21,13 +23,18 @@ export function CancelBookingConfirmDialog({
   onOpenChange,
   onConfirm,
 }: CancelBookingConfirmDialogProps) {
+  const [isLoading, setIsLoading] = useState(false);
+
   const handleConfirm = async () => {
     try {
+      setIsLoading(true);
       await onConfirm();
       onOpenChange(false);
     } catch (error) {
       // Error is handled by parent component (toast)
       // Keep dialog open so user can retry or cancel
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -42,11 +49,26 @@ export function CancelBookingConfirmDialog({
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button 
+            variant="outline" 
+            onClick={() => onOpenChange(false)}
+            disabled={isLoading}
+          >
             Bỏ qua
           </Button>
-          <Button variant="destructive" onClick={handleConfirm}>
-            Xác nhận hủy
+          <Button 
+            variant="destructive" 
+            onClick={handleConfirm}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <>
+                <IconLoader2 className="mr-2 size-4 animate-spin" />
+                Đang hủy...
+              </>
+            ) : (
+              "Xác nhận hủy"
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
