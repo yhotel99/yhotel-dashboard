@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useCallback } from "react";
+import type { BookingRecord } from "@/lib/types";
 
 type RealtimeContextType = {
   newBookingsCount: number;
@@ -10,6 +11,8 @@ type RealtimeContextType = {
   incrementBookingCount: (bookingCode: string) => void;
   resetBookingCount: () => void;
   markBookingsRefreshed: () => void;
+  displayedQRBooking: BookingRecord | null;
+  setDisplayedQRBooking: (booking: BookingRecord | null) => void;
 };
 
 const RealtimeContext = createContext<RealtimeContextType | undefined>(
@@ -26,6 +29,7 @@ export function RealtimeContextProvider({
     null
   );
   const [shouldRefreshBookings, setShouldRefreshBookings] = useState(false);
+  const [displayedQRBooking, setDisplayedQRBooking] = useState<BookingRecord | null>(null);
 
   const incrementBookingCount = useCallback((bookingCode: string) => {
     setNewBookingsCount((prev) => prev + 1);
@@ -52,6 +56,8 @@ export function RealtimeContextProvider({
         incrementBookingCount,
         resetBookingCount,
         markBookingsRefreshed,
+        displayedQRBooking,
+        setDisplayedQRBooking,
       }}
     >
       {children}
