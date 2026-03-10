@@ -9,6 +9,7 @@ import {
   IconCurrencyDollar,
   IconReceiptRefund,
   IconX,
+  IconQrcode,
 } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,7 @@ import { CreateRefundRequestDialog } from "./create-refund-request-dialog";
 import { BookingDetailDialog } from "./booking-detail-dialog";
 import { BOOKING_STATUS } from "@/lib/constants";
 import { IconEye } from "@tabler/icons-react";
+import { updateQRDisplayAction } from "@/actions/qr-display";
 
 // Context to update booking status from action cells
 export const UpdateBookingStatusContext = React.createContext<
@@ -190,6 +192,23 @@ export function BookingActionsCell({
     }
   };
 
+  const handleShowQR = async () => {
+    try {
+      // Update QR display state via Supabase Realtime
+      const result = await updateQRDisplayAction(booking);
+      
+      if (!result.ok) {
+        toast.error(result.message || "Không thể hiển thị mã QR");
+        return;
+      }
+      
+      toast.success("Đã cập nhật mã QR thành công");
+    } catch (error) {
+      console.error("Error showing QR:", error);
+      toast.error("Không thể hiển thị mã QR");
+    }
+  };
+
   return (
     <>
       <DropdownMenu onOpenChange={handleDropdownOpenChange}>
@@ -207,6 +226,10 @@ export function BookingActionsCell({
           <DropdownMenuItem onClick={() => setOpenDetail(true)}>
             <IconEye className="mr-2 size-4" />
             Xem chi tiết
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleShowQR}>
+            <IconQrcode className="mr-2 size-4" />
+            Hiển thị mã QR
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => onEdit(booking)}>

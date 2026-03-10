@@ -13,8 +13,11 @@ import type {
   ResultVoid,
 } from "@/lib/types";
 import { BOOKING_STATUS, PAYMENT_METHOD } from "@/lib/constants";
-import { mapBookingError } from "@/lib/functions";
+import { mapBookingError, formatDateTimePretty } from "@/lib/functions";
 import { logBookingUpdate, logBookingCancel } from "@/lib/audit-helpers";
+import { getSettings } from "@/services/settings";
+import { getResendClient, getResendFromAddress } from "@/lib/email/resend";
+import { renderCancelBookingHTML } from "@/lib/email/templates/cancel-booking";
 
 
 
@@ -409,6 +412,103 @@ export async function cancelBookingAction(
       ok: false,
       message: "Không thể hủy booking",
     };
+  }
+
+  // Send cancellation email (do not block cancellation if email fails)
+  try {
+    const resend = getResendClient();
+    if (resend) {
+      const { data: booking, error: bookingError } = await supabase
+        .from("bookings")
+        .select(
+          `
+          id,
+          booking_code,
+          check_in,
+          check_out,
+          total_amount,
+          customer:customer_id(full_name,email),
+          booking_rooms(
+            room:room_id(name)
+          )
+        `
+        )
+        .eq("id", bookingId)
+        .single();
+
+      if (!bookingError && booking) {
+        type BookingCustomerRow = { full_name: string | null; email: string | null };
+        type BookingRoomRow = { name: string | null };
+        type BookingRoomsJoinRow = {
+          room: BookingRoomRow | BookingRoomRow[] | null;
+        };
+        type BookingForCancellationEmail = {
+          booking_code: string;
+          check_in: string;
+          check_out: string;
+          total_amount: number;
+          customer: BookingCustomerRow | BookingCustomerRow[] | null;
+          booking_rooms: BookingRoomsJoinRow[] | null;
+        };
+
+        const bookingData = booking as unknown as BookingForCancellationEmail;
+
+        const settings = await getSettings();
+
+        const hotelName = settings?.site_title || "YHotel";
+        const hotline = settings?.contact_phone || "0787 913 388";
+        const supportEmail = settings?.contact_email || "hello@yhotel.vn";
+
+        const customerRaw = bookingData.customer;
+        const customer = Array.isArray(customerRaw) ? customerRaw[0] : customerRaw;
+        const customerEmail: string | undefined = customer?.email ?? undefined;
+        const customerName: string | undefined = customer?.full_name ?? undefined;
+
+        const roomNames = (bookingData.booking_rooms ?? [])
+          .map((br: BookingRoomsJoinRow) => {
+            const roomRaw = br.room;
+            const room = Array.isArray(roomRaw) ? roomRaw[0] : roomRaw;
+            return room?.name ?? undefined;
+          })
+          .filter(
+            (name: unknown): name is string =>
+              typeof name === "string" && name.trim().length > 0
+          );
+
+        const roomType = roomNames.length ? roomNames.join(", ") : "-";
+
+        if (!customerEmail) {
+          throw new Error("Missing customer email for cancellation email");
+        }
+
+        const html = renderCancelBookingHTML({
+          customer_name: customerName || "Quý khách",
+          hotel_name: hotelName,
+          booking_code: bookingData.booking_code,
+          room_type: roomType,
+          check_in: formatDateTimePretty(bookingData.check_in, {
+            showIcons: false,
+            format: "full",
+          }),
+          check_out: formatDateTimePretty(bookingData.check_out, {
+            showIcons: false,
+            format: "full",
+          }),
+          total_price: Number(bookingData.total_amount) || 0,
+          hotline,
+          support_email: supportEmail,
+        });
+
+        await resend.emails.send({
+          from: getResendFromAddress(),
+          to: customerEmail,
+          subject: `Thông báo hủy phòng – ${bookingData.booking_code}`,
+          html,
+        });
+      }
+    }
+  } catch (emailErr) {
+    console.error("Send cancellation email failed:", emailErr);
   }
 
   // Log audit trail
