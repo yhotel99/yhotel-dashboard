@@ -10,7 +10,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { toast } from "sonner";
-import { Copy } from "lucide-react";
 
 export function createColumns(
   onEdit: (customer: Customer) => void,
@@ -128,7 +127,7 @@ export function createColumns(
     {
       id: "actions",
       accessorKey: "Hành động",
-      header: "Hành động",
+      header: "",
       cell: ({ row }) => (
         <ActionsCell
           customer={row.original}

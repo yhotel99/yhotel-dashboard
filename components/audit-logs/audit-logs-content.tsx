@@ -15,10 +15,16 @@ export function AuditLogsContent() {
   const [entityId, setEntityId] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
   
-  // Debounce entity ID search (500ms delay)
+  // Debounce entity ID search (300ms delay)
   const debouncedEntityId = useDebounce(entityId, 300);
 
   const handleRefresh = () => {
+    setRefreshKey(prev => prev + 1);
+  };
+
+  // Reset refresh key when tab or entity ID changes
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
     setRefreshKey(prev => prev + 1);
   };
 
@@ -56,7 +62,7 @@ export function AuditLogsContent() {
         </CardContent>
       </Card>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
         <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="all">Tất cả</TabsTrigger>
           <TabsTrigger value="booking">Booking</TabsTrigger>
@@ -75,7 +81,7 @@ export function AuditLogsContent() {
               <AuditLogViewer 
                 key={`all-${refreshKey}-${debouncedEntityId}`}
                 entityId={debouncedEntityId || undefined}
-                limit={100} 
+                limit={20}
               />
             </CardContent>
           </Card>
@@ -92,7 +98,7 @@ export function AuditLogsContent() {
                 key={`booking-${refreshKey}-${debouncedEntityId}`}
                 entityType="booking"
                 entityId={debouncedEntityId || undefined}
-                limit={100} 
+                limit={20}
               />
             </CardContent>
           </Card>
@@ -109,7 +115,7 @@ export function AuditLogsContent() {
                 key={`refund-${refreshKey}-${debouncedEntityId}`}
                 entityType="refund"
                 entityId={debouncedEntityId || undefined}
-                limit={100} 
+                limit={20}
               />
             </CardContent>
           </Card>
@@ -126,7 +132,7 @@ export function AuditLogsContent() {
                 key={`room-${refreshKey}-${debouncedEntityId}`}
                 entityType="room"
                 entityId={debouncedEntityId || undefined}
-                limit={100} 
+                limit={20}
               />
             </CardContent>
           </Card>
@@ -143,7 +149,7 @@ export function AuditLogsContent() {
                 key={`payment-${refreshKey}-${debouncedEntityId}`}
                 entityType="payment"
                 entityId={debouncedEntityId || undefined}
-                limit={100} 
+                limit={20}
               />
             </CardContent>
           </Card>
