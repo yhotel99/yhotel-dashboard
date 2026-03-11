@@ -25,7 +25,7 @@ export const ROOMS_COLUMNS = {
   PRICE_PER_NIGHT: { accessorKey: "Giá mỗi đêm", header: "Giá mỗi đêm" },
   MAX_GUESTS: { accessorKey: "Số khách tối đa", header: "Số khách tối đa" },
   AMENITIES: { accessorKey: "Tiện ích", header: "Tiện ích" },
-  ACTIONS: { accessorKey: "Hành động", header: "Hành động" },
+  ACTIONS: { accessorKey: "Hành động", header: "" },
 } as const;
 
 export function createColumns(
@@ -129,7 +129,7 @@ export function createColumns(
           onViewDetail={onViewDetail}
         />
       ),
-      size: 60,
+      size: 50,
       minSize: 40,
       maxSize: 60,
     },

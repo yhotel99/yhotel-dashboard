@@ -91,7 +91,21 @@ export function createColumns(
     {
       accessorKey: COLUMNS.CUSTOMER_NAME.accessorKey,
       header: COLUMNS.CUSTOMER_NAME.header,
-      cell: ({ row }) => row.original.customers?.full_name ?? "-",
+      cell: ({ row }) => {
+        const fullName = row.original.customers?.full_name ?? "-"
+        return (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="max-w-[160px] truncate font-medium">
+                {fullName}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{fullName}</p>
+            </TooltipContent>
+          </Tooltip>
+        );
+      },
       size: 100,
       minSize: 100,
       maxSize: 140,
@@ -185,7 +199,7 @@ export function createColumns(
     {
       id: "actions",
       accessorKey: "Hành động",
-      header: "Hành động",
+      header: "",
       cell: ({ row }) => {
         const defaultCancelledBooking =
           handlers?.cancelledBooking ||
@@ -230,8 +244,8 @@ export function createColumns(
           />
         );
       },
-      size: 90,
-      minSize: 80,
+      size: 50,
+      minSize: 50,
       maxSize: 90,
     },
   ];

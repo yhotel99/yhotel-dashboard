@@ -23,7 +23,7 @@ export const PAYMENTS_COLUMNS = {
   PAYMENT_STATUS: { accessorKey: "Trạng thái", header: "Trạng thái" },
   PAID_AT: { accessorKey: "Ngày thanh toán", header: "Ngày thanh toán" },
   CREATED_AT: { accessorKey: "Ngày tạo", header: "Ngày tạo" },
-  ACTIONS: { accessorKey: "Hành động", header: "Hành động" },
+  ACTIONS: { accessorKey: "Hành động", header: "" },
 } as const;
 
 export function createPaymentsColumns(): ColumnDef<PaymentWithBooking>[] {

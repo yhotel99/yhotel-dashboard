@@ -42,7 +42,7 @@ export function createColumns(
     {
       id: "actions",
       accessorKey: "Hành động",
-      header: "Hành động",
+      header: "",
       cell: ({ row }) => (
         <UserActionsCell
           userName={row.original.full_name}
