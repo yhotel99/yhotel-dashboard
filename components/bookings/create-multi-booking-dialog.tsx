@@ -88,7 +88,7 @@ export function CreateMultiBookingDialog({
   const [finalAmount, setFinalAmount] = useState("");
   const [isFinalAmountDirty, setIsFinalAmountDirty] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(
-    PAYMENT_METHOD.PAY_AT_HOTEL
+    PAYMENT_METHOD.BANK_TRANSFER
   );
   const [notes, setNotes] = useState("");
   const [availableRooms, setAvailableRooms] = useState<Room[]>([]);
@@ -420,11 +420,14 @@ export function CreateMultiBookingDialog({
                   <SelectValue placeholder="Chọn phương thức thanh toán" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value={PAYMENT_METHOD.BANK_TRANSFER}>
+                    {paymentMethodLabels[PAYMENT_METHOD.BANK_TRANSFER]}
+                  </SelectItem>
                   <SelectItem value={PAYMENT_METHOD.PAY_AT_HOTEL}>
                     {paymentMethodLabels[PAYMENT_METHOD.PAY_AT_HOTEL]}
                   </SelectItem>
-                  <SelectItem value={PAYMENT_METHOD.BANK_TRANSFER}>
-                    {paymentMethodLabels[PAYMENT_METHOD.BANK_TRANSFER]}
+                  <SelectItem value={PAYMENT_METHOD.EXTERNAL}>
+                    {paymentMethodLabels[PAYMENT_METHOD.EXTERNAL]}
                   </SelectItem>
                 </SelectContent>
               </Select>
