@@ -54,9 +54,17 @@ export function PaymentCard({ booking }: PaymentCardProps) {
       ) : (
         <div className="space-y-2 text-xs sm:text-sm">
           <div className="flex justify-between items-center">
-            <span className="text-muted-foreground">Tổng tiền:</span>
+            <span className="text-muted-foreground">Tổng tiền gốc:</span>
             <span className="font-medium">
               {formatCurrency(booking.total_amount)}
+            </span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-muted-foreground">
+              Số tiền thanh toán cuối cùng:
+            </span>
+            <span className="font-medium">
+              {formatCurrency(booking.final_amount ?? booking.total_amount)}
             </span>
           </div>
           {advancePayment && (

@@ -167,7 +167,8 @@ export function createColumns(
     {
       accessorKey: COLUMNS.TOTAL_AMOUNT.accessorKey,
       header: COLUMNS.TOTAL_AMOUNT.header,
-      cell: ({ row }) => formatCurrency(row.original.total_amount),
+      cell: ({ row }) =>
+        formatCurrency(row.original.final_amount ?? row.original.total_amount),
       size: 120,
       minSize: 100,
       maxSize: 140,

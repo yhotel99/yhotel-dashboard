@@ -20,8 +20,12 @@ import {
   formatDateOnly,
   getDateISO,
   formatDateForInput,
+  formatNumberWithSeparators,
+  parseFormattedNumber,
+  calculateNightsValue,
+  translateBookingError,
 } from "@/lib/functions";
-import { calculateNightsValue, translateBookingError } from "@/lib/functions";
+import { BOOKING_STATUS } from "@/lib/constants";
 
 type EditBookingFormState = {
   room_id: string;
@@ -30,6 +34,7 @@ type EditBookingFormState = {
   total_guests: string;
   total_amount: string;
   advance_payment: string;
+  final_amount: string;
   notes: string;
 };
 
@@ -66,6 +71,7 @@ export function EditBookingDialog({
         total_guests: "1",
         total_amount: "0",
         advance_payment: "0",
+        final_amount: "",
         notes: "",
       };
     }
@@ -76,6 +82,9 @@ export function EditBookingDialog({
       total_guests: booking.total_guests.toString(),
       total_amount: booking.total_amount.toString(),
       advance_payment: booking.advance_payment.toString(),
+      final_amount: formatNumberWithSeparators(
+        String(booking.final_amount ?? booking.total_amount)
+      ),
       notes: booking.notes || "",
     };
   };
@@ -96,10 +105,15 @@ export function EditBookingDialog({
 
   const handleInputChange =
     (field: keyof EditBookingFormState) =>
-    (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      const { value } = event.target;
-      setFormValues((prev) => ({ ...prev, [field]: value }));
-    };
+      (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const { value } = event.target;
+        if (field === "final_amount") {
+          const formatted = formatNumberWithSeparators(value);
+          setFormValues((prev) => ({ ...prev, [field]: formatted }));
+        } else {
+          setFormValues((prev) => ({ ...prev, [field]: value }));
+        }
+      };
 
   const resetForm = () => {
     if (booking) {
@@ -110,6 +124,9 @@ export function EditBookingDialog({
         total_guests: booking.total_guests.toString(),
         total_amount: booking.total_amount.toString(),
         advance_payment: booking.advance_payment.toString(),
+        final_amount: formatNumberWithSeparators(
+          String(booking.final_amount ?? booking.total_amount)
+        ),
         notes: booking.notes || "",
       });
     }
@@ -151,10 +168,26 @@ export function EditBookingDialog({
       return;
     }
 
-    // Only update total_guests and notes
+    // Nếu booking đang chờ xác nhận, cho phép chỉnh final_amount
+    let finalAmountValue: number | null = null;
+    if (booking.status === "pending") {
+      finalAmountValue = parseFormattedNumber(formValues.final_amount || "0");
+      if (!Number.isFinite(finalAmountValue) || finalAmountValue <= 0) {
+        setError("Số tiền thanh toán cuối cùng phải là số lớn hơn 0.");
+        return;
+      }
+      if (finalAmountValue < booking.advance_payment) {
+        setError("Số tiền thanh toán cuối cùng không được nhỏ hơn tiền cọc.");
+        return;
+      }
+    }
+
     const payload: UpdateBookingInput = {
       total_guests: totalGuests,
       notes: formValues.notes.trim() || null,
+      ...(booking.status === "pending" && finalAmountValue !== null
+        ? { final_amount: finalAmountValue }
+        : {}),
     };
 
     try {
@@ -256,7 +289,6 @@ export function EditBookingDialog({
                 </p>
               </div>
             </div>
-
             <div className="space-y-2">
               <Label>Tiền cọc (VNĐ)</Label>
               <div className="rounded-md border bg-muted px-3 py-2">
@@ -265,6 +297,27 @@ export function EditBookingDialog({
                 </p>
               </div>
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="final_amount">
+                Số tiền thanh toán cuối cùng (VNĐ)
+              </Label>
+              <Input
+                id="final_amount"
+                type="text"
+                inputMode="numeric"
+                value={formValues.final_amount}
+                onChange={handleInputChange("final_amount")}
+                disabled={booking.status !== BOOKING_STATUS.PENDING}
+              />
+              <p className="text-xs text-muted-foreground">
+                {booking.status === BOOKING_STATUS.PENDING
+                  ? "Chỉ có thể chỉnh sửa khi booking đang ở trạng thái chờ xác nhận."
+                  : "Chỉ cho phép chỉnh sửa khi booking ở trạng thái chờ xác nhận."}
+              </p>
+            </div>
+
+
           </div>
 
           <div className="space-y-2">

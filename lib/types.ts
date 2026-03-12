@@ -220,6 +220,7 @@ export type BookingRecord = {
   status: BookingStatus;
   notes: string | null;
   total_amount: number;
+  final_amount: number | null;
   advance_payment: number;
   actual_check_in: string | null;
   actual_check_out: string | null;
@@ -252,6 +253,11 @@ export type BookingInput = {
   status?: BookingStatus;
   notes?: string | null;
   total_amount: number;
+   /**
+    * Final amount to be paid by customer.
+    * If omitted, backend should default to total_amount.
+    */
+  final_amount?: number | null;
   advance_payment?: number;
   payment_method?: PaymentMethod;
   actual_check_in?: string | null;
@@ -262,6 +268,7 @@ export type BookingInput = {
 export type UpdateBookingInput = {
   total_guests?: number;
   notes?: string | null;
+  final_amount?: number | null;
 };
 
 // Transfer booking input (for changing room, dates, and payments)
@@ -271,6 +278,7 @@ export type TransferBookingInput = {
   check_out?: string;
   number_of_nights?: number;
   total_amount?: number;
+  final_amount?: number | null;
   advance_payment?: number;
 };
 
@@ -285,6 +293,7 @@ export type MultiBookingInput = {
   notes?: string | null;
   payment_method: PaymentMethod;
   advance_payment: number;
+  final_amount?: number | null;
 };
 
 // ============================================================================

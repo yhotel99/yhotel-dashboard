@@ -85,6 +85,8 @@ export function CreateMultiBookingDialog({
   const [checkOutDate, setCheckOutDate] = useState("");
   const [totalGuests, setTotalGuests] = useState("1");
   const [advancePayment, setAdvancePayment] = useState("0");
+  const [finalAmount, setFinalAmount] = useState("");
+  const [isFinalAmountDirty, setIsFinalAmountDirty] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(
     PAYMENT_METHOD.PAY_AT_HOTEL
   );
@@ -161,6 +163,16 @@ export function CreateMultiBookingDialog({
     [selectedRoomsWithAmounts]
   );
 
+  useEffect(() => {
+    if (!isFinalAmountDirty) {
+      if (totalAmount > 0) {
+        setFinalAmount(formatNumberWithSeparators(String(totalAmount)));
+      } else {
+        setFinalAmount("");
+      }
+    }
+  }, [totalAmount, isFinalAmountDirty]);
+
   const toggleRoom = useCallback((roomId: string) => {
     setSelectedRoomIds((prev) => {
       const next = new Set(prev);
@@ -177,6 +189,8 @@ export function CreateMultiBookingDialog({
     setCheckOutDate("");
     setTotalGuests("1");
     setAdvancePayment("0");
+    setFinalAmount("");
+    setIsFinalAmountDirty(false);
     setPaymentMethod(PAYMENT_METHOD.PAY_AT_HOTEL);
     setNotes("");
     setAvailableRooms([]);
@@ -229,9 +243,14 @@ export function CreateMultiBookingDialog({
       setError("Số khách phải từ 1 trở lên");
       return;
     }
+    const finalAmountValue = parseFormattedNumber(finalAmount || "0");
+    if (finalAmountValue <= 0) {
+      setError("Số tiền thanh toán cuối cùng phải lớn hơn 0");
+      return;
+    }
     const advance = parseFormattedNumber(advancePayment || "0");
-    if (advance < 0 || advance > totalAmount) {
-      setError("Tiền cọc không hợp lệ");
+    if (advance < 0 || advance > finalAmountValue) {
+      setError("Tiền cọc không hợp lệ (không được lớn hơn số tiền thanh toán cuối cùng)");
       return;
     }
 
@@ -248,6 +267,7 @@ export function CreateMultiBookingDialog({
       notes: notes.trim() || null,
       payment_method: paymentMethod as PaymentMethod,
       advance_payment: advance,
+      final_amount: finalAmountValue,
     };
 
     setIsSubmitting(true);
@@ -488,7 +508,7 @@ export function CreateMultiBookingDialog({
           </div>
 
           {selectedRoomsWithAmounts.length > 0 && (
-            <div className="rounded-lg border p-4 bg-muted/30 shrink-0">
+            <div className="rounded-lg border p-4 bg-muted/30 shrink-0 space-y-2">
               <div className="space-y-1 text-sm">
                 {selectedRoomsWithAmounts.map(({ room, amount }) => (
                   <div
@@ -500,12 +520,29 @@ export function CreateMultiBookingDialog({
                   </div>
                 ))}
                 <div className="flex justify-between font-semibold pt-2 border-t">
-                  <span>Tổng cộng</span>
+                  <span>Tổng cộng (giá gốc)</span>
                   <span>{formatCurrency(totalAmount)}</span>
                 </div>
               </div>
             </div>
           )}
+
+          <div className="space-y-2 shrink-0">
+            <Label>Số tiền thanh toán cuối cùng (VNĐ)</Label>
+            <Input
+              type="text"
+              inputMode="numeric"
+              value={finalAmount}
+              onChange={(e) => {
+                setIsFinalAmountDirty(true);
+                setFinalAmount(formatNumberWithSeparators(e.target.value));
+              }}
+              placeholder="Mặc định bằng tổng cộng phía trên"
+            />
+            <p className="text-xs text-muted-foreground">
+              Đây là số tiền khách sẽ thanh toán sau cùng cho toàn bộ booking.
+            </p>
+          </div>
 
           <div className="space-y-2 shrink-0">
             <Label>Tiền cọc (VNĐ)</Label>
@@ -519,7 +556,10 @@ export function CreateMultiBookingDialog({
               placeholder="VD: 1.000.000"
             />
             <p className="text-xs text-muted-foreground">
-              Tối đa: {formatCurrency(totalAmount)}
+              Tối đa:{" "}
+              {formatCurrency(
+                parseFormattedNumber(finalAmount || "0") || totalAmount
+              )}
             </p>
           </div>
 

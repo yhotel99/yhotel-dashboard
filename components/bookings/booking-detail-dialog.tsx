@@ -52,7 +52,7 @@ export function BookingDetailDialog({
 
   // Fetch room data separately for all rooms in booking
   const roomIds = booking?.rooms?.items?.map(item => item.id) ?? [];
-  
+
   const { data: roomsData, isLoading: isRoomLoading } = useSWR<Room[]>(
     open && roomIds.length > 0 ? ["rooms", ...roomIds] : null,
     async () => {
@@ -259,9 +259,17 @@ export function BookingDetailDialog({
               </h3>
               <div className="grid grid-cols-2 gap-4 pl-7">
                 <div>
-                  <p className="text-sm text-muted-foreground">Tổng tiền</p>
-                  <p className="font-medium text-green-600">
+                  <p className="text-sm text-muted-foreground">Tổng tiền gốc</p>
+                  <p className="font-medium">
                     {formatCurrency(booking.total_amount)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">
+                    Số tiền thanh toán cuối cùng
+                  </p>
+                  <p className="font-medium text-green-600">
+                    {formatCurrency(booking.final_amount ?? booking.total_amount)}
                   </p>
                 </div>
                 <div>
@@ -274,7 +282,7 @@ export function BookingDetailDialog({
 
               {/* QR Code Payment */}
               <div className="pl-7 mt-4">
-                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
+                <div className="bg-linear-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
                   <div className="flex flex-col md:flex-row gap-6">
                     {/* QR Code */}
                     <div className="flex flex-col items-center gap-3">
@@ -309,7 +317,7 @@ export function BookingDetailDialog({
                         <div className="flex items-start gap-2">
                           <span className="text-sm text-muted-foreground min-w-[100px]">Số tiền:</span>
                           <span className="font-bold text-green-600 text-lg">
-                            {formatCurrency(booking.total_amount)}
+                            {formatCurrency(booking.final_amount ?? booking.total_amount)}
                           </span>
                         </div>
                         <div className="flex items-start gap-2">

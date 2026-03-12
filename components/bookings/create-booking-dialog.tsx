@@ -61,6 +61,7 @@ type CreateBookingFormState = {
   check_out_date: string;
   total_guests: string;
   total_amount: string;
+  final_amount: string;
   advance_payment: string;
   payment_method: string;
   notes: string;
@@ -73,6 +74,7 @@ const initialCreateBookingState: CreateBookingFormState = {
   check_out_date: "",
   total_guests: "1",
   total_amount: "0",
+  final_amount: "",
   advance_payment: "0",
   payment_method: PAYMENT_METHOD.PAY_AT_HOTEL,
   notes: "",
@@ -126,6 +128,11 @@ function validateBookingForm({
     return "💰 Tổng tiền phải lớn hơn 0. Vui lòng kiểm tra giá phòng.";
   }
 
+  const finalAmount = parseFormattedNumber(formValues.final_amount || "0");
+  if (!Number.isFinite(finalAmount) || finalAmount <= 0) {
+    return "💰 Số tiền thanh toán cuối cùng phải lớn hơn 0.";
+  }
+
   const advancePayment = parseFormattedNumber(
     formValues.advance_payment || "0"
   );
@@ -133,8 +140,8 @@ function validateBookingForm({
     return "💰 Tiền cọc phải là số không âm.";
   }
 
-  if (advancePayment > totalAmount) {
-    return "💰 Tiền cọc không được vượt quá tổng tiền phòng.";
+  if (advancePayment > finalAmount) {
+    return "💰 Tiền cọc không được vượt quá số tiền thanh toán cuối cùng.";
   }
 
   return null;
@@ -402,6 +409,7 @@ export function CreateBookingDialog({
       // At this point, we know submitSelectedRoom is not null (validation passed)
       const totalGuests = Number(formValues.total_guests);
       const totalAmount = Number(formValues.total_amount || 0);
+      const finalAmount = parseFormattedNumber(formValues.final_amount || "0");
       const advancePayment = parseFormattedNumber(
         formValues.advance_payment || "0"
       );
@@ -416,6 +424,7 @@ export function CreateBookingDialog({
         notes: formValues.notes.trim() || null,
         total_amount: totalAmount,
         advance_payment: advancePayment,
+        final_amount: finalAmount,
         payment_method: formValues.payment_method as PaymentMethod,
       };
 
@@ -662,6 +671,21 @@ export function CreateBookingDialog({
                   {formatCurrency(Number(formValues.total_amount || 0))}
                 </p>
               )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="final_amount">Số tiền thanh toán cuối cùng (VNĐ)</Label>
+              <Input
+                id="final_amount"
+                type="text"
+                inputMode="numeric"
+                value={formValues.final_amount}
+                onChange={handleInputChange("final_amount")}
+                placeholder="Mặc định bằng tổng tiền phía trên, có thể chỉnh khi giảm giá/phụ thu"
+              />
+              <p className="text-xs text-muted-foreground">
+                Đây là số tiền khách sẽ thực sự thanh toán sau cùng.
+              </p>
             </div>
 
             <div className="space-y-2">

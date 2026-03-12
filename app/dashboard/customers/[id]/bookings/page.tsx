@@ -87,7 +87,8 @@ const createColumns = (): ColumnDef<BookingRecord>[] => [
   {
     accessorKey: CUSTOMER_BOOKING_COLUMNS.TOTAL_AMOUNT.accessorKey,
     header: CUSTOMER_BOOKING_COLUMNS.TOTAL_AMOUNT.header,
-    cell: ({ row }) => formatCurrency(row.original.total_amount),
+    cell: ({ row }) =>
+      formatCurrency(row.original.final_amount ?? row.original.total_amount),
   },
   {
     accessorKey: CUSTOMER_BOOKING_COLUMNS.ADVANCE_PAYMENT.accessorKey,

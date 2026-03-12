@@ -217,6 +217,7 @@ export function QuickBookingDialog({
       notes: null,
       total_amount: totalAmount,
       advance_payment: 0,
+      final_amount: totalAmount,
       payment_method: formValues.payment_method as PaymentMethod,
     };
 

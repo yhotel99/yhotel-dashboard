@@ -144,6 +144,7 @@ export async function createBookingSecure(
         p_total_guests: input.total_guests ?? 1,
         p_notes: input.notes || null,
         p_advance_payment: input.advance_payment ?? 0,
+        p_final_amount: input.final_amount ?? null,
       }
     );
 
@@ -556,8 +557,9 @@ export async function createBookingWithPayments(
     }
 
     // Payment 2: room_charge (remaining amount after advance_payment)
-    const roomChargeAmount =
-      bookingData.total_amount - bookingData.advance_payment;
+    const baseTotalAmount =
+      bookingData.final_amount ?? bookingData.total_amount;
+    const roomChargeAmount = baseTotalAmount - bookingData.advance_payment;
     if (roomChargeAmount > 0) {
       paymentsToCreate.push({
         booking_id: bookingData.id,
@@ -587,6 +589,124 @@ export async function createBookingWithPayments(
     const errorMessage =
       err instanceof Error ? err.message : "Không thể tạo booking";
     throw new Error(errorMessage);
+  }
+}
+
+/**
+ * Recalculate pending room_charge payment for a booking when final_amount changes.
+ * - Chỉ áp dụng cho booking ở trạng thái pending
+ * - Giữ nguyên advance_payment, chỉ cập nhật/ghi nhận lại room_charge pending
+ */
+export async function recalculatePendingRoomChargePayment(
+  bookingId: string,
+  finalAmount: number
+): Promise<void> {
+  try {
+    const supabase = await createClient();
+
+    // Lấy thông tin trạng thái và tiền cọc hiện tại
+    const { data: booking, error: fetchError } = await supabase
+      .from("bookings")
+      .select("status, advance_payment")
+      .eq("id", bookingId)
+      .single();
+
+    if (fetchError || !booking) {
+      console.error(
+        "recalculatePendingRoomChargePayment: cannot fetch booking",
+        fetchError
+      );
+      return;
+    }
+
+    if (booking.status !== BOOKING_STATUS.PENDING) {
+      // Chỉ sync cho booking pending
+      return;
+    }
+
+    const advancePayment = booking.advance_payment ?? 0;
+
+    // Không cho finalAmount nhỏ hơn tiền cọc – nếu có thì bỏ qua (UI đã chặn nhưng check thêm)
+    if (finalAmount < advancePayment) {
+      console.warn(
+        "recalculatePendingRoomChargePayment skipped: final_amount < advance_payment",
+        { bookingId, finalAmount, advancePayment }
+      );
+      return;
+    }
+
+    const roomChargeAmount = finalAmount - advancePayment;
+
+    // Lấy tất cả payments pending của booking
+    const { data: existingPayments, error: paymentsError } = await supabase
+      .from("payments")
+      .select("id, payment_type, payment_status")
+      .eq("booking_id", bookingId)
+      .eq("payment_status", PAYMENT_STATUS.PENDING);
+
+    if (paymentsError) {
+      console.error(
+        "recalculatePendingRoomChargePayment: error fetching payments",
+        paymentsError
+      );
+      return;
+    }
+
+    const roomChargeRow = existingPayments?.find(
+      (p) => p.payment_type === PAYMENT_TYPE.ROOM_CHARGE
+    );
+
+    // ADVANCE_PAYMENT: giữ nguyên, không động vào.
+    // ROOM_CHARGE: cập nhật theo final_amount - advance_payment
+    if (roomChargeRow) {
+      if (roomChargeAmount > 0) {
+        const { error: updateError } = await supabase
+          .from("payments")
+          .update({ amount: roomChargeAmount })
+          .eq("id", roomChargeRow.id);
+
+        if (updateError) {
+          console.error(
+            "recalculatePendingRoomChargePayment: cannot update room_charge",
+            updateError
+          );
+        }
+      } else {
+        // Nếu roomChargeAmount <= 0 thì xoá payment tiền phòng pending
+        const { error: deleteError } = await supabase
+          .from("payments")
+          .delete()
+          .eq("id", roomChargeRow.id);
+
+        if (deleteError) {
+          console.error(
+            "recalculatePendingRoomChargePayment: cannot delete room_charge",
+            deleteError
+          );
+        }
+      }
+    } else if (roomChargeAmount > 0) {
+      // Chưa có room_charge pending -> tạo mới
+      const { error: insertError } = await supabase.from("payments").insert({
+        booking_id: bookingId,
+        amount: roomChargeAmount,
+        payment_type: PAYMENT_TYPE.ROOM_CHARGE,
+        payment_method: PAYMENT_METHOD.PAY_AT_HOTEL,
+        payment_status: PAYMENT_STATUS.PENDING,
+      });
+
+      if (insertError) {
+        console.error(
+          "recalculatePendingRoomChargePayment: cannot insert room_charge",
+          insertError
+        );
+      }
+    }
+  } catch (err) {
+    console.error(
+      "recalculatePendingRoomChargePayment: unexpected error",
+      err
+    );
   }
 }
 
@@ -662,7 +782,8 @@ export async function transferBooking(
     }
 
     // Step 5: Calculate payment amounts from updated booking
-    const finalTotalAmount = updatedBooking.total_amount ?? 0;
+    const finalTotalAmount =
+      updatedBooking.final_amount ?? updatedBooking.total_amount ?? 0;
     const finalAdvancePayment = updatedBooking.advance_payment ?? 0;
     const finalRoomChargeAmount = finalTotalAmount - finalAdvancePayment;
 

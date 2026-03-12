@@ -184,6 +184,7 @@ export async function createBooking(
       p_total_guests: input.total_guests ?? 1,
       p_notes: input.notes ?? null,
       p_advance_payment: input.advance_payment ?? 0,
+      p_final_amount: input.final_amount ?? null,
     }
   );
 
@@ -245,6 +246,7 @@ export async function createMultiBooking(
     p_notes: input.notes ?? null,
     p_payment_method: input.payment_method ?? PAYMENT_METHOD.PAY_AT_HOTEL,
     p_advance_payment: input.advance_payment ?? 0,
+    p_final_amount: input.final_amount ?? null,
   });
 
   if (error) {
@@ -274,39 +276,78 @@ export async function updateBooking(
   input: UpdateBookingInput
 ): Promise<Result<BookingRecord>> {
   const supabase = await createClient();
-  
+  const hasFinalAmount =
+    input.final_amount !== undefined && input.final_amount !== null;
+
   // Get old data (only fields being updated)
-  const fieldsToSelect = Object.keys(input).join(',');
+  const fieldsToSelect = Object.keys(input).join(",");
   const { data: oldData } = await supabase
     .from("bookings")
     .select(fieldsToSelect)
     .eq("id", bookingId)
     .single();
 
-  const { data, error } = await supabase
-    .from("bookings")
-    .update(input)
-    .eq("id", bookingId)
-    .select()
-    .single();
+  let updatedBooking: BookingRecord | null = null;
 
-  if (error) {
-    console.error("Error updating booking:", error);
-    return {
-      ok: false,
-      message: "Không thể cập nhật booking",
-    };
-  }
+  if (hasFinalAmount) {
+    // Use transactional RPC when final_amount is being changed
+    const { data, error } = await supabase.rpc(
+      "update_booking_final_amount_secure",
+      {
+        p_booking_id: bookingId,
+        p_final_amount: input.final_amount,
+        p_total_guests: input.total_guests ?? null,
+        p_notes: input.notes ?? null,
+      }
+    );
 
-  if (!data) {
-    return {
-      ok: false,
-      message: "Không tìm thấy booking để cập nhật",
-    };
+    if (error) {
+      console.error("Error updating booking via RPC:", error);
+      return {
+        ok: false,
+        message: "Không thể cập nhật booking",
+      };
+    }
+
+    if (!data?.ok) {
+      return {
+        ok: false,
+        message: mapBookingError(data.error_code ?? "UNKNOWN"),
+      };
+    }
+
+    updatedBooking = data.booking as BookingRecord;
+  } else {
+    // Simple path: direct update without touching payments
+    const { data, error } = await supabase
+      .from("bookings")
+      .update(input)
+      .eq("id", bookingId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error updating booking:", error);
+      return {
+        ok: false,
+        message: "Không thể cập nhật booking",
+      };
+    }
+
+    if (!data) {
+      return {
+        ok: false,
+        message: "Không tìm thấy booking để cập nhật",
+      };
+    }
+
+    updatedBooking = data as BookingRecord;
   }
 
   // Log audit trail
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (user) {
     await logBookingUpdate(
       bookingId,
@@ -323,7 +364,7 @@ export async function updateBooking(
 
   return {
     ok: true,
-    data: data as BookingRecord,
+    data: updatedBooking as BookingRecord,
   };
 }
 
