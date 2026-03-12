@@ -15,7 +15,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Copy } from "lucide-react";
 import { toast } from "sonner";
 
 // Column definitions constants
@@ -207,7 +206,7 @@ export function createColumns(
           (async (id: string) => await updateStatus(id, "cancelled"));
 
         const actionHandlers = {
-          onEdit: handlers?.onEdit || (() => {}),
+          onEdit: handlers?.onEdit || (() => { }),
           onTransfer:
             handlers?.onTransfer ||
             // eslint-disable-next-line @typescript-eslint/no-unused-vars

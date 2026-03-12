@@ -21,6 +21,7 @@ export async function updateQRDisplayAction(
       p_check_in: booking.check_in,
       p_check_out: booking.check_out,
       p_total_amount: booking.total_amount,
+      p_final_amount: booking.final_amount ?? null,
     });
 
     if (error) {

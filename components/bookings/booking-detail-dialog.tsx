@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import {
   Dialog,
   DialogContent,
@@ -42,7 +43,7 @@ export function BookingDetailDialog({
   const bookingId = booking?.id ?? null;
   const paymentsUrl =
     open && bookingId
-      ? `/api/payments?bookingId=${bookingId}&page=1&limit=50`
+      ? `/api/payments?bookingId=${bookingId}&page=1&limit=20`
       : null;
 
   const { data: paymentsResponse, isLoading: isPaymentsLoading } =
@@ -287,9 +288,16 @@ export function BookingDetailDialog({
                     {/* QR Code */}
                     <div className="flex flex-col items-center gap-3">
                       <div className="bg-white p-3 rounded-lg shadow-md">
-                        <img
-                          src={`https://qr.sepay.vn/img?acc=${BANK_ACCOUNT.ACC}&bank=${BANK_ACCOUNT.BANK}&amount=${booking.total_amount}&des=${encodeURIComponent(booking.booking_code)}&template=compact`}
+                        <Image
+                          src={`https://qr.sepay.vn/img?acc=${BANK_ACCOUNT.ACC
+                            }&bank=${BANK_ACCOUNT.BANK
+                            }&amount=${booking.final_amount ?? booking.total_amount
+                            }&des=${encodeURIComponent(
+                              booking.booking_code
+                            )}&template=compact`}
                           alt="QR Code thanh toán"
+                          width={192}
+                          height={192}
                           className="size-48"
                         />
                       </div>

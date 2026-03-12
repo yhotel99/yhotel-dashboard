@@ -20,6 +20,10 @@ const nextConfig: NextConfig = {
         hostname: "wqadavcddtdocdqxnony.supabase.co"
       },
       {
+        protocol: "https",
+        hostname: "qr.sepay.vn",
+      },
+      {
         protocol: "http",
         hostname: "127.0.0.1",
       },

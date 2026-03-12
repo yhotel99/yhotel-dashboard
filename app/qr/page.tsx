@@ -27,6 +27,7 @@ type QRDisplayData = {
   check_in: string;
   check_out: string;
   total_amount: number;
+  final_amount?: number | null;
   updated_at: string;
 };
 
@@ -184,7 +185,15 @@ export default function QRDisplayPage() {
 
             <div className="mb-6 flex justify-center">
               <img
-                src={`https://qr.sepay.vn/img?acc=${BANK_ACCOUNT.ACC}&bank=${BANK_ACCOUNT.BANK}&amount=${displayData.total_amount}&des=${encodeURIComponent(displayData.booking_code)}&template=compact`}
+                src={`https://qr.sepay.vn/img?acc=${
+                  BANK_ACCOUNT.ACC
+                }&bank=${
+                  BANK_ACCOUNT.BANK
+                }&amount=${
+                  displayData.final_amount ?? displayData.total_amount
+                }&des=${encodeURIComponent(
+                  displayData.booking_code
+                )}&template=compact`}
                 alt="QR Code thanh toán"
                 className="h-80 w-80 rounded-lg shadow-md"
               />
@@ -216,9 +225,13 @@ export default function QRDisplayPage() {
                 </span>
               </div>
               <div className="flex justify-between border-t border-gray-200 pt-3">
-                <span className="text-lg font-semibold text-gray-800">Tổng tiền:</span>
+                <span className="text-lg font-semibold text-gray-800">
+                  Số tiền thanh toán cuối cùng:
+                </span>
                 <span className="text-lg font-bold text-[#9bc78e]">
-                  {formatCurrency(displayData.total_amount)}
+                  {formatCurrency(
+                    displayData.final_amount ?? displayData.total_amount
+                  )}
                 </span>
               </div>
             </div>
