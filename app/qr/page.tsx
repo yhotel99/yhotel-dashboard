@@ -38,7 +38,7 @@ export default function QRDisplayPage() {
   const playedSuccessSoundRef = useRef(false);
 
   useEffect(() => {
-    setMounted(true);
+    queueMicrotask(() => setMounted(true));
     const supabase = createClient();
 
     const channel = supabase
