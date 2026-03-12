@@ -6,11 +6,11 @@ import { BANK_ACCOUNT } from "@/lib/constants";
 import { formatCurrency, formatDateOnly } from "@/lib/functions";
 import { createClient } from "@/lib/supabase/client";
 
-// Âm thanh thanh toán: phát file mp3 thực tế (money-soundfx.mp3 trong public)
+// Âm thanh thanh toán: phát file mp3 thực tế (apple-pay-original.mp3 trong public)
 function playPaymentSuccessSound() {
   if (typeof window === "undefined") return;
   try {
-    const audio = new Audio("/money-soundfx.mp3");
+    const audio = new Audio("/apple-pay-original.mp3");
     audio.currentTime = 0;
     audio.volume = 1;
     void audio.play().catch(() => {});
