@@ -346,7 +346,7 @@ export function RoomCard({ room, onStatusChange }: RoomCardProps) {
           onConfirm={handleConfirmStatusChange}
         />
       )}
-      {/* Quick Booking Dialog */}
+      {/* Quick Booking Dialog
       {room.mapStatus === ROOM_MAP_STATUS.VACANT && isQuickBookingOpen && (
         <QuickBookingDialog
           open={isQuickBookingOpen}
@@ -354,7 +354,7 @@ export function RoomCard({ room, onStatusChange }: RoomCardProps) {
           room={room}
           onCreate={handleCreateBooking}
         />
-      )}
+      )} */}
 
       {/* Checkout Dialog */}
       {(room.mapStatus === ROOM_MAP_STATUS.OCCUPIED ||

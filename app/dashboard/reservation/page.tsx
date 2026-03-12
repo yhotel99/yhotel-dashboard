@@ -29,11 +29,11 @@ const statusFilters: Array<{
   count?: number;
 }> = [
   { status: "all", label: "Tất cả", color: "bg-gray-200" },
-  {
-    status: ROOM_MAP_STATUS.VACANT,
-    label: roomMapStatusLabels[ROOM_MAP_STATUS.VACANT],
-    color: roomMapStatusColors[ROOM_MAP_STATUS.VACANT],
-  },
+  // {
+  //   status: ROOM_MAP_STATUS.VACANT,
+  //   label: roomMapStatusLabels[ROOM_MAP_STATUS.VACANT],
+  //   color: roomMapStatusColors[ROOM_MAP_STATUS.VACANT],
+  // },
   {
     status: ROOM_MAP_STATUS.UPCOMING_CHECKIN,
     label: roomMapStatusLabels[ROOM_MAP_STATUS.UPCOMING_CHECKIN],

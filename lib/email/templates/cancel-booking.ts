@@ -22,6 +22,9 @@ export function renderCancelBookingHTML(payload: CancelBookingEmailPayload) {
   const hotline = escapeHtml(payload.hotline);
   const support_email = escapeHtml(payload.support_email);
 
+  const phone = "+84 7879 13388"
+  const zalo = "+84 786 456 469"
+
   return `<!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -70,8 +73,10 @@ export function renderCancelBookingHTML(payload: CancelBookingEmailPayload) {
               </table>
               <p>
                 Nếu Quý khách đã thanh toán trước, vui lòng liên hệ chúng tôi để được hướng dẫn hoàn tiền.<br/>
-                📞 ${hotline}<br/>
-                📧 ${support_email}
+                📞 Hotline: ${hotline}<br/>
+                ☎️ Điện thoại: ${phone}<br/>
+                💬 Zalo/whatsapp: ${zalo}<br/>
+                📧 Email: ${support_email}
               </p>
               <p>
                 Trân trọng,<br/>

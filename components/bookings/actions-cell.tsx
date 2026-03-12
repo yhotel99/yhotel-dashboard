@@ -209,6 +209,8 @@ export function BookingActionsCell({
     }
   };
 
+  const disabledBooking = booking.status === BOOKING_STATUS.CANCELLED || booking.status === BOOKING_STATUS.CHECKED_OUT
+
   return (
     <>
       <DropdownMenu onOpenChange={handleDropdownOpenChange}>
@@ -232,7 +234,7 @@ export function BookingActionsCell({
             Hiển thị mã QR
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => onEdit(booking)}>
+          <DropdownMenuItem onClick={() => onEdit(booking)} disabled={disabledBooking}>
             <IconEdit className="mr-2 size-4" />
             Chỉnh sửa
           </DropdownMenuItem>
@@ -240,7 +242,6 @@ export function BookingActionsCell({
             <IconRefresh className="mr-2 size-4" />
             Thay đổi trạng thái
           </DropdownMenuItem>
-
           <DropdownMenuItem
             onClick={() => setOpenMarkAdvancePayment(true)}
             disabled={
@@ -264,7 +265,7 @@ export function BookingActionsCell({
           <DropdownMenuItem
             variant="destructive"
             onClick={() => setOpenCancel(true)}
-            disabled={booking.status === BOOKING_STATUS.CANCELLED}
+            disabled={disabledBooking}
           >
             <IconX className="mr-2 size-4" />
             Hủy booking
