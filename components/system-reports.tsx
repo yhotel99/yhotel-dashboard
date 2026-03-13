@@ -207,9 +207,8 @@ export function SystemReports() {
   const summaryUrl = `/api/reports/summary?fromDate=${encodeURIComponent(
     fromISO
   )}&toDate=${encodeURIComponent(toISO)}`;
-  const monthlyUrl = `/api/reports/monthly?months=${
-    monthRange === "6_months" ? "6" : "12"
-  }`;
+  const monthlyUrl = `/api/reports/monthly?months=${monthRange === "6_months" ? "6" : "12"
+    }`;
   const roomStatsUrl = "/api/reports/room-stats";
   const customerSourcesUrl = "/api/reports/customer-sources";
   const countryStatsUrl = "/api/reports/country-stats";
@@ -475,9 +474,9 @@ export function SystemReports() {
             showCompare={false}
             locale="vi-VN"
           />
-          <Button 
-            variant="outline" 
-            size="icon" 
+          <Button
+            variant="outline"
+            size="icon"
             title="Xuất báo cáo"
             onClick={exportReport}
             disabled={isLoadingReports || isLoadingRoomStats || isLoadingCustomerSources || isLoadingCountryStats || isLoadingPaymentMethods || isLoadingRoomStatus || isLoadingRecentPayments}
@@ -617,7 +616,7 @@ export function SystemReports() {
           </CardContent>
         </Card>
 
-       
+
       </div>
 
       {/* Charts Section */}
@@ -865,7 +864,7 @@ export function SystemReports() {
                               key={`cell-${index}`}
                               fill={
                                 ROOM_TYPE_COLORS[
-                                  index % ROOM_TYPE_COLORS.length
+                                index % ROOM_TYPE_COLORS.length
                                 ]
                               }
                             />
@@ -966,7 +965,7 @@ export function SystemReports() {
                               key={`cell-${index}`}
                               fill={
                                 CUSTOMER_SOURCE_COLORS[
-                                  index % CUSTOMER_SOURCE_COLORS.length
+                                index % CUSTOMER_SOURCE_COLORS.length
                                 ]
                               }
                             />
@@ -1069,7 +1068,7 @@ export function SystemReports() {
                               key={`cell-${index}`}
                               fill={
                                 COUNTRY_COLORS[
-                                  index % COUNTRY_COLORS.length
+                                index % COUNTRY_COLORS.length
                                 ]
                               }
                             />
@@ -1169,7 +1168,7 @@ export function SystemReports() {
                               key={`cell-${index}`}
                               fill={
                                 PAYMENT_METHOD_COLORS[
-                                  index % PAYMENT_METHOD_COLORS.length
+                                index % PAYMENT_METHOD_COLORS.length
                                 ]
                               }
                             />
@@ -1265,22 +1264,20 @@ export function SystemReports() {
                         {status.label}
                       </span>
                       <span
-                        className={`text-sm font-semibold ${
-                          textColorClasses[
-                            status.color as keyof typeof textColorClasses
-                          ]
-                        }`}
+                        className={`text-sm font-semibold ${textColorClasses[
+                          status.color as keyof typeof textColorClasses
+                        ]
+                          }`}
                       >
                         {status.count} phòng
                       </span>
                     </div>
                     <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
                       <div
-                        className={`h-full rounded-full transition-all ${
-                          colorClasses[
-                            status.color as keyof typeof colorClasses
-                          ]
-                        }`}
+                        className={`h-full rounded-full transition-all ${colorClasses[
+                          status.color as keyof typeof colorClasses
+                        ]
+                          }`}
                         style={{ width: `${percentage}%` }}
                       />
                     </div>
@@ -1324,7 +1321,7 @@ export function SystemReports() {
                   <TableRow>
                     <TableHead>Khách hàng</TableHead>
                     <TableHead>Phòng</TableHead>
-                    <TableHead className="text-right">Số tiền</TableHead>
+                    <TableHead>Số tiền</TableHead>
                     <TableHead>Phương thức</TableHead>
                     <TableHead>Trạng thái</TableHead>
                     <TableHead>Ngày</TableHead>
@@ -1336,10 +1333,10 @@ export function SystemReports() {
                       <TableCell className="font-medium">
                         {payment.bookings?.customers?.full_name || "N/A"}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="max-w-[300px] truncate block font-medium">
                         {payment.bookings?.rooms?.name || "N/A"}
                       </TableCell>
-                      <TableCell className="text-right font-semibold text-primary">
+                      <TableCell className="font-semibold text-primary">
                         {formatCurrency(payment.amount)}
                       </TableCell>
                       <TableCell>
@@ -1357,21 +1354,21 @@ export function SystemReports() {
                       <TableCell className="text-muted-foreground">
                         {payment.paid_at
                           ? new Date(payment.paid_at).toLocaleDateString(
-                              "vi-VN",
-                              {
-                                day: "2-digit",
-                                month: "2-digit",
-                                year: "numeric",
-                              }
-                            )
+                            "vi-VN",
+                            {
+                              day: "2-digit",
+                              month: "2-digit",
+                              year: "numeric",
+                            }
+                          )
                           : new Date(payment.created_at).toLocaleDateString(
-                              "vi-VN",
-                              {
-                                day: "2-digit",
-                                month: "2-digit",
-                                year: "numeric",
-                              }
-                            )}
+                            "vi-VN",
+                            {
+                              day: "2-digit",
+                              month: "2-digit",
+                              year: "numeric",
+                            }
+                          )}
                       </TableCell>
                     </TableRow>
                   ))}
