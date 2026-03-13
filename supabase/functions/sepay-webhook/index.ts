@@ -141,7 +141,7 @@ serve(async (req)=>{
     }
     // Extract booking code from content (format: YH + YYYYMMDD + 6 alphanumeric chars = 16 chars total)
     // Example: "YH20260113A1CD0F   Ma giao dich  Trace427638" -> "YH20260113A1CD0F"
-    const bookingCodeMatch = content.match(/^YH[A-Z0-9]{14}\b/);
+    const bookingCodeMatch = content.match(/\bYH[A-Z0-9]{14}\b/);
     const bookingCode = bookingCodeMatch?.[0] ?? null;
       /* ========== NO BOOKING CODE → UNMATCHED ========== */
     if (!bookingCode) {
@@ -171,10 +171,14 @@ serve(async (req)=>{
         booking_code,
         status,
         total_amount,
+        final_amount,
         check_in,
         check_out,
         customers ( full_name, email ),
-        rooms ( name )
+        booking_rooms(
+          room:room_id(name),
+          amount
+        )
       `).eq("booking_code", bookingCode).is("deleted_at", null).maybeSingle();
 
     if (bookingError) {
@@ -213,7 +217,7 @@ serve(async (req)=>{
     }
     /* ========== AMOUNT CHECK ========== */ 
     const receivedAmount = Number(transaction.transferAmount);
-    const expectedAmount = Number(booking.total_amount);
+    const expectedAmount = Number(booking.final_amount ?? booking.total_amount);
     console.log({
       receivedAmount,
       expectedAmount,
@@ -302,6 +306,11 @@ serve(async (req)=>{
       status: "success"
     }).eq("transaction_id", transactionId);
     /* ========== SEND EMAIL (NON-BLOCKING) ========== */ try {
+        const roomNames = (booking.booking_rooms ?? [])
+  .map((br: { room?: { name?: string } }) => br.room?.name)
+  .filter(Boolean);
+const room_type = roomNames.length > 0 ? roomNames.join(", ") : "-";
+
       await fetch(`${supabaseUrl}/functions/v1/send-email`, {
         method: "POST",
         headers: {
@@ -309,13 +318,17 @@ serve(async (req)=>{
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          booking_code: booking.booking_code,
-          room_name: booking.rooms?.name ?? "-",
-          customer_email: booking.customers?.email,
-          customer_name: booking.customers?.full_name ?? "-",
-          check_in: booking.check_in,
-          check_out: booking.check_out
-        })
+        booking_code: booking.booking_code,
+        room_name: room_type,
+        customer_email: booking.customers?.email,
+        customer_name: booking.customers?.full_name ?? "Quý khách",
+        check_in: booking.check_in,
+        check_out: booking.check_out,
+        total_price: booking.total_amount,
+        hotel_name: "YHotel",
+        hotline: "0787 913 388",
+        support_email: "contact@yhotel.vn",
+      }),
       });
     } catch (e) {
       console.error("Email error:", e);

@@ -143,7 +143,7 @@ export function TransferRoomDialog({
   useEffect(() => {
     if (formValues.advance_payment) {
       const currentValue = parseFormattedNumber(formValues.advance_payment);
-      const maxValue = calculatedTotalAmount || booking?.total_amount || 0;
+      const maxValue = calculatedTotalAmount || (booking?.final_amount ?? booking?.total_amount) || 0;
 
       // If current value exceeds new max, cap it
       if (currentValue > maxValue) {
@@ -154,7 +154,7 @@ export function TransferRoomDialog({
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [calculatedTotalAmount, booking?.total_amount]);
+  }, [calculatedTotalAmount, booking?.final_amount, booking?.total_amount]);
 
   const handleInputChange =
     (field: keyof TransferRoomFormState) =>
@@ -248,8 +248,8 @@ export function TransferRoomDialog({
       return;
     }
 
-    // Use calculated total amount or booking's total amount
-    const totalAmount = calculatedTotalAmount || booking.total_amount;
+    // Use calculated total amount or booking's amount to pay (final_amount ?? total_amount)
+    const totalAmount = calculatedTotalAmount || (booking.final_amount ?? booking.total_amount);
 
     // Validate advance_payment only if it hasn't been paid
     let advancePayment = booking.advance_payment; // Default to current value
@@ -393,7 +393,7 @@ export function TransferRoomDialog({
               <div className="rounded-md border bg-muted px-3 py-2">
                 <p className="text-sm font-medium">
                   {formatCurrency(
-                    calculatedTotalAmount || booking.total_amount
+                    calculatedTotalAmount || (booking.final_amount ?? booking.total_amount)
                   )}
                 </p>
                 {selectedRoom && nights > 0 && (
@@ -488,7 +488,7 @@ export function TransferRoomDialog({
                   <p className="text-xs text-muted-foreground">
                     Tối đa:{" "}
                     {formatCurrency(
-                      calculatedTotalAmount || booking.total_amount
+                      calculatedTotalAmount || (booking.final_amount ?? booking.total_amount)
                     )}
                   </p>
                 </>

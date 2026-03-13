@@ -468,6 +468,7 @@ export async function cancelBookingAction(
           check_in,
           check_out,
           total_amount,
+          final_amount,
           customer:customer_id(full_name,email),
           booking_rooms(
             room:room_id(name)
@@ -488,6 +489,7 @@ export async function cancelBookingAction(
           check_in: string;
           check_out: string;
           total_amount: number;
+          final_amount?: number | null;
           customer: BookingCustomerRow | BookingCustomerRow[] | null;
           booking_rooms: BookingRoomsJoinRow[] | null;
         };
@@ -535,7 +537,7 @@ export async function cancelBookingAction(
             showIcons: false,
             format: "full",
           }),
-          total_price: Number(bookingData.total_amount) || 0,
+          total_price: Number(bookingData.final_amount ?? bookingData.total_amount) || 0,
           hotline,
           support_email: supportEmail,
         });

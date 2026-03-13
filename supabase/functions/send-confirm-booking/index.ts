@@ -168,8 +168,10 @@ export function renderBookingConfirmationHTML(
               </table>
 
               <p>
-                📞 ${hotline}<br/>
-                📧 ${support_email}
+                📞 Hotline: ${hotline}<br/>
+                ☎️ Điện thoại: +84 7879 13388<br/>
+                💬 Zalo/whatsapp: +84 786 456 469<br/>
+                📧 Email: ${support_email}
               </p>
 
               <p>
@@ -227,6 +229,7 @@ Deno.serve(async (req: Request) => {
         check_in,
         check_out,
         total_amount,
+        final_amount,
         customer:customer_id(email, full_name),
         booking_rooms(
           room:room_id(name),
@@ -258,7 +261,7 @@ const room_type = roomNames.length > 0 ? roomNames.join(", ") : "-";
       room_type: room_type,
       check_in: formatDateTimePretty(booking.check_in),
       check_out: formatDateTimePretty(booking.check_out),
-      total_price: booking.total_amount
+      total_price: booking.final_amount ?? booking.total_amount
     });
 
     const resend = await fetch("https://api.resend.com/emails", {
