@@ -324,7 +324,7 @@ const room_type = roomNames.length > 0 ? roomNames.join(", ") : "-";
         customer_name: booking.customers?.full_name ?? "Quý khách",
         check_in: booking.check_in,
         check_out: booking.check_out,
-        total_price: booking.total_amount,
+        total_price: booking.final_amount,
         hotel_name: "YHotel",
         hotline: "0787 913 388",
         support_email: "contact@yhotel.vn",
