@@ -38,7 +38,8 @@ import type { Customer, Room } from "@/lib/types";
 import { PAYMENT_METHOD, PAYMENT_TYPE, paymentMethodLabels } from "@/lib/constants";
 import {
   formatCurrency,
-  getDateISO,
+  getCheckInDateISO,
+  getCheckOutDateISO,
   calculateNightsValue,
   translateBookingError,
   formatNumberWithSeparators,
@@ -214,14 +215,22 @@ export function CreateBookingDialog({
     });
   }, [debouncedSearch]);
 
-  // Convert dates to ISO strings with default times
+  // Cùng ngày: check-in 00:00, check-out 12:00 (1 đêm). Nhiều ngày: 14:00 / 12:00
   const checkInISO = useMemo(
-    () => getDateISO(formValues.check_in_date, false),
-    [formValues.check_in_date]
+    () =>
+      getCheckInDateISO(
+        formValues.check_in_date,
+        formValues.check_out_date
+      ),
+    [formValues.check_in_date, formValues.check_out_date]
   );
   const checkOutISO = useMemo(
-    () => getDateISO(formValues.check_out_date, true),
-    [formValues.check_out_date]
+    () =>
+      getCheckOutDateISO(
+        formValues.check_in_date,
+        formValues.check_out_date
+      ),
+    [formValues.check_in_date, formValues.check_out_date]
   );
 
   const nights = useMemo(
@@ -378,9 +387,15 @@ export function CreateBookingDialog({
     setError(null);
 
     try {
-      // Convert dates to ISO strings with default times (needed for validation)
-      const checkInISO = getDateISO(formValues.check_in_date, false);
-      const checkOutISO = getDateISO(formValues.check_out_date, true);
+      // Cùng ngày: check-in 00:00, check-out 12:00
+      const checkInISO = getCheckInDateISO(
+        formValues.check_in_date,
+        formValues.check_out_date
+      );
+      const checkOutISO = getCheckOutDateISO(
+        formValues.check_in_date,
+        formValues.check_out_date
+      );
 
       if (!checkInISO || !checkOutISO) {
         setError("📅 Định dạng ngày tháng không hợp lệ. Vui lòng chọn lại.");
@@ -646,8 +661,12 @@ export function CreateBookingDialog({
                     }
                     onSelect={handleDateSelect("check_out_date")}
                     disabled={(date) => {
+                      if (!formValues.check_in_date) return false;
                       const checkIn = parseISO(formValues.check_in_date);
-                      return date <= checkIn;
+                      checkIn.setHours(0, 0, 0, 0);
+                      const d = new Date(date);
+                      d.setHours(0, 0, 0, 0);
+                      return d.getTime() < checkIn.getTime();
                     }}
                   />
                 </PopoverContent>

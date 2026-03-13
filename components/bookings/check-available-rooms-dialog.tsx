@@ -13,7 +13,12 @@ import {
 import { Label } from "@/components/ui/label";
 import { getAvailableRoomsAction } from "@/actions/rooms";
 import type { Room } from "@/lib/types";
-import { formatCurrency, formatDateOnly, getDateISO } from "@/lib/functions";
+import {
+  formatCurrency,
+  formatDateOnly,
+  getCheckInDateISO,
+  getCheckOutDateISO,
+} from "@/lib/functions";
 import { roomTypeLabels } from "@/lib/constants";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -48,16 +53,19 @@ export function CheckAvailableRoomsDialog({
       return;
     }
 
-    const checkInISO = getDateISO(checkInDate, false);
-    const checkOutISO = getDateISO(checkOutDate, true);
+    const checkInISO = getCheckInDateISO(checkInDate, checkOutDate);
+    const checkOutISO = getCheckOutDateISO(checkInDate, checkOutDate);
 
     if (!checkInISO || !checkOutISO) {
       toast.error("Ngày không hợp lệ");
       return;
     }
 
-    if (new Date(checkOutISO) <= new Date(checkInISO)) {
-      toast.error("Ngày check-out phải sau ngày check-in");
+    // Same-day allowed (1 night); only reject if check-out date is before check-in date
+    const inPart = checkInDate.slice(0, 10);
+    const outPart = checkOutDate.slice(0, 10);
+    if (outPart < inPart) {
+      toast.error("Ngày check-out phải sau hoặc bằng ngày check-in");
       return;
     }
 

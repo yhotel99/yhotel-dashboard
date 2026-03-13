@@ -24,7 +24,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  getDateISO,
+  getCheckInDateISO,
+  getCheckOutDateISO,
   calculateNightsValue,
   formatCurrency,
   formatDisplayDate,
@@ -145,14 +146,20 @@ export function QuickBookingDialog({
       }));
     };
 
-  // Calculate number of nights and total amount
+  // Calculate number of nights and total amount (same day = 1 night, check-out 12h)
   const nightsAndAmount = useMemo(() => {
     if (!formValues.check_in_date || !formValues.check_out_date) {
       return { nights: 0, totalAmount: 0 };
     }
 
-    const checkInISO = getDateISO(formValues.check_in_date, false);
-    const checkOutISO = getDateISO(formValues.check_out_date, true);
+    const checkInISO = getCheckInDateISO(
+      formValues.check_in_date,
+      formValues.check_out_date
+    );
+    const checkOutISO = getCheckOutDateISO(
+      formValues.check_in_date,
+      formValues.check_out_date
+    );
 
     if (!checkInISO || !checkOutISO) {
       return { nights: 0, totalAmount: 0 };
@@ -177,9 +184,15 @@ export function QuickBookingDialog({
       return;
     }
 
-    // Convert dates to ISO strings with default times
-    const checkInISO = getDateISO(formValues.check_in_date, false);
-    const checkOutISO = getDateISO(formValues.check_out_date, true);
+    // Cùng ngày: check-in 00:00, check-out 12:00
+    const checkInISO = getCheckInDateISO(
+      formValues.check_in_date,
+      formValues.check_out_date
+    );
+    const checkOutISO = getCheckOutDateISO(
+      formValues.check_in_date,
+      formValues.check_out_date
+    );
 
     if (!checkInISO || !checkOutISO) {
       setError("Vui lòng nhập đầy đủ ngày check-in và check-out.");
@@ -356,7 +369,14 @@ export function QuickBookingDialog({
                       : undefined
                   }
                   onSelect={handleDateSelect("check_out_date")}
-                  disabled={(date) => date < new Date(formValues.check_in_date)}
+                  disabled={(date) => {
+                    if (!formValues.check_in_date) return false;
+                    const checkIn = parseISO(formValues.check_in_date);
+                    checkIn.setHours(0, 0, 0, 0);
+                    const d = new Date(date);
+                    d.setHours(0, 0, 0, 0);
+                    return d.getTime() < checkIn.getTime();
+                  }}
                 />
               </PopoverContent>
             </Popover>

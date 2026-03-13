@@ -18,7 +18,8 @@ import { useRooms } from "@/hooks/use-rooms";
 import {
   formatCurrency,
   formatDateOnly,
-  getDateISO,
+  getCheckInDateISO,
+  getCheckOutDateISO,
   formatDateForInput,
   formatNumberWithSeparators,
   parseFormattedNumber,
@@ -137,8 +138,12 @@ export function EditBookingDialog({
   // Get booking dates and room info for display
   const checkInDate = booking ? formatDateForInput(booking.check_in) : "";
   const checkOutDate = booking ? formatDateForInput(booking.check_out) : "";
-  const checkInISO = booking ? getDateISO(checkInDate, false) : null;
-  const checkOutISO = booking ? getDateISO(checkOutDate, true) : null;
+  const checkInISO = booking
+    ? getCheckInDateISO(checkInDate, checkOutDate)
+    : null;
+  const checkOutISO = booking
+    ? getCheckOutDateISO(checkInDate, checkOutDate)
+    : null;
   const nights = booking
     ? calculateNightsValue(checkInISO || "", checkOutISO || "")
     : 0;

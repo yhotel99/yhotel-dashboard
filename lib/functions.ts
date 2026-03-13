@@ -109,10 +109,24 @@ export function getDateTimeISO(date: string, time: string): string | null {
  */
 
 /**
- * Calculate number of nights between check-in and check-out dates
+ * Get date part YYYY-MM-DD from ISO or YYYY-MM-DD string (local date, no TZ shift)
+ */
+function toDatePart(isoOrDate: string): string {
+  if (!isoOrDate) return "";
+  const d = new Date(isoOrDate);
+  if (isNaN(d.getTime())) return "";
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/**
+ * Calculate number of nights between check-in and check-out dates.
+ * Same calendar day (check-in and check-out on the same day) counts as 1 night.
  * @param checkIn ISO date string
  * @param checkOut ISO date string
- * @returns Number of nights (rounded up)
+ * @returns Number of nights (rounded up); same day = 1
  */
 export function calculateNightsValue(
   checkIn: string,
@@ -121,14 +135,14 @@ export function calculateNightsValue(
   if (!checkIn || !checkOut) return 0;
   const checkInDate = new Date(checkIn);
   const checkOutDate = new Date(checkOut);
-  if (
-    isNaN(checkInDate.getTime()) ||
-    isNaN(checkOutDate.getTime()) ||
-    checkOutDate <= checkInDate
-  ) {
+  if (isNaN(checkInDate.getTime()) || isNaN(checkOutDate.getTime())) {
     return 0;
   }
-  // Tính số đêm = ceil((check_out - check_in) / 1 ngày)
+  const inPart = toDatePart(checkIn);
+  const outPart = toDatePart(checkOut);
+  // Cùng ngày → tính 1 đêm (day use)
+  if (inPart && outPart && inPart === outPart) return 1;
+  if (checkOutDate <= checkInDate) return 0;
   const diffInMs = checkOutDate.getTime() - checkInDate.getTime();
   const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
   return Math.ceil(diffInDays);
@@ -168,6 +182,37 @@ export function getDateISO(
   const dateObj = new Date(dateTimeString);
   if (isNaN(dateObj.getTime())) return null;
   return dateObj.toISOString();
+}
+
+/**
+ * Check-in ISO for booking: cùng ngày (day use) dùng 00:00 để khách có thể vào
+ * sớm (vd 2h sáng) và trả phòng 12:00; nhiều ngày dùng 14:00. Dùng khi build payload.
+ */
+export function getCheckInDateISO(
+  checkInDate: string,
+  checkOutDate: string
+): string | null {
+  if (!checkInDate) return null;
+  const sameDay =
+    checkInDate &&
+    checkOutDate &&
+    toDatePart(checkInDate) === toDatePart(checkOutDate);
+  const time = sameDay ? "00:00" : "14:00";
+  const dateTimeString = `${checkInDate} ${time}`;
+  const dateObj = new Date(dateTimeString);
+  if (isNaN(dateObj.getTime())) return null;
+  return dateObj.toISOString();
+}
+
+/**
+ * Check-out ISO for booking: luôn 12:00. Cùng ngày thì check_in dùng getCheckInDateISO
+ * (00:00) nên 12:00 vẫn > check_in, DB hợp lệ.
+ */
+export function getCheckOutDateISO(
+  _checkInDate: string,
+  checkOutDate: string
+): string | null {
+  return getDateISO(checkOutDate, true);
 }
 
 /**

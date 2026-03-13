@@ -44,7 +44,8 @@ import {
 } from "@/lib/constants";
 import {
   formatCurrency,
-  getDateISO,
+  getCheckInDateISO,
+  getCheckOutDateISO,
   calculateNightsValue,
   translateBookingError,
   formatNumberWithSeparators,
@@ -102,12 +103,12 @@ export function CreateMultiBookingDialog({
   const debouncedSearch = useDebounce(customerSearch, 300);
 
   const checkInISO = useMemo(
-    () => getDateISO(checkInDate, false),
-    [checkInDate]
+    () => getCheckInDateISO(checkInDate, checkOutDate),
+    [checkInDate, checkOutDate]
   );
   const checkOutISO = useMemo(
-    () => getDateISO(checkOutDate, true),
-    [checkOutDate]
+    () => getCheckOutDateISO(checkInDate, checkOutDate),
+    [checkInDate, checkOutDate]
   );
   const nights = useMemo(
     () => calculateNightsValue(checkInISO || "", checkOutISO || ""),
@@ -390,9 +391,14 @@ export function CreateMultiBookingDialog({
                     mode="single"
                     selected={checkOutDate ? parseISO(checkOutDate) : undefined}
                     onSelect={handleDateSelect("check_out")}
-                    disabled={(d) =>
-                      !checkInDate || d <= parseISO(checkInDate)
-                    }
+                    disabled={(d) => {
+                      if (!checkInDate) return false;
+                      const checkIn = parseISO(checkInDate);
+                      checkIn.setHours(0, 0, 0, 0);
+                      const day = new Date(d);
+                      day.setHours(0, 0, 0, 0);
+                      return day.getTime() < checkIn.getTime();
+                    }}
                   />
                 </PopoverContent>
               </Popover>

@@ -24,10 +24,9 @@ import { useRooms } from "@/hooks/use-rooms";
 import { checkAdvancePaymentStatusAction } from "@/actions/payments";
 import {
   formatCurrency,
-  getDateISO,
+  getCheckInDateISO,
+  getCheckOutDateISO,
   formatDateForInput,
-} from "@/lib/functions";
-import {
   calculateNightsValue,
   translateBookingError,
   formatNumberWithSeparators,
@@ -117,9 +116,15 @@ export function TransferRoomDialog({
     }
   }, [open, booking]);
 
-  // Convert dates to ISO strings with default times
-  const checkInISO = getDateISO(formValues.check_in_date, false);
-  const checkOutISO = getDateISO(formValues.check_out_date, true);
+  // Cùng ngày: check-in 00:00, check-out 12:00
+  const checkInISO = getCheckInDateISO(
+    formValues.check_in_date,
+    formValues.check_out_date
+  );
+  const checkOutISO = getCheckOutDateISO(
+    formValues.check_in_date,
+    formValues.check_out_date
+  );
 
   const nights = calculateNightsValue(checkInISO || "", checkOutISO || "");
 
@@ -220,9 +225,15 @@ export function TransferRoomDialog({
       return;
     }
 
-    // Convert dates to ISO strings with default times
-    const checkInISO = getDateISO(formValues.check_in_date, false);
-    const checkOutISO = getDateISO(formValues.check_out_date, true);
+    // Cùng ngày: check-in 00:00, check-out 12:00
+    const checkInISO = getCheckInDateISO(
+      formValues.check_in_date,
+      formValues.check_out_date
+    );
+    const checkOutISO = getCheckOutDateISO(
+      formValues.check_in_date,
+      formValues.check_out_date
+    );
 
     if (!checkInISO || !checkOutISO) {
       setError("Vui lòng nhập đầy đủ ngày check-in và check-out.");
