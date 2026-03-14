@@ -230,16 +230,30 @@ export type BookingRecord = {
   booking_code: string;
   // Relations (from join queries)
   customers?: {
+    id: string;
     full_name: string;
     phone: string | null;
+    email?: string | null;
   } | null;
   rooms?: {
+    id: string;
     name: string;
+    room_number?: string | null;
+    floor_number?: number | null;
     items?: Array<{
       id: string;
       name: string;
     }>;
   } | null;
+  booking_rooms?: Array<{
+    room_id: string;
+    rooms: {
+      id: string;
+      name: string;
+      room_number?: string | null;
+      floor_number?: number | null;
+    };
+  }> | null;
 };
 
 // Booking input type for create/update operations

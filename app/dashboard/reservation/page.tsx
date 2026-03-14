@@ -9,10 +9,12 @@ import {
   IconLayoutGrid,
   IconList,
   IconRefresh,
+  IconClock24,
 } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
+import Link from "next/link";
 import {
   roomTypeLabels,
   type RoomMapStatus,
@@ -151,6 +153,16 @@ export default function ReservationPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            asChild
+            className="gap-2"
+          >
+            <Link href="/dashboard/reservation/kanban">
+              <IconClock24 className="size-4" />
+              Kanban
+            </Link>
+          </Button>
           <Button
             variant={viewMode === "grid" ? "default" : "outline"}
             size="icon"

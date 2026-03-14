@@ -53,11 +53,17 @@ export function BookingDetailDialog({
 
   // Fetch room data separately for all rooms in booking
   const roomIds = booking?.rooms?.items?.map(item => item.id) ?? [];
+  
+  // For multi-room bookings, get room IDs from booking_rooms
+  const multiRoomIds = booking?.booking_rooms?.map(br => br.room_id) ?? [];
+  
+  // Combine both sources of room IDs
+  const allRoomIds = [...roomIds, ...multiRoomIds].filter((id, index, arr) => arr.indexOf(id) === index);
 
   const { data: roomsData, isLoading: isRoomLoading } = useSWR<Room[]>(
-    open && roomIds.length > 0 ? ["rooms", ...roomIds] : null,
+    open && allRoomIds.length > 0 ? ["rooms", ...allRoomIds] : null,
     async () => {
-      const result = await getRoomsByIds(roomIds);
+      const result = await getRoomsByIds(allRoomIds);
       if (result.ok) {
         return result.data;
       }
@@ -130,7 +136,7 @@ export function BookingDetailDialog({
             <div className="space-y-3">
               <h3 className="text-lg font-semibold flex items-center gap-2">
                 <MapPinIcon className="size-5" />
-                Thông tin phòng {roomIds.length > 1 && `(${roomIds.length} phòng)`}
+                Thông tin phòng {(allRoomIds.length > 1 || (booking?.booking_rooms && booking.booking_rooms.length > 1)) && `(${Math.max(allRoomIds.length, booking?.booking_rooms?.length || 0)} phòng)`}
               </h3>
               {isRoomLoading ? (
                 <div className="pl-7 text-sm text-muted-foreground">
@@ -169,16 +175,53 @@ export function BookingDetailDialog({
                     </div>
                   ))}
                 </div>
-              ) : (
+              ) : booking?.booking_rooms && booking.booking_rooms.length > 0 ? (
+                <div className="pl-7 space-y-4">
+                  {booking.booking_rooms.map((br, index) => (
+                    <div key={br.room_id} className="space-y-2">
+                      {booking.booking_rooms && booking.booking_rooms.length > 1 && (
+                        <p className="text-sm font-semibold text-muted-foreground">
+                          Phòng {index + 1}
+                        </p>
+                      )}
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Tên phòng</p>
+                          <p className="font-medium">{br.rooms.name}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Số phòng</p>
+                          <p className="font-medium">{br.rooms.room_number || "-"}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Số tầng</p>
+                          <p className="font-medium">
+                            {br.rooms.floor_number !== null && br.rooms.floor_number !== undefined
+                              ? `Tầng ${br.rooms.floor_number}`
+                              : "-"}
+                          </p>
+                        </div>
+                      </div>
+                      {index < (booking.booking_rooms?.length || 0) - 1 && (
+                        <Separator className="mt-3" />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : booking?.rooms?.items && booking.rooms.items.length > 0 ? (
                 <div className="pl-7">
                   <p className="text-sm text-muted-foreground">Danh sách phòng</p>
                   <div className="space-y-1 mt-1">
-                    {booking.rooms?.items?.map((item, index) => (
+                    {booking.rooms.items.map((item, index) => (
                       <p key={item.id} className="font-medium">
                         {index + 1}. {item.name}
                       </p>
                     ))}
                   </div>
+                </div>
+              ) : (
+                <div className="pl-7">
+                  <p className="text-sm text-muted-foreground">Chưa có thông tin phòng</p>
                 </div>
               )}
             </div>
