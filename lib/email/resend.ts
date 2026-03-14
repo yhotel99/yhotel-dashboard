@@ -13,6 +13,6 @@ export function getResendClient(): Resend | null {
 }
 
 export function getResendFromAddress(): string {
-  return process.env.RESEND_FROM || "YHotel <noreply@yhotel.vn>";
+  return process.env.RESEND_FROM || "YHotel <hello@yhotel.vn>";
 }
 

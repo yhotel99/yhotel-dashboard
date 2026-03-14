@@ -271,7 +271,7 @@ const room_type = roomNames.length > 0 ? roomNames.join(", ") : "-";
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "YHotel Booking <noreply@yhotel.vn>",
+        from: "YHotel Booking <hello@yhotel.vn>",
         to: [booking.customer?.email],
         subject: `Xác nhận đặt phòng – ${booking.booking_code}`,
         html,

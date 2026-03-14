@@ -175,7 +175,7 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "YHotel Booking <noreply@yhotel.vn>",
+        from: "YHotel Booking <hello@yhotel.vn>",
         to: [payload.customer_email],
         subject: `Xác nhận đặt phòng – ${payload.booking_code}`,
         html,
