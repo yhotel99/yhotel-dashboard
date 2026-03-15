@@ -276,9 +276,17 @@ export function RoomCard({ room, onStatusChange }: RoomCardProps) {
           )}
         </div>
 
-        {/* Room number - lớn và đậm */}
+        {/* Số phòng và tên phòng */}
         <div className="grid">
-          <h3 className="text-2xl font-bold tracking-tight">{room.name}</h3>
+          <h3 className="text-2xl font-bold tracking-tight">
+            {room.room_number ? (
+              <>
+                <span className="text-foreground">P.{room.room_number}</span>
+                {room.name && " · "}
+              </>
+            ) : null}
+            {room.name}
+          </h3>
         </div>
 
         {/* Room type */}

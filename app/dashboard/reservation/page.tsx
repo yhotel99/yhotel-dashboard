@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { useReservation } from "@/hooks/use-reservation";
+import { useUpcomingCheckins } from "@/hooks/use-upcoming-checkins";
 import { RoomCard } from "@/components/rooms/room-card";
 import {
   IconSearch,
@@ -28,6 +29,7 @@ const statusFilters: Array<{
   status: RoomMapStatus | "all";
   label: string;
   color: string;
+  title?: string;
   count?: number;
 }> = [
   { status: "all", label: "Tất cả", color: "bg-gray-200" },
@@ -40,6 +42,7 @@ const statusFilters: Array<{
     status: ROOM_MAP_STATUS.UPCOMING_CHECKIN,
     label: roomMapStatusLabels[ROOM_MAP_STATUS.UPCOMING_CHECKIN],
     color: roomMapStatusColors[ROOM_MAP_STATUS.UPCOMING_CHECKIN],
+    title: "Phòng có khách sắp check-in: trong 2 tiếng tới hoặc các ngày khác",
   },
   {
     status: ROOM_MAP_STATUS.OCCUPIED,
@@ -80,17 +83,61 @@ function groupRoomsByFloor(rooms: RoomWithBooking[]) {
   }));
 }
 
+type UpcomingBooking = {
+  id: string;
+  check_in: string;
+  check_out: string;
+  status: string;
+  rooms?: { id: string } | null;
+  booking_rooms?: Array<{ rooms: { id: string } }> | null;
+};
+
+// Map roomId -> currentBooking từ danh sách sắp check-in (để thẻ hiển thị check-in/check-out/status)
+function getRoomIdToUpcomingBooking(
+  bookings: UpcomingBooking[]
+): Map<string, { id: string; check_in: string; check_out: string; status: string }> {
+  const map = new Map<string, { id: string; check_in: string; check_out: string; status: string }>();
+  for (const b of bookings) {
+    const info = { id: b.id, check_in: b.check_in, check_out: b.check_out, status: b.status };
+    if (b.rooms?.id) map.set(b.rooms.id, info);
+    if (b.booking_rooms) for (const br of b.booking_rooms) if (br.rooms?.id) map.set(br.rooms.id, info);
+  }
+  return map;
+}
+
 export default function ReservationPage() {
   const { rooms, isLoading, error, refetch } = useReservation();
+  const { bookings: upcomingBookings } = useUpcomingCheckins({ search: "" });
   const [search, setSearch] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<RoomMapStatus | "all">(
     "all"
   );
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
+  // Gộp "Sắp nhận" từ dữ liệu bookings: phòng vacant có booking sắp check-in → upcoming_checkin + currentBooking để thẻ hiện check-in/check-out/status
+  const roomsWithUpcoming = useMemo(() => {
+    const roomIdToBooking = getRoomIdToUpcomingBooking(upcomingBookings);
+    if (roomIdToBooking.size === 0) return rooms;
+    return rooms.map((room) => {
+      if (room.mapStatus !== "vacant") return room;
+      const booking = roomIdToBooking.get(room.id);
+      if (!booking) return room;
+      return {
+        ...room,
+        mapStatus: "upcoming_checkin" as const,
+        currentBooking: {
+          id: booking.id,
+          check_in: booking.check_in,
+          check_out: booking.check_out,
+          status: booking.status,
+        },
+      };
+    });
+  }, [rooms, upcomingBookings]);
+
   // Filter rooms
   const filteredRooms = useMemo(() => {
-    let filtered = rooms;
+    let filtered = roomsWithUpcoming;
 
     // Filter by status
     if (selectedStatus !== "all") {
@@ -110,7 +157,7 @@ export default function ReservationPage() {
     }
 
     return filtered;
-  }, [rooms, selectedStatus, search]);
+  }, [roomsWithUpcoming, selectedStatus, search]);
 
   // Group by floor
   const groupedRooms = useMemo(() => {
@@ -127,12 +174,12 @@ export default function ReservationPage() {
       overdue_checkout: 0,
     };
 
-    rooms.forEach((room) => {
+    roomsWithUpcoming.forEach((room) => {
       counts[room.mapStatus]++;
     });
 
     return counts;
-  }, [rooms]);
+  }, [roomsWithUpcoming]);
 
   if (error) {
     return (
@@ -221,6 +268,7 @@ export default function ReservationPage() {
                     filter.status === "all" ? "all" : filter.status
                   )
                 }
+                title={filter.title}
                 className={cn(
                   "flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-colors",
                   selectedStatus === filter.status
@@ -234,6 +282,11 @@ export default function ReservationPage() {
             );
           })}
         </div>
+        {selectedStatus === ROOM_MAP_STATUS.UPCOMING_CHECKIN && (
+          <p className="text-xs text-muted-foreground">
+            Đang hiển thị các phòng sắp nhận — <strong>trong 2 tiếng</strong> tới hoặc <strong>các ngày khác</strong> (theo lịch check-in).
+          </p>
+        )}
       </div>
 
       {/* Room Grid */}

@@ -14,7 +14,14 @@ import { formatDateOnly, formatCurrency } from "@/lib/functions";
 import { roomTypeLabels } from "@/lib/constants";
 import { IconHome, IconCalendar, IconCurrencyDong } from "@tabler/icons-react";
 import { Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { AvailableRoomData } from "@/hooks/use-available-rooms";
+
+const CARD_TINT_CLASSES = [
+  "bg-emerald-50/80 dark:bg-emerald-950/30 border-emerald-200/60 dark:border-emerald-800/50",
+  "bg-sky-50/80 dark:bg-sky-950/30 border-sky-200/60 dark:border-sky-800/50",
+  "bg-violet-50/80 dark:bg-violet-950/30 border-violet-200/60 dark:border-violet-800/50",
+] as const;
 
 interface AvailableRoomsDialogProps {
   open: boolean;
@@ -61,12 +68,13 @@ export function AvailableRoomsDialog({
             </div>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {availableRooms.map((roomData) => {
+              {availableRooms.map((roomData, index) => {
                 const { room, availablePeriods } = roomData;
                 const totalDays = availablePeriods.reduce((sum, period) => sum + period.days, 0);
+                const tintClass = CARD_TINT_CLASSES[index % CARD_TINT_CLASSES.length];
 
                 return (
-                  <Card key={room.id} className="p-3">
+                  <Card key={room.id} className={cn("p-3 border", tintClass)}>
                     <div className="space-y-2">
                       {/* Room Header - compact */}
                       <div className="flex items-start justify-between gap-2">

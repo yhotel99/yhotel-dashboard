@@ -27,8 +27,11 @@ function getResourceFromPath(pathname: string): string | null {
     return PATH_TO_RESOURCE[pathname];
   }
 
-  // Check if pathname starts with any of the paths (for nested routes)
-  for (const [path, resource] of Object.entries(PATH_TO_RESOURCE)) {
+  // Match longest path prefix first (e.g. /dashboard/reservation/kanban → reservations, not dashboard)
+  const sortedPaths = Object.entries(PATH_TO_RESOURCE).sort(
+    (a, b) => b[0].length - a[0].length
+  );
+  for (const [path, resource] of sortedPaths) {
     if (pathname.startsWith(path + "/") || pathname === path) {
       return resource;
     }
