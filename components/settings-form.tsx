@@ -33,6 +33,8 @@ import { Separator } from "@/components/ui/separator";
 import { ImageListSelector } from "@/components/image-selector";
 import type { ImageValue } from "@/lib/types";
 import { IconPlus, IconTrash } from "@tabler/icons-react";
+import { DEFAULT_WEEKDAY_RATES } from "@/lib/pricing";
+import type { WeekdayRates } from "@/lib/types";
 
 const settingsSchema = z.object({
   site_title: z.string().min(1, "Tiêu đề không được để trống"),
@@ -64,6 +66,18 @@ const settingsSchema = z.object({
     .transform((val) => (val === "" ? null : val)),
   social_media_links: z
     .record(z.string(), z.string().url("URL không hợp lệ"))
+    .nullable()
+    .optional(),
+  pricing_weekday_rates: z
+    .tuple([
+      z.number().min(0).max(100),
+      z.number().min(0).max(100),
+      z.number().min(0).max(100),
+      z.number().min(0).max(100),
+      z.number().min(0).max(100),
+      z.number().min(0).max(100),
+      z.number().min(0).max(100),
+    ])
     .nullable()
     .optional(),
   bank_account_number: z
@@ -103,6 +117,10 @@ export function SettingsForm({ initialData }: SettingsFormProps) {
       site_title: initialData?.site_title || "Dashboard Yhotel",
       site_description: initialData?.site_description || "Dashboard for Yhotel",
       hero_images: initialData?.hero_images || [],
+      pricing_weekday_rates:
+        (initialData?.pricing_weekday_rates?.length === 7
+          ? (initialData.pricing_weekday_rates as WeekdayRates)
+          : DEFAULT_WEEKDAY_RATES) ?? DEFAULT_WEEKDAY_RATES,
       contact_email: initialData?.contact_email || null,
       contact_phone: initialData?.contact_phone || null,
       contact_address: initialData?.contact_address || null,
@@ -123,6 +141,10 @@ export function SettingsForm({ initialData }: SettingsFormProps) {
         site_description:
           initialData.site_description || "Dashboard for Yhotel",
         hero_images: initialData.hero_images || [],
+        pricing_weekday_rates:
+          (initialData.pricing_weekday_rates?.length === 7
+            ? (initialData.pricing_weekday_rates as WeekdayRates)
+            : DEFAULT_WEEKDAY_RATES) ?? DEFAULT_WEEKDAY_RATES,
         contact_email: initialData.contact_email || null,
         contact_phone: initialData.contact_phone || null,
         contact_address: initialData.contact_address || null,
@@ -198,6 +220,7 @@ export function SettingsForm({ initialData }: SettingsFormProps) {
       const cleanedData = {
         ...data,
         hero_images: heroImages.length > 0 ? heroImages : null,
+        pricing_weekday_rates: data.pricing_weekday_rates ?? DEFAULT_WEEKDAY_RATES,
         contact_email: data.contact_email || null,
         contact_phone: data.contact_phone || null,
         contact_address: data.contact_address || null,
@@ -249,9 +272,12 @@ export function SettingsForm({ initialData }: SettingsFormProps) {
             className="space-y-6"
           >
             <Tabs defaultValue="general" className="w-full">
-              <TabsList className="grid w-full grid-cols-5 h-full p-1">
+              <TabsList className="grid w-full grid-cols-6 h-full p-1">
                 <TabsTrigger className="p-2" value="general">
                   Chung
+                </TabsTrigger>
+                <TabsTrigger className="p-2" value="pricing">
+                  Giá
                 </TabsTrigger>
                 <TabsTrigger className="p-2" value="contact">
                   Liên hệ
@@ -317,6 +343,148 @@ export function SettingsForm({ initialData }: SettingsFormProps) {
                     <FormDescription>
                       Chọn nhiều ảnh hero để hiển thị trên trang chủ của client
                     </FormDescription>
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="pricing" className="space-y-4 mt-6">
+                <div className="space-y-4">
+                  <div className="rounded-lg border p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="font-semibold">Tăng giá theo thứ</div>
+                        <p className="text-sm text-muted-foreground">
+                          Áp dụng trên <strong>giá phòng gốc</strong> khi tính tổng tiền booking.
+                          Mặc định: Thứ 6 +15%, Thứ 7 +20%, Chủ nhật–Thứ 5: +0%.
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            form.setValue("pricing_weekday_rates", DEFAULT_WEEKDAY_RATES);
+                          }}
+                        >
+                          Đặt lại mặc định
+                        </Button>
+                      </div>
+                    </div>
+
+                    <FormField
+                      control={form.control}
+                      name="pricing_weekday_rates"
+                      render={({ field }) => {
+                        const value = Array.isArray(field.value) && field.value.length === 7
+                          ? field.value
+                          : DEFAULT_WEEKDAY_RATES;
+
+                        const setAll = (percent: number) => {
+                          const next = Array.from({ length: 7 }).map(() => percent);
+                          field.onChange(next);
+                        };
+
+                        const setOne = (idx: number, percent: number) => {
+                          const next = [...value];
+                          next[idx] = percent;
+                          field.onChange(next);
+                        };
+
+                        const days = [
+                          "Chủ nhật",
+                          "Thứ 2",
+                          "Thứ 3",
+                          "Thứ 4",
+                          "Thứ 5",
+                          "Thứ 6",
+                          "Thứ 7",
+                        ];
+
+                        return (
+                          <FormItem className="mt-4">
+                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+                              {days.map((label, idx) => {
+                                const isWeekend = idx === 5 || idx === 6;
+                                return (
+                                  <div
+                                    key={label}
+                                    className={[
+                                      "flex flex-col items-center gap-2 rounded-xl border p-3",
+                                      isWeekend ? "border-primary/20 bg-primary/5" : "border-muted",
+                                    ].join(" ")}
+                                  >
+                                    <span
+                                      className={[
+                                        "text-[11px] font-semibold",
+                                        isWeekend ? "text-primary" : "text-muted-foreground",
+                                      ].join(" ")}
+                                    >
+                                      {label}
+                                    </span>
+                                    <div className="flex items-center gap-1">
+                                      <Input
+                                        type="number"
+                                        min={0}
+                                        max={100}
+                                        step={1}
+                                        className="w-20 text-center font-semibold"
+                                        value={String(value[idx] ?? 0)}
+                                        onChange={(e) =>
+                                          setOne(idx, Number(e.target.value || 0))
+                                        }
+                                      />
+                                      <span className="text-sm text-muted-foreground">%</span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+
+                            <div className="mt-4 rounded-lg border border-rose-200 bg-rose-50/40 p-4">
+                              <div className="flex items-center justify-between gap-3">
+                                <div>
+                                  <div className="font-semibold text-rose-700">
+                                    Thiết lập nhanh Lễ / Tết
+                                  </div>
+                                  <p className="text-sm text-rose-700/80">
+                                    Bấm 1 lần để set <strong>tất cả các ngày</strong> lên +20% / +25% / +30%.
+                                  </p>
+                                </div>
+                                <div className="flex gap-2">
+                                  <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => setAll(20)}
+                                  >
+                                    +20%
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => setAll(25)}
+                                  >
+                                    +25%
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => setAll(30)}
+                                  >
+                                    +30%
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+
+                            <FormMessage />
+                          </FormItem>
+                        );
+                      }}
+                    />
                   </div>
                 </div>
               </TabsContent>

@@ -654,6 +654,12 @@ export type Settings = {
   bank_name: string | null;
   bank_bin: string | null;
   bank_account_owner: string | null;
+  /**
+   * Weekday-based price increase rates (percent) applied on top of room base price.
+   * Index: 0=Sun ... 6=Sat (JS Date.getDay()).
+   * Example default: [0,0,0,0,0,15,20] => Fri +15%, Sat +20%.
+   */
+  pricing_weekday_rates: number[] | null;
   created_at: string;
   updated_at: string;
 };
@@ -672,6 +678,43 @@ export type SettingsInput = {
   bank_name?: string | null;
   bank_bin?: string | null;
   bank_account_owner?: string | null;
+  pricing_weekday_rates?: number[] | null;
+};
+
+// ============================================================================
+// Pricing Types
+// ============================================================================
+
+/**
+ * Weekday-based increase rates (percent).
+ * Index: 0=Sun ... 6=Sat (JS Date.getDay()).
+ *
+ * Index meaning:
+ * - 0: Sunday
+ * - 1: Monday
+ * - 2: Tuesday
+ * - 3: Wednesday
+ * - 4: Thursday
+ * - 5: Friday
+ * - 6: Saturday
+ *
+ * Example default: [0,0,0,0,0,15,20]
+ */
+export type WeekdayRates = [
+  number,
+  number,
+  number,
+  number,
+  number,
+  number,
+  number
+];
+
+export type DailyPricingBreakdownItem = {
+  date: string; // YYYY-MM-DD
+  weekday: number; // 0..6
+  percent: number;
+  price: number;
 };
 
 

@@ -31,6 +31,7 @@ import { Label } from "@/components/ui/label";
 import { IconSearch, IconPlus } from "@tabler/icons-react";
 import type { BookingInput, PaymentMethod } from "@/lib/types";
 import { useRooms } from "@/hooks/use-rooms";
+import { useSettings } from "@/hooks/use-settings";
 import { searchCustomersAction, createCustomerAction } from "@/actions/customers";
 import { useDebounce } from "@/hooks/use-debounce";
 import { CreateCustomerDialog } from "@/components/customers/create-customer-dialog";
@@ -54,6 +55,10 @@ import {
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format, parseISO } from "date-fns";
+import {
+  calculateTotalWithWeekdayRates,
+  normalizeWeekdayRates,
+} from "@/lib/pricing";
 
 type CreateBookingFormState = {
   customer_id: string;
@@ -179,6 +184,7 @@ export function CreateBookingDialog({
     limit: 20,
     search: "",
   });
+  const { settings } = useSettings();
   const debouncedSearch = useDebounce(customerSearch, 300);
 
   // Fetch rooms when dialog opens
@@ -246,11 +252,27 @@ export function CreateBookingDialog({
 
   // Calculate total amount from room price and nights
   const calculatedTotalAmount = useMemo(() => {
-    if (selectedRoom && nights > 0) {
-      return selectedRoom.price_per_night * nights;
-    }
-    return 0;
-  }, [selectedRoom, nights]);
+    if (!selectedRoom) return 0;
+    if (!formValues.check_in_date || !formValues.check_out_date) return 0;
+
+    const weekdayRates = normalizeWeekdayRates(
+      settings?.pricing_weekday_rates ?? undefined
+    );
+
+    const { total } = calculateTotalWithWeekdayRates({
+      basePrice: selectedRoom.price_per_night,
+      checkInDate: formValues.check_in_date,
+      checkOutDate: formValues.check_out_date,
+      weekdayRates,
+    });
+
+    return total;
+  }, [
+    selectedRoom,
+    formValues.check_in_date,
+    formValues.check_out_date,
+    settings?.pricing_weekday_rates,
+  ]);
 
   // Check if room capacity is exceeded
   const isOverCapacity = useMemo(() => {

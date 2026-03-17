@@ -61,6 +61,11 @@ import { Calendar } from "@/components/ui/calendar";
 import { format, parseISO } from "date-fns";
 import { Loader2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useSettings } from "@/hooks/use-settings";
+import {
+  calculateTotalWithWeekdayRates,
+  normalizeWeekdayRates,
+} from "@/lib/pricing";
 
 type SelectedRoom = { room: Room; amount: number };
 
@@ -75,6 +80,7 @@ export function CreateMultiBookingDialog({
   onOpenChange: (open: boolean) => void;
   onCreate: (input: MultiBookingInput) => Promise<void>;
 }) {
+  const { settings } = useSettings();
   const [customerSearch, setCustomerSearch] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
     null
@@ -151,13 +157,31 @@ export function CreateMultiBookingDialog({
   }, [debouncedSearch]);
 
   const selectedRoomsWithAmounts = useMemo((): SelectedRoom[] => {
+    const weekdayRates = normalizeWeekdayRates(
+      settings?.pricing_weekday_rates ?? undefined
+    );
     return availableRooms
       .filter((r) => selectedRoomIds.has(r.id))
       .map((r) => ({
         room: r,
-        amount: r.price_per_night * nights,
+        amount:
+          checkInDate && checkOutDate && nights > 0
+            ? calculateTotalWithWeekdayRates({
+                basePrice: r.price_per_night,
+                checkInDate,
+                checkOutDate,
+                weekdayRates,
+              }).total
+            : 0,
       }));
-  }, [availableRooms, selectedRoomIds, nights]);
+  }, [
+    availableRooms,
+    selectedRoomIds,
+    nights,
+    checkInDate,
+    checkOutDate,
+    settings?.pricing_weekday_rates,
+  ]);
 
   const totalAmount = useMemo(
     () => selectedRoomsWithAmounts.reduce((s, x) => s + x.amount, 0),
@@ -493,8 +517,8 @@ export function CreateMultiBookingDialog({
                               {formatCurrency(room.price_per_night)}/đêm
                             </div>
                             <div className="text-xs text-muted-foreground">
-                              {nights} đêm ={" "}
-                              {formatCurrency(room.price_per_night * nights)}
+                            Giá gốc: {nights} đêm ={" "}
+                            {formatCurrency(room.price_per_night * nights)}
                             </div>
                           </div>
                           <Button
@@ -529,7 +553,7 @@ export function CreateMultiBookingDialog({
                   </div>
                 ))}
                 <div className="flex justify-between font-semibold pt-2 border-t">
-                  <span>Tổng cộng (giá gốc)</span>
+                  <span>Tổng cộng (đã áp dụng theo thứ)</span>
                   <span>{formatCurrency(totalAmount)}</span>
                 </div>
               </div>

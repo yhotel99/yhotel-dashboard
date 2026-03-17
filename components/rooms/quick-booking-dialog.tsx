@@ -33,6 +33,7 @@ import {
 import { useDebounce } from "@/hooks/use-debounce";
 import { searchCustomersAction, createCustomerAction } from "@/actions/customers";
 import { CreateCustomerDialog } from "@/components/customers/create-customer-dialog";
+import { useSettings } from "@/hooks/use-settings";
 import {
   Popover,
   PopoverContent,
@@ -40,6 +41,10 @@ import {
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format, parseISO } from "date-fns";
+import {
+  calculateTotalWithWeekdayRates,
+  normalizeWeekdayRates,
+} from "@/lib/pricing";
 
 type QuickBookingFormState = {
   customer_id: string;
@@ -70,6 +75,7 @@ export function QuickBookingDialog({
   room: RoomWithBooking;
   onCreate: (input: BookingInput) => Promise<void>;
 }) {
+  const { settings } = useSettings();
   const [formValues, setFormValues] =
     useState<QuickBookingFormState>(initialFormState);
   const [error, setError] = useState<string | null>(null);
@@ -166,13 +172,26 @@ export function QuickBookingDialog({
     }
 
     const nights = calculateNightsValue(checkInISO, checkOutISO);
-    const totalAmount = nights > 0 ? room.price_per_night * nights : 0;
+
+    const weekdayRates = normalizeWeekdayRates(
+      settings?.pricing_weekday_rates ?? undefined
+    );
+    const totalAmount =
+      nights > 0
+        ? calculateTotalWithWeekdayRates({
+            basePrice: room.price_per_night,
+            checkInDate: formValues.check_in_date,
+            checkOutDate: formValues.check_out_date,
+            weekdayRates,
+          }).total
+        : 0;
 
     return { nights, totalAmount };
   }, [
     formValues.check_in_date,
     formValues.check_out_date,
     room.price_per_night,
+    settings?.pricing_weekday_rates,
   ]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -217,8 +236,16 @@ export function QuickBookingDialog({
       return;
     }
 
-    // Calculate total amount
-    const totalAmount = room.price_per_night * number_of_nights;
+    const weekdayRates = normalizeWeekdayRates(
+      settings?.pricing_weekday_rates ?? undefined
+    );
+
+    const totalAmount = calculateTotalWithWeekdayRates({
+      basePrice: room.price_per_night,
+      checkInDate: formValues.check_in_date,
+      checkOutDate: formValues.check_out_date,
+      weekdayRates,
+    }).total;
 
     const payload: BookingInput = {
       customer_id: formValues.customer_id,

@@ -12,6 +12,11 @@ const settingsInputSchema = z.object({
     id: z.string(),
     url: z.string(),
   })).nullable().optional(),
+  pricing_weekday_rates: z
+    .array(z.coerce.number().min(0).max(100))
+    .length(7)
+    .nullable()
+    .optional(),
   contact_email: z
     .union([z.string().email(), z.literal(""), z.null()])
     .optional()
