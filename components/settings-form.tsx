@@ -447,7 +447,6 @@ export function SettingsForm({ initialData }: SettingsFormProps) {
 
                   <Separator />
 
-                  <div className="text-sm font-semibold">Giờ làm việc</div>
                   <FormField
                     control={form.control}
                     name="working_hours"
