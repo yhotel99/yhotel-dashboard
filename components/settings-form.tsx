@@ -260,8 +260,8 @@ export function SettingsForm({ initialData }: SettingsFormProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Cài đặt Website</CardTitle>
-        <CardDescription>
+        <CardTitle className="text-3xl font-bold tracking-tight">Cài đặt Website</CardTitle>
+        <CardDescription className="text-muted-foreground text-base">
           Quản lý thông tin website, liên hệ và mạng xã hội
         </CardDescription>
       </CardHeader>
@@ -272,18 +272,12 @@ export function SettingsForm({ initialData }: SettingsFormProps) {
             className="space-y-6"
           >
             <Tabs defaultValue="general" className="w-full">
-              <TabsList className="grid w-full grid-cols-6 h-full p-1">
+              <TabsList className="grid w-full grid-cols-4 h-full p-1">
                 <TabsTrigger className="p-2" value="general">
                   Chung
                 </TabsTrigger>
                 <TabsTrigger className="p-2" value="pricing">
                   Giá
-                </TabsTrigger>
-                <TabsTrigger className="p-2" value="contact">
-                  Liên hệ
-                </TabsTrigger>
-                <TabsTrigger className="p-2" value="hours">
-                  Giờ làm việc
                 </TabsTrigger>
                 <TabsTrigger className="p-2" value="social">
                   Mạng xã hội
@@ -344,6 +338,89 @@ export function SettingsForm({ initialData }: SettingsFormProps) {
                       Chọn nhiều ảnh hero để hiển thị trên trang chủ của client
                     </FormDescription>
                   </div>
+
+                  <Separator />
+
+                  <div className="text-sm font-semibold">Liên hệ</div>
+                  <FormField
+                    control={form.control}
+                    name="contact_email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email liên hệ</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="email"
+                            placeholder="VD: contact@yhotel.com"
+                            {...field}
+                            value={field.value || ""}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="contact_phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Số điện thoại</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="tel"
+                            placeholder="VD: 0901234567"
+                            {...field}
+                            value={field.value || ""}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="contact_address"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Địa chỉ</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="VD: 123 Đường ABC, Quận XYZ, TP.HCM"
+                            {...field}
+                            value={field.value || ""}
+                            rows={3}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <Separator />
+
+                  <div className="text-sm font-semibold">Giờ làm việc</div>
+                  <FormField
+                    control={form.control}
+                    name="working_hours"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Giờ làm việc</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="VD: Thứ 2 - Chủ nhật: 8:00 - 22:00"
+                            {...field}
+                            value={field.value || ""}
+                            rows={4}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Nhập thông tin giờ làm việc (có thể nhiều dòng)
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
               </TabsContent>
 
@@ -486,91 +563,6 @@ export function SettingsForm({ initialData }: SettingsFormProps) {
                       }}
                     />
                   </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="contact" className="space-y-4 mt-6">
-                <div className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="contact_email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email liên hệ</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="email"
-                            placeholder="VD: contact@yhotel.com"
-                            {...field}
-                            value={field.value || ""}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="contact_phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Số điện thoại</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="tel"
-                            placeholder="VD: 0901234567"
-                            {...field}
-                            value={field.value || ""}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="contact_address"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Địa chỉ</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="VD: 123 Đường ABC, Quận XYZ, TP.HCM"
-                            {...field}
-                            value={field.value || ""}
-                            rows={3}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </TabsContent>
-
-              <TabsContent value="hours" className="space-y-4 mt-6">
-                <div className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="working_hours"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Giờ làm việc</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="VD: Thứ 2 - Chủ nhật: 8:00 - 22:00"
-                            {...field}
-                            value={field.value || ""}
-                            rows={4}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Nhập thông tin giờ làm việc (có thể nhiều dòng)
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                 </div>
               </TabsContent>
 

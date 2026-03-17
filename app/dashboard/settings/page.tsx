@@ -7,13 +7,7 @@ export default async function SettingsPage() {
   console.log(settings);
 
   return (
-    <div className="flex flex-col gap-4 p-4 max-w-7xl mx-auto">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Cài đặt Website</h1>
-        <p className="text-muted-foreground">
-          Quản lý thông tin website, liên hệ và mạng xã hội
-        </p>
-      </div>
+    <div className="flex flex-col gap-4 p-4 max-w-7xl w-full mx-auto">
       <SettingsForm initialData={settings} />
     </div>
   );
