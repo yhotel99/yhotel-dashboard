@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { updateSettingsAction } from "@/actions/settings";
 import type { Settings } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -28,13 +29,14 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { ImageListSelector } from "@/components/image-selector";
 import type { ImageValue } from "@/lib/types";
 import { IconPlus, IconTrash } from "@tabler/icons-react";
 import { DEFAULT_WEEKDAY_RATES } from "@/lib/pricing";
 import type { WeekdayRates } from "@/lib/types";
+import { Banknote, CreditCard, Globe, Settings as SettingsIcon } from "lucide-react";
 
 const settingsSchema = z.object({
   site_title: z.string().min(1, "Tiêu đề không được để trống"),
@@ -103,6 +105,9 @@ interface SettingsFormProps {
 export function SettingsForm({ initialData }: SettingsFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeTab, setActiveTab] = useState<
+    "general" | "pricing" | "social" | "bank"
+  >("general");
   const [heroImages, setHeroImages] = useState<ImageValue[]>(
     initialData?.hero_images || []
   );
@@ -271,21 +276,64 @@ export function SettingsForm({ initialData }: SettingsFormProps) {
             onSubmit={form.handleSubmit(handleSubmit)}
             className="space-y-6"
           >
-            <Tabs defaultValue="general" className="w-full">
-              <TabsList className="grid w-full grid-cols-4 h-full p-1">
-                <TabsTrigger className="p-2" value="general">
-                  Chung
-                </TabsTrigger>
-                <TabsTrigger className="p-2" value="pricing">
-                  Giá
-                </TabsTrigger>
-                <TabsTrigger className="p-2" value="social">
-                  Mạng xã hội
-                </TabsTrigger>
-                <TabsTrigger className="p-2" value="bank">
-                  Tài khoản ngân hàng
-                </TabsTrigger>
-              </TabsList>
+            <Tabs
+              value={activeTab}
+              onValueChange={(v) => setActiveTab(v as typeof activeTab)}
+              className="w-full"
+            >
+              <nav className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-4">
+                {(
+                  [
+                    { key: "general", label: "Chung", icon: SettingsIcon },
+                    { key: "pricing", label: "Giá", icon: CreditCard },
+                    { key: "social", label: "Mạng xã hội", icon: Globe },
+                    { key: "bank", label: "Tài khoản ngân hàng", icon: Banknote },
+                  ] as const
+                ).map((item) => {
+                  const Icon = item.icon;
+                  const isActive = activeTab === item.key;
+                  return (
+                    <button
+                      key={item.key}
+                      type="button"
+                      onClick={() => setActiveTab(item.key)}
+                      className={cn(
+                        "group flex items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm font-semibold transition-colors",
+                        "hover:bg-muted/60 hover:border-primary",
+                        isActive
+                          ? "bg-muted border-primary shadow-sm"
+                          : "bg-card border-border/60"
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "inline-flex size-9 items-center justify-center rounded-lg transition-colors",
+                          isActive
+                            ? "bg-primary/10 text-primary"
+                            : "bg-muted text-muted-foreground group-hover:bg-muted/80"
+                        )}
+                      >
+                        <Icon
+                          className={cn(
+                            "size-4",
+                            isActive ? "text-primary" : "text-muted-foreground"
+                          )}
+                        />
+                      </span>
+                      <span
+                        className={cn(
+                          "truncate",
+                          isActive
+                            ? "text-foreground"
+                            : "text-foreground/90 group-hover:text-foreground"
+                        )}
+                      >
+                        {item.label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </nav>
 
               <TabsContent value="general" className="space-y-4 mt-6">
                 <div className="space-y-4">
