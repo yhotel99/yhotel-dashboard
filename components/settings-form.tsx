@@ -387,9 +387,7 @@ export function SettingsForm({ initialData }: SettingsFormProps) {
                     </FormDescription>
                   </div>
 
-                  <Separator />
 
-                  <div className="text-sm font-semibold">Liên hệ</div>
                   <FormField
                     control={form.control}
                     name="contact_email"
@@ -444,8 +442,6 @@ export function SettingsForm({ initialData }: SettingsFormProps) {
                       </FormItem>
                     )}
                   />
-
-                  <Separator />
 
                   <FormField
                     control={form.control}
