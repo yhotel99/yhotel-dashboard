@@ -32,6 +32,7 @@ import {
 } from "@/lib/functions";
 import { useDebounce } from "@/hooks/use-debounce";
 import { searchCustomersAction, createCustomerAction } from "@/actions/customers";
+import { validateVoucherForBooking } from "@/actions/vouchers";
 import { CreateCustomerDialog } from "@/components/customers/create-customer-dialog";
 import { useSettings } from "@/hooks/use-settings";
 import {
@@ -52,6 +53,7 @@ type QuickBookingFormState = {
   check_out_date: string;
   total_guests: string;
   payment_method: string;
+  voucher_code: string;
 };
 
 const initialFormState: QuickBookingFormState = {
@@ -60,6 +62,7 @@ const initialFormState: QuickBookingFormState = {
   check_out_date: "",
   total_guests: "1",
   payment_method: PAYMENT_METHOD.PAY_AT_HOTEL,
+  voucher_code: "",
 };
 
 const SEARCH_CUSTOMER_MIN_LENGTH = 2;
@@ -78,6 +81,12 @@ export function QuickBookingDialog({
   const { settings } = useSettings();
   const [formValues, setFormValues] =
     useState<QuickBookingFormState>(initialFormState);
+  const [voucherState, setVoucherState] = useState<{
+    code: string;
+    discount: number;
+    finalAmount: number;
+  } | null>(null);
+  const [isApplyingVoucher, setIsApplyingVoucher] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [customerSearch, setCustomerSearch] = useState("");
@@ -126,6 +135,8 @@ export function QuickBookingDialog({
       setError(null);
       setCustomerSearch("");
       setSelectedCustomer(null);
+      setVoucherState(null);
+      setIsApplyingVoucher(false);
     }
     onOpenChange(newOpen);
   };
@@ -194,6 +205,17 @@ export function QuickBookingDialog({
     settings?.pricing_weekday_rates,
   ]);
 
+  // If total changes while voucher applied, clear voucher to avoid stale discount
+  useEffect(() => {
+    if (voucherState) setVoucherState(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nightsAndAmount.totalAmount, formValues.check_in_date, formValues.check_out_date]);
+
+  const clearVoucher = () => {
+    setVoucherState(null);
+    setFormValues((prev) => ({ ...prev, voucher_code: "" }));
+  };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
@@ -257,7 +279,8 @@ export function QuickBookingDialog({
       notes: null,
       total_amount: totalAmount,
       advance_payment: 0,
-      final_amount: totalAmount,
+      final_amount: voucherState ? undefined : totalAmount,
+      voucher_code: voucherState ? voucherState.code : null,
       payment_method: formValues.payment_method as PaymentMethod,
     };
 
@@ -470,8 +493,96 @@ export function QuickBookingDialog({
                     {formatCurrency(nightsAndAmount.totalAmount)}
                   </span>
                 </div>
+                {voucherState ? (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">
+                        Giảm voucher:
+                      </span>
+                      <span className="font-semibold">
+                        -{formatCurrency(voucherState.discount)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">
+                        Thành tiền:
+                      </span>
+                      <span className="font-semibold text-lg">
+                        {formatCurrency(voucherState.finalAmount)}
+                      </span>
+                    </div>
+                  </>
+                ) : null}
               </div>
             )}
+
+          <div className="space-y-2">
+            <Label htmlFor="voucher_code">Mã voucher</Label>
+            <div className="flex gap-2">
+              <Input
+                id="voucher_code"
+                type="text"
+                value={formValues.voucher_code}
+                onChange={(e) =>
+                  setFormValues((prev) => ({ ...prev, voucher_code: e.target.value }))
+                }
+                placeholder="VD: SUMMER2026"
+                disabled={isApplyingVoucher || !!voucherState}
+              />
+              {voucherState ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={clearVoucher}
+                  disabled={isApplyingVoucher}
+                >
+                  Xóa
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      setError(null);
+                      const code = formValues.voucher_code.trim();
+                      if (!code) {
+                        setError("Vui lòng nhập mã voucher.");
+                        return;
+                      }
+                      const total = nightsAndAmount.totalAmount;
+                      if (!Number.isFinite(total) || total <= 0) {
+                        setError("Tổng tiền không hợp lệ để áp dụng voucher.");
+                        return;
+                      }
+                      setIsApplyingVoucher(true);
+                      const result = await validateVoucherForBooking({
+                        code,
+                        totalAmount: total,
+                      });
+                      if (!result.ok) {
+                        setError(result.message);
+                        return;
+                      }
+                      setVoucherState({
+                        code: result.data.voucher.code,
+                        discount: result.data.discount,
+                        finalAmount: result.data.finalAmount,
+                      });
+                      setFormValues((prev) => ({
+                        ...prev,
+                        voucher_code: result.data.voucher.code,
+                      }));
+                    } finally {
+                      setIsApplyingVoucher(false);
+                    }
+                  }}
+                  disabled={isApplyingVoucher}
+                >
+                  {isApplyingVoucher ? "Đang áp dụng..." : "Áp dụng"}
+                </Button>
+              )}
+            </div>
+          </div>
 
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
           <DialogFooter>

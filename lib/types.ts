@@ -221,6 +221,9 @@ export type BookingRecord = {
   notes: string | null;
   total_amount: number;
   final_amount: number | null;
+  voucher_id?: string | null;
+  voucher_code?: string | null;
+  voucher_discount?: number | null;
   advance_payment: number;
   actual_check_in: string | null;
   actual_check_out: string | null;
@@ -272,6 +275,11 @@ export type BookingInput = {
     * If omitted, backend should default to total_amount.
     */
   final_amount?: number | null;
+  /**
+   * Optional voucher code to apply server-side.
+   * If provided, backend will validate and compute final_amount.
+   */
+  voucher_code?: string | null;
   advance_payment?: number;
   payment_method?: PaymentMethod;
   actual_check_in?: string | null;
@@ -308,6 +316,7 @@ export type MultiBookingInput = {
   payment_method: PaymentMethod;
   advance_payment: number;
   final_amount?: number | null;
+  voucher_code?: string | null;
 };
 
 // ============================================================================

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin/server";
-import type { ResultVoid, VoucherInput } from "@/lib/types";
+import type { Result, ResultVoid, VoucherInput, Voucher } from "@/lib/types";
 
 export async function createVoucher(input: VoucherInput): Promise<ResultVoid> {
   try {
@@ -151,6 +151,73 @@ export async function toggleVoucherActive(
       err instanceof Error
         ? err.message
         : "Không thể cập nhật trạng thái voucher";
+    return { ok: false, message };
+  }
+}
+
+export async function validateVoucherForBooking(input: {
+  code: string;
+  totalAmount: number;
+}): Promise<Result<{ voucher: Voucher; discount: number; finalAmount: number }>> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return { ok: false, message: "Unauthorized" };
+    }
+
+    const code = input.code.trim();
+    if (!code) {
+      return { ok: false, message: "Vui lòng nhập mã voucher" };
+    }
+    if (!Number.isFinite(input.totalAmount) || input.totalAmount <= 0) {
+      return { ok: false, message: "Tổng tiền không hợp lệ" };
+    }
+
+    // Read can work with anon, but keep it consistent server-side
+    const admin = createAdminClient();
+    const { data, error } = await admin
+      .from("vouchers")
+      .select("*")
+      .is("deleted_at", null)
+      .eq("is_active", true)
+      .ilike("code", code)
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      return { ok: false, message: error.message };
+    }
+    if (!data) {
+      return { ok: false, message: "Voucher không tồn tại hoặc đã bị tắt" };
+    }
+
+    const now = new Date();
+    if (data.start_at && new Date(data.start_at) > now) {
+      return { ok: false, message: "Voucher chưa đến thời gian hiệu lực" };
+    }
+    if (data.end_at && new Date(data.end_at) < now) {
+      return { ok: false, message: "Voucher đã hết hạn" };
+    }
+
+    const total = input.totalAmount;
+    let discount = 0;
+    if (data.discount_type === "percent") {
+      discount = (total * (Number(data.discount_value) || 0)) / 100;
+    } else {
+      discount = Number(data.discount_value) || 0;
+    }
+    if (!Number.isFinite(discount) || discount < 0) discount = 0;
+    if (discount > total) discount = total;
+
+    const finalAmount = Math.max(0, total - discount);
+    return { ok: true, data: { voucher: data as Voucher, discount, finalAmount } };
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : "Không thể kiểm tra voucher";
     return { ok: false, message };
   }
 }

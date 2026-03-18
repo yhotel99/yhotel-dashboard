@@ -33,6 +33,7 @@ import type { BookingInput, PaymentMethod } from "@/lib/types";
 import { useRooms } from "@/hooks/use-rooms";
 import { useSettings } from "@/hooks/use-settings";
 import { searchCustomersAction, createCustomerAction } from "@/actions/customers";
+import { validateVoucherForBooking } from "@/actions/vouchers";
 import { useDebounce } from "@/hooks/use-debounce";
 import { CreateCustomerDialog } from "@/components/customers/create-customer-dialog";
 import type { Customer, Room } from "@/lib/types";
@@ -68,6 +69,7 @@ type CreateBookingFormState = {
   total_guests: string;
   total_amount: string;
   final_amount: string;
+  voucher_code: string;
   advance_payment: string;
   payment_method: string;
   notes: string;
@@ -81,6 +83,7 @@ const initialCreateBookingState: CreateBookingFormState = {
   total_guests: "1",
   total_amount: "0",
   final_amount: "",
+  voucher_code: "",
   advance_payment: "0",
   payment_method: PAYMENT_METHOD.PAY_AT_HOTEL,
   notes: "",
@@ -167,6 +170,12 @@ export function CreateBookingDialog({
   const [formValues, setFormValues] = useState<CreateBookingFormState>(
     initialCreateBookingState
   );
+  const [voucherState, setVoucherState] = useState<{
+    code: string;
+    discount: number;
+    finalAmount: number;
+  } | null>(null);
+  const [isApplyingVoucher, setIsApplyingVoucher] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [customerSearch, setCustomerSearch] = useState("");
@@ -311,6 +320,15 @@ export function CreateBookingDialog({
     }
   }, [calculatedTotalAmount, formValues.room_id]);
 
+  // If total changes while voucher applied, clear voucher to avoid stale discount
+  useEffect(() => {
+    if (voucherState) {
+      setVoucherState(null);
+      setFormValues((prev) => ({ ...prev, final_amount: "" }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [calculatedTotalAmount, formValues.check_in_date, formValues.check_out_date, formValues.room_id]);
+
   // Format advance_payment when total_amount changes (to update max value display)
   useEffect(() => {
     if (formValues.advance_payment) {
@@ -352,6 +370,15 @@ export function CreateBookingDialog({
         }
       };
 
+  const clearVoucher = useCallback(() => {
+    setVoucherState(null);
+    setFormValues((prev) => ({
+      ...prev,
+      voucher_code: "",
+      final_amount: "",
+    }));
+  }, []);
+
   const resetForm = useCallback(() => {
     setFormValues(initialCreateBookingState);
     setError(null);
@@ -359,6 +386,8 @@ export function CreateBookingDialog({
     setCustomerSearch("");
     setSelectedCustomer(null);
     lastSearchRef.current = "";
+    setVoucherState(null);
+    setIsApplyingVoucher(false);
   }, []);
 
   const handleCustomerSelect = (customer: Customer) => {
@@ -461,7 +490,8 @@ export function CreateBookingDialog({
         notes: formValues.notes.trim() || null,
         total_amount: totalAmount,
         advance_payment: advancePayment,
-        final_amount: finalAmount,
+        final_amount: voucherState ? undefined : finalAmount,
+        voucher_code: voucherState ? voucherState.code : null,
         payment_method: formValues.payment_method as PaymentMethod,
       };
 
@@ -723,9 +753,90 @@ export function CreateBookingDialog({
                 value={formValues.final_amount}
                 onChange={handleInputChange("final_amount")}
                 placeholder="Mặc định bằng tổng tiền phía trên, có thể chỉnh khi giảm giá/phụ thu"
+                readOnly={!!voucherState}
+                className={voucherState ? "bg-muted" : undefined}
               />
               <p className="text-xs text-muted-foreground">
-                Đây là số tiền khách sẽ thực sự thanh toán sau cùng.
+                {voucherState
+                  ? `Đang áp dụng voucher: giảm ${formatCurrency(voucherState.discount)}. Số tiền cuối: ${formatCurrency(voucherState.finalAmount)}.`
+                  : "Đây là số tiền khách sẽ thực sự thanh toán sau cùng."}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="voucher_code">Mã voucher</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="voucher_code"
+                  type="text"
+                  value={formValues.voucher_code}
+                  onChange={(e) =>
+                    setFormValues((prev) => ({ ...prev, voucher_code: e.target.value }))
+                  }
+                  placeholder="VD: SUMMER2026"
+                  disabled={isApplyingVoucher || !!voucherState}
+                />
+                {voucherState ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={clearVoucher}
+                    disabled={isApplyingVoucher}
+                  >
+                    Xóa
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        setError(null);
+                        const code = formValues.voucher_code.trim();
+                        if (!code) {
+                          setError("Vui lòng nhập mã voucher.");
+                          return;
+                        }
+                        const total = Number(formValues.total_amount || 0);
+                        if (!Number.isFinite(total) || total <= 0) {
+                          setError("Tổng tiền không hợp lệ để áp dụng voucher.");
+                          return;
+                        }
+                        setIsApplyingVoucher(true);
+                        const result = await validateVoucherForBooking({
+                          code,
+                          totalAmount: total,
+                        });
+                        if (!result.ok) {
+                          setError(result.message);
+                          return;
+                        }
+                        setVoucherState({
+                          code: result.data.voucher.code,
+                          discount: result.data.discount,
+                          finalAmount: result.data.finalAmount,
+                        });
+                        setFormValues((prev) => ({
+                          ...prev,
+                          voucher_code: result.data.voucher.code,
+                          final_amount: formatNumberWithSeparators(result.data.finalAmount),
+                          advance_payment:
+                            parseFormattedNumber(prev.advance_payment || "0") >
+                            result.data.finalAmount
+                              ? formatNumberWithSeparators(result.data.finalAmount)
+                              : prev.advance_payment,
+                        }));
+                      } finally {
+                        setIsApplyingVoucher(false);
+                      }
+                    }}
+                    disabled={isApplyingVoucher}
+                  >
+                    {isApplyingVoucher ? "Đang áp dụng..." : "Áp dụng"}
+                  </Button>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Voucher sẽ được kiểm tra hiệu lực và tính giảm giá tự động.
               </p>
             </div>
 

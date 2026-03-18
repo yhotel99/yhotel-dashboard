@@ -185,6 +185,7 @@ export async function createBooking(
       p_notes: input.notes ?? null,
       p_advance_payment: input.advance_payment ?? 0,
       p_final_amount: input.final_amount ?? null,
+      p_voucher_code: input.voucher_code ?? null,
     }
   );
 
@@ -247,6 +248,7 @@ export async function createMultiBooking(
     p_payment_method: input.payment_method ?? PAYMENT_METHOD.PAY_AT_HOTEL,
     p_advance_payment: input.advance_payment ?? 0,
     p_final_amount: input.final_amount ?? null,
+    p_voucher_code: input.voucher_code ?? null,
   });
 
   if (error) {
