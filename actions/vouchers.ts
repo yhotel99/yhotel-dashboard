@@ -16,6 +16,7 @@ export async function createVoucher(input: VoucherInput): Promise<ResultVoid> {
       return { ok: false, message: "Unauthorized" };
     }
 
+    const adminSupabase = createAdminClient();
     const payload = {
       ...input,
       code: input.code.trim(),
@@ -23,7 +24,7 @@ export async function createVoucher(input: VoucherInput): Promise<ResultVoid> {
       updated_at: new Date().toISOString(),
     };
 
-    const { error } = await supabase.from("vouchers").insert([payload]);
+    const { error } = await adminSupabase.from("vouchers").insert([payload]);
     if (error) {
       return { ok: false, message: error.message || "Không thể tạo voucher" };
     }
@@ -50,6 +51,7 @@ export async function updateVoucher(
       return { ok: false, message: "Unauthorized" };
     }
 
+    const adminSupabase = createAdminClient();
     const payload: Record<string, unknown> = {
       ...input,
       updated_at: new Date().toISOString(),
@@ -57,7 +59,7 @@ export async function updateVoucher(
     if (typeof input.code === "string") payload.code = input.code.trim();
     if (typeof input.name === "string") payload.name = input.name.trim();
 
-    const { error } = await supabase
+    const { error } = await adminSupabase
       .from("vouchers")
       .update(payload)
       .eq("id", id);
@@ -132,7 +134,8 @@ export async function toggleVoucherActive(
       return { ok: false, message: "Unauthorized" };
     }
 
-    const { error } = await supabase
+    const adminSupabase = createAdminClient();
+    const { error } = await adminSupabase
       .from("vouchers")
       .update({ is_active: isActive, updated_at: new Date().toISOString() })
       .eq("id", id);
