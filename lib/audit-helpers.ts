@@ -10,13 +10,18 @@ async function getRequestMetadata() {
   };
 }
 
+function toRecord(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return value as Record<string, unknown>;
+}
+
 // Log booking update
 export async function logBookingUpdate(
   bookingId: string,
   userId: string,
   userEmail: string,
-  beforeData: Record<string, unknown>,
-  afterData: Record<string, unknown>,
+  beforeData: unknown,
+  afterData: unknown,
   metadata?: Record<string, unknown>
 ) {
   const requestMeta = await getRequestMetadata();
@@ -28,8 +33,8 @@ export async function logBookingUpdate(
     userId,
     userEmail,
     changes: {
-      before: beforeData,
-      after: afterData,
+      before: toRecord(beforeData),
+      after: toRecord(afterData),
     },
     metadata,
     ...requestMeta,
