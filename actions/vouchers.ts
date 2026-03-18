@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin/server";
 import type { ResultVoid, VoucherInput } from "@/lib/types";
 
 export async function createVoucher(input: VoucherInput): Promise<ResultVoid> {
@@ -88,15 +89,25 @@ export async function deleteVoucher(id: string): Promise<ResultVoid> {
       return { ok: false, message: "Unauthorized" };
     }
 
-    console.log({id})
+    // Use service role for writes to avoid RLS mismatches
+    const adminSupabase = createAdminClient();
 
-    const { error } = await supabase
+    const { data, error } = await adminSupabase
       .from("vouchers")
       .update({ deleted_at: new Date().toISOString() })
-      .eq("id", id);
+      .eq("id", id)
+      .select("id");
 
     if (error) {
       return { ok: false, message: error.message || "Không thể xóa voucher" };
+    }
+
+    if (!data || data.length === 0) {
+      return {
+        ok: false,
+        message:
+          "Không thể xóa voucher (không có quyền hoặc voucher không tồn tại).",
+      };
     }
 
     revalidatePath("/dashboard/vouchers", "page");
