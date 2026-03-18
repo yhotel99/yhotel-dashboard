@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { getUpcomingCheckinsWithPagination } from "@/services/reservation";
-import type { PageProps } from "@/lib/types";
 
 /**
  * GET /api/upcoming-checkins

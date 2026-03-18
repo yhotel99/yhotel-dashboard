@@ -9,6 +9,7 @@ import {
   IconNews,
   IconHistory,
   IconFileText,
+  IconTicket,
   IconWifi,
   IconParking,
   IconSnowflake,
@@ -316,6 +317,7 @@ export const SIDEBAR_URLS = {
   GALLERY: "/dashboard/gallery",
   USERS: "/dashboard/users",
   BLOGS: "/dashboard/blogs",
+  VOUCHERS: "/dashboard/vouchers",
 } as const;
 
 export const CUSTOMER_ERROR_PATTERNS = {
@@ -426,6 +428,7 @@ export const PATH_TO_RESOURCE: Record<string, string> = {
   [SIDEBAR_URLS.GALLERY]: "gallery",
   [SIDEBAR_URLS.USERS]: "users",
   [SIDEBAR_URLS.BLOGS]: "blogs",
+  [SIDEBAR_URLS.VOUCHERS]: "vouchers",
 };
 
 export const allNavItems = [
@@ -465,6 +468,12 @@ export const allNavItems = [
     url: SIDEBAR_URLS.PAYMENTS,
     icon: IconCreditCard,
     resource: "payments",
+  },
+  {
+    title: "Voucher",
+    url: SIDEBAR_URLS.VOUCHERS,
+    icon: IconTicket,
+    resource: "vouchers",
   },
   {
     title: "Lịch Sử Webhook",
@@ -534,6 +543,7 @@ export const DASHBOARD_URLS = {
   RESERVATION: "/dashboard/reservation",
   CUSTOMERS: "/dashboard/customers",
   PAYMENTS: "/dashboard/payments",
+  VOUCHERS: "/dashboard/vouchers",
   PAYMENT_LOGS: "/dashboard/payment-logs",
   REFUND_REQUESTS: "/dashboard/refund-requests",
   AUDIT_LOGS: "/dashboard/audit-logs",

@@ -15,9 +15,9 @@ export async function logBookingUpdate(
   bookingId: string,
   userId: string,
   userEmail: string,
-  beforeData: Record<string, any>,
-  afterData: Record<string, any>,
-  metadata?: Record<string, any>
+  beforeData: Record<string, unknown>,
+  afterData: Record<string, unknown>,
+  metadata?: Record<string, unknown>
 ) {
   const requestMeta = await getRequestMetadata();
   
@@ -42,7 +42,7 @@ export async function logBookingCancel(
   userId: string,
   userEmail: string,
   reason?: string,
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 ) {
   const requestMeta = await getRequestMetadata();
   
@@ -68,7 +68,7 @@ export async function logRefundProcess(
   userEmail: string,
   amount: number,
   status: 'approved' | 'rejected' | 'refunded',
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 ) {
   const requestMeta = await getRequestMetadata();
   
@@ -105,7 +105,7 @@ export async function logPriceUpdate(
   userEmail: string,
   oldPrice: number,
   newPrice: number,
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 ) {
   const requestMeta = await getRequestMetadata();
   
@@ -133,9 +133,9 @@ export async function logPaymentUpdate(
   paymentId: string,
   userId: string,
   userEmail: string,
-  beforeData: Record<string, any>,
-  afterData: Record<string, any>,
-  metadata?: Record<string, any>
+  beforeData: Record<string, unknown>,
+  afterData: Record<string, unknown>,
+  metadata?: Record<string, unknown>
 ) {
   const requestMeta = await getRequestMetadata();
   

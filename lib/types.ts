@@ -636,6 +636,43 @@ export type PageProps = {
 };
 
 // ============================================================================
+// Voucher Types
+// ============================================================================
+
+export type VoucherDiscountType = "percent" | "fixed";
+
+export type Voucher = {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  discount_type: VoucherDiscountType;
+  discount_value: number;
+  start_at: string | null;
+  end_at: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+};
+
+export type VoucherInput = {
+  code: string;
+  name: string;
+  description?: string | null;
+  discount_type: VoucherDiscountType;
+  discount_value: number;
+  start_at?: string | null;
+  end_at?: string | null;
+  is_active?: boolean;
+};
+
+export type VouchersResponse = {
+  data: Voucher[];
+  pagination: PaginationMeta;
+};
+
+// ============================================================================
 // Settings Types
 // ============================================================================
 
