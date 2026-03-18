@@ -7,6 +7,13 @@ import type { ResultVoid, VoucherInput } from "@/lib/types";
 export async function createVoucher(input: VoucherInput): Promise<ResultVoid> {
   try {
     const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return { ok: false, message: "Unauthorized" };
+    }
 
     const payload = {
       ...input,
@@ -34,6 +41,13 @@ export async function updateVoucher(
 ): Promise<ResultVoid> {
   try {
     const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return { ok: false, message: "Unauthorized" };
+    }
 
     const payload: Record<string, unknown> = {
       ...input,
@@ -66,6 +80,15 @@ export async function updateVoucher(
 export async function deleteVoucher(id: string): Promise<ResultVoid> {
   try {
     const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return { ok: false, message: "Unauthorized" };
+    }
+
+    console.log({id})
 
     const { error } = await supabase
       .from("vouchers")
@@ -90,6 +113,13 @@ export async function toggleVoucherActive(
 ): Promise<ResultVoid> {
   try {
     const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return { ok: false, message: "Unauthorized" };
+    }
 
     const { error } = await supabase
       .from("vouchers")
