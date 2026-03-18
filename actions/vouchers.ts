@@ -16,7 +16,6 @@ export async function createVoucher(input: VoucherInput): Promise<ResultVoid> {
       return { ok: false, message: "Unauthorized" };
     }
 
-    const adminSupabase = createAdminClient();
     const payload = {
       ...input,
       code: input.code.trim(),
@@ -24,7 +23,7 @@ export async function createVoucher(input: VoucherInput): Promise<ResultVoid> {
       updated_at: new Date().toISOString(),
     };
 
-    const { error } = await adminSupabase.from("vouchers").insert([payload]);
+    const { error } = await supabase.from("vouchers").insert([payload]);
     if (error) {
       return { ok: false, message: error.message || "Không thể tạo voucher" };
     }
@@ -51,7 +50,6 @@ export async function updateVoucher(
       return { ok: false, message: "Unauthorized" };
     }
 
-    const adminSupabase = createAdminClient();
     const payload: Record<string, unknown> = {
       ...input,
       updated_at: new Date().toISOString(),
@@ -59,10 +57,7 @@ export async function updateVoucher(
     if (typeof input.code === "string") payload.code = input.code.trim();
     if (typeof input.name === "string") payload.name = input.name.trim();
 
-    const { error } = await adminSupabase
-      .from("vouchers")
-      .update(payload)
-      .eq("id", id);
+    const { error } = await supabase.from("vouchers").update(payload).eq("id", id);
 
     if (error) {
       return {
@@ -91,9 +86,8 @@ export async function deleteVoucher(id: string): Promise<ResultVoid> {
       return { ok: false, message: "Unauthorized" };
     }
 
-    // Use service role for writes to avoid RLS mismatches
+    // Use service role for writes (bypass RLS)
     const adminSupabase = createAdminClient();
-
     const { data, error } = await adminSupabase
       .from("vouchers")
       .update({ deleted_at: new Date().toISOString() })
@@ -134,8 +128,7 @@ export async function toggleVoucherActive(
       return { ok: false, message: "Unauthorized" };
     }
 
-    const adminSupabase = createAdminClient();
-    const { error } = await adminSupabase
+    const { error } = await supabase
       .from("vouchers")
       .update({ is_active: isActive, updated_at: new Date().toISOString() })
       .eq("id", id);
@@ -180,9 +173,7 @@ export async function validateVoucherForBooking(input: {
       return { ok: false, message: "Tổng tiền không hợp lệ" };
     }
 
-    // Read can work with anon, but keep it consistent server-side
-    const admin = createAdminClient();
-    const { data, error } = await admin
+    const { data, error } = await supabase
       .from("vouchers")
       .select("*")
       .is("deleted_at", null)
