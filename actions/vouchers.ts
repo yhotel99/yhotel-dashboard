@@ -57,12 +57,25 @@ export async function updateVoucher(
     if (typeof input.code === "string") payload.code = input.code.trim();
     if (typeof input.name === "string") payload.name = input.name.trim();
 
-    const { error } = await supabase.from("vouchers").update(payload).eq("id", id);
+    const adminSupabase = createAdminClient();
+    const { data, error } = await adminSupabase
+      .from("vouchers")
+      .update(payload)
+      .eq("id", id)
+      .select("id");
 
     if (error) {
       return {
         ok: false,
         message: error.message || "Không thể cập nhật voucher",
+      };
+    }
+
+    if (!data || data.length === 0) {
+      return {
+        ok: false,
+        message:
+          "Không thể cập nhật voucher (không có quyền hoặc voucher không tồn tại).",
       };
     }
 
@@ -128,15 +141,25 @@ export async function toggleVoucherActive(
       return { ok: false, message: "Unauthorized" };
     }
 
-    const { error } = await supabase
+    const adminSupabase = createAdminClient();
+    const { data, error } = await adminSupabase
       .from("vouchers")
       .update({ is_active: isActive, updated_at: new Date().toISOString() })
-      .eq("id", id);
+      .eq("id", id)
+      .select("id");
 
     if (error) {
       return {
         ok: false,
         message: error.message || "Không thể cập nhật trạng thái voucher",
+      };
+    }
+
+    if (!data || data.length === 0) {
+      return {
+        ok: false,
+        message:
+          "Không thể cập nhật trạng thái voucher (không có quyền hoặc voucher không tồn tại).",
       };
     }
 
