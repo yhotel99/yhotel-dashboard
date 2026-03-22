@@ -1,7 +1,11 @@
 "use client";
 
 import { ColumnDef } from "@tanstack/react-table";
-import { formatCurrency, formatDateOnly } from "@/lib/functions";
+import {
+  formatCurrency,
+  formatDateOnly,
+  formatRoomNumbersWithTypeNameFallback,
+} from "@/lib/functions";
 import type { PaymentMethod, PaymentWithBooking } from "@/lib/types";
 import { PaymentStatusBadge } from "./status";
 import { PaymentDetailDialog } from "./detail-dialog";
@@ -16,7 +20,7 @@ import { Badge } from "@/components/ui/badge";
 // Column definitions constants
 export const PAYMENTS_COLUMNS = {
   CUSTOMER_NAME: { accessorKey: "Khách hàng", header: "Khách hàng" },
-  ROOM_NAME: { accessorKey: "Phòng", header: "Phòng" },
+  ROOM_NAME: { accessorKey: "Số phòng", header: "Số phòng" },
   AMOUNT: { accessorKey: "Số tiền", header: "Số tiền" },
   PAYMENT_TYPE: { accessorKey: "Loại thanh toán", header: "Loại thanh toán" },
   PAYMENT_METHOD: { accessorKey: "Phương thức thanh toán", header: "Phương thức thanh toán" },
@@ -26,7 +30,10 @@ export const PAYMENTS_COLUMNS = {
   ACTIONS: { accessorKey: "Hành động", header: "" },
 } as const;
 
-export function createPaymentsColumns(): ColumnDef<PaymentWithBooking>[] {
+export function createPaymentsColumns(options?: {
+  roomNumberById?: Readonly<Record<string, string>>;
+}): ColumnDef<PaymentWithBooking>[] {
+  const roomNumberById = options?.roomNumberById;
   return [
     {
       accessorKey: PAYMENTS_COLUMNS.CUSTOMER_NAME.accessorKey,
@@ -54,16 +61,23 @@ export function createPaymentsColumns(): ColumnDef<PaymentWithBooking>[] {
       accessorKey: PAYMENTS_COLUMNS.ROOM_NAME.accessorKey,
       header: PAYMENTS_COLUMNS.ROOM_NAME.header,
       cell: ({ row }) => {
-        const roomName = row.original.bookings?.rooms?.name ?? "-";
+        const label = formatRoomNumbersWithTypeNameFallback(
+          {
+            room_id: null,
+            rooms: row.original.bookings?.rooms ?? undefined,
+            booking_rooms: undefined,
+          },
+          roomNumberById
+        );
         return (
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="max-w-[160px] truncate block font-medium">
-                {roomName}
+              <span className="max-w-[200px] truncate block font-medium">
+                {label}
               </span>
             </TooltipTrigger>
             <TooltipContent>
-              <p>{roomName}</p>
+              <p>{label}</p>
             </TooltipContent>
           </Tooltip>
         );

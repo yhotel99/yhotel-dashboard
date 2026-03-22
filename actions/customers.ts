@@ -76,8 +76,16 @@ export async function createCustomerAction(
     .single();
 
   if (error) {
-
     console.error("Error creating customer:", error);
+    
+    // Check for duplicate email
+    if (error.code === "23505" && error.message.includes("customers_email_key")) {
+      return {
+        ok: false,
+        message: "Email này đã tồn tại trong hệ thống. Vui lòng sử dụng email khác.",
+      };
+    }
+    
     return {
       ok: false,
       message: error.message,
@@ -119,6 +127,15 @@ export async function updateCustomerAction(
 
   if (error) {
     console.error("Error updating customer:", error);
+    
+    // Check for duplicate email
+    if (error.code === "23505" && error.message.includes("customers_email_key")) {
+      return {
+        ok: false,
+        message: "Email này đã tồn tại trong hệ thống. Vui lòng sử dụng email khác.",
+      };
+    }
+    
     return {
       ok: false,
       message: "Không thể cập nhật khách hàng",

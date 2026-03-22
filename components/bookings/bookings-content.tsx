@@ -39,6 +39,7 @@ import { CheckAvailableRoomsDialog } from "@/components/bookings/check-available
 import { translateBookingError } from "@/lib/functions";
 import { toast } from "sonner";
 import { useRealtimeContext } from "@/contexts/realtime-context";
+import { useRoomNumberLookup } from "@/hooks/use-room-number-lookup";
 
 export function BookingsContent({
   initialData,
@@ -110,6 +111,8 @@ export function BookingsContent({
     limit,
     fallbackData: initialData,
   });
+
+  const { data: roomNumberById } = useRoomNumberLookup();
 
   // Reset count khi vào trang
   React.useEffect(() => {
@@ -309,18 +312,22 @@ export function BookingsContent({
 
   const columns = React.useMemo(
     () =>
-      createColumns(handleUpdateStatus, {
-        onEdit: handleEdit,
-        onTransfer: handleTransfer,
-        onMarkAdvancePayment: handleMarkAdvancePayment,
-        onCancelBooking: handleCancelBooking,
-        checkAdvancePaymentStatus: checkAdvancePaymentStatusAction,
-        pendingBooking,
-        confirmedBooking,
-        checkedInBooking,
-        checkedOutBooking,
-        cancelledBooking,
-      }),
+      createColumns(
+        handleUpdateStatus,
+        {
+          onEdit: handleEdit,
+          onTransfer: handleTransfer,
+          onMarkAdvancePayment: handleMarkAdvancePayment,
+          onCancelBooking: handleCancelBooking,
+          checkAdvancePaymentStatus: checkAdvancePaymentStatusAction,
+          pendingBooking,
+          confirmedBooking,
+          checkedInBooking,
+          checkedOutBooking,
+          cancelledBooking,
+        },
+        roomNumberById ? { roomNumberById } : undefined
+      ),
     [
       handleUpdateStatus,
       handleEdit,
@@ -332,6 +339,7 @@ export function BookingsContent({
       checkedInBooking,
       checkedOutBooking,
       cancelledBooking,
+      roomNumberById,
     ]
   );
 

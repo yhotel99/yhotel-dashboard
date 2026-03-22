@@ -92,15 +92,26 @@ type UpcomingBooking = {
   booking_rooms?: Array<{ rooms: { id: string } }> | null;
 };
 
-// Map roomId -> currentBooking từ danh sách sắp check-in (để thẻ hiển thị check-in/check-out/status)
+// Map roomId -> booking sắp nhận sớm nhất (cùng phòng nhiều đơn: phải lấy check_in nhỏ nhất, không ghi đè bởi đơn sau)
 function getRoomIdToUpcomingBooking(
   bookings: UpcomingBooking[]
 ): Map<string, { id: string; check_in: string; check_out: string; status: string }> {
   const map = new Map<string, { id: string; check_in: string; check_out: string; status: string }>();
+  const upsert = (
+    roomId: string,
+    info: { id: string; check_in: string; check_out: string; status: string }
+  ) => {
+    const prev = map.get(roomId);
+    if (!prev || info.check_in < prev.check_in) map.set(roomId, info);
+  };
   for (const b of bookings) {
     const info = { id: b.id, check_in: b.check_in, check_out: b.check_out, status: b.status };
-    if (b.rooms?.id) map.set(b.rooms.id, info);
-    if (b.booking_rooms) for (const br of b.booking_rooms) if (br.rooms?.id) map.set(br.rooms.id, info);
+    if (b.rooms?.id) upsert(b.rooms.id, info);
+    if (b.booking_rooms) {
+      for (const br of b.booking_rooms) {
+        if (br.rooms?.id) upsert(br.rooms.id, info);
+      }
+    }
   }
   return map;
 }

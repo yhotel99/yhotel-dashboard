@@ -8,6 +8,7 @@ import { usePayments } from "@/hooks/use-payments";
 import type { PaymentsResponse } from "@/lib/types";
 import { useDebounce } from "@/hooks/use-debounce";
 import { createPaymentsColumns, PAYMENTS_COLUMNS } from "./columns";
+import { useRoomNumberLookup } from "@/hooks/use-room-number-lookup";
 
 export function PaymentsContent({
   initialData,
@@ -75,6 +76,8 @@ export function PaymentsContent({
     fallbackData: initialData,
   });
 
+  const { data: roomNumberById } = useRoomNumberLookup();
+
   // Handle empty page after deletion or invalid page number
   useEffect(() => {
     if (!isLoading && pagination.totalPages > 0) {
@@ -99,7 +102,13 @@ export function PaymentsContent({
     updateSearchParams,
   ]);
 
-  const columns = useMemo(() => createPaymentsColumns(), []);
+  const columns = useMemo(
+    () =>
+      createPaymentsColumns(
+        roomNumberById ? { roomNumberById } : undefined
+      ),
+    [roomNumberById]
+  );
 
   return (
     <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">

@@ -514,7 +514,7 @@ export function SystemReports() {
                     : "text-destructive"
                 }
               >
-                {Math.abs(summaryStats.revenueGrowth)}%
+                {Math.abs(summaryStats.revenueGrowth).toFixed(2)}%
               </span>
               <span>so với kỳ trước</span>
             </div>
@@ -545,7 +545,7 @@ export function SystemReports() {
                     : "text-green-600"
                 }
               >
-                {Math.abs(summaryStats.refundGrowth)}%
+                {Math.abs(summaryStats.refundGrowth).toFixed(2)}%
               </span>
               <span>so với kỳ trước</span>
             </div>
@@ -578,7 +578,7 @@ export function SystemReports() {
                     : "text-destructive"
                 }
               >
-                {Math.abs(summaryStats.bookingGrowth)}%
+                {Math.abs(summaryStats.bookingGrowth).toFixed(2)}%
               </span>
               <span>so với kỳ trước</span>
             </div>
@@ -594,7 +594,7 @@ export function SystemReports() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-primary">
-              {summaryStats.averageOccupancy}%
+              {summaryStats.averageOccupancy.toFixed(2)}%
             </div>
             <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
               {summaryStats.occupancyGrowth > 0 ? (
@@ -609,7 +609,7 @@ export function SystemReports() {
                     : "text-destructive"
                 }
               >
-                {Math.abs(summaryStats.occupancyGrowth)}%
+                {Math.abs(summaryStats.occupancyGrowth).toFixed(2)}%
               </span>
               <span>so với kỳ trước</span>
             </div>

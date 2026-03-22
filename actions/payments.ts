@@ -28,7 +28,15 @@ export async function checkAdvancePaymentStatusAction(
       .single();
 
     if (error) {
-      throw new Error(error.message);
+      // Not found is not an error, just means no advance payment
+      if (error.code === "PGRST116") {
+        return {
+          hasAdvancePayment: false,
+          isPaid: false,
+          paymentId: null,
+        };
+      }
+      throw new Error("Không thể kiểm tra trạng thái đặt cọc. Vui lòng thử lại.");
     }
 
     if (!data) {
@@ -82,7 +90,10 @@ export async function markAdvancePaymentAsPaidAction(
       .eq("payment_type", PAYMENT_TYPE.ADVANCE_PAYMENT);
 
     if (error) {
-      throw new Error(error.message);
+      if (error.code === "23503") {
+        throw new Error("Không thể cập nhật thanh toán vì có dữ liệu liên quan bị thiếu.");
+      }
+      throw new Error("Không thể đánh dấu đặt cọc đã thanh toán. Vui lòng thử lại.");
     }
 
     // Log audit trail
@@ -139,7 +150,7 @@ export async function getPaymentsByBookingIdAction(
       .order("created_at", { ascending: false });
 
     if (error) {
-      throw new Error(error.message);
+      throw new Error("Không thể tải danh sách thanh toán. Vui lòng thử lại.");
     }
 
     return (data || []) as PaymentWithBooking[];

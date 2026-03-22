@@ -99,7 +99,11 @@ export async function updateSettingsAction(
       .single();
 
     if (error) {
-      throw new Error(error.message);
+      // Check for specific errors
+      if (error.code === "23503") {
+        throw new Error("Không thể cập nhật cài đặt vì có dữ liệu liên quan bị thiếu.");
+      }
+      throw new Error("Không thể cập nhật cài đặt. Vui lòng thử lại.");
     }
 
     // Parse hero_images from JSONB to ImageValue[]

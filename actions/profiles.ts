@@ -53,7 +53,17 @@ export async function createProfileAction(
     });
 
     if (authError) {
-      throw new Error(authError.message);
+      // Translate common auth errors
+      if (authError.message.includes("User already registered")) {
+        throw new Error("Email này đã được đăng ký. Vui lòng sử dụng email khác.");
+      }
+      if (authError.message.includes("Password should be at least")) {
+        throw new Error("Mật khẩu phải có ít nhất 6 ký tự.");
+      }
+      if (authError.message.includes("duplicate key value") && authError.message.includes("email")) {
+        throw new Error("Email này đã tồn tại trong hệ thống.");
+      }
+      throw new Error("Không thể tạo tài khoản. Vui lòng kiểm tra lại thông tin.");
     }
 
     // Revalidate profiles page
@@ -110,7 +120,15 @@ export async function updateProfileAction(
       .single();
 
     if (error) {
-      throw new Error(error.message);
+      // Check for duplicate email
+      if (error.code === "23505" && error.message.includes("email")) {
+        throw new Error("Email này đã tồn tại trong hệ thống.");
+      }
+      // Check for foreign key violations
+      if (error.code === "23503") {
+        throw new Error("Không thể cập nhật thông tin vì có dữ liệu liên quan.");
+      }
+      throw new Error("Không thể cập nhật thông tin người dùng. Vui lòng thử lại.");
     }
 
     // Revalidate profiles page
@@ -136,7 +154,11 @@ export async function deleteProfileAction(id: string): Promise<void> {
       .eq("id", id);
 
     if (error) {
-      throw new Error(error.message);
+      // Check for foreign key violations
+      if (error.code === "23503") {
+        throw new Error("Không thể xóa người dùng này vì có dữ liệu liên quan trong hệ thống.");
+      }
+      throw new Error("Không thể xóa người dùng. Vui lòng thử lại.");
     }
 
     // Revalidate profiles page

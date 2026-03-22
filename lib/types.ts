@@ -246,6 +246,8 @@ export type BookingRecord = {
     items?: Array<{
       id: string;
       name: string;
+      room_number?: string | null;
+      floor_number?: number | null;
     }>;
   } | null;
   booking_rooms?: Array<{
@@ -253,6 +255,31 @@ export type BookingRecord = {
     rooms: {
       id: string;
       name: string;
+      room_number?: string | null;
+      floor_number?: number | null;
+    };
+  }> | null;
+};
+
+/** Slice tối thiểu để format nhãn số phòng (booking list, payment join, v.v.). */
+export type BookingRoomNumbersSlice = {
+  room_id?: string | null;
+  rooms?: {
+    name?: string;
+    room_number?: string | null;
+    floor_number?: number | null;
+    items?: Array<{
+      id: string;
+      name?: string;
+      room_number?: string | null;
+      floor_number?: number | null;
+    }>;
+  } | null;
+  booking_rooms?: Array<{
+    room_id: string;
+    rooms: {
+      id?: string;
+      name?: string;
       room_number?: string | null;
       floor_number?: number | null;
     };
@@ -373,6 +400,7 @@ export type PaymentWithBooking = Payment & {
     } | null;
     rooms?: {
       name: string;
+      items?: Array<{ id: string; name?: string }>;
     } | null;
   } | null;
 };
@@ -612,6 +640,7 @@ export type PaymentLogWithBooking = PaymentLog & {
     } | null;
     rooms?: {
       name: string;
+      items?: Array<{ id: string; name?: string }>;
     } | null;
   } | null;
 };

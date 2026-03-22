@@ -327,6 +327,20 @@ export const CUSTOMER_ERROR_PATTERNS = {
   DUPLICATE_KEY_GENERAL: "duplicate key value violates unique constraint",
 } as const;
 
+export const ROOM_ERROR_PATTERNS = {
+  DUPLICATE_ROOM_NUMBER:
+    'duplicate key value violates unique constraint "rooms_room_number_key"',
+  DUPLICATE_ROOM_NUMBER_SHORT: "rooms_room_number_key",
+  FOREIGN_KEY_VIOLATION: "23503",
+  HAS_BOOKINGS: "update or delete on table \"rooms\" violates foreign key constraint",
+} as const;
+
+export const DATABASE_ERROR_CODES = {
+  UNIQUE_VIOLATION: "23505",
+  FOREIGN_KEY_VIOLATION: "23503",
+  CHECK_VIOLATION: "23514",
+} as const;
+
 export const BOOKING_ERROR_PATTERNS = {
   ROOM_NOT_AVAILABLE: "Room is not available for the selected date/time",
   CONFLICT_EXCLUSION_CONSTRAINT:

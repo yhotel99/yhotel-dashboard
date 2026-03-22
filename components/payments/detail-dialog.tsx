@@ -13,7 +13,12 @@ import { Badge } from "@/components/ui/badge";
 import { Eye } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { PaymentWithBooking } from "@/lib/types";
-import { formatCurrency, formatDateOnly } from "@/lib/functions";
+import {
+  formatCurrency,
+  formatDateOnly,
+  formatRoomNumbersWithTypeNameFallback,
+} from "@/lib/functions";
+import { useRoomNumberLookup } from "@/hooks/use-room-number-lookup";
 import { PaymentStatusBadge } from "./status";
 import { paymentTypeLabels, paymentMethodLabels } from "@/lib/constants";
 
@@ -22,6 +27,16 @@ interface PaymentDetailDialogProps {
 }
 
 export function PaymentDetailDialog({ payment }: PaymentDetailDialogProps) {
+  const { data: roomNumberById } = useRoomNumberLookup();
+  const roomLabel = formatRoomNumbersWithTypeNameFallback(
+    {
+      room_id: null,
+      rooms: payment.bookings?.rooms ?? undefined,
+      booking_rooms: undefined,
+    },
+    roomNumberById
+  );
+
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -71,11 +86,9 @@ export function PaymentDetailDialog({ payment }: PaymentDetailDialogProps) {
               </div>
               <div>
                 <p className="text-sm font-medium text-muted-foreground">
-                  Phòng
+                  Số phòng
                 </p>
-                <p className="text-sm">
-                  {payment.bookings?.rooms?.name || "-"}
-                </p>
+                <p className="text-sm">{roomLabel}</p>
               </div>
               <div>
                 <p className="text-sm font-medium text-muted-foreground">

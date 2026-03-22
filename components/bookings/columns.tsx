@@ -1,7 +1,11 @@
 "use client";
 
 import { ColumnDef } from "@tanstack/react-table";
-import { formatCurrency, formatDateOnly } from "@/lib/functions";
+import {
+  formatBookingRoomNumbersLabel,
+  formatCurrency,
+  formatDateOnly,
+} from "@/lib/functions";
 import type {
   BookingRecord,
   BookingStatus,
@@ -49,8 +53,13 @@ export function createColumns(
     checkedInBooking?: (bookingId: string) => Promise<void>;
     checkedOutBooking?: (bookingId: string) => Promise<void>;
     cancelledBooking?: (bookingId: string) => Promise<void>;
+  },
+  options?: {
+    /** id phòng → số phòng (bảng rooms, cùng nguồn /dashboard/rooms) */
+    roomNumberById?: Readonly<Record<string, string>>;
   }
 ): ColumnDef<BookingRecord>[] {
+  const roomNumberById = options?.roomNumberById;
   return [
     {
       accessorKey: COLUMNS.BOOKING_CODE.accessorKey,
@@ -113,16 +122,19 @@ export function createColumns(
       accessorKey: COLUMNS.ROOM_NAME.accessorKey,
       header: COLUMNS.ROOM_NAME.header,
       cell: ({ row }) => {
-        const roomName = row.original.rooms?.name ?? "-";
+        const label = formatBookingRoomNumbersLabel(
+          row.original,
+          roomNumberById
+        );
         return (
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="max-w-[160px] truncate font-medium">
-                {roomName}
+              <div className="max-w-[200px] truncate font-medium">
+                {label}
               </div>
             </TooltipTrigger>
             <TooltipContent>
-              <p>{roomName}</p>
+              <p>{label}</p>
             </TooltipContent>
           </Tooltip>
         );

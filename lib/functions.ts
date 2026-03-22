@@ -1,5 +1,6 @@
 import { parse, formatISO, format, parseISO } from "date-fns";
 import { CUSTOMER_ERROR_PATTERNS } from "@/lib/constants";
+import type { BookingRoomNumbersSlice } from "@/lib/types";
 
 // 🎨 Hàm tạo màu gradient ổn định dựa vào user.id
 export function generateGradient(id: string) {
@@ -107,6 +108,86 @@ export function getDateTimeISO(date: string, time: string): string | null {
 /**
  * Utility functions for booking operations
  */
+
+function collectBookingRoomIds(booking: BookingRoomNumbersSlice): string[] {
+  const ids: string[] = [];
+  const seen = new Set<string>();
+  const push = (id: string | null | undefined) => {
+    if (!id || seen.has(id)) return;
+    seen.add(id);
+    ids.push(id);
+  };
+  for (const br of booking.booking_rooms ?? []) {
+    push(br.room_id);
+  }
+  for (const it of booking.rooms?.items ?? []) {
+    push(it.id);
+  }
+  push(booking.room_id);
+  return ids;
+}
+
+/**
+ * Chuỗi số phòng trên bảng booking. Nếu có `roomNumberById` (lookup từ bảng rooms như /dashboard/rooms),
+ * resolve theo id phòng từ booking; không thì dùng room_number có sẵn trong payload.
+ */
+export function formatBookingRoomNumbersLabel(
+  booking: BookingRoomNumbersSlice,
+  roomNumberById?: Readonly<Record<string, string>>
+): string {
+  if (roomNumberById && Object.keys(roomNumberById).length > 0) {
+    const labels: string[] = [];
+    const usedNums = new Set<string>();
+    for (const id of collectBookingRoomIds(booking)) {
+      const n = roomNumberById[id];
+      if (n && !usedNums.has(n)) {
+        usedNums.add(n);
+        labels.push(n);
+      }
+    }
+    if (labels.length > 0) {
+      return labels.join(", ");
+    }
+  }
+
+  if (booking.booking_rooms && booking.booking_rooms.length > 0) {
+    const nums = booking.booking_rooms
+      .map((br) => br.rooms.room_number)
+      .filter((n): n is string => Boolean(n && String(n).trim()));
+    const sorted = [...new Set(nums)].sort((a, b) =>
+      a.localeCompare(b, undefined, { numeric: true })
+    );
+    if (sorted.length > 0) {
+      return sorted.join(", ");
+    }
+  }
+  const single = booking.rooms?.room_number;
+  if (single && String(single).trim()) {
+    return String(single).trim();
+  }
+  const fromItems = booking.rooms?.items
+    ?.map((it) => it.room_number)
+    .filter((n): n is string => Boolean(n && String(n).trim()));
+  if (fromItems?.length) {
+    return [...new Set(fromItems)].sort((a, b) =>
+      a.localeCompare(b, undefined, { numeric: true })
+    ).join(", ");
+  }
+  return "-";
+}
+
+/**
+ * Số phòng từ lookup; nếu chưa resolve được thì hiện tên loại phòng (`rooms.name`) thay cho "-".
+ */
+export function formatRoomNumbersWithTypeNameFallback(
+  slice: BookingRoomNumbersSlice,
+  roomNumberById?: Readonly<Record<string, string>>
+): string {
+  const n = formatBookingRoomNumbersLabel(slice, roomNumberById);
+  if (n !== "-") return n;
+  const name = slice.rooms?.name?.trim();
+  return name || "-";
+}
 
 /**
  * Get date part YYYY-MM-DD from ISO or YYYY-MM-DD string (local date, no TZ shift)
@@ -321,6 +402,87 @@ export function translateCustomerError(rawMessage: string): string {
     return "Email này đã tồn tại trong hệ thống. Vui lòng sử dụng email khác.";
   }
   return rawMessage;
+}
+
+/**
+ * Translate room error messages to Vietnamese
+ * @param rawMessage Original error message
+ * @param errorCode Optional error code from database
+ * @returns Translated error message
+ */
+export function translateRoomError(rawMessage: string, errorCode?: string): string {
+  // Check for duplicate room number
+  if (
+    rawMessage.includes("rooms_room_number_key") ||
+    rawMessage.includes("duplicate key value violates unique constraint")
+  ) {
+    return "Số phòng này đã tồn tại trong hệ thống. Vui lòng sử dụng số phòng khác.";
+  }
+  
+  // Check for foreign key violations (room has bookings)
+  if (
+    errorCode === "23503" ||
+    rawMessage.includes("foreign key constraint") ||
+    rawMessage.includes("violates foreign key")
+  ) {
+    return "Không thể xóa phòng này vì đang có đơn đặt phòng liên quan. Vui lòng kiểm tra lại.";
+  }
+  
+  return rawMessage;
+}
+
+/**
+ * Translate payment error messages to Vietnamese
+ * @param rawMessage Original error message
+ * @returns Translated error message
+ */
+export function translatePaymentError(rawMessage: string): string {
+  if (rawMessage.includes("foreign key constraint")) {
+    return "Không thể thực hiện thao tác này vì có dữ liệu liên quan. Vui lòng kiểm tra lại.";
+  }
+  
+  if (rawMessage.includes("check constraint")) {
+    return "Dữ liệu không hợp lệ. Vui lòng kiểm tra lại thông tin thanh toán.";
+  }
+  
+  if (rawMessage.includes("not found") || rawMessage.includes("does not exist")) {
+    return "Không tìm thấy thông tin thanh toán. Vui lòng thử lại.";
+  }
+  
+  return "Không thể xử lý thanh toán. Vui lòng thử lại sau.";
+}
+
+/**
+ * Translate profile/auth error messages to Vietnamese
+ * @param rawMessage Original error message
+ * @returns Translated error message
+ */
+export function translateProfileError(rawMessage: string): string {
+  if (rawMessage.includes("Invalid login credentials")) {
+    return "Thông tin đăng nhập không chính xác. Vui lòng kiểm tra lại email và mật khẩu.";
+  }
+  
+  if (rawMessage.includes("Email not confirmed")) {
+    return "Email chưa được xác nhận. Vui lòng kiểm tra hộp thư và xác nhận email.";
+  }
+  
+  if (rawMessage.includes("User already registered")) {
+    return "Email này đã được đăng ký. Vui lòng sử dụng email khác hoặc đăng nhập.";
+  }
+  
+  if (rawMessage.includes("Password should be at least")) {
+    return "Mật khẩu phải có ít nhất 6 ký tự.";
+  }
+  
+  if (rawMessage.includes("duplicate key value") && rawMessage.includes("email")) {
+    return "Email này đã tồn tại trong hệ thống.";
+  }
+  
+  if (rawMessage.includes("foreign key constraint")) {
+    return "Không thể cập nhật thông tin vì có dữ liệu liên quan.";
+  }
+  
+  return "Không thể cập nhật thông tin. Vui lòng thử lại sau.";
 }
 
 /**

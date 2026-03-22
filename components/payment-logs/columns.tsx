@@ -1,7 +1,12 @@
 "use client";
 
 import { ColumnDef } from "@tanstack/react-table";
-import { formatCurrency, formatDateOnly, formatDate } from "@/lib/functions";
+import {
+  formatCurrency,
+  formatDateOnly,
+  formatDate,
+  formatRoomNumbersWithTypeNameFallback,
+} from "@/lib/functions";
 import type { PaymentLogWithBooking } from "@/lib/types";
 import { PaymentLogStatusBadge } from "./status";
 import { PaymentLogDetailDialog } from "./detail-dialog";
@@ -16,7 +21,7 @@ export const PAYMENT_LOG_COLUMNS = {
   BOOKING_CODE: { accessorKey: "Mã Booking", header: "Mã Booking" },
   TRANSACTION_ID: { accessorKey: "Mã Giao Dịch", header: "Mã Giao Dịch" },
   CUSTOMER_NAME: { accessorKey: "Khách hàng", header: "Khách hàng" },
-  ROOM_NAME: { accessorKey: "Phòng", header: "Phòng" },
+  ROOM_NAME: { accessorKey: "Số phòng", header: "Số phòng" },
   AMOUNT: { accessorKey: "Số tiền", header: "Số tiền" },
   BANK_CODE: { accessorKey: "Ngân hàng", header: "Ngân hàng" },
   STATUS: { accessorKey: "Trạng thái", header: "Trạng thái" },
@@ -25,7 +30,10 @@ export const PAYMENT_LOG_COLUMNS = {
   CREATED_AT: { accessorKey: "Ngày tạo", header: "Ngày tạo" },
 } as const;
 
-export function createPaymentLogColumns(): ColumnDef<PaymentLogWithBooking>[] {
+export function createPaymentLogColumns(options?: {
+  roomNumberById?: Readonly<Record<string, string>>;
+}): ColumnDef<PaymentLogWithBooking>[] {
+  const roomNumberById = options?.roomNumberById;
   return [
     {
       accessorKey: PAYMENT_LOG_COLUMNS.BOOKING_CODE.accessorKey,
@@ -81,8 +89,29 @@ export function createPaymentLogColumns(): ColumnDef<PaymentLogWithBooking>[] {
     {
       accessorKey: PAYMENT_LOG_COLUMNS.ROOM_NAME.accessorKey,
       header: PAYMENT_LOG_COLUMNS.ROOM_NAME.header,
-      cell: ({ row }) => row.original.bookings?.rooms?.name ?? "-",
-      size: 100,
+      cell: ({ row }) => {
+        const label = formatRoomNumbersWithTypeNameFallback(
+          {
+            room_id: null,
+            rooms: row.original.bookings?.rooms ?? undefined,
+            booking_rooms: undefined,
+          },
+          roomNumberById
+        );
+        return (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="max-w-[200px] truncate block font-medium">
+                {label}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{label}</p>
+            </TooltipContent>
+          </Tooltip>
+        );
+      },
+      size: 120,
       minSize: 80,
     },
     {
@@ -163,7 +192,12 @@ export function createPaymentLogColumns(): ColumnDef<PaymentLogWithBooking>[] {
       header: "Hành động",
       cell: ({ row }) => {
         const log = row.original;
-        return <PaymentLogDetailDialog paymentLog={log} />;
+        return (
+          <PaymentLogDetailDialog
+            paymentLog={log}
+            roomNumberById={roomNumberById}
+          />
+        );
       },
       size: 100,
       minSize: 80,

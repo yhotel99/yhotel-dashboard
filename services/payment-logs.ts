@@ -4,6 +4,7 @@ import type {
   PaymentLogWithBooking,
   PaymentLogsResponse,
 } from "@/lib/types";
+import { enrichRowsWithBookingRoomItems } from "@/services/enrich-booking-rooms";
 
 /**
  * Get payment logs list with pagination
@@ -70,11 +71,15 @@ export async function getPaymentLogsListWithPagination({
     }
 
     const paymentLogsData = (data || []) as PaymentLogWithBooking[];
+    const enriched = await enrichRowsWithBookingRoomItems(
+      supabase,
+      paymentLogsData
+    );
     const total = count || 0;
     const totalPages = Math.ceil(total / limit);
 
     return {
-      data: paymentLogsData,
+      data: enriched,
       pagination: {
         total,
         page,

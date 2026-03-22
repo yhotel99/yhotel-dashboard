@@ -25,6 +25,10 @@ export async function createVoucher(input: VoucherInput): Promise<ResultVoid> {
 
     const { error } = await supabase.from("vouchers").insert([payload]);
     if (error) {
+      // Check for duplicate voucher code error
+      if (error.code === "23505" && error.message.includes("vouchers_code_unique")) {
+        return { ok: false, message: "Không thể tạo voucher. Mã voucher đã tồn tại trong hệ thống." };
+      }
       return { ok: false, message: error.message || "Không thể tạo voucher" };
     }
 
@@ -65,6 +69,10 @@ export async function updateVoucher(
       .select("id");
 
     if (error) {
+      // Check for duplicate voucher code error
+      if (error.code === "23505" && error.message.includes("vouchers_code_unique")) {
+        return { ok: false, message: "Không thể cập nhật voucher. Mã voucher đã tồn tại trong hệ thống." };
+      }
       return {
         ok: false,
         message: error.message || "Không thể cập nhật voucher",

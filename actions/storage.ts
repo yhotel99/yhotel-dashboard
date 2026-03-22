@@ -17,7 +17,7 @@ export async function uploadFileAction(
   folder: string = "gallery"
 ): Promise<UploadResult> {
   if (!isValidImageFile(file)) {
-    throw new Error(`File ${file.name} không phải là hình ảnh`);
+    throw new Error(`File ${file.name} không phải là hình ảnh hợp lệ. Vui lòng chọn file JPG, PNG hoặc WebP.`);
   }
 
   const supabase = await createClient();
@@ -33,7 +33,17 @@ export async function uploadFileAction(
     });
 
   if (uploadError) {
-    throw new Error(`Upload thất bại: ${uploadError.message}`);
+    // Check for specific storage errors
+    if (uploadError.message.includes("Duplicate")) {
+      throw new Error("File đã tồn tại. Vui lòng thử lại.");
+    }
+    if (uploadError.message.includes("size")) {
+      throw new Error("File quá lớn. Vui lòng chọn file nhỏ hơn.");
+    }
+    if (uploadError.message.includes("not found")) {
+      throw new Error("Không tìm thấy bucket lưu trữ. Vui lòng liên hệ quản trị viên.");
+    }
+    throw new Error("Không thể tải lên hình ảnh. Vui lòng thử lại.");
   }
 
   // Get public URL

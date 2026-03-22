@@ -93,6 +93,13 @@ export async function createRoom(
       .single();
 
     if (error) {
+      // Check for duplicate room number
+      if (error.code === "23505" && error.message.includes("rooms_room_number_key")) {
+        return {
+          ok: false,
+          message: "Số phòng này đã tồn tại trong hệ thống. Vui lòng sử dụng số phòng khác.",
+        };
+      }
       return {
         ok: false,
         message: error.message || "Không thể tạo phòng",
@@ -183,6 +190,13 @@ export async function updateRoom(
     const { error } = await supabase.from("rooms").update(input).eq("id", id);
 
     if (error) {
+      // Check for duplicate room number
+      if (error.code === "23505" && error.message.includes("rooms_room_number_key")) {
+        return {
+          ok: false,
+          message: "Số phòng này đã tồn tại trong hệ thống. Vui lòng sử dụng số phòng khác.",
+        };
+      }
       return {
         ok: false,
         message: error.message || "Không thể cập nhật phòng",
@@ -317,12 +331,42 @@ export async function updateRoomStatus(
 export async function deleteRoom(id: string): Promise<ResultVoid> {
   try {
     const supabase = await createClient();
+    
+    // Check if room has any bookings (active or historical)
+    const { data: bookings, error: bookingError } = await supabase
+      .from("bookings")
+      .select("id")
+      .eq("room_id", id)
+      .limit(1);
+
+    if (bookingError) {
+      console.error("Error checking room bookings:", bookingError);
+      return {
+        ok: false,
+        message: "Không thể kiểm tra đơn đặt phòng",
+      };
+    }
+
+    if (bookings && bookings.length > 0) {
+      return {
+        ok: false,
+        message: "Không thể xóa phòng này vì đang có đơn đặt phòng liên quan. Vui lòng kiểm tra lại.",
+      };
+    }
+
     const { error } = await supabase
       .from("rooms")
       .update({ deleted_at: new Date().toISOString() })
       .eq("id", id);
 
     if (error) {
+      // Check for foreign key violations
+      if (error.code === "23503" || error.message.includes("foreign key constraint")) {
+        return {
+          ok: false,
+          message: "Không thể xóa phòng này vì đang có dữ liệu liên quan. Vui lòng kiểm tra lại.",
+        };
+      }
       return {
         ok: false,
         message: error.message || "Không thể xóa phòng",
@@ -443,6 +487,43 @@ export async function getRoomById(
  * @param ids - Array of room IDs
  * @returns Array of rooms with basic info (without images for performance)
  */
+/**
+ * Map room id → room_number (cùng bảng rooms với /dashboard/rooms), dùng lookup trên bảng booking.
+ */
+export async function listRoomNumberLookup(): Promise<
+  Result<Record<string, string>>
+> {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("rooms")
+      .select("id, room_number")
+      .is("deleted_at", null);
+
+    if (error) {
+      return {
+        ok: false,
+        message: error.message || "Không thể tải danh sách số phòng",
+      };
+    }
+
+    const map: Record<string, string> = {};
+    for (const row of data ?? []) {
+      const id = row.id as string;
+      const num = row.room_number;
+      if (id && num != null && String(num).trim() !== "") {
+        map[id] = String(num).trim();
+      }
+    }
+
+    return { ok: true, data: map };
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : "Không thể tải danh sách số phòng";
+    return { ok: false, message };
+  }
+}
+
 export async function getRoomsByIds(
   ids: string[]
 ): Promise<Result<Room[]>> {

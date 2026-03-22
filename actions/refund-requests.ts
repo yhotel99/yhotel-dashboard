@@ -34,7 +34,7 @@ async function getTotalRefundedAmount(
   const { data, error } = await query;
 
   if (error) {
-    throw new Error(`Không thể tính tổng đã hoàn tiền: ${error.message}`);
+    throw new Error("Không thể tính tổng số tiền đã hoàn. Vui lòng thử lại.");
   }
 
   return (data || []).reduce((sum: number, refund: { amount: number }) => sum + (refund.amount || 0), 0);
@@ -52,7 +52,7 @@ async function getTotalPaidAmount(bookingId: string): Promise<number> {
     .eq("payment_status", PAYMENT_STATUS.PAID);
 
   if (error) {
-    throw new Error(`Không thể tính tổng đã thanh toán: ${error.message}`);
+    throw new Error("Không thể tính tổng số tiền đã thanh toán. Vui lòng thử lại.");
   }
 
   return (data || []).reduce((sum: number, payment: { amount: number }) => sum + (payment.amount || 0), 0);
@@ -148,7 +148,11 @@ export async function createRefundRequestAction(
       .single();
 
     if (error) {
-      throw new Error(error.message);
+      // Check for foreign key violations
+      if (error.code === "23503") {
+        throw new Error("Không thể tạo yêu cầu hoàn tiền vì thông tin booking hoặc payment không hợp lệ.");
+      }
+      throw new Error("Không thể tạo yêu cầu hoàn tiền. Vui lòng thử lại.");
     }
 
     // Revalidate refund requests page
@@ -187,7 +191,7 @@ export async function getRefundRequestsByBookingIdAction(
       .order("created_at", { ascending: false });
 
     if (error) {
-      throw new Error(error.message);
+      throw new Error("Không thể tải danh sách yêu cầu hoàn tiền. Vui lòng thử lại.");
     }
 
     return (data || []) as RefundRequest[];
@@ -253,7 +257,13 @@ export async function updateRefundRequestStatusAction(
       p_user_id: user.id,
     });
 
-    if (error) throw new Error(error.message);
+    if (error) {
+      // Check for foreign key violations
+      if (error.code === "23503") {
+        throw new Error("Không thể cập nhật trạng thái vì có dữ liệu liên quan bị thiếu.");
+      }
+      throw new Error("Không thể cập nhật trạng thái yêu cầu hoàn tiền. Vui lòng thử lại.");
+    }
 
     // Log audit trail for approve/reject/refunded
     if (status === REFUND_REQUEST_STATUS.APPROVED) {

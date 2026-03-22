@@ -11,6 +11,7 @@ import type {
   PaymentsResponse,
 } from "@/lib/types";
 import { PAYMENT_STATUS, PAYMENT_TYPE } from "@/lib/constants";
+import { enrichRowsWithBookingRoomItems } from "@/services/enrich-booking-rooms";
 
 /**
  * Search payments with pagination and search
@@ -413,18 +414,22 @@ export async function getPaymentsListWithPagination({
               phone: row.customers.phone,
             }
           : null,
-        rooms: row.rooms?.name
-          ? {
-              name: row.rooms.name,
-            }
-          : null,
+        rooms:
+          row.rooms != null
+            ? { name: row.rooms.name ?? "" }
+            : null,
       },
     }));
+
+    const withRoomIds = await enrichRowsWithBookingRoomItems(
+      supabase,
+      paymentsData
+    );
 
     const totalPages = Math.ceil(total / limit);
 
     return {
-      data: paymentsData,
+      data: withRoomIds,
       pagination: {
         total,
         page,

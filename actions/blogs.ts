@@ -93,9 +93,18 @@ export async function updateBlogStatus(
   
   if (error) {
     console.error("Error updating blog status:", error);
+    
+    // Check for foreign key violations
+    if (error.code === "23503") {
+      return {
+        ok: false,
+        message: "Không thể cập nhật trạng thái vì có dữ liệu liên quan.",
+      };
+    }
+    
     return {
       ok: false,
-      message: error.message,
+      message: "Không thể cập nhật trạng thái blog. Vui lòng thử lại.",
     };
   }
 
