@@ -126,10 +126,18 @@ export async function GET(req: NextRequest) {
     }
 
     // Calculate current period stats
-    // Total Revenue = Sum of all booking amounts (Gross revenue, not just paid)
+    // Total Revenue = Sum of booking amounts from valid revenue statuses only
+    const revenueStatuses = [
+      BOOKING_STATUS.CONFIRMED,
+      BOOKING_STATUS.CHECKED_IN,
+      BOOKING_STATUS.CHECKED_OUT,
+    ];
     const totalRevenue =
       currentBookings?.reduce(
         (sum, b) => {
+          if (!revenueStatuses.includes(b.status)) {
+            return sum;
+          }
           const val = typeof b.total_amount === "string" ? parseFloat(b.total_amount) : (b.total_amount || 0);
           return sum + (isNaN(val) ? 0 : val);
         },
@@ -217,6 +225,9 @@ export async function GET(req: NextRequest) {
     const prevTotalRevenue =
       prevBookings?.reduce(
         (sum, b) => {
+          if (!revenueStatuses.includes(b.status)) {
+            return sum;
+          }
           const val = typeof b.total_amount === "string" ? parseFloat(b.total_amount) : (b.total_amount || 0);
           return sum + (isNaN(val) ? 0 : val);
         },
