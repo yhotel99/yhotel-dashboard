@@ -293,11 +293,6 @@ export default function ReservationPage() {
             );
           })}
         </div>
-        {selectedStatus === ROOM_MAP_STATUS.UPCOMING_CHECKIN && (
-          <p className="text-xs text-muted-foreground">
-            Đang hiển thị các phòng sắp nhận — <strong>trong 2 tiếng</strong> tới hoặc <strong>các ngày khác</strong> (theo lịch check-in).
-          </p>
-        )}
       </div>
 
       {/* Room Grid */}

@@ -80,6 +80,14 @@ function calculateStayDuration(booking: RoomWithBooking["currentBooking"]) {
   return `${totalHours} giờ ${totalMinutes} phút / ${bookedHours} giờ`;
 }
 
+function isSameDay(dateA: Date, dateB: Date): boolean {
+  return (
+    dateA.getFullYear() === dateB.getFullYear() &&
+    dateA.getMonth() === dateB.getMonth() &&
+    dateA.getDate() === dateB.getDate()
+  );
+}
+
 interface RoomCardProps {
   room: RoomWithBooking;
   onStatusChange?: () => void;
@@ -87,6 +95,16 @@ interface RoomCardProps {
 
 export function RoomCard({ room, onStatusChange }: RoomCardProps) {
   const stayDuration = calculateStayDuration(room.currentBooking);
+  const isTodayCheckIn =
+    room.mapStatus === ROOM_MAP_STATUS.UPCOMING_CHECKIN &&
+    !!room.currentBooking &&
+    isSameDay(new Date(room.currentBooking.check_in), new Date());
+  const cardColorClassName =
+    room.mapStatus === ROOM_MAP_STATUS.UPCOMING_CHECKIN
+      ? isTodayCheckIn
+        ? "bg-yellow-50 border-2 border-yellow-300"
+        : "bg-white border border-gray-200"
+      : roomMapStatusCardColors[room.mapStatus];
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isQuickBookingOpen, setIsQuickBookingOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
@@ -216,7 +234,7 @@ export function RoomCard({ room, onStatusChange }: RoomCardProps) {
         onClick={handleCardClick}
         className={cn(
           "relative p-4 cursor-pointer hover:shadow-lg transition-all duration-200 grid grid-rows-[auto_auto_auto_1fr_auto] gap-3",
-          roomMapStatusCardColors[room.mapStatus]
+          cardColorClassName
         )}
       >
         {/* Header với badge "Sạch" và menu */}
