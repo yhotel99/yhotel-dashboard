@@ -29,7 +29,9 @@ import { Label } from "@/components/ui/label";
 import type { Customer, CustomerInput } from "@/lib/types";
 import {
   CUSTOMER_SOURCE,
+  NATIONALITY,
   customerSourceLabels,
+  nationalityLabels,
 } from "@/lib/constants";
 import {
   Popover,
@@ -176,6 +178,7 @@ export function EditCustomerDialog({
     const fullName = formValues.full_name.trim();
     const email = formValues.email.trim();
     const phone = formValues.phone.trim();
+    const nationality = formValues.nationality.trim();
 
     if (!fullName) {
       setError("Họ tên không được để trống.");
@@ -197,11 +200,16 @@ export function EditCustomerDialog({
       return;
     }
 
+    if (!nationality) {
+      setError("Quốc tịch không được để trống.");
+      return;
+    }
+
     const payload: CustomerInput = {
       full_name: fullName,
       email: email,
       phone: phone || null,
-      nationality: formValues.nationality.trim() || null,
+      nationality,
       id_card: formValues.id_card.trim() || null,
       customer_type: formValues.customer_type,
       date_of_birth: formValues.date_of_birth || null,
@@ -281,14 +289,22 @@ export function EditCustomerDialog({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="nationality">Quốc tịch</Label>
-              <Input
-                id="nationality"
-                type="text"
-                placeholder="Nhập quốc tịch"
+              <Label htmlFor="nationality">Quốc tịch *</Label>
+              <Select
                 value={formValues.nationality}
-                onChange={handleInputChange("nationality")}
-              />
+                onValueChange={handleSelectChange("nationality")}
+              >
+                <SelectTrigger id="nationality" className="w-full">
+                  <SelectValue placeholder="Chọn quốc tịch" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[320px]">
+                  {Object.values(NATIONALITY).map((code) => (
+                    <SelectItem key={code} value={code}>
+                      {nationalityLabels[code]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="id_card">CMND/Hộ chiếu</Label>
