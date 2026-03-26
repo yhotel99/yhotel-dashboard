@@ -40,12 +40,22 @@ export function calculateTotalWithWeekdayRates({
   breakdown: DailyPricingBreakdownItem[];
 } {
   const inD = startOfDayLocal(checkInDate);
-  const outD = startOfDayLocal(checkOutDate);
+  const outDInput = startOfDayLocal(checkOutDate);
 
   if (!Number.isFinite(basePrice) || basePrice <= 0) {
     return { total: 0, breakdown: [] };
   }
-  if (Number.isNaN(inD.getTime()) || Number.isNaN(outD.getTime()) || outD <= inD) {
+  if (Number.isNaN(inD.getTime()) || Number.isNaN(outDInput.getTime())) {
+    return { total: 0, breakdown: [] };
+  }
+
+  // Day-use: same calendar day still counts as 1 night.
+  const outD =
+    outDInput.getTime() === inD.getTime()
+      ? new Date(inD.getFullYear(), inD.getMonth(), inD.getDate() + 1)
+      : outDInput;
+
+  if (outD < inD) {
     return { total: 0, breakdown: [] };
   }
 
@@ -70,7 +80,6 @@ export function calculateTotalWithWeekdayRates({
     });
   }
 
-  console.log(breakdown);
   return { total, breakdown };
 }
 
