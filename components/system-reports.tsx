@@ -3,7 +3,6 @@
 import { useState } from "react";
 
 import {
-  IconTrendingUp,
   IconTrendingDown,
   IconChartBar,
   IconBed,
@@ -178,6 +177,11 @@ type RoomStatusResponse = {
   color: string;
 }[];
 
+type DailyOccupancyResponse = {
+  date: string;
+  occupancy: number;
+}[];
+
 type PaymentsResponse = {
   data: PaymentWithBooking[];
   pagination: {
@@ -251,6 +255,16 @@ export function SystemReports() {
     isLoading: isLoadingRoomStatus,
     error: roomStatusError,
   } = useSWR<RoomStatusResponse>("/api/reports/room-status", fetcher);
+  const {
+    data: dailyOccupancyData,
+    isLoading: isLoadingDailyOccupancy,
+    error: dailyOccupancyError,
+  } = useSWR<DailyOccupancyResponse>(
+    `/api/reports/daily?fromDate=${encodeURIComponent(
+      fromISO
+    )}&toDate=${encodeURIComponent(toISO)}`,
+    fetcher
+  );
   const { data: recentPaymentsData, isLoading: isLoadingRecentPayments } =
     useSWR<PaymentsResponse>("/api/payments?page=1&limit=10", fetcher);
 
@@ -281,6 +295,10 @@ export function SystemReports() {
       : [];
   const roomStatuses =
     Array.isArray(roomStatusData) && !roomStatusError ? roomStatusData : [];
+  const dailyOccupancy =
+    Array.isArray(dailyOccupancyData) && !dailyOccupancyError
+      ? dailyOccupancyData
+      : [];
 
   // Calculate total rooms for percentage
   const totalRooms = roomStatuses.reduce(
@@ -501,23 +519,6 @@ export function SystemReports() {
             <div className="text-2xl font-bold text-green-600">
               {formatCurrency(summaryStats.totalRevenue)}
             </div>
-            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-              {summaryStats.revenueGrowth > 0 ? (
-                <IconTrendingUp className="h-3 w-3 text-green-600" />
-              ) : (
-                <IconTrendingDown className="h-3 w-3 text-destructive" />
-              )}
-              <span
-                className={
-                  summaryStats.revenueGrowth > 0
-                    ? "text-green-600 font-semibold"
-                    : "text-destructive"
-                }
-              >
-                {Math.abs(summaryStats.revenueGrowth).toFixed(2)}%
-              </span>
-              <span>so với kỳ trước</span>
-            </div>
           </CardContent>
         </Card>
 
@@ -531,23 +532,6 @@ export function SystemReports() {
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
               {formatCurrency(summaryStats.totalRefunded)}
-            </div>
-            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-              {summaryStats.refundGrowth > 0 ? (
-                <IconTrendingUp className="h-3 w-3 text-destructive" />
-              ) : (
-                <IconTrendingDown className="h-3 w-3 text-green-600" />
-              )}
-              <span
-                className={
-                  summaryStats.refundGrowth > 0
-                    ? "text-destructive font-semibold"
-                    : "text-green-600"
-                }
-              >
-                {Math.abs(summaryStats.refundGrowth).toFixed(2)}%
-              </span>
-              <span>so với kỳ trước</span>
             </div>
           </CardContent>
         </Card>
@@ -565,23 +549,6 @@ export function SystemReports() {
             <div className="text-2xl font-bold text-primary">
               {summaryStats.totalBookings}
             </div>
-            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-              {summaryStats.bookingGrowth > 0 ? (
-                <IconTrendingUp className="h-3 w-3 text-primary" />
-              ) : (
-                <IconTrendingDown className="h-3 w-3 text-destructive" />
-              )}
-              <span
-                className={
-                  summaryStats.bookingGrowth > 0
-                    ? "text-primary font-semibold"
-                    : "text-destructive"
-                }
-              >
-                {Math.abs(summaryStats.bookingGrowth).toFixed(2)}%
-              </span>
-              <span>so với kỳ trước</span>
-            </div>
           </CardContent>
         </Card>
 
@@ -595,23 +562,6 @@ export function SystemReports() {
           <CardContent>
             <div className="text-2xl font-bold text-primary">
               {summaryStats.averageOccupancy.toFixed(2)}%
-            </div>
-            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-              {summaryStats.occupancyGrowth > 0 ? (
-                <IconTrendingUp className="h-3 w-3 text-primary" />
-              ) : (
-                <IconTrendingDown className="h-3 w-3 text-destructive" />
-              )}
-              <span
-                className={
-                  summaryStats.occupancyGrowth > 0
-                    ? "text-primary font-semibold"
-                    : "text-destructive"
-                }
-              >
-                {Math.abs(summaryStats.occupancyGrowth).toFixed(2)}%
-              </span>
-              <span>so với kỳ trước</span>
             </div>
           </CardContent>
         </Card>
@@ -1231,59 +1181,148 @@ export function SystemReports() {
       <Card className="border-primary/20 bg-linear-to-br from-primary/5 via-card to-card">
         <CardHeader>
           <CardTitle className="text-2xl">Tình trạng phòng</CardTitle>
+          <CardDescription className="text-base mt-1">
+            Theo ngày: số phòng trống và số phòng đã đặt
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoadingRoomStatus ? (
+          {isLoadingRoomStatus || isLoadingDailyOccupancy ? (
             <div className="h-[200px] flex items-center justify-center">
               <p className="text-muted-foreground">Đang tải dữ liệu...</p>
             </div>
-          ) : roomStatuses.length === 0 ? (
+          ) : roomStatuses.length === 0 || dailyOccupancy.length === 0 ? (
             <div className="h-[200px] flex items-center justify-center">
               <p className="text-muted-foreground">Không có dữ liệu</p>
             </div>
           ) : (
             <div className="space-y-4">
-              {roomStatuses.map((status) => {
-                const percentage =
-                  totalRooms > 0 ? (status.count / totalRooms) * 100 : 0;
-                const colorClasses = {
-                  green: "bg-green-500",
-                  red: "bg-red-500",
-                  orange: "bg-orange-500",
-                };
-                const textColorClasses = {
-                  green: "text-green-600 dark:text-green-400",
-                  red: "text-red-600 dark:text-red-400",
-                  orange: "text-orange-600 dark:text-orange-400",
-                };
+              {(() => {
+                const dailyRoomStatus = dailyOccupancy.map((day) => {
+                  const bookedRooms =
+                    totalRooms > 0
+                      ? Math.round((Math.max(day.occupancy, 0) / 100) * totalRooms)
+                      : 0;
+                  const emptyRooms = Math.max(totalRooms - bookedRooms, 0);
+
+                  return {
+                    date: day.date,
+                    label: format(new Date(day.date), "dd/MM"),
+                    booked: bookedRooms,
+                    empty: emptyRooms,
+                    occupancy: day.occupancy,
+                  };
+                });
+                const totalDays = dailyRoomStatus.length;
+                const criticalEmptyDays = dailyRoomStatus.filter(
+                  (day) => day.empty <= Math.max(1, Math.round(totalRooms * 0.1))
+                ).length;
 
                 return (
-                  <div key={status.status} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-foreground">
-                        {status.label}
-                      </span>
-                      <span
-                        className={`text-sm font-semibold ${textColorClasses[
-                          status.color as keyof typeof textColorClasses
-                        ]
-                          }`}
-                      >
-                        {status.count} phòng
+                  <>
+                    <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                          data={dailyRoomStatus}
+                          margin={{ top: 8, right: 8, left: 8, bottom: 8 }}
+                          barCategoryGap="32%"
+                        >
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                          <XAxis
+                            dataKey="label"
+                            tickLine={false}
+                            axisLine={false}
+                            tickMargin={8}
+                            className="text-xs"
+                            interval="preserveStartEnd"
+                            minTickGap={22}
+                          />
+                          <YAxis
+                            tickLine={false}
+                            axisLine={false}
+                            tickMargin={8}
+                            allowDecimals={false}
+                            domain={[0, totalRooms]}
+                            label={{
+                              value: "Phòng",
+                              angle: -90,
+                              position: "insideLeft",
+                              fill: "hsl(var(--muted-foreground))",
+                              fontSize: 12,
+                            }}
+                          />
+                          <ChartTooltip
+                            content={({ active, payload }) => {
+                              if (active && payload && payload.length) {
+                                const data = payload[0].payload;
+                                return (
+                                  <div className="rounded-lg border border-primary/20 bg-background p-3 shadow-lg">
+                                    <p className="mb-2 text-sm font-semibold text-primary">
+                                      Ngày {data.label}
+                                    </p>
+                                    <div className="space-y-1">
+                                      <div className="flex items-center justify-between gap-4 text-xs">
+                                        <span className="text-muted-foreground">Đã đặt</span>
+                                        <span className="font-semibold text-red-600">
+                                          {data.booked} phòng
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center justify-between gap-4 text-xs">
+                                        <span className="text-muted-foreground">Còn trống</span>
+                                        <span className="font-semibold text-green-600">
+                                          {data.empty} phòng
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center justify-between gap-4 text-xs">
+                                        <span className="text-muted-foreground">Lấp đầy</span>
+                                        <span className="font-semibold text-primary">
+                                          {Number(data.occupancy).toFixed(1)}%
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            }}
+                          />
+                          <Bar
+                            dataKey="booked"
+                            stackId="rooms"
+                            fill="hsl(0 72% 72%)"
+                            name="Đã đặt"
+                            maxBarSize={14}
+                            radius={[0, 0, 0, 0]}
+                          />
+                          <Bar
+                            dataKey="empty"
+                            stackId="rooms"
+                            fill="hsl(142 45% 64%)"
+                            name="Còn trống"
+                            maxBarSize={14}
+                            radius={[6, 6, 0, 0]}
+                          />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </ChartContainer>
+
+                    <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-2">
+                        <span className="inline-block h-2.5 w-2.5 rounded-full bg-red-300" />
+                        <span>Đã đặt</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="inline-block h-2.5 w-2.5 rounded-full bg-green-300" />
+                        <span>Còn trống</span>
+                      </div>
+                      <span>Tổng số phòng: {totalRooms}</span>
+                      <span>
+                        Ngày gần kín phòng (còn {"<="}10%): {criticalEmptyDays}{" "}
+                        / {totalDays}
                       </span>
                     </div>
-                    <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
-                      <div
-                        className={`h-full rounded-full transition-all ${colorClasses[
-                          status.color as keyof typeof colorClasses
-                        ]
-                          }`}
-                        style={{ width: `${percentage}%` }}
-                      />
-                    </div>
-                  </div>
+                  </>
                 );
-              })}
+              })()}
             </div>
           )}
         </CardContent>
