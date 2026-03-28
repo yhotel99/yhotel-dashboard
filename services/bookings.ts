@@ -1063,6 +1063,9 @@ export async function deleteBooking(bookingId: string): Promise<void> {
  * @param page - Page number (default: 1)
  * @param limit - Items per page (default: 10)
  * @param customerId - Customer ID to filter (optional)
+ * @param status - booking_status (optional; null/empty = all)
+ * @param cursorCreatedAt - keyset cursor (cùng với cursorId)
+ * @param cursorId - keyset cursor
  * @returns Object with bookings data and pagination metadata
  */
 export async function getBookingsListWithPagination({
@@ -1070,11 +1073,17 @@ export async function getBookingsListWithPagination({
   page = 1,
   limit = 10,
   customerId,
+  status,
+  cursorCreatedAt,
+  cursorId,
 }: {
   search?: string | null;
   page?: number;
   limit?: number;
   customerId?: string | null;
+  status?: string | null;
+  cursorCreatedAt?: string | null;
+  cursorId?: string | null;
 }): Promise<{
   data: BookingRecord[];
   pagination: PaginationMeta;
@@ -1090,32 +1099,41 @@ export async function getBookingsListWithPagination({
     // Trim and normalize search and customerId
     const trimmedSearch = search?.trim() || null;
     const trimmedCustomerId = customerId?.trim() || null;
+    const trimmedStatus = status?.trim() || null;
+    const trimmedCursorAt = cursorCreatedAt?.trim() || null;
+    const trimmedCursorId = cursorId?.trim() || null;
+    const useKeyset = Boolean(trimmedCursorAt && trimmedCursorId);
 
-    // Call both RPC functions in parallel
-    const [bookingsData, countData] = await Promise.all([
-      supabase.rpc("search_bookings_json", {
-        p_search: trimmedSearch,
-        p_page: page,
-        p_limit: limit,
-        p_customer_id: trimmedCustomerId,
-      }),
-      supabase.rpc("count_bookings_json", {
-        p_search: trimmedSearch,
-        p_customer_id: trimmedCustomerId,
-      }),
-    ]);
+    const { data, error } = await supabase.rpc("list_bookings_json", {
+      p_search: trimmedSearch,
+      p_page: page,
+      p_limit: limit,
+      p_customer_id: trimmedCustomerId,
+      p_status: trimmedStatus,
+      p_cursor_created_at: useKeyset ? trimmedCursorAt : null,
+      p_cursor_id: useKeyset ? trimmedCursorId : null,
+    });
 
-    if (bookingsData.error) {
-      throw new Error(bookingsData.error.message);
+    if (error) {
+      throw new Error(error.message);
     }
 
-    if (countData.error) {
-      throw new Error(countData.error.message);
-    }
-
-    const bookings = (bookingsData.data || []) as BookingRecord[];
-    const total = (countData.data as number) || 0;
+    const payload = data as {
+      items?: BookingRecord[];
+      total?: number;
+      next_cursor?: { created_at?: string; id?: string } | null;
+    } | null;
+    const bookings = (payload?.items ?? []) as BookingRecord[];
+    const total = Number(payload?.total ?? 0);
     const totalPages = Math.ceil(total / limit);
+    const nc = payload?.next_cursor;
+    const nextCursor =
+      nc &&
+      typeof nc === "object" &&
+      nc.id != null &&
+      nc.created_at != null
+        ? { created_at: String(nc.created_at), id: String(nc.id) }
+        : null;
 
     return {
       data: bookings,
@@ -1124,6 +1142,7 @@ export async function getBookingsListWithPagination({
         page,
         limit,
         totalPages,
+        nextCursor,
       },
     };
   } catch (err) {

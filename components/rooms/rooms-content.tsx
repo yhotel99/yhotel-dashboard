@@ -204,7 +204,7 @@ export function RoomsContent({ initialData }: { initialData: RoomsResponse }) {
           columns={columns}
           data={rooms}
           searchKey="name"
-          searchPlaceholder="Tìm kiếm theo tên phòng, loại phòng..."
+          searchPlaceholder="Tìm kiếm theo tên phòng, số phòng..."
           emptyMessage="Không tìm thấy kết quả."
           entityName="phòng"
           getRowId={(row) => row.id}

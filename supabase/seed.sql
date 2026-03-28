@@ -278,3 +278,470 @@ VALUES
   ('Phòng Family 302', 'Phòng gia đình có ban công.', 'family', 2400000, 5, '["wifi_high_speed", "parking", "coffee", "breakfast_service"]'::jsonb, 'available', '302', 3, now(), now()),
   ('Phòng Deluxe 203', 'Phòng deluxe góc tầng view đẹp.', 'deluxe', 1800000, 4, '["wifi_high_speed", "parking", "coffee", "breakfast_service"]'::jsonb, 'available', '203', 2, now(), now()),
   ('Phòng Standard 103', 'Phòng tiêu chuẩn gần thang máy.', 'standard', 700000, 2, '["wifi_high_speed", "parking"]'::jsonb, 'available', '103', 1, now(), now());
+
+-- ============================================================================
+-- Demo bookings + booking_rooms (~20, created_at lệch nhau cho keyset / sort)
+-- Idempotent: ON CONFLICT (id) / (booking_id, room_id) DO NOTHING
+-- ============================================================================
+
+INSERT INTO public.customers (full_name, email, phone, customer_type, created_at, updated_at)
+VALUES
+  ('Trần Minh Khoa', 'seed.booking.c1@local.test', '0911000001', 'regular', now(), now()),
+  ('Lê Thu Hà', 'seed.booking.c2@local.test', '0911000002', 'regular', now(), now()),
+  ('Phạm Quốc An', 'seed.booking.c3@local.test', '0911000003', 'vip', now(), now()),
+  ('Hoàng Mai Linh', 'seed.booking.c4@local.test', '0911000004', 'regular', now(), now()),
+  ('Đỗ Văn Hùng', 'seed.booking.c5@local.test', '0911000005', 'regular', now(), now())
+ON CONFLICT (email) DO NOTHING;
+
+INSERT INTO public.bookings (
+  id,
+  customer_id,
+  room_id,
+  check_in,
+  check_out,
+  number_of_nights,
+  total_guests,
+  status,
+  notes,
+  total_amount,
+  advance_payment,
+  final_amount,
+  created_at,
+  updated_at,
+  booking_code,
+  deleted_at
+)
+VALUES
+  -- 1–8: checked_out (quá khứ), mỗi phòng một slot
+  (
+    'bbad1000-0001-4000-8000-000000000001'::uuid,
+    (SELECT id FROM public.customers WHERE email = 'seed.booking.c1@local.test' LIMIT 1),
+    (SELECT id FROM public.rooms WHERE room_number = '101' AND deleted_at IS NULL LIMIT 1),
+    timestamptz '2026-01-02 14:00:00+07',
+    timestamptz '2026-01-04 12:00:00+07',
+    2,
+    2,
+    'checked_out'::public.booking_status,
+    'Seed: đã trả phòng',
+    1600000,
+    0,
+    1600000,
+    timestamptz '2026-02-15 08:00:00+07',
+    timestamptz '2026-02-15 08:00:00+07',
+    'YHSEED260301001',
+    NULL
+  ),
+  (
+    'bbad1000-0001-4000-8000-000000000002'::uuid,
+    (SELECT id FROM public.customers WHERE email = 'seed.booking.c2@local.test' LIMIT 1),
+    (SELECT id FROM public.rooms WHERE room_number = '102' AND deleted_at IS NULL LIMIT 1),
+    timestamptz '2026-01-05 14:00:00+07',
+    timestamptz '2026-01-07 12:00:00+07',
+    2,
+    2,
+    'checked_out',
+    'Seed: đã trả phòng',
+    1500000,
+    0,
+    1500000,
+    timestamptz '2026-02-15 09:17:00+07',
+    timestamptz '2026-02-15 09:17:00+07',
+    'YHSEED260301002',
+    NULL
+  ),
+  (
+    'bbad1000-0001-4000-8000-000000000003'::uuid,
+    (SELECT id FROM public.customers WHERE email = 'seed.booking.c3@local.test' LIMIT 1),
+    (SELECT id FROM public.rooms WHERE room_number = '103' AND deleted_at IS NULL LIMIT 1),
+    timestamptz '2026-01-08 14:00:00+07',
+    timestamptz '2026-01-10 12:00:00+07',
+    2,
+    2,
+    'checked_out',
+    NULL,
+    1400000,
+    200000,
+    1400000,
+    timestamptz '2026-02-15 10:34:00+07',
+    timestamptz '2026-02-15 10:34:00+07',
+    'YHSEED260301003',
+    NULL
+  ),
+  (
+    'bbad1000-0001-4000-8000-000000000004'::uuid,
+    (SELECT id FROM public.customers WHERE email = 'seed.booking.c4@local.test' LIMIT 1),
+    (SELECT id FROM public.rooms WHERE room_number = '201' AND deleted_at IS NULL LIMIT 1),
+    timestamptz '2026-01-11 14:00:00+07',
+    timestamptz '2026-01-13 12:00:00+07',
+    2,
+    2,
+    'checked_out',
+    'Seed',
+    2600000,
+    0,
+    2600000,
+    timestamptz '2026-02-15 11:51:00+07',
+    timestamptz '2026-02-15 11:51:00+07',
+    'YHSEED260301004',
+    NULL
+  ),
+  (
+    'bbad1000-0001-4000-8000-000000000005'::uuid,
+    (SELECT id FROM public.customers WHERE email = 'seed.booking.c5@local.test' LIMIT 1),
+    (SELECT id FROM public.rooms WHERE room_number = '202' AND deleted_at IS NULL LIMIT 1),
+    timestamptz '2026-01-14 14:00:00+07',
+    timestamptz '2026-01-16 12:00:00+07',
+    2,
+    3,
+    'checked_out',
+    NULL,
+    3200000,
+    0,
+    3200000,
+    timestamptz '2026-02-15 13:08:00+07',
+    timestamptz '2026-02-15 13:08:00+07',
+    'YHSEED260301005',
+    NULL
+  ),
+  (
+    'bbad1000-0001-4000-8000-000000000006'::uuid,
+    (SELECT id FROM public.customers WHERE email = 'seed.booking.c1@local.test' LIMIT 1),
+    (SELECT id FROM public.rooms WHERE room_number = '203' AND deleted_at IS NULL LIMIT 1),
+    timestamptz '2026-01-17 14:00:00+07',
+    timestamptz '2026-01-19 12:00:00+07',
+    2,
+    2,
+    'checked_out',
+    NULL,
+    3600000,
+    0,
+    3600000,
+    timestamptz '2026-02-15 14:25:00+07',
+    timestamptz '2026-02-15 14:25:00+07',
+    'YHSEED260301006',
+    NULL
+  ),
+  (
+    'bbad1000-0001-4000-8000-000000000007'::uuid,
+    (SELECT id FROM public.customers WHERE email = 'seed.booking.c2@local.test' LIMIT 1),
+    (SELECT id FROM public.rooms WHERE room_number = '301' AND deleted_at IS NULL LIMIT 1),
+    timestamptz '2026-01-20 14:00:00+07',
+    timestamptz '2026-01-22 12:00:00+07',
+    2,
+    4,
+    'checked_out',
+    'Gia đình',
+    4400000,
+    4400000,
+    4400000,
+    timestamptz '2026-02-15 15:42:00+07',
+    timestamptz '2026-02-15 15:42:00+07',
+    'YHSEED260301007',
+    NULL
+  ),
+  (
+    'bbad1000-0001-4000-8000-000000000008'::uuid,
+    (SELECT id FROM public.customers WHERE email = 'seed.booking.c3@local.test' LIMIT 1),
+    (SELECT id FROM public.rooms WHERE room_number = '302' AND deleted_at IS NULL LIMIT 1),
+    timestamptz '2026-01-23 14:00:00+07',
+    timestamptz '2026-01-25 12:00:00+07',
+    2,
+    4,
+    'checked_out',
+    NULL,
+    4800000,
+    0,
+    4800000,
+    timestamptz '2026-02-15 16:59:00+07',
+    timestamptz '2026-02-15 16:59:00+07',
+    'YHSEED260301008',
+    NULL
+  ),
+  -- 9–10: cancelled
+  (
+    'bbad1000-0001-4000-8000-000000000009'::uuid,
+    (SELECT id FROM public.customers WHERE email = 'seed.booking.c4@local.test' LIMIT 1),
+    (SELECT id FROM public.rooms WHERE room_number = '401' AND deleted_at IS NULL LIMIT 1),
+    timestamptz '2026-01-26 14:00:00+07',
+    timestamptz '2026-01-28 12:00:00+07',
+    2,
+    2,
+    'cancelled',
+    'Khách hủy',
+    3000000,
+    0,
+    NULL,
+    timestamptz '2026-02-15 18:16:00+07',
+    timestamptz '2026-02-15 18:16:00+07',
+    'YHSEED260301009',
+    NULL
+  ),
+  (
+    'bbad1000-0001-4000-8000-00000000000a'::uuid,
+    (SELECT id FROM public.customers WHERE email = 'seed.booking.c5@local.test' LIMIT 1),
+    (SELECT id FROM public.rooms WHERE room_number = '402' AND deleted_at IS NULL LIMIT 1),
+    timestamptz '2026-01-29 14:00:00+07',
+    timestamptz '2026-01-31 12:00:00+07',
+    2,
+    2,
+    'cancelled',
+    NULL,
+    2400000,
+    0,
+    NULL,
+    timestamptz '2026-02-15 19:33:00+07',
+    timestamptz '2026-02-15 19:33:00+07',
+    'YHSEED260301010',
+    NULL
+  ),
+  -- 11: multi-room checked_out (101 + 102)
+  (
+    'bbad1000-0001-4000-8000-00000000000b'::uuid,
+    (SELECT id FROM public.customers WHERE email = 'seed.booking.c1@local.test' LIMIT 1),
+    (SELECT id FROM public.rooms WHERE room_number = '101' AND deleted_at IS NULL LIMIT 1),
+    timestamptz '2026-02-01 14:00:00+07',
+    timestamptz '2026-02-03 12:00:00+07',
+    2,
+    4,
+    'checked_out',
+    'Seed: 2 phòng',
+    3200000,
+    0,
+    3200000,
+    timestamptz '2026-02-15 20:50:00+07',
+    timestamptz '2026-02-15 20:50:00+07',
+    'YHSEED260301011',
+    NULL
+  ),
+  -- 12–14: confirmed (tương lai, phòng không đụng pending)
+  (
+    'bbad1000-0001-4000-8000-00000000000c'::uuid,
+    (SELECT id FROM public.customers WHERE email = 'seed.booking.c2@local.test' LIMIT 1),
+    (SELECT id FROM public.rooms WHERE room_number = '101' AND deleted_at IS NULL LIMIT 1),
+    timestamptz '2026-06-10 14:00:00+07',
+    timestamptz '2026-06-12 12:00:00+07',
+    2,
+    2,
+    'confirmed',
+    'Hè 2026',
+    1600000,
+    500000,
+    1600000,
+    timestamptz '2026-02-15 22:07:00+07',
+    timestamptz '2026-02-15 22:07:00+07',
+    'YHSEED260301012',
+    NULL
+  ),
+  (
+    'bbad1000-0001-4000-8000-00000000000d'::uuid,
+    (SELECT id FROM public.customers WHERE email = 'seed.booking.c3@local.test' LIMIT 1),
+    (SELECT id FROM public.rooms WHERE room_number = '103' AND deleted_at IS NULL LIMIT 1),
+    timestamptz '2026-06-15 14:00:00+07',
+    timestamptz '2026-06-17 12:00:00+07',
+    2,
+    2,
+    'confirmed',
+    NULL,
+    1500000,
+    0,
+    1500000,
+    timestamptz '2026-02-16 08:22:00+07',
+    timestamptz '2026-02-16 08:22:00+07',
+    'YHSEED260301013',
+    NULL
+  ),
+  (
+    'bbad1000-0001-4000-8000-00000000000e'::uuid,
+    (SELECT id FROM public.customers WHERE email = 'seed.booking.c4@local.test' LIMIT 1),
+    (SELECT id FROM public.rooms WHERE room_number = '201' AND deleted_at IS NULL LIMIT 1),
+    timestamptz '2026-06-20 14:00:00+07',
+    timestamptz '2026-06-22 12:00:00+07',
+    2,
+    2,
+    'confirmed',
+    NULL,
+    2600000,
+    2600000,
+    2600000,
+    timestamptz '2026-02-16 09:39:00+07',
+    timestamptz '2026-02-16 09:39:00+07',
+    'YHSEED260301014',
+    NULL
+  ),
+  -- 15–17: pending
+  (
+    'bbad1000-0001-4000-8000-00000000000f'::uuid,
+    (SELECT id FROM public.customers WHERE email = 'seed.booking.c5@local.test' LIMIT 1),
+    (SELECT id FROM public.rooms WHERE room_number = '102' AND deleted_at IS NULL LIMIT 1),
+    timestamptz '2026-07-05 14:00:00+07',
+    timestamptz '2026-07-07 12:00:00+07',
+    2,
+    2,
+    'pending',
+    'Chờ xác nhận',
+    1500000,
+    0,
+    1500000,
+    timestamptz '2026-02-16 10:56:00+07',
+    timestamptz '2026-02-16 10:56:00+07',
+    'YHSEED260301015',
+    NULL
+  ),
+  (
+    'bbad1000-0001-4000-8000-000000000010'::uuid,
+    (SELECT id FROM public.customers WHERE email = 'seed.booking.c1@local.test' LIMIT 1),
+    (SELECT id FROM public.rooms WHERE room_number = '202' AND deleted_at IS NULL LIMIT 1),
+    timestamptz '2026-07-10 14:00:00+07',
+    timestamptz '2026-07-12 12:00:00+07',
+    2,
+    2,
+    'pending',
+    NULL,
+    3200000,
+    0,
+    3200000,
+    timestamptz '2026-02-16 12:13:00+07',
+    timestamptz '2026-02-16 12:13:00+07',
+    'YHSEED260301016',
+    NULL
+  ),
+  (
+    'bbad1000-0001-4000-8000-000000000011'::uuid,
+    (SELECT id FROM public.customers WHERE email = 'seed.booking.c2@local.test' LIMIT 1),
+    (SELECT id FROM public.rooms WHERE room_number = '203' AND deleted_at IS NULL LIMIT 1),
+    timestamptz '2026-07-15 14:00:00+07',
+    timestamptz '2026-07-17 12:00:00+07',
+    2,
+    2,
+    'pending',
+    NULL,
+    3600000,
+    0,
+    3600000,
+    timestamptz '2026-02-16 13:30:00+07',
+    timestamptz '2026-02-16 13:30:00+07',
+    'YHSEED260301017',
+    NULL
+  ),
+  -- 18–19: awaiting_payment
+  (
+    'bbad1000-0001-4000-8000-000000000012'::uuid,
+    (SELECT id FROM public.customers WHERE email = 'seed.booking.c3@local.test' LIMIT 1),
+    (SELECT id FROM public.rooms WHERE room_number = '301' AND deleted_at IS NULL LIMIT 1),
+    timestamptz '2026-08-01 14:00:00+07',
+    timestamptz '2026-08-03 12:00:00+07',
+    2,
+    4,
+    'awaiting_payment',
+    'Chờ CK',
+    4400000,
+    0,
+    4400000,
+    timestamptz '2026-02-16 14:47:00+07',
+    timestamptz '2026-02-16 14:47:00+07',
+    'YHSEED260301018',
+    NULL
+  ),
+  (
+    'bbad1000-0001-4000-8000-000000000013'::uuid,
+    (SELECT id FROM public.customers WHERE email = 'seed.booking.c4@local.test' LIMIT 1),
+    (SELECT id FROM public.rooms WHERE room_number = '302' AND deleted_at IS NULL LIMIT 1),
+    timestamptz '2026-08-08 14:00:00+07',
+    timestamptz '2026-08-10 12:00:00+07',
+    2,
+    3,
+    'awaiting_payment',
+    NULL,
+    4800000,
+    0,
+    4800000,
+    timestamptz '2026-02-16 16:04:00+07',
+    timestamptz '2026-02-16 16:04:00+07',
+    'YHSEED260301019',
+    NULL
+  ),
+  -- 20: multi-room confirmed (401 + 402)
+  (
+    'bbad1000-0001-4000-8000-000000000014'::uuid,
+    (SELECT id FROM public.customers WHERE email = 'seed.booking.c5@local.test' LIMIT 1),
+    (SELECT id FROM public.rooms WHERE room_number = '401' AND deleted_at IS NULL LIMIT 1),
+    timestamptz '2026-08-20 14:00:00+07',
+    timestamptz '2026-08-22 12:00:00+07',
+    2,
+    4,
+    'confirmed',
+    'Combo 2 phòng deluxe',
+    5400000,
+    1000000,
+    5400000,
+    timestamptz '2026-02-16 17:21:00+07',
+    timestamptz '2026-02-16 17:21:00+07',
+    'YHSEED260301020',
+    NULL
+  )
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO public.booking_rooms (
+  booking_id,
+  room_id,
+  check_in,
+  check_out,
+  number_of_nights,
+  amount,
+  status,
+  created_at
+)
+SELECT b.id, r.id, b.check_in, b.check_out, b.number_of_nights, b.total_amount, b.status::text, b.created_at + interval '1 second'
+FROM public.bookings b
+JOIN public.rooms r ON r.id = b.room_id
+WHERE b.booking_code LIKE 'YHSEED260301%'
+  AND b.room_id IS NOT NULL
+  AND b.booking_code NOT IN ('YHSEED260301011', 'YHSEED260301020')
+ON CONFLICT (booking_id, room_id) DO NOTHING;
+
+-- Đa phòng: chia amount theo từng booking_room
+INSERT INTO public.booking_rooms (
+  booking_id,
+  room_id,
+  check_in,
+  check_out,
+  number_of_nights,
+  amount,
+  status,
+  created_at
+)
+SELECT
+  'bbad1000-0001-4000-8000-00000000000b'::uuid,
+  r.id,
+  timestamptz '2026-02-01 14:00:00+07',
+  timestamptz '2026-02-03 12:00:00+07',
+  2,
+  1600000,
+  'checked_out',
+  timestamptz '2026-02-15 20:51:00+07'
+FROM public.rooms r
+WHERE r.room_number IN ('101', '102') AND r.deleted_at IS NULL
+ON CONFLICT (booking_id, room_id) DO NOTHING;
+
+INSERT INTO public.booking_rooms (
+  booking_id,
+  room_id,
+  check_in,
+  check_out,
+  number_of_nights,
+  amount,
+  status,
+  created_at
+)
+SELECT
+  'bbad1000-0001-4000-8000-000000000014'::uuid,
+  r.id,
+  timestamptz '2026-08-20 14:00:00+07',
+  timestamptz '2026-08-22 12:00:00+07',
+  2,
+  2700000,
+  'confirmed',
+  timestamptz '2026-02-16 17:22:00+07'
+FROM public.rooms r
+WHERE r.room_number IN ('401', '402') AND r.deleted_at IS NULL
+ON CONFLICT (booking_id, room_id) DO NOTHING;

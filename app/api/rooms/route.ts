@@ -51,9 +51,11 @@ export async function GET(req: NextRequest) {
       .is("deleted_at", null)
       .eq("room_images.is_main", true);
 
-    // Add search filter if search term exists
+    // Add search filter: tên phòng hoặc số phòng (room_number)
     if (search && search.trim() !== "") {
-      query = query.ilike("name", `%${search.trim()}%`);
+      const term = search.trim();
+      const pattern = `%${term}%`;
+      query = query.or(`name.ilike.${pattern},room_number.ilike.${pattern}`);
     }
 
     // Fetch data with pagination
