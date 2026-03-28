@@ -128,6 +128,7 @@ export function CreateCustomerDialog({
     const fullName = formValues.full_name.trim();
     const email = formValues.email.trim();
     const phone = formValues.phone.trim();
+    const nationality = formValues.nationality.trim();
 
     if (!fullName) {
       setError("Họ tên không được để trống.");
@@ -149,11 +150,16 @@ export function CreateCustomerDialog({
       return;
     }
 
+    if (!nationality) {
+      setError("Quốc tịch không được để trống.");
+      return;
+    }
+
     const payload: CustomerInput = {
       full_name: fullName,
       email: email,
       phone: phone || null,
-      nationality: formValues.nationality.trim() || null,
+      nationality,
       id_card: formValues.id_card.trim() || null,
       customer_type: formValues.customer_type,
       date_of_birth: formValues.date_of_birth || null,
@@ -248,7 +254,7 @@ export function CreateCustomerDialog({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="nationality">Quốc tịch</Label>
+              <Label htmlFor="nationality">Quốc tịch *</Label>
               <Select
                 value={formValues.nationality}
                 onValueChange={handleSelectChange("nationality")}

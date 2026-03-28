@@ -24,7 +24,7 @@ export default async function KanbanPage({ searchParams }: PageProps) {
             <div>
               <h1 className="text-2xl font-bold">Kanban - Phòng sắp nhận</h1>
               <p className="text-muted-foreground text-sm">
-                Theo dõi các phòng sắp nhận trong 30 ngày tới
+                Theo dõi các phòng (2 ngày trước đến 30 ngày tới)
               </p>
             </div>
           </div>
