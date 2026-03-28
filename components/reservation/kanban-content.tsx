@@ -73,7 +73,7 @@ function groupBookingsByDateWithFloors(bookings: BookingRecord[]): Array<{
       const isYesterday = dateObj.getTime() === today.getTime() - 24 * 60 * 60 * 1000;
       const isTwoDaysAgo = dateObj.getTime() === today.getTime() - 2 * 24 * 60 * 60 * 1000;
       let label = formatDateOnly(date);
-      if (isTwoDaysAgo) label = `2 ngày trước (${formatDateOnly(date)})`;
+      if (isTwoDaysAgo) label = `Hôm kia (${formatDateOnly(date)})`;
       else if (isYesterday) label = `Hôm qua (${formatDateOnly(date)})`;
       else if (isToday) label = `Hôm nay (${formatDateOnly(date)})`;
       else if (isTomorrow) label = `Ngày mai (${formatDateOnly(date)})`;
