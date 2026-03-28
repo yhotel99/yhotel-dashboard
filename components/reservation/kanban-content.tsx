@@ -53,6 +53,8 @@ function groupBookingsByDateWithFloors(bookings: BookingRecord[]): Array<{
   floorGroups: Array<{ floor: number; label: string; bookings: BookingRecord[] }>;
   isToday: boolean;
   isTomorrow: boolean;
+  isYesterday: boolean;
+  isTwoDaysAgo: boolean;
 }> {
   const byDate = new Map<string, BookingRecord[]>();
   for (const b of bookings) {
@@ -68,11 +70,15 @@ function groupBookingsByDateWithFloors(bookings: BookingRecord[]): Array<{
       today.setHours(0, 0, 0, 0);
       const isToday = dateObj.getTime() === today.getTime();
       const isTomorrow = dateObj.getTime() === today.getTime() + 24 * 60 * 60 * 1000;
+      const isYesterday = dateObj.getTime() === today.getTime() - 24 * 60 * 60 * 1000;
+      const isTwoDaysAgo = dateObj.getTime() === today.getTime() - 2 * 24 * 60 * 60 * 1000;
       let label = formatDateOnly(date);
-      if (isToday) label = `Hôm nay (${formatDateOnly(date)})`;
+      if (isTwoDaysAgo) label = `2 ngày trước (${formatDateOnly(date)})`;
+      else if (isYesterday) label = `Hôm qua (${formatDateOnly(date)})`;
+      else if (isToday) label = `Hôm nay (${formatDateOnly(date)})`;
       else if (isTomorrow) label = `Ngày mai (${formatDateOnly(date)})`;
       const floorGroups = groupBookingsByFloor(list);
-      return { date, label, floorGroups, isToday, isTomorrow };
+      return { date, label, floorGroups, isToday, isTomorrow, isYesterday, isTwoDaysAgo };
     });
 }
 
@@ -278,7 +284,7 @@ export function KanbanContent({ initialData }: KanbanContentProps) {
         <div>
           <h1 className="text-2xl font-bold">Kanban - Phòng sắp nhận</h1>
           <p className="text-muted-foreground text-sm">
-            Theo dõi các phòng sắp nhận trong 30 ngày tới ({bookings.length} booking)
+            Theo dõi các phòng (2 ngày trước đến 30 ngày tới) - {bookings.length} booking
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -346,18 +352,21 @@ export function KanbanContent({ initialData }: KanbanContentProps) {
       ) : (
         <div className="px-4 lg:px-6">
           <div className="flex gap-4 overflow-x-auto pb-4">
-            {groupedByDateWithFloors.map(({ date, label, floorGroups, isToday, isTomorrow }) => {
+            {groupedByDateWithFloors.map(({ date, label, floorGroups, isToday, isTomorrow, isYesterday, isTwoDaysAgo }) => {
               const totalCards = floorGroups.reduce((s, g) => s + g.bookings.length, 0);
               return (
                 <div key={date} className="flex-shrink-0 w-80">
                   <div className={cn(
                     "sticky top-0 z-10 bg-background border-b pb-3 mb-4",
+                    isTwoDaysAgo && "bg-slate-50 dark:bg-slate-900/20",
+                    isYesterday && "bg-slate-50 dark:bg-slate-900/20",
                     isToday && "bg-blue-50 dark:bg-blue-950/20",
                     isTomorrow && "bg-orange-50 dark:bg-orange-950/20"
                   )}>
                     <div className="flex items-center justify-between">
                       <h3 className={cn(
                         "font-semibold",
+                        (isTwoDaysAgo || isYesterday) && "text-slate-600 dark:text-slate-400",
                         isToday && "text-blue-700 dark:text-blue-300",
                         isTomorrow && "text-orange-700 dark:text-orange-300"
                       )}>
