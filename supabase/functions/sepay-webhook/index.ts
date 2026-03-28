@@ -327,7 +327,7 @@ const room_type = roomNames.length > 0 ? roomNames.join(", ") : "-";
         total_price: booking.final_amount,
         hotel_name: "YHotel",
         hotline: "0787 913 388",
-        support_email: "contact@yhotel.vn",
+        support_email: "hello@yhotel.vn",
       }),
       });
     } catch (e) {

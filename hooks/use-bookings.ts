@@ -11,18 +11,26 @@ import { fetcher } from "@/lib/fetcher";
  * @param page - Page number
  * @param limit - Items per page
  * @param customerId - Optional customer ID to filter bookings
+ * @param status - Optional booking status (public.booking_status)
+ * @param cursorCreatedAt / cursorId - Keyset cursor (cả hai mới có hiệu lực)
  */
 export function useBookings({
   search = "",
   page = 1,
   limit = 10,
   customerId = null,
+  status = "",
+  cursorCreatedAt = "",
+  cursorId = "",
   fallbackData,
 }: {
   search?: string;
   page?: number;
   limit?: number;
   customerId?: string | null;
+  status?: string;
+  cursorCreatedAt?: string;
+  cursorId?: string;
   fallbackData?: BookingsResponse;
 }) {
 
@@ -38,6 +46,13 @@ export function useBookings({
   }
   if (customerId) {
     params.append("customerId", customerId);
+  }
+  if (status && status.trim() !== "") {
+    params.append("status", status.trim());
+  }
+  if (cursorCreatedAt.trim() !== "" && cursorId.trim() !== "") {
+    params.append("cursorCreatedAt", cursorCreatedAt.trim());
+    params.append("cursorId", cursorId.trim());
   }
 
   if(fallbackData) {
@@ -56,6 +71,7 @@ export function useBookings({
       page: 1,
       limit: 10,
       totalPages: 0,
+      nextCursor: null,
     },
     isLoading: isLoading || isValidating,
     error: error

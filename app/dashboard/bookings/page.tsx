@@ -9,11 +9,19 @@ export default async function BookingsPage({ searchParams }: PageProps) {
   const page = params.page ? Number(params.page) : 1;
   const limit = params.limit ? Number(params.limit) : 10;
   const search = params.search ? String(params.search) : "";
+  const status = params.status ? String(params.status) : null;
+  const cursorCreatedAt = params.cursorCreatedAt
+    ? String(params.cursorCreatedAt)
+    : null;
+  const cursorId = params.cursorId ? String(params.cursorId) : null;
 
   const initialData = await getBookingsListWithPagination({
     page,
     limit,
     search,
+    status,
+    cursorCreatedAt,
+    cursorId,
   });
 
   return (

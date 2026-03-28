@@ -4,6 +4,14 @@ import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { IconPlus, IconSearch } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { DataTable } from "@/components/data-table";
 import { useBookings } from "@/hooks/use-bookings";
 import {
@@ -40,6 +48,15 @@ import { translateBookingError } from "@/lib/functions";
 import { toast } from "sonner";
 import { useRealtimeContext } from "@/contexts/realtime-context";
 import { useRoomNumberLookup } from "@/hooks/use-room-number-lookup";
+import { BOOKING_STATUS, bookingStatusLabels } from "@/lib/constants";
+
+const BOOKING_STATUS_FILTER_VALUES = new Set<string>([
+  BOOKING_STATUS.PENDING,
+  BOOKING_STATUS.CONFIRMED,
+  BOOKING_STATUS.CHECKED_IN,
+  BOOKING_STATUS.CHECKED_OUT,
+  BOOKING_STATUS.CANCELLED,
+]);
 
 export function BookingsContent({
   initialData,
@@ -51,7 +68,7 @@ export function BookingsContent({
   const [localSearch, setLocalSearch] = React.useState("");
   const [isCheckAvailableRoomsDialogOpen, setIsCheckAvailableRoomsDialogOpen] =
     React.useState(false);
-  
+
   // Reset booking count và refresh data khi vào trang bookings
   const { resetBookingCount, shouldRefreshBookings, markBookingsRefreshed } = useRealtimeContext();
 
@@ -72,12 +89,31 @@ export function BookingsContent({
     return searchParams.get("search") || "";
   }, [searchParams]);
 
+  const status = React.useMemo(() => {
+    return searchParams.get("status") || "";
+  }, [searchParams]);
+
+  const cursorCreatedAt = React.useMemo(
+    () => searchParams.get("cursorCreatedAt") || "",
+    [searchParams]
+  );
+  const cursorId = React.useMemo(
+    () => searchParams.get("cursorId") || "",
+    [searchParams]
+  );
+
   // Debounce search
   const debouncedSearch = useDebounce(localSearch, 300);
 
   // Update search params
   const updateSearchParams = React.useCallback(
-    (newPage: number, newLimit: number, newSearch: string) => {
+    (
+      newPage: number,
+      newLimit: number,
+      newSearch: string,
+      newStatus?: string,
+      options?: { resetCursor?: boolean }
+    ) => {
       const params = new URLSearchParams(searchParams.toString());
       if (newPage > 1) {
         params.set("page", newPage.toString());
@@ -94,23 +130,58 @@ export function BookingsContent({
       } else {
         params.delete("search");
       }
+      const s = newStatus !== undefined ? newStatus : status;
+      if (s && s.trim() !== "") {
+        params.set("status", s.trim());
+      } else {
+        params.delete("status");
+      }
+      if (options?.resetCursor) {
+        params.delete("cursorCreatedAt");
+        params.delete("cursorId");
+      }
       router.push(`/dashboard/bookings?${params.toString()}`);
     },
-    [router, searchParams]
+    [router, searchParams, status]
   );
 
   React.useEffect(() => {
     if (debouncedSearch !== search) {
-      updateSearchParams(1, limit, debouncedSearch);
+      updateSearchParams(1, limit, debouncedSearch, status, {
+        resetCursor: true,
+      });
     }
-  }, [debouncedSearch, search, limit, updateSearchParams]);
+  }, [debouncedSearch, search, limit, status, updateSearchParams]);
+
+  const statusFilterValue = React.useMemo(() => {
+    const s = status.trim();
+    if (s === "") return "all";
+    return BOOKING_STATUS_FILTER_VALUES.has(s) ? s : "all";
+  }, [status]);
+
+  const statusForFetch = React.useMemo(() => {
+    const s = status.trim();
+    if (s === "") return "";
+    return BOOKING_STATUS_FILTER_VALUES.has(s) ? s : "";
+  }, [status]);
 
   const { bookings, isLoading, pagination, mutate } = useBookings({
     search,
     page,
     limit,
+    status: statusForFetch,
+    cursorCreatedAt,
+    cursorId,
     fallbackData: initialData,
   });
+
+  const handleStatusFilterChange = React.useCallback(
+    (value: string) => {
+      const nextStatus = value === "all" ? "" : value;
+      updateSearchParams(1, limit, search, nextStatus, { resetCursor: true });
+    },
+    [limit, search, updateSearchParams]
+  );
 
   const { data: roomNumberById } = useRoomNumberLookup();
 
@@ -345,14 +416,14 @@ export function BookingsContent({
 
   return (
     <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-      <div className="flex items-center justify-between px-4 lg:px-6">
+      <div className="flex flex-col gap-4 px-4 sm:flex-row sm:items-start sm:justify-between lg:px-6">
         <div>
           <h1 className="text-2xl font-bold">Quản lý đặt phòng</h1>
           <p className="text-muted-foreground text-sm">
             Quản lý và theo dõi các đặt phòng trong khách sạn
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
           <Button
             variant="outline"
             onClick={() => setIsCheckAvailableRoomsDialogOpen(true)}
@@ -361,10 +432,35 @@ export function BookingsContent({
             <IconSearch className="size-4" />
             Kiểm tra
           </Button>
-          <Button
-            onClick={handleCreateMultiBooking}
-            className="gap-2"
-          >
+          <div className="flex items-center gap-2">
+            <Select value={statusFilterValue} onValueChange={handleStatusFilterChange}>
+              <SelectTrigger
+                id="booking-status-filter"
+                className="h-9 w-[min(100%,220px)] min-w-[160px] sm:w-[200px]"
+              >
+                <SelectValue placeholder="Tất cả trạng thái" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả trạng thái</SelectItem>
+                <SelectItem value={BOOKING_STATUS.PENDING}>
+                  {bookingStatusLabels[BOOKING_STATUS.PENDING]}
+                </SelectItem>
+                <SelectItem value={BOOKING_STATUS.CONFIRMED}>
+                  {bookingStatusLabels[BOOKING_STATUS.CONFIRMED]}
+                </SelectItem>
+                <SelectItem value={BOOKING_STATUS.CHECKED_IN}>
+                  {bookingStatusLabels[BOOKING_STATUS.CHECKED_IN]}
+                </SelectItem>
+                <SelectItem value={BOOKING_STATUS.CHECKED_OUT}>
+                  {bookingStatusLabels[BOOKING_STATUS.CHECKED_OUT]}
+                </SelectItem>
+                <SelectItem value={BOOKING_STATUS.CANCELLED}>
+                  {bookingStatusLabels[BOOKING_STATUS.CANCELLED]}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Button onClick={handleCreateMultiBooking} className="gap-2">
             <IconPlus className="size-4" />
             Đặt nhiều phòng
           </Button>
@@ -389,8 +485,16 @@ export function BookingsContent({
           }}
           isLoading={isLoading}
           serverPagination={pagination}
-          onPageChange={(newPage) => updateSearchParams(newPage, limit, search)}
-          onLimitChange={(newLimit) => updateSearchParams(1, newLimit, search)}
+          onPageChange={(newPage) =>
+            updateSearchParams(newPage, limit, search, status, {
+              resetCursor: true,
+            })
+          }
+          onLimitChange={(newLimit) =>
+            updateSearchParams(1, newLimit, search, status, {
+              resetCursor: true,
+            })
+          }
           serverSearch={localSearch}
           onSearchChange={setLocalSearch}
           initialColumnVisibility={{

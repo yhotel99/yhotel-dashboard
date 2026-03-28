@@ -518,6 +518,8 @@ export type PaginationMeta = {
   page: number;
   limit: number;
   totalPages: number;
+  /** Next page cursor for keyset pagination (`list_bookings_json`). */
+  nextCursor?: { created_at: string; id: string } | null;
 };
 
 export type PreviewItem = {
