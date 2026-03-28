@@ -264,6 +264,7 @@ export async function getUpcomingCheckinsWithPagination({
           )
         )
       `)
+      .in("status", ["pending", "confirmed", "checked_in", "checked_out"])
       .gte("check_in", startDateStr)
       .lte("check_in", thirtyDaysStr)
       .is("deleted_at", null);
@@ -282,6 +283,7 @@ export async function getUpcomingCheckinsWithPagination({
     let countQuery = supabase
       .from("bookings")
       .select("*", { count: "exact", head: true })
+      .in("status", ["pending", "confirmed", "checked_in", "checked_out"])
       .gte("check_in", startDateStr)
       .lte("check_in", thirtyDaysStr)
       .is("deleted_at", null);
