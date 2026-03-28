@@ -464,9 +464,11 @@ export async function getRoomsListWithPagination({
       )
       .is("deleted_at", null);
 
-    // Add search filter if search term exists
+    // Add search filter: tên phòng hoặc số phòng (room_number)
     if (search && search.trim() !== "") {
-      query = query.ilike("name", `%${search.trim()}%`);
+      const term = search.trim();
+      const pattern = `%${term}%`;
+      query = query.or(`name.ilike.${pattern},room_number.ilike.${pattern}`);
     }
 
     // Fetch data with server-side pagination
