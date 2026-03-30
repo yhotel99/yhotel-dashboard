@@ -201,7 +201,7 @@ export async function getAvailableRoomsIn30Days(): Promise<Array<{
 }
 
 /**
- * Get upcoming check-ins in the next 30 days (plus 2 days before) with pagination
+ * Get upcoming check-ins from today to next 30 days with pagination
  * @param search - Search term (optional)
  * @param page - Page number (default: 1)
  * @param limit - Items per page (default: 50)
@@ -227,14 +227,12 @@ export async function getUpcomingCheckinsWithPagination({
 
     const supabase = await createServerClient();
 
-    // Calculate date range (2 days before to 30 days after)
+    // Calculate date range (today to 30 days after)
     const today = new Date();
-    const twoDaysBefore = new Date();
-    twoDaysBefore.setDate(today.getDate() - 2);
     const thirtyDaysFromNow = new Date();
     thirtyDaysFromNow.setDate(today.getDate() + 30);
 
-    const startDateStr = twoDaysBefore.toISOString().split('T')[0];
+    const startDateStr = today.toISOString().split('T')[0];
     const thirtyDaysStr = thirtyDaysFromNow.toISOString().split('T')[0];
 
     // Build query
@@ -264,7 +262,7 @@ export async function getUpcomingCheckinsWithPagination({
           )
         )
       `)
-      .in("status", ["pending", "confirmed", "checked_in", "checked_out"])
+      .in("status", ["pending", "confirmed"])
       .gte("check_in", startDateStr)
       .lte("check_in", thirtyDaysStr)
       .is("deleted_at", null);
@@ -283,7 +281,7 @@ export async function getUpcomingCheckinsWithPagination({
     let countQuery = supabase
       .from("bookings")
       .select("*", { count: "exact", head: true })
-      .in("status", ["pending", "confirmed", "checked_in", "checked_out"])
+      .in("status", ["pending", "confirmed"])
       .gte("check_in", startDateStr)
       .lte("check_in", thirtyDaysStr)
       .is("deleted_at", null);
