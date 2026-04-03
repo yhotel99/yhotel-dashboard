@@ -337,9 +337,8 @@ export function GalleryContent() {
                         src={image.url}
                         alt={image.url}
                         fill
-                        className="object-cover"
+                        className="object-contain"
                         loading="lazy"
-                        unoptimized
                       />
                     </ImageZoom>
                   )}
@@ -440,7 +439,6 @@ export function GalleryContent() {
                           alt={`Preview ${item.file.name}`}
                           fill
                           className="w-full h-full object-cover rounded border"
-                          unoptimized
                         />
                         <Button
                           variant="destructive"
