@@ -37,7 +37,11 @@ const GALLERY_BUCKET = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET;
 const GALLERY_FOLDER = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_FOLDER;
 
 /** Mặc định ảnh mỗi trang (khớp GET /api/gallery); URL không có ?limit= thì dùng giá trị này. */
-const DEFAULT_GALLERY_LIMIT = 20;
+const DEFAULT_GALLERY_LIMIT = 24;
+
+/** Lưới responsive: số cột theo width, mỗi ô tối thiểu ~192px — tránh 8–10 cột chật trên màn rộng. */
+const GALLERY_GRID_CLASS =
+  "grid gap-3 md:gap-4 mb-4 [grid-template-columns:repeat(auto-fill,minmax(min(100%,12rem),1fr))]";
 
 export function GalleryContent() {
   const router = useRouter();
@@ -314,14 +318,14 @@ export function GalleryContent() {
 
         {/* Image Grid */}
         {isLoading ? (
-          <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-8 xl:grid-cols-10 mb-4">
+          <div className={GALLERY_GRID_CLASS}>
             {Array.from({ length: limit }).map((_, i) => (
               <div key={i} className="aspect-square bg-muted rounded-lg" />
             ))}
           </div>
         ) : images.length > 0 ? (
           <>
-            <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-8 xl:grid-cols-10 mb-4">
+            <div className={GALLERY_GRID_CLASS}>
               {images.map((image) => (
                 <div
                   key={image.id}
@@ -333,7 +337,7 @@ export function GalleryContent() {
                         src={image.url}
                         alt={image.url}
                         fill
-                        className="object-contain"
+                        className="object-cover"
                         loading="lazy"
                         unoptimized
                       />

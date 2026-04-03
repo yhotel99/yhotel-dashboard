@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
 
     const page = Number(searchParams.get("page") || 1);
-    const limit = Number(searchParams.get("limit") || 20);
+    const limit = Number(searchParams.get("limit") || 24);
 
     // Calculate offset
     const from = (page - 1) * limit;
