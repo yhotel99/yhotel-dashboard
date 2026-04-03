@@ -65,8 +65,8 @@ export function ImageSelector({
         foundImage
           ? [foundImage]
           : imageValue.id
-          ? [imageValue as GalleryImage]
-          : []
+            ? [imageValue as GalleryImage]
+            : []
       );
     } else {
       setSelectedImages([]);
@@ -111,8 +111,8 @@ export function ImageSelector({
         foundImage
           ? [foundImage]
           : imageValue.id
-          ? [imageValue as GalleryImage]
-          : []
+            ? [imageValue as GalleryImage]
+            : []
       );
     } else {
       setSelectedImages([]);
@@ -145,7 +145,6 @@ export function ImageSelector({
             alt="Selected"
             fill
             className="object-cover"
-            unoptimized
           />
           <Button
             type="button"
@@ -207,7 +206,6 @@ export function ImageSelector({
                         alt=""
                         fill
                         className="object-cover"
-                        unoptimized
                       />
                       {isSelected && (
                         <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
@@ -388,7 +386,6 @@ export function ImageListSelector({
                 alt={`Selected`}
                 fill
                 className="object-cover"
-                unoptimized
               />
               <Button
                 type="button"
@@ -452,7 +449,6 @@ export function ImageListSelector({
                         alt=""
                         fill
                         className="object-cover"
-                        unoptimized
                       />
                       {isSelected && (
                         <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
