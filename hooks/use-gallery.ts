@@ -12,7 +12,7 @@ import type { GalleryImagesResponse, PaginationMeta } from "@/lib/types";
  * @param page - Page number
  * @param limit - Items per page
  */
-export function useGallery(page: number = 1, limit: number = 20) {
+export function useGallery(page: number = 1, limit: number = 24) {
   // Build query parameters
   const params = new URLSearchParams({
     page: page.toString(),
@@ -27,7 +27,7 @@ export function useGallery(page: number = 1, limit: number = 20) {
   const pagination: PaginationMeta = data?.pagination || {
     total: 0,
     page: 1,
-    limit: 20,
+    limit: 24,
     totalPages: 0,
   };
 

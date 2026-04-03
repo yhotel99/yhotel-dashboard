@@ -145,6 +145,7 @@ export function ImageSelector({
             alt="Selected"
             fill
             className="object-cover"
+            unoptimized
           />
           <Button
             type="button"
@@ -206,6 +207,7 @@ export function ImageSelector({
                         alt=""
                         fill
                         className="object-cover"
+                        unoptimized
                       />
                       {isSelected && (
                         <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
@@ -386,6 +388,7 @@ export function ImageListSelector({
                 alt={`Selected`}
                 fill
                 className="object-cover"
+                unoptimized
               />
               <Button
                 type="button"
@@ -449,6 +452,7 @@ export function ImageListSelector({
                         alt=""
                         fill
                         className="object-cover"
+                        unoptimized
                       />
                       {isSelected && (
                         <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">

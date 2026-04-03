@@ -2,6 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
+    // Ít breakpoint hơn mặc định → ít biến thể width được generate (tiết kiệm transformation).
+    deviceSizes: [640, 828, 1080],
     remotePatterns: [
       {
         protocol: "https",

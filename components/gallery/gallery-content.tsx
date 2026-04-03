@@ -36,6 +36,13 @@ import { cn } from "@/lib/utils";
 const GALLERY_BUCKET = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET;
 const GALLERY_FOLDER = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_FOLDER;
 
+/** Mặc định ảnh mỗi trang (khớp GET /api/gallery); URL không có ?limit= thì dùng giá trị này. */
+const DEFAULT_GALLERY_LIMIT = 24;
+
+/** Lưới responsive: số cột theo width, mỗi ô tối thiểu ~192px — tránh 8–10 cột chật trên màn rộng. */
+const GALLERY_GRID_CLASS =
+  "grid gap-3 md:gap-4 mb-4 [grid-template-columns:repeat(auto-fill,minmax(min(100%,12rem),1fr))]";
+
 export function GalleryContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -49,8 +56,8 @@ export function GalleryContent() {
 
   const limit = useMemo(() => {
     const limitParam = searchParams.get("limit");
-    const limitNum = limitParam ? parseInt(limitParam, 10) : 100;
-    return limitNum > 0 ? limitNum : 100;
+    const limitNum = limitParam ? parseInt(limitParam, 10) : DEFAULT_GALLERY_LIMIT;
+    return limitNum > 0 ? limitNum : DEFAULT_GALLERY_LIMIT;
   }, [searchParams]);
 
   const { images, isLoading, pagination, refetch, mutate } = useGallery(
@@ -77,7 +84,7 @@ export function GalleryContent() {
       } else {
         params.delete("page");
       }
-      if (newLimit !== 20) {
+      if (newLimit !== DEFAULT_GALLERY_LIMIT) {
         params.set("limit", newLimit.toString());
       } else {
         params.delete("limit");
@@ -311,14 +318,14 @@ export function GalleryContent() {
 
         {/* Image Grid */}
         {isLoading ? (
-          <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-8 xl:grid-cols-10 mb-4">
+          <div className={GALLERY_GRID_CLASS}>
             {Array.from({ length: limit }).map((_, i) => (
               <div key={i} className="aspect-square bg-muted rounded-lg" />
             ))}
           </div>
         ) : images.length > 0 ? (
           <>
-            <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-8 xl:grid-cols-10 mb-4">
+            <div className={GALLERY_GRID_CLASS}>
               {images.map((image) => (
                 <div
                   key={image.id}
@@ -330,8 +337,9 @@ export function GalleryContent() {
                         src={image.url}
                         alt={image.url}
                         fill
-                        className="object-contain"
+                        className="object-cover"
                         loading="lazy"
+                        unoptimized
                       />
                     </ImageZoom>
                   )}
@@ -432,6 +440,7 @@ export function GalleryContent() {
                           alt={`Preview ${item.file.name}`}
                           fill
                           className="w-full h-full object-cover rounded border"
+                          unoptimized
                         />
                         <Button
                           variant="destructive"
