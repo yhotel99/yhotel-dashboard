@@ -36,6 +36,9 @@ import { cn } from "@/lib/utils";
 const GALLERY_BUCKET = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET;
 const GALLERY_FOLDER = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_FOLDER;
 
+/** Mặc định ảnh mỗi trang (khớp GET /api/gallery); URL không có ?limit= thì dùng giá trị này. */
+const DEFAULT_GALLERY_LIMIT = 20;
+
 export function GalleryContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -49,8 +52,8 @@ export function GalleryContent() {
 
   const limit = useMemo(() => {
     const limitParam = searchParams.get("limit");
-    const limitNum = limitParam ? parseInt(limitParam, 10) : 100;
-    return limitNum > 0 ? limitNum : 100;
+    const limitNum = limitParam ? parseInt(limitParam, 10) : DEFAULT_GALLERY_LIMIT;
+    return limitNum > 0 ? limitNum : DEFAULT_GALLERY_LIMIT;
   }, [searchParams]);
 
   const { images, isLoading, pagination, refetch, mutate } = useGallery(
@@ -77,7 +80,7 @@ export function GalleryContent() {
       } else {
         params.delete("page");
       }
-      if (newLimit !== 20) {
+      if (newLimit !== DEFAULT_GALLERY_LIMIT) {
         params.set("limit", newLimit.toString());
       } else {
         params.delete("limit");
@@ -332,6 +335,7 @@ export function GalleryContent() {
                         fill
                         className="object-contain"
                         loading="lazy"
+                        unoptimized
                       />
                     </ImageZoom>
                   )}
@@ -432,6 +436,7 @@ export function GalleryContent() {
                           alt={`Preview ${item.file.name}`}
                           fill
                           className="w-full h-full object-cover rounded border"
+                          unoptimized
                         />
                         <Button
                           variant="destructive"
