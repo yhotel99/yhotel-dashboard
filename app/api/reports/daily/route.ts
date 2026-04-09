@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { PAYMENT_STATUS, BOOKING_STATUS } from "@/lib/constants";
+import { PAYMENT_STATUS, BOOKING_STATUS, ROOM_STATUS } from "@/lib/constants";
 import { DailyReportData } from "../types";
 
 /**
@@ -94,13 +94,14 @@ export async function GET(req: NextRequest) {
       })),
     ];
 
-    // Fetch total rooms
-    const { count: totalRooms } = await supabase
+    // Fetch sellable rooms (exclude maintenance rooms)
+    const { count: sellableRoomsCount } = await supabase
       .from("rooms")
       .select("id", { count: "exact", head: true })
+      .neq("status", ROOM_STATUS.MAINTENANCE)
       .is("deleted_at", null);
 
-    const totalRoomsCount = totalRooms || 1;
+    const totalRoomsCount = Math.max(sellableRoomsCount || 0, 1);
 
     // Generate all dates in the range
     const fromDateOnly = new Date(fromDate);

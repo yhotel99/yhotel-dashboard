@@ -24,3 +24,27 @@ export interface DailyReportData {
   occupancy: number;
 }
 
+export interface UserBookingsKpiRow {
+  userId: string | null;
+  fullName: string | null;
+  email: string | null;
+  totalBookings: number;
+  pendingBookings: number;
+  confirmedBookings: number;
+  checkedInBookings: number;
+  checkedOutBookings: number;
+  processingRate: number;
+  pendingRate: number;
+}
+
+export interface UserBookingDetailRow {
+  id: string;
+  bookingCode: string | null;
+  customerName: string | null;
+  roomName: string | null;
+  checkIn: string | null;
+  checkOut: string | null;
+  status: string | null;
+  totalAmount: number;
+  createdAt: string | null;
+}

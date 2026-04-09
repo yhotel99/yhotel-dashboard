@@ -65,6 +65,26 @@ export async function logBookingCancel(
   });
 }
 
+// Log booking creation
+export async function logBookingCreate(
+  bookingId: string,
+  userId: string,
+  userEmail: string,
+  metadata?: Record<string, unknown>
+) {
+  const requestMeta = await getRequestMetadata();
+
+  return createAuditLog({
+    action: 'booking.create',
+    entityType: 'booking',
+    entityId: bookingId,
+    userId,
+    userEmail,
+    metadata,
+    ...requestMeta,
+  });
+}
+
 // Log refund processing
 export async function logRefundProcess(
   refundId: string,

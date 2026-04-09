@@ -14,7 +14,7 @@ import type {
 } from "@/lib/types";
 import { BOOKING_STATUS, PAYMENT_METHOD } from "@/lib/constants";
 import { mapBookingError, formatDateTimePretty } from "@/lib/functions";
-import { logBookingUpdate, logBookingCancel } from "@/lib/audit-helpers";
+import { logBookingCreate, logBookingUpdate, logBookingCancel } from "@/lib/audit-helpers";
 import { getSettings } from "@/services/settings";
 import { getResendClient, getResendFromAddress } from "@/lib/email/resend";
 import { renderCancelBookingHTML } from "@/lib/email/templates/cancel-booking";
@@ -204,6 +204,23 @@ export async function createBooking(
     };
   }
 
+  // Log audit trail
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user) {
+    await logBookingCreate(data.booking_id, user.id, user.email!, {
+      mode: "single",
+      roomId: input.room_id ?? null,
+      customerId: input.customer_id ?? null,
+      checkIn: input.check_in,
+      checkOut: input.check_out,
+      totalAmount: input.total_amount,
+      finalAmount: input.final_amount ?? null,
+      voucherCode: input.voucher_code ?? null,
+    });
+  }
+
   // Revalidate bookings page after creating
   revalidatePath("/dashboard/bookings");
 
@@ -261,6 +278,22 @@ export async function createMultiBooking(
       ok: false,
       message: mapBookingError(data.error_code ?? "UNKNOWN"),
     };
+  }
+
+  // Log audit trail
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user) {
+    await logBookingCreate(data.booking_id, user.id, user.email!, {
+      mode: "multi",
+      customerId: input.customer_id,
+      roomItems: input.room_items,
+      checkIn: input.check_in,
+      checkOut: input.check_out,
+      finalAmount: input.final_amount ?? null,
+      voucherCode: input.voucher_code ?? null,
+    });
   }
 
   revalidatePath("/dashboard/bookings");

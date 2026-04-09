@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { BOOKING_STATUS, REFUND_REQUEST_STATUS } from "@/lib/constants";
+import {
+  BOOKING_STATUS,
+  REFUND_REQUEST_STATUS,
+  ROOM_STATUS,
+} from "@/lib/constants";
 import { ReportSummary } from "../types";
 
 /**
@@ -75,10 +79,11 @@ export async function GET(req: NextRequest) {
         .eq("status", REFUND_REQUEST_STATUS.REFUNDED)
         .gte("updated_at", fromISO)
         .lte("updated_at", toISO),
-      // Total rooms
+      // Sellable rooms (exclude maintenance rooms)
       supabase
         .from("rooms")
-        .select("id")
+        .select("id, status")
+        .neq("status", ROOM_STATUS.MAINTENANCE)
         .is("deleted_at", null),
       // Previous period bookings
       supabase
@@ -157,15 +162,22 @@ export async function GET(req: NextRequest) {
     const totalRoomsCount = totalRooms?.length || 1;
     
     // Helper function to calculate occupied room-nights using daily iteration
+    type OccupancyBooking = {
+      check_in: string | null;
+      check_out: string | null;
+      status: (typeof BOOKING_STATUS)[keyof typeof BOOKING_STATUS];
+      booking_rooms?: Array<{ room_id: string }> | null;
+    };
+
     const calculateOccupiedRoomNights = (
-      bookings: any[],
+      bookings: OccupancyBooking[],
       periodStart: Date,
       periodEnd: Date
     ): number => {
       const occupancyMap = new Map<string, number>();
       
       // Valid booking statuses for occupancy calculation
-      const validStatuses = [
+      const validStatuses: OccupancyBooking["status"][] = [
         BOOKING_STATUS.CONFIRMED,
         BOOKING_STATUS.CHECKED_IN,
         BOOKING_STATUS.CHECKED_OUT

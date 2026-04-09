@@ -213,6 +213,7 @@ export type BookingRecord = {
   id: string;
   customer_id: string | null;
   room_id: string | null;
+  created_by?: string | null;
   check_in: string;
   check_out: string;
   number_of_nights: number;
@@ -518,8 +519,10 @@ export type PaginationMeta = {
   page: number;
   limit: number;
   totalPages: number;
-  /** Next page cursor for keyset pagination (`list_bookings_json`). */
-  nextCursor?: { created_at: string; id: string } | null;
+  nextCursor?: {
+    created_at: string;
+    id: string;
+  } | null;
 };
 
 export type PreviewItem = {

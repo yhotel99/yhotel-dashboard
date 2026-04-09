@@ -182,6 +182,19 @@ type DailyOccupancyResponse = {
   occupancy: number;
 }[];
 
+type UserKpiRow = {
+  userId: string | null;
+  fullName: string | null;
+  email: string | null;
+  totalBookings: number;
+  pendingBookings: number;
+  confirmedBookings: number;
+  checkedInBookings: number;
+  checkedOutBookings: number;
+  processingRate: number;
+  pendingRate: number;
+}[];
+
 type PaymentsResponse = {
   data: PaymentWithBooking[];
   pagination: {
@@ -217,6 +230,9 @@ export function SystemReports() {
   const customerSourcesUrl = "/api/reports/customer-sources";
   const countryStatsUrl = "/api/reports/country-stats";
   const paymentMethodsUrl = `/api/reports/payment-methods?fromDate=${encodeURIComponent(
+    fromISO
+  )}&toDate=${encodeURIComponent(toISO)}`;
+  const usersKpiUrl = `/api/reports/users?fromDate=${encodeURIComponent(
     fromISO
   )}&toDate=${encodeURIComponent(toISO)}`;
 
@@ -265,6 +281,10 @@ export function SystemReports() {
     )}&toDate=${encodeURIComponent(toISO)}`,
     fetcher
   );
+  const {
+    data: usersKpiData,
+    isLoading: isLoadingUsersKpi,
+  } = useSWR<UserKpiRow>(usersKpiUrl, fetcher);
   const { data: recentPaymentsData, isLoading: isLoadingRecentPayments } =
     useSWR<PaymentsResponse>("/api/payments?page=1&limit=10", fetcher);
 
@@ -566,8 +586,84 @@ export function SystemReports() {
           </CardContent>
         </Card>
 
-
       </div>
+
+      {!isLoadingUsersKpi &&
+        usersKpiData &&
+        usersKpiData.some((row) => row.totalBookings > 0) ? (
+        <Card className="border-primary/20 bg-linear-to-br from-primary/5 via-card to-card">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-2xl">KPI theo nhân viên</CardTitle>
+                <CardDescription className="text-base mt-1">
+                  Theo dõi hiệu suất xử lý booking của từng nhân viên trong khoảng thời gian đã chọn.
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="mb-3 text-sm text-muted-foreground">
+              Tỷ lệ xử lý = (Confirmed + Check-in + Check-out) / Tổng booking. Tỷ lệ pending = Pending / Tổng booking.
+            </p>
+            <div className="rounded-md border border-primary/20 overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nhân viên</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead className="text-right">Tổng booking</TableHead>
+                    <TableHead className="text-right">Đã xác nhận</TableHead>
+                    <TableHead className="text-right">Check-in</TableHead>
+                    <TableHead className="text-right">Check-out</TableHead>
+                    <TableHead className="text-right">Pending</TableHead>
+                    <TableHead className="text-right">Tỷ lệ xử lý</TableHead>
+                    <TableHead className="text-right">Tỷ lệ pending</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {usersKpiData.map((row, index) => (
+                    <TableRow key={row.userId ?? `unknown-${index}`}>
+                      <TableCell className="font-medium">
+                        {row.fullName || "Không xác định"}
+                        {!row.userId && (
+                          <span className="ml-2 text-xs text-muted-foreground">
+                            (dữ liệu cũ / không gắn user)
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {row.email || "-"}
+                      </TableCell>
+                      <TableCell className="text-right font-semibold text-primary">
+                        {row.totalBookings}
+                      </TableCell>
+                      <TableCell className="text-right font-semibold">
+                        {row.confirmedBookings}
+                      </TableCell>
+                      <TableCell className="text-right font-semibold">
+                        {row.checkedInBookings}
+                      </TableCell>
+                      <TableCell className="text-right font-semibold">
+                        {row.checkedOutBookings}
+                      </TableCell>
+                      <TableCell className="text-right font-semibold">
+                        {row.pendingBookings}
+                      </TableCell>
+                      <TableCell className="text-right font-bold text-emerald-600">
+                        {row.processingRate.toFixed(2)}%
+                      </TableCell>
+                      <TableCell className="text-right font-bold text-amber-600">
+                        {row.pendingRate.toFixed(2)}%
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
 
       {/* Charts Section */}
       <div className="flex flex-col gap-4">
