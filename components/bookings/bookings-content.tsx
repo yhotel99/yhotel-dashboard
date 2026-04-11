@@ -20,6 +20,7 @@ import {
   updateBookingStatusAction,
   confirmBookingEmailAction,
   cancelBookingAction,
+  type CancelBookingActionOptions,
   transferBookingAction,
   checkInBookingAction,
   checkOutBookingAction,
@@ -36,6 +37,7 @@ import type {
   UpdateBookingInput,
   TransferBookingInput,
   BookingsResponse,
+  ConfirmBookingEmailOptions,
 } from "@/lib/types";
 import { useDebounce } from "@/hooks/use-debounce";
 import { createColumns, COLUMNS } from "@/components/bookings/columns";
@@ -296,9 +298,13 @@ export function BookingsContent({
   );
 
   const handleCancelBooking = React.useCallback(
-    async (id: string) => {
+    async (id: string, options?: CancelBookingActionOptions) => {
       try {
-        await cancelBookingAction(id);
+        const result = await cancelBookingAction(id, options);
+        if (!result.ok) {
+          toast.error(result.message ?? "Không thể hủy booking");
+          throw new Error(result.message ?? "Không thể hủy booking");
+        }
         toast.success("Đã hủy booking thành công");
         await mutate();
       } catch {
@@ -349,8 +355,12 @@ export function BookingsContent({
   );
 
   const confirmedBooking = React.useCallback(
-    async (bookingCode: string) => {
-      await confirmBookingEmailAction(bookingCode);
+    async (bookingCode: string, options?: ConfirmBookingEmailOptions) => {
+      const result = await confirmBookingEmailAction(bookingCode, options);
+      if (!result.ok) {
+        toast.error(result.message ?? "Không thể xác nhận booking");
+        throw new Error(result.message ?? "Không thể xác nhận booking");
+      }
       await mutate();
     },
     [mutate]
@@ -373,8 +383,11 @@ export function BookingsContent({
   );
 
   const cancelledBooking = React.useCallback(
-    async (id: string) => {
-      await cancelBookingAction(id);
+    async (id: string, options?: CancelBookingActionOptions) => {
+      const result = await cancelBookingAction(id, options);
+      if (!result.ok) {
+        throw new Error(result.message ?? "Không thể hủy booking");
+      }
       await mutate();
     },
     [mutate]

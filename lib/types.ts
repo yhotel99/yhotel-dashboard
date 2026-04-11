@@ -262,6 +262,43 @@ export type BookingRecord = {
   }> | null;
 };
 
+/**
+ * Join `customer:customer_id(...)` khi select booking cho email (hủy / xác nhận).
+ */
+export type BookingEmailCustomerJoinRow = {
+  full_name: string | null;
+  email: string | null;
+};
+
+/**
+ * Join `room:room_id(name)` trong `booking_rooms` cho template email.
+ */
+export type BookingEmailRoomNameJoinRow = {
+  name: string | null;
+};
+
+export type BookingEmailBookingRoomsJoinRow = {
+  room: BookingEmailRoomNameJoinRow | BookingEmailRoomNameJoinRow[] | null;
+};
+
+/**
+ * Hình booking sau khi select (customer + booking_rooms) dùng cho email giao dịch.
+ */
+export type BookingForTransactionalEmail = {
+  booking_code: string;
+  check_in: string;
+  check_out: string;
+  total_amount: number;
+  final_amount?: number | null;
+  customer: BookingEmailCustomerJoinRow | BookingEmailCustomerJoinRow[] | null;
+  booking_rooms: BookingEmailBookingRoomsJoinRow[] | null;
+};
+
+/** Tùy chọn gửi email khi xác nhận booking (dashboard). Mặc định có gửi. */
+export type ConfirmBookingEmailOptions = {
+  sendConfirmationEmail?: boolean;
+};
+
 /** Slice tối thiểu để format nhãn số phòng (booking list, payment join, v.v.). */
 export type BookingRoomNumbersSlice = {
   room_id?: string | null;
