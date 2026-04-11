@@ -1,13 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { PAYMENT_STATUS } from "@/lib/constants";
+import { REPORT_METRICS_BOOKING_STATUSES } from "@/lib/constants";
 import { MonthlyRevenueData } from "../types";
+import { parseBookingRevenueAmount } from "@/lib/reports/booking-revenue";
+
+function sumRevenueFromBookings(
+  rows:
+    | { final_amount?: unknown; total_amount?: unknown; status: string }[]
+    | null
+    | undefined
+): number {
+  return (
+    rows?.reduce((sum, b) => sum + parseBookingRevenueAmount(b), 0) || 0
+  );
+}
 
 /**
  * GET /api/reports/monthly
- * Get monthly report data for the last N months
- * Query parameters:
- * - months: Number of months to fetch (default: 6, max: 12)
+ *
+ * **Time basis:** `check_in` calendar month + `REPORT_METRICS_BOOKING_STATUSES` only
+ * (same event window as summary `revenueByCheckIn` / `bookingsByCheckIn`, rolled up by month).
  */
 export async function GET(req: NextRequest) {
   try {
@@ -20,7 +32,6 @@ export async function GET(req: NextRequest) {
 
     const supabase = await createClient();
 
-    // Calculate date range for last N months
     const now = new Date();
     const months: MonthlyRevenueData[] = [];
 
@@ -44,70 +55,21 @@ export async function GET(req: NextRequest) {
       const monthStartISO = monthStart.toISOString();
       const monthEndISO = monthEnd.toISOString();
 
-      // Fetch payments and bookings for this month
-      // Use paid_at if available, otherwise use created_at
-      const [paymentsByPaidAt, paymentsByCreatedAt, bookingsResult] =
-        await Promise.all([
-          // Payments with paid_at in this month
-          supabase
-            .from("payments")
-            .select("amount")
-            .eq("payment_status", PAYMENT_STATUS.PAID)
-            .not("paid_at", "is", null)
-            .gte("paid_at", monthStartISO)
-            .lte("paid_at", monthEndISO),
-          // Payments without paid_at but created_at in this month
-          supabase
-            .from("payments")
-            .select("amount")
-            .eq("payment_status", PAYMENT_STATUS.PAID)
-            .is("paid_at", null)
-            .gte("created_at", monthStartISO)
-            .lte("created_at", monthEndISO),
-          supabase
-            .from("bookings")
-            .select("id")
-            .is("deleted_at", null)
-            .gte("created_at", monthStartISO)
-            .lte("created_at", monthEndISO),
-        ]);
+      const { data: bookingsInMonth, error: bookingsError } = await supabase
+        .from("bookings")
+        .select("id, final_amount, total_amount, status")
+        .is("deleted_at", null)
+        .in("status", [...REPORT_METRICS_BOOKING_STATUSES])
+        .gte("check_in", monthStartISO)
+        .lte("check_in", monthEndISO);
 
-      if (
-        paymentsByPaidAt.error ||
-        paymentsByCreatedAt.error ||
-        bookingsResult.error
-      ) {
-        console.error("Error fetching monthly data:", {
-          paymentsByPaidAtError: paymentsByPaidAt.error,
-          paymentsByCreatedAtError: paymentsByCreatedAt.error,
-          bookingsError: bookingsResult.error,
-        });
+      if (bookingsError) {
+        console.error("Error fetching monthly data:", bookingsError);
         continue;
       }
 
-      // Calculate revenue from both sources
-      const revenueFromPaidAt =
-        paymentsByPaidAt.data?.reduce(
-          (sum, p) =>
-            sum +
-            (typeof p.amount === "string"
-              ? parseFloat(p.amount)
-              : p.amount || 0),
-          0
-        ) || 0;
-
-      const revenueFromCreatedAt =
-        paymentsByCreatedAt.data?.reduce(
-          (sum, p) =>
-            sum +
-            (typeof p.amount === "string"
-              ? parseFloat(p.amount)
-              : p.amount || 0),
-          0
-        ) || 0;
-
-      const revenue = revenueFromPaidAt + revenueFromCreatedAt;
-      const bookings = bookingsResult.data?.length || 0;
+      const revenue = sumRevenueFromBookings(bookingsInMonth);
+      const bookings = bookingsInMonth?.length || 0;
 
       months.push({
         month: `Tháng ${monthDate.getMonth() + 1}`,
@@ -124,4 +86,3 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
-

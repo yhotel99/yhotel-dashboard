@@ -60,7 +60,7 @@ import { paymentMethodLabels } from "@/lib/constants";
 import { Download } from "lucide-react";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
-import { endOfMonth, startOfMonth, format } from "date-fns";
+import { endOfDay, startOfMonth, format } from "date-fns";
 import Link from "next/link";
 import { PaymentStatusBadge } from "@/components/payments/status";
 import type { PaymentWithBooking } from "@/lib/types";
@@ -130,14 +130,10 @@ const PAYMENT_METHOD_COLORS = [
 
 // Types for API responses
 type SummaryResponse = {
-  totalRevenue: number;
-  totalBookings: number;
-  averageOccupancy: number;
-  totalRefunded: number;
-  revenueGrowth: number;
-  bookingGrowth: number;
-  occupancyGrowth: number;
-  refundGrowth: number;
+  revenueByCheckIn: number;
+  bookingsByCheckIn: number;
+  occupancyPctFromRoomNights: number;
+  refundCashflowByUpdatedAt: number;
 };
 
 type MonthlyResponse = {
@@ -206,15 +202,16 @@ type PaymentsResponse = {
 };
 
 export function SystemReports() {
-  const getCurrentMonthRange = () => {
+  /** Mặc định: ngày 1 tháng này → hết ngày hôm nay (không kéo tới cuối tháng). */
+  const getMonthToDateRange = () => {
     const now = new Date();
     return {
       from: startOfMonth(now),
-      to: endOfMonth(now),
+      to: endOfDay(now),
     };
   };
 
-  const [dateRange, setDateRange] = useState(getCurrentMonthRange());
+  const [dateRange, setDateRange] = useState(getMonthToDateRange());
   const [reportType, setReportType] = useState("revenue");
   const [monthRange, setMonthRange] = useState("6_months");
   // Build URLs for SWR
@@ -290,14 +287,12 @@ export function SystemReports() {
 
   // Derived state with safe defaults - ensure arrays are always arrays
   const summaryStats = {
-    totalRevenue: summaryData?.totalRevenue ?? 0,
-    totalBookings: summaryData?.totalBookings ?? 0,
-    averageOccupancy: summaryData?.averageOccupancy ?? 0,
-    totalRefunded: summaryData?.totalRefunded ?? 0,
-    revenueGrowth: summaryData?.revenueGrowth ?? 0,
-    bookingGrowth: summaryData?.bookingGrowth ?? 0,
-    occupancyGrowth: summaryData?.occupancyGrowth ?? 0,
-    refundGrowth: summaryData?.refundGrowth ?? 0,
+    revenueByCheckIn: summaryData?.revenueByCheckIn ?? 0,
+    bookingsByCheckIn: summaryData?.bookingsByCheckIn ?? 0,
+    occupancyPctFromRoomNights:
+      summaryData?.occupancyPctFromRoomNights ?? 0,
+    refundCashflowByUpdatedAt:
+      summaryData?.refundCashflowByUpdatedAt ?? 0,
   };
   const revenueData =
     Array.isArray(monthlyData) && !monthlyError ? monthlyData : [];
@@ -351,11 +346,23 @@ export function SystemReports() {
 
     // Summary Statistics
     const summaryData = [
-      ["Chỉ số", "Giá trị", "Tăng trưởng (%)"],
-      ["Tổng thu (Gross)", formatCurrency(summaryStats.totalRevenue), `${summaryStats.revenueGrowth.toFixed(2)}`],
-      ["Tổng đặt phòng", summaryStats.totalBookings.toString(), `${summaryStats.bookingGrowth.toFixed(2)}`],
-      ["Tỷ lệ lấp đầy trung bình", `${summaryStats.averageOccupancy.toFixed(2)}%`, `${summaryStats.occupancyGrowth.toFixed(2)}`],
-      ["Tổng hoàn tiền", formatCurrency(summaryStats.totalRefunded), `${summaryStats.refundGrowth.toFixed(2)}`],
+      ["Chỉ số", "Giá trị"],
+      [
+        "Tổng thu (theo ngày check-in)",
+        formatCurrency(summaryStats.revenueByCheckIn),
+      ],
+      [
+        "Số đặt phòng (theo ngày check-in)",
+        summaryStats.bookingsByCheckIn.toString(),
+      ],
+      [
+        "Tỷ lệ lấp đầy (đêm phòng trong kỳ)",
+        `${summaryStats.occupancyPctFromRoomNights.toFixed(2)}%`,
+      ],
+      [
+        "Hoàn tiền (theo ngày cập nhật trạng thái hoàn)",
+        formatCurrency(summaryStats.refundCashflowByUpdatedAt),
+      ],
     ];
     sections.push(
       Papa.unparse([["=== TỔNG QUAN ==="], ...summaryData, [""]], papaConfig)
@@ -528,60 +535,80 @@ export function SystemReports() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="border-green-500/20 bg-linear-to-br from-green-500/5 to-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0">
-            <CardTitle className="text-sm font-medium">
-              🟩 Tổng thu (Gross)
-            </CardTitle>
+            <div>
+              <CardTitle className="text-sm font-medium">
+                🟩 Tổng thu (Gross)
+              </CardTitle>
+              <CardDescription className="text-xs pt-1">
+                Theo ngày check-in · không phải doanh thu kế toán theo thanh toán
+              </CardDescription>
+            </div>
             <div className="rounded-full bg-green-500/10 p-2">
               <IconReceipt className="h-4 w-4 text-green-600" />
             </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {formatCurrency(summaryStats.totalRevenue)}
+              {formatCurrency(summaryStats.revenueByCheckIn)}
             </div>
           </CardContent>
         </Card>
 
         <Card className="border-red-500/20 bg-linear-to-br from-red-500/5 to-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0">
-            <CardTitle className="text-sm font-medium">🟥 Tổng hoàn tiền (Refund)</CardTitle>
+            <div>
+              <CardTitle className="text-sm font-medium">
+                🟥 Tổng hoàn tiền (Refund)
+              </CardTitle>
+              <CardDescription className="text-xs pt-1">
+                Theo thời điểm cập nhật hoàn tiền · khác mốc check-in
+              </CardDescription>
+            </div>
             <div className="rounded-full bg-red-500/10 p-2">
               <IconTrendingDown className="h-4 w-4 text-red-600" />
             </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
-              {formatCurrency(summaryStats.totalRefunded)}
+              {formatCurrency(summaryStats.refundCashflowByUpdatedAt)}
             </div>
           </CardContent>
         </Card>
 
         <Card className="border-primary/20 bg-linear-to-br from-primary/5 to-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0">
-            <CardTitle className="text-sm font-medium">
-              Tổng đặt phòng
-            </CardTitle>
+            <div>
+              <CardTitle className="text-sm font-medium">Tổng đặt phòng</CardTitle>
+              <CardDescription className="text-xs pt-1">
+                Booking đã xác nhận / in / out, theo ngày check-in
+              </CardDescription>
+            </div>
             <div className="rounded-full bg-primary/10 p-2">
               <IconBed className="h-4 w-4 text-primary" />
             </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-primary">
-              {summaryStats.totalBookings}
+              {summaryStats.bookingsByCheckIn}
             </div>
           </CardContent>
         </Card>
 
         <Card className="border-primary/20 bg-linear-to-br from-primary/5 to-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0">
-            <CardTitle className="text-sm font-medium">Tỷ lệ lấp đầy</CardTitle>
+            <div>
+              <CardTitle className="text-sm font-medium">Tỷ lệ lấp đầy</CardTitle>
+              <CardDescription className="text-xs pt-1">
+                Đêm phòng bán / đêm phòng khả dụng (kỳ chồng lấn lưu trú)
+              </CardDescription>
+            </div>
             <div className="rounded-full bg-primary/10 p-2">
               <IconChartBar className="h-4 w-4 text-primary" />
             </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-primary">
-              {summaryStats.averageOccupancy.toFixed(2)}%
+              {summaryStats.occupancyPctFromRoomNights.toFixed(2)}%
             </div>
           </CardContent>
         </Card>

@@ -26,11 +26,13 @@ const statusConfig: Record<
   },
   checked_in: {
     variant: "outline",
-    className: "border-green-500 text-green-600 dark:border-green-500/70 dark:text-green-400",
+    className:
+      "border-green-500 text-green-600 dark:border-green-500/70 dark:text-green-400",
   },
   checked_out: {
     variant: "outline",
-    className: "border-emerald-500 text-emerald-600 dark:border-emerald-500/70 dark:text-emerald-400",
+    className:
+      "border-violet-500 text-violet-600 dark:border-violet-500/70 dark:text-violet-400",
   },
   cancelled: {
     variant: "destructive",

@@ -62,7 +62,7 @@ export type UserStatus = "active" | "inactive" | "suspended";
 // Room type enum
 export type RoomType = "standard" | "deluxe" | "superior" | "family";
 
-// Room status type
+// Room status type (app workflow; DB enum may define extra values)
 export type RoomStatus = "available" | "maintenance" | "not_clean" | "clean";
 
 // Room type matching database schema (rooms table)

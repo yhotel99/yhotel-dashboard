@@ -1,12 +1,37 @@
+/**
+ * Operational analytics shapes (dashboard / CSV). Not a unified accounting or hotel-BI model;
+ * each metric documents its own time basis.
+ */
+
+/**
+ * Summary KPIs for the selected `[fromDate, toDate]` window.
+ *
+ * **Mixed time models (by design for ops dashboards):**
+ * - `revenueByCheckIn` / `bookingsByCheckIn` — event-based on `bookings.check_in`
+ * - `refundCashflowByUpdatedAt` — transaction-based on `refund_requests.updated_at`
+ * - `occupancyPctFromRoomNights` — duration-based (stay overlap × room-nights vs sellable capacity)
+ */
 export interface ReportSummary {
-  totalRevenue: number;
-  totalBookings: number;
-  averageOccupancy: number;
-  totalRefunded: number;
-  revenueGrowth: number;
-  bookingGrowth: number;
-  occupancyGrowth: number;
-  refundGrowth: number;
+  /**
+   * Recognized booking revenue for the range: sum of `final_amount ?? total_amount` for
+   * `REPORT_METRICS_BOOKING_STATUSES` bookings with `check_in` in the filter window.
+   * KPI / ops metric — not P&L by payment date.
+   */
+  revenueByCheckIn: number;
+  /** Count of those same bookings (confirmed | checked_in | checked_out). */
+  bookingsByCheckIn: number;
+  /**
+   * Occupancy % = **sold room-nights** (stays overlapping the range, confirmed+,
+   * `booking_rooms` count or 1) ÷ **available room-nights** (sum over each calendar day in the
+   * range of inventory room count). Inventory excludes `maintenance` only; per-day
+   * count currently uses today’s room snapshot (historical OOO-by-day not in schema yet).
+   */
+  occupancyPctFromRoomNights: number;
+  /**
+   * Refund totals in the range by settlement / record time: refunded rows with `updated_at`
+   * in the window. Compare carefully to revenue-by-check-in (different time basis).
+   */
+  refundCashflowByUpdatedAt: number;
 }
 
 export interface MonthlyRevenueData {

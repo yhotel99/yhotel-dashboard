@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { REPORT_METRICS_BOOKING_STATUSES } from "@/lib/constants";
 import { UserBookingDetailRow } from "../../types";
+import { parseBookingRevenueAmount } from "@/lib/reports/booking-revenue";
 
 /**
  * GET /api/reports/users/bookings
@@ -37,9 +39,10 @@ export async function GET(req: NextRequest) {
     const { data, error } = await supabase
       .from("bookings")
       .select(
-        "id, booking_code, check_in, check_out, status, total_amount, created_at, customers:customer_id(full_name), booking_rooms(rooms:room_id(name))"
+        "id, booking_code, check_in, check_out, status, final_amount, total_amount, created_at, customers:customer_id(full_name), booking_rooms(rooms:room_id(name))"
       )
       .is("deleted_at", null)
+      .in("status", [...REPORT_METRICS_BOOKING_STATUSES])
       .eq("created_by", userId)
       .gte("created_at", fromISO)
       .lte("created_at", toISO)
@@ -58,10 +61,10 @@ export async function GET(req: NextRequest) {
         .filter((name): name is string => Boolean(name && name.trim()));
 
       const customerObj = item.customers as { full_name?: string | null } | null;
-      const totalAmount =
-        typeof item.total_amount === "string"
-          ? parseFloat(item.total_amount)
-          : item.total_amount || 0;
+      const totalAmount = parseBookingRevenueAmount({
+        final_amount: item.final_amount,
+        total_amount: item.total_amount,
+      });
 
       return {
         id: item.id as string,
