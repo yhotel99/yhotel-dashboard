@@ -304,6 +304,22 @@ export function SystemReports() {
       : [];
   const countryStats =
     Array.isArray(countryStatsData) && !countryStatsError ? countryStatsData : [];
+  const countryStatsForChart = (() => {
+    if (countryStats.length <= 6) return countryStats;
+
+    const sorted = [...countryStats].sort((a, b) => b.count - a.count);
+    const topCountries = sorted.slice(0, 5);
+    const otherCount = sorted
+      .slice(5)
+      .reduce((sum, stat) => sum + stat.count, 0);
+
+    return otherCount > 0
+      ? [
+        ...topCountries,
+        { country: "other", label: "Khác", count: otherCount },
+      ]
+      : topCountries;
+  })();
   const paymentMethods =
     Array.isArray(paymentMethodsData) && !paymentMethodsError
       ? paymentMethodsData
@@ -1124,19 +1140,19 @@ export function SystemReports() {
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
-                          data={countryStats}
+                          data={countryStatsForChart}
                           cx="50%"
                           cy="50%"
                           labelLine={false}
                           label={({ label, percent }) =>
-                            percent > 0 ? `${label}: ${(percent * 100).toFixed(0)}%` : ''
+                            percent >= 0.08 ? `${label}: ${(percent * 100).toFixed(0)}%` : ""
                           }
                           outerRadius={100}
                           innerRadius={60}
                           fill="#8884d8"
                           dataKey="count"
                         >
-                          {countryStats.map((_, index) => (
+                          {countryStatsForChart.map((_, index) => (
                             <Cell
                               key={`cell-${index}`}
                               fill={
@@ -1151,7 +1167,7 @@ export function SystemReports() {
                           content={({ active, payload }) => {
                             if (active && payload && payload.length) {
                               const data = payload[0].payload;
-                              const total = countryStats.reduce(
+                              const total = countryStatsForChart.reduce(
                                 (sum, stat) => sum + stat.count,
                                 0
                               );
