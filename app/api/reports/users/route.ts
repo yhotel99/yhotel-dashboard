@@ -72,11 +72,7 @@ export async function GET(req: NextRequest) {
       if (status === "pending") {
         current.pendingBookings += 1;
       }
-      if (
-        status === "confirmed" ||
-        status === "checked_in" ||
-        status === "checked_out"
-      ) {
+      if (status === "confirmed") {
         current.confirmedBookings += 1;
       }
       if (status === "checked_in") {
