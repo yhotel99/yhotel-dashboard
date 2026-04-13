@@ -62,7 +62,7 @@ export type UserStatus = "active" | "inactive" | "suspended";
 // Room type enum
 export type RoomType = "standard" | "deluxe" | "superior" | "family";
 
-// Room status type
+// Room status type (app workflow; DB enum may define extra values)
 export type RoomStatus = "available" | "maintenance" | "not_clean" | "clean";
 
 // Room type matching database schema (rooms table)
@@ -213,6 +213,7 @@ export type BookingRecord = {
   id: string;
   customer_id: string | null;
   room_id: string | null;
+  created_by?: string | null;
   check_in: string;
   check_out: string;
   number_of_nights: number;
@@ -259,6 +260,43 @@ export type BookingRecord = {
       floor_number?: number | null;
     };
   }> | null;
+};
+
+/**
+ * Join `customer:customer_id(...)` khi select booking cho email (hủy / xác nhận).
+ */
+export type BookingEmailCustomerJoinRow = {
+  full_name: string | null;
+  email: string | null;
+};
+
+/**
+ * Join `room:room_id(name)` trong `booking_rooms` cho template email.
+ */
+export type BookingEmailRoomNameJoinRow = {
+  name: string | null;
+};
+
+export type BookingEmailBookingRoomsJoinRow = {
+  room: BookingEmailRoomNameJoinRow | BookingEmailRoomNameJoinRow[] | null;
+};
+
+/**
+ * Hình booking sau khi select (customer + booking_rooms) dùng cho email giao dịch.
+ */
+export type BookingForTransactionalEmail = {
+  booking_code: string;
+  check_in: string;
+  check_out: string;
+  total_amount: number;
+  final_amount?: number | null;
+  customer: BookingEmailCustomerJoinRow | BookingEmailCustomerJoinRow[] | null;
+  booking_rooms: BookingEmailBookingRoomsJoinRow[] | null;
+};
+
+/** Tùy chọn gửi email khi xác nhận booking (dashboard). Mặc định có gửi. */
+export type ConfirmBookingEmailOptions = {
+  sendConfirmationEmail?: boolean;
 };
 
 /** Slice tối thiểu để format nhãn số phòng (booking list, payment join, v.v.). */
@@ -518,8 +556,10 @@ export type PaginationMeta = {
   page: number;
   limit: number;
   totalPages: number;
-  /** Next page cursor for keyset pagination (`list_bookings_json`). */
-  nextCursor?: { created_at: string; id: string } | null;
+  nextCursor?: {
+    created_at: string;
+    id: string;
+  } | null;
 };
 
 export type PreviewItem = {

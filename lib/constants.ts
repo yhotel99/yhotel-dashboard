@@ -133,6 +133,14 @@ export const BOOKING_STATUS = {
   CANCELLED: "cancelled",
 } as const;
 
+/** Bookings included in report revenue and booking counts (excludes pending / cancelled). */
+/** Doanh thu / đếm booking báo cáo & **đêm phòng occupancy** (không tính pending / cancelled). */
+export const REPORT_METRICS_BOOKING_STATUSES = [
+  BOOKING_STATUS.CONFIRMED,
+  BOOKING_STATUS.CHECKED_IN,
+  BOOKING_STATUS.CHECKED_OUT,
+] as const satisfies readonly (typeof BOOKING_STATUS)[keyof typeof BOOKING_STATUS][];
+
 /**
  * Booking status labels mapping
  */

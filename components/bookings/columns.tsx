@@ -10,8 +10,10 @@ import type {
   BookingRecord,
   BookingStatus,
   TransferBookingInput,
+  ConfirmBookingEmailOptions,
 } from "@/lib/types";
 import { BookingActionsCell } from "@/components/bookings/actions-cell";
+import type { CancelBookingConfirmOptions } from "@/components/bookings/cancel-booking-confirm-dialog";
 import { StatusBadge } from "@/components/bookings/status";
 import { NotesCell } from "@/components/bookings/notes-cell";
 import {
@@ -42,17 +44,26 @@ export function createColumns(
     onEdit?: (booking: BookingRecord) => void;
     onTransfer?: (id: string, input: TransferBookingInput) => Promise<void>;
     onMarkAdvancePayment?: (bookingId: string) => Promise<void>;
-    onCancelBooking?: (id: string) => Promise<void>;
+    onCancelBooking?: (
+      id: string,
+      options?: CancelBookingConfirmOptions
+    ) => Promise<void>;
     checkAdvancePaymentStatus?: (bookingId: string) => Promise<{
       hasAdvancePayment: boolean;
       isPaid: boolean;
       paymentId: string | null;
     }>;
     pendingBooking?: (bookingId: string) => Promise<void>;
-    confirmedBooking?: (bookingCode: string) => Promise<void>;
+    confirmedBooking?: (
+      bookingCode: string,
+      options?: ConfirmBookingEmailOptions
+    ) => Promise<void>;
     checkedInBooking?: (bookingId: string) => Promise<void>;
     checkedOutBooking?: (bookingId: string) => Promise<void>;
-    cancelledBooking?: (bookingId: string) => Promise<void>;
+    cancelledBooking?: (
+      bookingId: string,
+      options?: CancelBookingConfirmOptions
+    ) => Promise<void>;
   },
   options?: {
     /** id phòng → số phòng (bảng rooms, cùng nguồn /dashboard/rooms) */
@@ -215,7 +226,8 @@ export function createColumns(
       cell: ({ row }) => {
         const defaultCancelledBooking =
           handlers?.cancelledBooking ||
-          (async (id: string) => await updateStatus(id, "cancelled"));
+          (async (id: string, _options?: CancelBookingConfirmOptions) =>
+            await updateStatus(id, "cancelled"));
 
         const actionHandlers = {
           onEdit: handlers?.onEdit || (() => { }),
@@ -238,7 +250,10 @@ export function createColumns(
             (async (id: string) => await updateStatus(id, "pending")),
           confirmedBooking:
             handlers?.confirmedBooking ||
-            (async (id: string) => await updateStatus(id, "confirmed")),
+            (async (
+              id: string,
+              _options?: ConfirmBookingEmailOptions
+            ) => await updateStatus(id, "confirmed")),
           checkedInBooking:
             handlers?.checkedInBooking ||
             (async (id: string) => await updateStatus(id, "checked_in")),

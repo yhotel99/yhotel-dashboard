@@ -18,9 +18,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { IconArrowRight, IconAlertCircle } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
-import type { BookingStatus } from "@/lib/types";
+import type { BookingStatus, ConfirmBookingEmailOptions } from "@/lib/types";
 import { BOOKING_STATUS, bookingStatusLabels } from "@/lib/constants";
 import { StatusBadge } from "./status";
 
@@ -29,7 +31,10 @@ interface ChangeBookingStatusDialogProps {
   onOpenChange: (open: boolean) => void;
   currentStatus: BookingStatus;
   pendingBooking: (bookingId: string) => Promise<void>;
-  confirmedBooking: (bookingCode: string) => Promise<void>;
+  confirmedBooking: (
+    bookingCode: string,
+    options?: ConfirmBookingEmailOptions
+  ) => Promise<void>;
   checkedInBooking: (bookingId: string) => Promise<void>;
   checkedOutBooking: (bookingId: string) => Promise<void>;
   cancelledBooking: (bookingId: string) => Promise<void>;
@@ -106,6 +111,7 @@ export function ChangeBookingStatusDialog({
   const [selectedStatus, setSelectedStatus] =
     useState<BookingStatus>(currentStatus);
   const [isLoading, setIsLoading] = useState(false);
+  const [sendConfirmationEmail, setSendConfirmationEmail] = useState(true);
 
   // Get allowed status transitions
   const allowedStatuses = useMemo(
@@ -118,6 +124,7 @@ export function ChangeBookingStatusDialog({
     if (newOpen) {
       setSelectedStatus(currentStatus);
       setIsLoading(false);
+      setSendConfirmationEmail(true);
     }
     onOpenChange(newOpen);
   };
@@ -142,7 +149,7 @@ export function ChangeBookingStatusDialog({
           await pendingBooking(bookingId);
           break;
         case BOOKING_STATUS.CONFIRMED:
-          await confirmedBooking(bookingCode);
+          await confirmedBooking(bookingCode, { sendConfirmationEmail });
           break;
         case BOOKING_STATUS.CHECKED_IN:
           await checkedInBooking(bookingId);
@@ -251,6 +258,23 @@ export function ChangeBookingStatusDialog({
                 <p className="text-sm text-amber-800 dark:text-amber-200">
                   {confirmationMessage}
                 </p>
+                {selectedStatus === BOOKING_STATUS.CONFIRMED && (
+                  <div className="flex items-start gap-3 pt-3">
+                    <Checkbox
+                      id="change-status-confirm-send-email"
+                      checked={sendConfirmationEmail}
+                      onCheckedChange={(value) =>
+                        setSendConfirmationEmail(value === true)
+                      }
+                    />
+                    <Label
+                      htmlFor="change-status-confirm-send-email"
+                      className="text-sm font-normal text-amber-900 dark:text-amber-100 leading-snug"
+                    >
+                      Gửi email xác nhận cho khách
+                    </Label>
+                  </div>
+                )}
               </div>
             </div>
           )}

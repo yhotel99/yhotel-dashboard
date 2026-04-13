@@ -32,8 +32,12 @@ import type {
   BookingStatus,
   BookingRecord,
   TransferBookingInput,
+  ConfirmBookingEmailOptions,
 } from "@/lib/types";
-import { CancelBookingConfirmDialog } from "./cancel-booking-confirm-dialog";
+import {
+  CancelBookingConfirmDialog,
+  type CancelBookingConfirmOptions,
+} from "./cancel-booking-confirm-dialog";
 import { ChangeBookingStatusDialog } from "./change-booking-status-dialog";
 import { TransferRoomDialog } from "./transfer-room-dialog";
 import { MarkAdvancePaymentDialog } from "./mark-advance-payment-dialog";
@@ -110,17 +114,26 @@ export function BookingActionsCell({
   onEdit: (booking: BookingRecord) => void;
   onTransfer: (id: string, input: TransferBookingInput) => Promise<void>;
   onMarkAdvancePayment: (bookingId: string) => Promise<void>;
-  onCancelBooking?: (id: string) => Promise<void>;
+  onCancelBooking?: (
+    id: string,
+    options?: CancelBookingConfirmOptions
+  ) => Promise<void>;
   checkAdvancePaymentStatus?: (bookingId: string) => Promise<{
     hasAdvancePayment: boolean;
     isPaid: boolean;
     paymentId: string | null;
   }>;
   pendingBooking: (bookingId: string) => Promise<void>;
-  confirmedBooking: (bookingCode: string) => Promise<void>;
+  confirmedBooking: (
+    bookingCode: string,
+    options?: ConfirmBookingEmailOptions
+  ) => Promise<void>;
   checkedInBooking: (bookingId: string) => Promise<void>;
   checkedOutBooking: (bookingId: string) => Promise<void>;
-  cancelledBooking: (bookingId: string) => Promise<void>;
+  cancelledBooking: (
+    bookingId: string,
+    options?: CancelBookingConfirmOptions
+  ) => Promise<void>;
   onViewDetails?: (booking: BookingRecord) => void;
 }) {
   const [openCancel, setOpenCancel] = useState(false);
@@ -277,11 +290,13 @@ export function BookingActionsCell({
         <CancelBookingConfirmDialog
           open={openCancel}
           onOpenChange={setOpenCancel}
-          onConfirm={async () => {
+          onConfirm={async ({ sendCancellationEmail }) => {
             if (onCancelBooking) {
-              await onCancelBooking(booking.id);
+              await onCancelBooking(booking.id, { sendCancellationEmail });
             } else {
-              await cancelledBooking(booking.id);
+              await cancelledBooking(booking.id, {
+                sendCancellationEmail,
+              });
             }
           }}
         />

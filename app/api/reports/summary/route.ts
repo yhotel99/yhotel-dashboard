@@ -1,14 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { BOOKING_STATUS, REFUND_REQUEST_STATUS } from "@/lib/constants";
+import {
+  REFUND_REQUEST_STATUS,
+  REPORT_METRICS_BOOKING_STATUSES,
+  ROOM_STATUS,
+} from "@/lib/constants";
 import { ReportSummary } from "../types";
+import { parseBookingRevenueAmount } from "@/lib/reports/booking-revenue";
+import {
+  countInventoryRoomsForOccupancy,
+  sumAvailableRoomNightsInRange,
+  totalRoomNightsInPeriod,
+} from "@/lib/reports/occupancy-room-nights";
 
 /**
  * GET /api/reports/summary
- * Get summary report data
- * Query parameters:
- * - fromDate: Start date (ISO string, required)
- * - toDate: End date (ISO string, required)
+ *
+ * Returns **mixed operational metrics** (different time bases). See `ReportSummary` JSDoc.
+ * Query: `fromDate`, `toDate` (ISO).
  */
 export async function GET(req: NextRequest) {
   try {
@@ -38,255 +47,100 @@ export async function GET(req: NextRequest) {
 
     const supabase = await createClient();
 
-    // Calculate previous period (inclusive day count)
-    const periodDays = Math.floor(
-      (toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24)
-    ) + 1;
-    const prevFromDate = new Date(fromDate);
-    prevFromDate.setDate(prevFromDate.getDate() - periodDays);
-    const prevToDate = new Date(fromDate);
-    prevToDate.setDate(prevToDate.getDate() - 1);
-    const prevFromISO = prevFromDate.toISOString();
-    const prevToISO = prevToDate.toISOString();
-
-
-
-    // Fetch current period data
     const [
       { data: currentBookings, error: bookingsError },
       { data: currentRefunds, error: refundsError },
       { data: totalRooms, error: roomsError },
-      { data: prevBookings, error: prevBookingsError },
-      { data: prevRefunds, error: prevRefundsError },
       { data: currentBookingsForOccupancy, error: occupancyError },
-      { data: prevBookingsForOccupancy, error: prevOccupancyError },
     ] = await Promise.all([
-      // Current period bookings - for revenue calculation
+      // (1) Revenue / booking count — event basis: check_in in window
       supabase
         .from("bookings")
-        .select("total_amount, status")
+        .select("final_amount, total_amount, status")
         .is("deleted_at", null)
-        .gte("created_at", fromISO)
-        .lte("created_at", toISO),
-      // Current period refunds
+        .in("status", [...REPORT_METRICS_BOOKING_STATUSES])
+        .gte("check_in", fromISO)
+        .lte("check_in", toISO),
+      // (2) Refunds — transaction basis: updated_at in window (cashflow / ops)
       supabase
         .from("refund_requests")
         .select("amount")
         .eq("status", REFUND_REQUEST_STATUS.REFUNDED)
         .gte("updated_at", fromISO)
         .lte("updated_at", toISO),
-      // Total rooms
       supabase
         .from("rooms")
-        .select("id")
+        .select("id, status")
+        .neq("status", ROOM_STATUS.MAINTENANCE)
         .is("deleted_at", null),
-      // Previous period bookings
-      supabase
-        .from("bookings")
-        .select("total_amount, status")
-        .is("deleted_at", null)
-        .gte("created_at", prevFromISO)
-        .lte("created_at", prevToISO),
-      // Previous period refunds
-      supabase
-        .from("refund_requests")
-        .select("amount")
-        .eq("status", REFUND_REQUEST_STATUS.REFUNDED)
-        .gte("updated_at", prevFromISO)
-        .lte("updated_at", prevToISO),
-      // Current period bookings for occupancy - fetch all bookings that overlap with period
+      // (3) Occupancy — chỉ confirmed / checked_in / checked_out (không pending); overlap kỳ
       supabase
         .from("bookings")
         .select("id, check_in, check_out, status, booking_rooms(room_id)")
         .is("deleted_at", null)
+        .in("status", [...REPORT_METRICS_BOOKING_STATUSES])
         .lt("check_in", toISO)
         .gt("check_out", fromISO),
-      // Previous period bookings for occupancy
-      supabase
-        .from("bookings")
-        .select("id, check_in, check_out, status, booking_rooms(room_id)")
-        .is("deleted_at", null)
-        .lt("check_in", prevToISO)
-        .gt("check_out", prevFromISO),
     ]);
 
-    if (
-      bookingsError ||
-      refundsError ||
-      roomsError ||
-      prevBookingsError ||
-      prevRefundsError ||
-      occupancyError ||
-      prevOccupancyError
-    ) {
+    if (bookingsError || refundsError || roomsError || occupancyError) {
       return NextResponse.json(
         { error: "Error fetching report data" },
         { status: 500 }
       );
     }
 
-    // Calculate current period stats
-    // Total Revenue = Sum of booking amounts from valid revenue statuses only
-    const revenueStatuses = [
-      BOOKING_STATUS.CONFIRMED,
-      BOOKING_STATUS.CHECKED_IN,
-      BOOKING_STATUS.CHECKED_OUT,
-    ];
-    const totalRevenue =
+    const revenueByCheckIn =
       currentBookings?.reduce(
-        (sum, b) => {
-          if (!revenueStatuses.includes(b.status)) {
-            return sum;
-          }
-          const val = typeof b.total_amount === "string" ? parseFloat(b.total_amount) : (b.total_amount || 0);
-          return sum + (isNaN(val) ? 0 : val);
-        },
+        (sum, b) => sum + parseBookingRevenueAmount(b),
         0
       ) || 0;
-    const totalBookings = currentBookings?.length || 0;
-    const totalRefunded =
+    const bookingsByCheckIn = currentBookings?.length || 0;
+    const refundCashflowByUpdatedAt =
       currentRefunds?.reduce(
         (sum, r) => {
-          const val = typeof r.amount === "string" ? parseFloat(r.amount) : (r.amount || 0);
+          const val =
+            typeof r.amount === "string"
+              ? parseFloat(r.amount)
+              : r.amount || 0;
           return sum + (isNaN(val) ? 0 : val);
         },
         0
       ) || 0;
 
-    // Calculate occupancy rate using daily-based approach (industry standard)
-    const totalRoomsCount = totalRooms?.length || 1;
-    
-    // Helper function to calculate occupied room-nights using daily iteration
-    const calculateOccupiedRoomNights = (
-      bookings: any[],
-      periodStart: Date,
-      periodEnd: Date
-    ): number => {
-      const occupancyMap = new Map<string, number>();
-      
-      // Valid booking statuses for occupancy calculation
-      const validStatuses = [
-        BOOKING_STATUS.CONFIRMED,
-        BOOKING_STATUS.CHECKED_IN,
-        BOOKING_STATUS.CHECKED_OUT
-      ];
-      
-      for (const booking of bookings) {
-        if (!booking.check_in || !booking.check_out || !validStatuses.includes(booking.status)) {
-          continue;
-        }
-        
-        const checkIn = new Date(booking.check_in);
-        const checkOut = new Date(booking.check_out);
-        
-        // Normalize to date-only (remove time component for accurate comparison)
-        checkIn.setHours(0, 0, 0, 0);
-        checkOut.setHours(0, 0, 0, 0);
-        
-        // Count rooms for this booking (handle multi-room bookings)
-        const roomCount = booking.booking_rooms?.length || 1;
-        
-        // Iterate each day in the report period
-        const currentDay = new Date(periodStart);
-        currentDay.setHours(0, 0, 0, 0);
-        
-        const periodEndNormalized = new Date(periodEnd);
-        periodEndNormalized.setHours(0, 0, 0, 0);
-        
-        while (currentDay <= periodEndNormalized) {
-          const dayKey = currentDay.toISOString().split('T')[0];
-          
-          // Room is occupied on day D if: check_in <= D AND check_out > D
-          if (checkIn <= currentDay && checkOut > currentDay) {
-            occupancyMap.set(dayKey, (occupancyMap.get(dayKey) || 0) + roomCount);
-          }
-          
-          currentDay.setDate(currentDay.getDate() + 1);
-        }
-      }
-      
-      // Sum all occupied room-nights
-      return Array.from(occupancyMap.values()).reduce((sum, count) => sum + count, 0);
-    };
-    
-    // Calculate current period occupancy
-    const currentRoomNights = calculateOccupiedRoomNights(
+    const inventoryRoomCount = countInventoryRoomsForOccupancy(totalRooms);
+    const sellableRoomsPerDay = Math.max(inventoryRoomCount, 1);
+    const availableRoomNightsInRange = sumAvailableRoomNightsInRange(
+      fromDate,
+      toDate,
+      () => sellableRoomsPerDay
+    );
+
+    const currentRoomNights = totalRoomNightsInPeriod(
       currentBookingsForOccupancy || [],
       fromDate,
-      toDate
+      toDate,
+      REPORT_METRICS_BOOKING_STATUSES
     );
-    
-    const totalPossibleRoomNights = totalRoomsCount * periodDays;
-    const averageOccupancy = totalPossibleRoomNights > 0 
-      ? (currentRoomNights / totalPossibleRoomNights) * 100 
-      : 0;
 
-    // Calculate previous period stats
-    const prevTotalRevenue =
-      prevBookings?.reduce(
-        (sum, b) => {
-          if (!revenueStatuses.includes(b.status)) {
-            return sum;
-          }
-          const val = typeof b.total_amount === "string" ? parseFloat(b.total_amount) : (b.total_amount || 0);
-          return sum + (isNaN(val) ? 0 : val);
-        },
-        0
-      ) || 0;
-    const prevTotalBookings = prevBookings?.length || 0;
-    const prevTotalRefunded =
-      prevRefunds?.reduce(
-        (sum, r) => {
-          const val = typeof r.amount === "string" ? parseFloat(r.amount) : (r.amount || 0);
-          return sum + (isNaN(val) ? 0 : val);
-        },
-        0
-      ) || 0;
-
-    // Calculate previous period occupancy
-    const prevRoomNights = calculateOccupiedRoomNights(
-      prevBookingsForOccupancy || [],
-      prevFromDate,
-      prevToDate
-    );
-    
-    const prevAverageOccupancy = totalPossibleRoomNights > 0 
-      ? (prevRoomNights / totalPossibleRoomNights) * 100 
-      : 0;
-
-    // Calculate growth rates
-    const revenueGrowth =
-      prevTotalRevenue > 0
-        ? ((totalRevenue - prevTotalRevenue) / prevTotalRevenue) * 100
+    const occupancyPctFromRoomNights =
+      availableRoomNightsInRange > 0
+        ? (currentRoomNights / availableRoomNightsInRange) * 100
         : 0;
-    const bookingGrowth =
-      prevTotalBookings > 0
-        ? ((totalBookings - prevTotalBookings) / prevTotalBookings) * 100
-        : 0;
-    const occupancyGrowth =
-      prevAverageOccupancy > 0
-        ? ((averageOccupancy - prevAverageOccupancy) / prevAverageOccupancy) *
-          100
-        : 0;
-    const refundGrowth =
-      prevTotalRefunded > 0
-        ? ((totalRefunded - prevTotalRefunded) / prevTotalRefunded) * 100
-        : 0;
-
-    const totalRevenueNum = isNaN(totalRevenue) ? 0 : totalRevenue;
-    const totalBookingsNum = isNaN(totalBookings) ? 0 : totalBookings;
-    const averageOccupancyNum = isNaN(averageOccupancy) ? 0 : averageOccupancy;
-    const totalRefundedNum = isNaN(totalRefunded) ? 0 : totalRefunded;
 
     const summary: ReportSummary = {
-      totalRevenue: totalRevenueNum,
-      totalBookings: totalBookingsNum,
-      averageOccupancy: Math.min(Math.round(averageOccupancyNum * 100) / 100, 100),
-      totalRefunded: totalRefundedNum,
-      revenueGrowth: isNaN(revenueGrowth) ? 0 : Math.round(revenueGrowth * 100) / 100,
-      bookingGrowth: isNaN(bookingGrowth) ? 0 : Math.round(bookingGrowth * 100) / 100,
-      occupancyGrowth: isNaN(occupancyGrowth) ? 0 : Math.round(occupancyGrowth * 100) / 100,
-      refundGrowth: isNaN(refundGrowth) ? 0 : Math.round(refundGrowth * 100) / 100,
+      revenueByCheckIn: isNaN(revenueByCheckIn) ? 0 : revenueByCheckIn,
+      bookingsByCheckIn: isNaN(bookingsByCheckIn) ? 0 : bookingsByCheckIn,
+      occupancyPctFromRoomNights: Math.min(
+        Math.round(
+          (isNaN(occupancyPctFromRoomNights) ? 0 : occupancyPctFromRoomNights) *
+            100
+        ) / 100,
+        100
+      ),
+      refundCashflowByUpdatedAt: isNaN(refundCashflowByUpdatedAt)
+        ? 0
+        : refundCashflowByUpdatedAt,
     };
 
     return NextResponse.json(summary);
@@ -297,4 +151,3 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
-

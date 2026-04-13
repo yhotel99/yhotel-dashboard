@@ -41,16 +41,17 @@ export async function createProfileAction(
       );
     }
 
-    // Create user in Supabase Auth using admin API
-    const { error: authError } = await adminSupabase.auth.admin.createUser({
-      email: input.email,
-      password: input.password,
-      user_metadata: {
-        full_name: input.full_name,
-        phone: input.phone || null,
-      },
-      email_confirm: true, // email will be confirmed automatically
-    });
+    // Create user in Supabase Auth using admin API (trigger inserts profiles with DB defaults)
+    const { data: authResult, error: authError } =
+      await adminSupabase.auth.admin.createUser({
+        email: input.email,
+        password: input.password,
+        user_metadata: {
+          full_name: input.full_name,
+          phone: input.phone || null,
+        },
+        email_confirm: true, // email will be confirmed automatically
+      });
 
     if (authError) {
       // Translate common auth errors
@@ -64,6 +65,26 @@ export async function createProfileAction(
         throw new Error("Email này đã tồn tại trong hệ thống.");
       }
       throw new Error("Không thể tạo tài khoản. Vui lòng kiểm tra lại thông tin.");
+    }
+
+    const newUserId = authResult.user?.id;
+    if (!newUserId) {
+      throw new Error("Không thể tạo tài khoản. Vui lòng thử lại.");
+    }
+
+    const { error: profileUpdateError } = await adminSupabase
+      .from("profiles")
+      .update({
+        role: input.role,
+        status: input.status,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", newUserId);
+
+    if (profileUpdateError) {
+      throw new Error(
+        "Tài khoản đã tạo nhưng không thể gán vai trò/trạng thái. Vui lòng chỉnh sửa người dùng trong danh sách."
+      );
     }
 
     // Revalidate profiles page

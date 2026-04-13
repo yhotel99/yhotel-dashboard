@@ -11,13 +11,17 @@ import type {
   BookingRecord,
   Result,
   ResultVoid,
+  BookingForTransactionalEmail,
+  BookingEmailBookingRoomsJoinRow,
+  ConfirmBookingEmailOptions,
 } from "@/lib/types";
 import { BOOKING_STATUS, PAYMENT_METHOD } from "@/lib/constants";
 import { mapBookingError, formatDateTimePretty } from "@/lib/functions";
-import { logBookingUpdate, logBookingCancel } from "@/lib/audit-helpers";
+import { logBookingCreate, logBookingUpdate, logBookingCancel } from "@/lib/audit-helpers";
 import { getSettings } from "@/services/settings";
 import { getResendClient, getResendFromAddress } from "@/lib/email/resend";
 import { renderCancelBookingHTML } from "@/lib/email/templates/cancel-booking";
+import { renderBookingConfirmationHTML } from "@/lib/email/templates/confirm-booking";
 
 
 
@@ -204,6 +208,23 @@ export async function createBooking(
     };
   }
 
+  // Log audit trail
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user) {
+    await logBookingCreate(data.booking_id, user.id, user.email!, {
+      mode: "single",
+      roomId: input.room_id ?? null,
+      customerId: input.customer_id ?? null,
+      checkIn: input.check_in,
+      checkOut: input.check_out,
+      totalAmount: input.total_amount,
+      finalAmount: input.final_amount ?? null,
+      voucherCode: input.voucher_code ?? null,
+    });
+  }
+
   // Revalidate bookings page after creating
   revalidatePath("/dashboard/bookings");
 
@@ -261,6 +282,22 @@ export async function createMultiBooking(
       ok: false,
       message: mapBookingError(data.error_code ?? "UNKNOWN"),
     };
+  }
+
+  // Log audit trail
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user) {
+    await logBookingCreate(data.booking_id, user.id, user.email!, {
+      mode: "multi",
+      customerId: input.customer_id,
+      roomItems: input.room_items,
+      checkIn: input.check_in,
+      checkOut: input.check_out,
+      finalAmount: input.final_amount ?? null,
+      voucherCode: input.voucher_code ?? null,
+    });
   }
 
   revalidatePath("/dashboard/bookings");
@@ -437,13 +474,20 @@ export async function checkOutBookingAction(
   return { ok: true };
 }
 
+export type CancelBookingActionOptions = {
+  /** Gửi email thông báo hủy cho khách. Mặc định true. */
+  sendCancellationEmail?: boolean;
+};
+
 /**
  * Cancel booking (update status and cancel pending payments)
  */
 export async function cancelBookingAction(
-  bookingId: string
+  bookingId: string,
+  options?: CancelBookingActionOptions
 ): Promise<ResultVoid> {
   const supabase = await createClient();
+  const sendCancellationEmail = options?.sendCancellationEmail !== false;
 
   const { error } = await supabase.rpc("cancel_booking_secure", {
     p_booking_id: bookingId,
@@ -458,6 +502,21 @@ export async function cancelBookingAction(
   }
 
   // Send cancellation email (do not block cancellation if email fails)
+  if (!sendCancellationEmail) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await logBookingCancel(
+        bookingId,
+        user.id,
+        user.email!,
+        "Cancelled by user",
+        { action: "cancel_booking", send_cancellation_email: false }
+      );
+    }
+    revalidatePath("/dashboard/bookings");
+    return { ok: true };
+  }
+
   try {
     const resend = getResendClient();
     if (resend) {
@@ -481,22 +540,7 @@ export async function cancelBookingAction(
         .single();
 
       if (!bookingError && booking) {
-        type BookingCustomerRow = { full_name: string | null; email: string | null };
-        type BookingRoomRow = { name: string | null };
-        type BookingRoomsJoinRow = {
-          room: BookingRoomRow | BookingRoomRow[] | null;
-        };
-        type BookingForCancellationEmail = {
-          booking_code: string;
-          check_in: string;
-          check_out: string;
-          total_amount: number;
-          final_amount?: number | null;
-          customer: BookingCustomerRow | BookingCustomerRow[] | null;
-          booking_rooms: BookingRoomsJoinRow[] | null;
-        };
-
-        const bookingData = booking as unknown as BookingForCancellationEmail;
+        const bookingData = booking as unknown as BookingForTransactionalEmail;
 
         const settings = await getSettings();
 
@@ -510,7 +554,7 @@ export async function cancelBookingAction(
         const customerName: string | undefined = customer?.full_name ?? undefined;
 
         const roomNames = (bookingData.booking_rooms ?? [])
-          .map((br: BookingRoomsJoinRow) => {
+          .map((br: BookingEmailBookingRoomsJoinRow) => {
             const roomRaw = br.room;
             const room = Array.isArray(roomRaw) ? roomRaw[0] : roomRaw;
             return room?.name ?? undefined;
@@ -563,14 +607,14 @@ export async function cancelBookingAction(
       bookingId,
       user.id,
       user.email!,
-      'Cancelled by user',
-      { action: 'cancel_booking' }
+      "Cancelled by user",
+      { action: "cancel_booking", send_cancellation_email: true }
     );
   }
 
   // Revalidate bookings page after cancelling
   revalidatePath("/dashboard/bookings");
-  
+
   return { ok: true };
 }
 
@@ -585,34 +629,122 @@ export async function transferBookingAction(
 }
 
 
-export async function confirmBookingEmailAction(bookingCode: string) {
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/send-confirm-booking`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
-      },
-      body: JSON.stringify({
-        booking_code: bookingCode,
-      }),
-      cache: "no-store",
-    }
-  );
-
-  const emailResult = await res.json();
-  console.log({
-    emailResult,
-    bookingCode,
-  });
-
-  if (!res.ok) {
-    console.error("Send email failed", emailResult);
-    // optional: không throw để không chặn confirm booking
+/**
+ * Xác nhận booking (RPC) và gửi email xác nhận qua Resend — logic trước đây ở edge function send-confirm-booking.
+ */
+export async function confirmBookingEmailAction(
+  bookingCode: string,
+  options?: ConfirmBookingEmailOptions
+): Promise<ResultVoid> {
+  const code = bookingCode?.trim();
+  if (!code) {
+    return { ok: false, message: "Thiếu mã booking" };
   }
 
-  // Revalidate bookings page after confirming
-  revalidatePath("/dashboard/bookings");
+  const sendConfirmationEmail = options?.sendConfirmationEmail !== false;
+  const supabase = await createClient();
 
+  const { data: booking, error: fetchError } = await supabase
+    .from("bookings")
+    .select(
+      `
+      id,
+      booking_code,
+      check_in,
+      check_out,
+      total_amount,
+      final_amount,
+      customer:customer_id(email, full_name),
+      booking_rooms(
+        room:room_id(name),
+        amount
+      )
+    `
+    )
+    .eq("booking_code", code)
+    .single();
+
+  if (fetchError || !booking) {
+    console.error("Confirm booking — fetch error:", fetchError);
+    return { ok: false, message: "Không tìm thấy booking" };
+  }
+
+  const { error: rpcError } = await supabase.rpc("confirm_booking_secure", {
+    p_booking_id: booking.id,
+  });
+
+  if (rpcError) {
+    console.error("confirm_booking_secure error:", rpcError);
+    return { ok: false, message: "Không thể xác nhận booking" };
+  }
+
+  if (!sendConfirmationEmail) {
+    revalidatePath("/dashboard/bookings");
+    return { ok: true };
+  }
+
+  const bookingData = booking as unknown as BookingForTransactionalEmail;
+
+  try {
+    const resend = getResendClient();
+    if (!resend) {
+      revalidatePath("/dashboard/bookings");
+      return { ok: true };
+    }
+
+    const customerRaw = bookingData.customer;
+    const customer = Array.isArray(customerRaw) ? customerRaw[0] : customerRaw;
+    const customerEmail = customer?.email?.trim();
+    if (!customerEmail) {
+      console.warn("Confirm booking — no customer email, skip send");
+      revalidatePath("/dashboard/bookings");
+      return { ok: true };
+    }
+
+    const settings = await getSettings();
+    const hotelName = settings?.site_title || "YHotel";
+    const hotline = settings?.contact_phone || "0787 913 388";
+    const supportEmail = settings?.contact_email || "hello@yhotel.vn";
+
+    const roomNames = (bookingData.booking_rooms ?? [])
+      .map((br: BookingEmailBookingRoomsJoinRow) => {
+        const roomRaw = br.room;
+        const room = Array.isArray(roomRaw) ? roomRaw[0] : roomRaw;
+        return room?.name ?? undefined;
+      })
+      .filter(
+        (name: unknown): name is string =>
+          typeof name === "string" && name.trim().length > 0
+      );
+    const roomType = roomNames.length ? roomNames.join(", ") : "-";
+
+    const html = renderBookingConfirmationHTML({
+      customer_name: customer?.full_name?.trim() || "Quý khách",
+      hotel_name: hotelName,
+      booking_code: bookingData.booking_code,
+      room_type: roomType,
+      check_in: formatDateTimePretty(bookingData.check_in, {
+        format: "full",
+      }),
+      check_out: formatDateTimePretty(bookingData.check_out, {
+        format: "full",
+      }),
+      total_price:
+        Number(bookingData.final_amount ?? bookingData.total_amount) || 0,
+      hotline,
+      support_email: supportEmail,
+    });
+
+    await resend.emails.send({
+      from: getResendFromAddress(),
+      to: customerEmail,
+      subject: `Xác nhận đặt phòng – ${bookingData.booking_code}`,
+      html,
+    });
+  } catch (emailErr) {
+    console.error("Send confirmation email failed:", emailErr);
+  }
+
+  revalidatePath("/dashboard/bookings");
+  return { ok: true };
 }

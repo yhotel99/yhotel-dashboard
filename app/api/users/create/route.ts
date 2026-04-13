@@ -46,7 +46,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Permission denied" }, { status: 400 });
     }
 
-    // Create user in Supabase Auth using admin API
     const { data: authData, error: authError } =
       await adminSupabase.auth.admin.createUser({
         email,
@@ -65,6 +64,25 @@ export async function POST(request: NextRequest) {
     if (!authData.user) {
       return NextResponse.json(
         { error: "Failed to create user" },
+        { status: 500 }
+      );
+    }
+
+    const { error: profileUpdateError } = await adminSupabase
+      .from("profiles")
+      .update({
+        role,
+        status,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", authData.user.id);
+
+    if (profileUpdateError) {
+      return NextResponse.json(
+        {
+          error:
+            "User created but profile role could not be set. Update the user manually.",
+        },
         { status: 500 }
       );
     }

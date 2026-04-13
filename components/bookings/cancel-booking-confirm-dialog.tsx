@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,12 +10,18 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { IconLoader2 } from "@tabler/icons-react";
+
+export type CancelBookingConfirmOptions = {
+  sendCancellationEmail: boolean;
+};
 
 interface CancelBookingConfirmDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onConfirm: () => Promise<void> | void;
+  onConfirm: (options: CancelBookingConfirmOptions) => Promise<void> | void;
 }
 
 export function CancelBookingConfirmDialog({
@@ -24,11 +30,18 @@ export function CancelBookingConfirmDialog({
   onConfirm,
 }: CancelBookingConfirmDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [sendCancellationEmail, setSendCancellationEmail] = useState(true);
+
+  useEffect(() => {
+    if (open) {
+      setSendCancellationEmail(true);
+    }
+  }, [open]);
 
   const handleConfirm = async () => {
     try {
       setIsLoading(true);
-      await onConfirm();
+      await onConfirm({ sendCancellationEmail });
       onOpenChange(false);
     } catch (error) {
       // Error is handled by parent component (toast)
@@ -48,6 +61,21 @@ export function CancelBookingConfirmDialog({
             chắn muốn tiếp tục?
           </DialogDescription>
         </DialogHeader>
+        <div className="flex items-start gap-3 py-2">
+          <Checkbox
+            id="cancel-booking-send-email"
+            checked={sendCancellationEmail}
+            onCheckedChange={(value) =>
+              setSendCancellationEmail(value === true)
+            }
+          />
+          <Label
+            htmlFor="cancel-booking-send-email"
+            className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+          >
+            Gửi email thông báo hủy cho khách
+          </Label>
+        </div>
         <DialogFooter>
           <Button 
             variant="outline" 

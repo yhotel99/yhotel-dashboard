@@ -60,7 +60,7 @@ import { paymentMethodLabels } from "@/lib/constants";
 import { Download } from "lucide-react";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
-import { endOfMonth, startOfMonth, format } from "date-fns";
+import { endOfDay, startOfMonth, format } from "date-fns";
 import Link from "next/link";
 import { PaymentStatusBadge } from "@/components/payments/status";
 import type { PaymentWithBooking } from "@/lib/types";
@@ -130,14 +130,10 @@ const PAYMENT_METHOD_COLORS = [
 
 // Types for API responses
 type SummaryResponse = {
-  totalRevenue: number;
-  totalBookings: number;
-  averageOccupancy: number;
-  totalRefunded: number;
-  revenueGrowth: number;
-  bookingGrowth: number;
-  occupancyGrowth: number;
-  refundGrowth: number;
+  revenueByCheckIn: number;
+  bookingsByCheckIn: number;
+  occupancyPctFromRoomNights: number;
+  refundCashflowByUpdatedAt: number;
 };
 
 type MonthlyResponse = {
@@ -182,6 +178,19 @@ type DailyOccupancyResponse = {
   occupancy: number;
 }[];
 
+type UserKpiRow = {
+  userId: string | null;
+  fullName: string | null;
+  email: string | null;
+  totalBookings: number;
+  pendingBookings: number;
+  confirmedBookings: number;
+  checkedInBookings: number;
+  checkedOutBookings: number;
+  processingRate: number;
+  pendingRate: number;
+}[];
+
 type PaymentsResponse = {
   data: PaymentWithBooking[];
   pagination: {
@@ -193,15 +202,16 @@ type PaymentsResponse = {
 };
 
 export function SystemReports() {
-  const getCurrentMonthRange = () => {
+  /** Mặc định: ngày 1 tháng này → hết ngày hôm nay (không kéo tới cuối tháng). */
+  const getMonthToDateRange = () => {
     const now = new Date();
     return {
       from: startOfMonth(now),
-      to: endOfMonth(now),
+      to: endOfDay(now),
     };
   };
 
-  const [dateRange, setDateRange] = useState(getCurrentMonthRange());
+  const [dateRange, setDateRange] = useState(getMonthToDateRange());
   const [reportType, setReportType] = useState("revenue");
   const [monthRange, setMonthRange] = useState("6_months");
   // Build URLs for SWR
@@ -217,6 +227,9 @@ export function SystemReports() {
   const customerSourcesUrl = "/api/reports/customer-sources";
   const countryStatsUrl = "/api/reports/country-stats";
   const paymentMethodsUrl = `/api/reports/payment-methods?fromDate=${encodeURIComponent(
+    fromISO
+  )}&toDate=${encodeURIComponent(toISO)}`;
+  const usersKpiUrl = `/api/reports/users?fromDate=${encodeURIComponent(
     fromISO
   )}&toDate=${encodeURIComponent(toISO)}`;
 
@@ -265,19 +278,21 @@ export function SystemReports() {
     )}&toDate=${encodeURIComponent(toISO)}`,
     fetcher
   );
+  const {
+    data: usersKpiData,
+    isLoading: isLoadingUsersKpi,
+  } = useSWR<UserKpiRow>(usersKpiUrl, fetcher);
   const { data: recentPaymentsData, isLoading: isLoadingRecentPayments } =
     useSWR<PaymentsResponse>("/api/payments?page=1&limit=10", fetcher);
 
   // Derived state with safe defaults - ensure arrays are always arrays
   const summaryStats = {
-    totalRevenue: summaryData?.totalRevenue ?? 0,
-    totalBookings: summaryData?.totalBookings ?? 0,
-    averageOccupancy: summaryData?.averageOccupancy ?? 0,
-    totalRefunded: summaryData?.totalRefunded ?? 0,
-    revenueGrowth: summaryData?.revenueGrowth ?? 0,
-    bookingGrowth: summaryData?.bookingGrowth ?? 0,
-    occupancyGrowth: summaryData?.occupancyGrowth ?? 0,
-    refundGrowth: summaryData?.refundGrowth ?? 0,
+    revenueByCheckIn: summaryData?.revenueByCheckIn ?? 0,
+    bookingsByCheckIn: summaryData?.bookingsByCheckIn ?? 0,
+    occupancyPctFromRoomNights:
+      summaryData?.occupancyPctFromRoomNights ?? 0,
+    refundCashflowByUpdatedAt:
+      summaryData?.refundCashflowByUpdatedAt ?? 0,
   };
   const revenueData =
     Array.isArray(monthlyData) && !monthlyError ? monthlyData : [];
@@ -331,11 +346,23 @@ export function SystemReports() {
 
     // Summary Statistics
     const summaryData = [
-      ["Chỉ số", "Giá trị", "Tăng trưởng (%)"],
-      ["Tổng thu (Gross)", formatCurrency(summaryStats.totalRevenue), `${summaryStats.revenueGrowth.toFixed(2)}`],
-      ["Tổng đặt phòng", summaryStats.totalBookings.toString(), `${summaryStats.bookingGrowth.toFixed(2)}`],
-      ["Tỷ lệ lấp đầy trung bình", `${summaryStats.averageOccupancy.toFixed(2)}%`, `${summaryStats.occupancyGrowth.toFixed(2)}`],
-      ["Tổng hoàn tiền", formatCurrency(summaryStats.totalRefunded), `${summaryStats.refundGrowth.toFixed(2)}`],
+      ["Chỉ số", "Giá trị"],
+      [
+        "Tổng thu (theo ngày check-in)",
+        formatCurrency(summaryStats.revenueByCheckIn),
+      ],
+      [
+        "Số đặt phòng (theo ngày check-in)",
+        summaryStats.bookingsByCheckIn.toString(),
+      ],
+      [
+        "Tỷ lệ lấp đầy (đêm phòng trong kỳ)",
+        `${summaryStats.occupancyPctFromRoomNights.toFixed(2)}%`,
+      ],
+      [
+        "Hoàn tiền (theo ngày cập nhật trạng thái hoàn)",
+        formatCurrency(summaryStats.refundCashflowByUpdatedAt),
+      ],
     ];
     sections.push(
       Papa.unparse([["=== TỔNG QUAN ==="], ...summaryData, [""]], papaConfig)
@@ -508,66 +535,162 @@ export function SystemReports() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="border-green-500/20 bg-linear-to-br from-green-500/5 to-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0">
-            <CardTitle className="text-sm font-medium">
-              🟩 Tổng thu (Gross)
-            </CardTitle>
+            <div>
+              <CardTitle className="text-sm font-medium">
+                🟩 Tổng thu (Gross)
+              </CardTitle>
+              <CardDescription className="text-xs pt-1">
+                Theo ngày check-in · không phải doanh thu kế toán theo thanh toán
+              </CardDescription>
+            </div>
             <div className="rounded-full bg-green-500/10 p-2">
               <IconReceipt className="h-4 w-4 text-green-600" />
             </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {formatCurrency(summaryStats.totalRevenue)}
+              {formatCurrency(summaryStats.revenueByCheckIn)}
             </div>
           </CardContent>
         </Card>
 
         <Card className="border-red-500/20 bg-linear-to-br from-red-500/5 to-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0">
-            <CardTitle className="text-sm font-medium">🟥 Tổng hoàn tiền (Refund)</CardTitle>
+            <div>
+              <CardTitle className="text-sm font-medium">
+                🟥 Tổng hoàn tiền (Refund)
+              </CardTitle>
+              <CardDescription className="text-xs pt-1">
+                Theo thời điểm cập nhật hoàn tiền · khác mốc check-in
+              </CardDescription>
+            </div>
             <div className="rounded-full bg-red-500/10 p-2">
               <IconTrendingDown className="h-4 w-4 text-red-600" />
             </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
-              {formatCurrency(summaryStats.totalRefunded)}
+              {formatCurrency(summaryStats.refundCashflowByUpdatedAt)}
             </div>
           </CardContent>
         </Card>
 
         <Card className="border-primary/20 bg-linear-to-br from-primary/5 to-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0">
-            <CardTitle className="text-sm font-medium">
-              Tổng đặt phòng
-            </CardTitle>
+            <div>
+              <CardTitle className="text-sm font-medium">Tổng đặt phòng</CardTitle>
+              <CardDescription className="text-xs pt-1">
+                Booking đã xác nhận / in / out, theo ngày check-in
+              </CardDescription>
+            </div>
             <div className="rounded-full bg-primary/10 p-2">
               <IconBed className="h-4 w-4 text-primary" />
             </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-primary">
-              {summaryStats.totalBookings}
+              {summaryStats.bookingsByCheckIn}
             </div>
           </CardContent>
         </Card>
 
         <Card className="border-primary/20 bg-linear-to-br from-primary/5 to-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0">
-            <CardTitle className="text-sm font-medium">Tỷ lệ lấp đầy</CardTitle>
+            <div>
+              <CardTitle className="text-sm font-medium">Tỷ lệ lấp đầy</CardTitle>
+              <CardDescription className="text-xs pt-1">
+                Đêm phòng bán / đêm phòng khả dụng (kỳ chồng lấn lưu trú)
+              </CardDescription>
+            </div>
             <div className="rounded-full bg-primary/10 p-2">
               <IconChartBar className="h-4 w-4 text-primary" />
             </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-primary">
-              {summaryStats.averageOccupancy.toFixed(2)}%
+              {summaryStats.occupancyPctFromRoomNights.toFixed(2)}%
             </div>
           </CardContent>
         </Card>
 
-
       </div>
+
+      {!isLoadingUsersKpi &&
+        usersKpiData &&
+        usersKpiData.some((row) => row.totalBookings > 0) ? (
+        <Card className="border-primary/20 bg-linear-to-br from-primary/5 via-card to-card">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-2xl">KPI theo nhân viên</CardTitle>
+                <CardDescription className="text-base mt-1">
+                  Theo dõi hiệu suất xử lý booking của từng nhân viên trong khoảng thời gian đã chọn.
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="mb-3 text-sm text-muted-foreground">
+              Tỷ lệ xử lý = (Confirmed + Check-in + Check-out) / Tổng booking. Tỷ lệ pending = Pending / Tổng booking.
+            </p>
+            <div className="rounded-md border border-primary/20 overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nhân viên</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead className="text-right">Tổng booking</TableHead>
+                    <TableHead className="text-right">Đã xác nhận</TableHead>
+                    <TableHead className="text-right">Check-in</TableHead>
+                    <TableHead className="text-right">Check-out</TableHead>
+                    <TableHead className="text-right">Pending</TableHead>
+                    <TableHead className="text-right">Tỷ lệ xử lý</TableHead>
+                    <TableHead className="text-right">Tỷ lệ pending</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {usersKpiData.map((row, index) => (
+                    <TableRow key={row.userId ?? `unknown-${index}`}>
+                      <TableCell className="font-medium">
+                        {row.fullName || "Không xác định"}
+                        {!row.userId && (
+                          <span className="ml-2 text-xs text-muted-foreground">
+                            (dữ liệu cũ / không gắn user)
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {row.email || "-"}
+                      </TableCell>
+                      <TableCell className="text-right font-semibold text-primary">
+                        {row.totalBookings}
+                      </TableCell>
+                      <TableCell className="text-right font-semibold">
+                        {row.confirmedBookings}
+                      </TableCell>
+                      <TableCell className="text-right font-semibold">
+                        {row.checkedInBookings}
+                      </TableCell>
+                      <TableCell className="text-right font-semibold">
+                        {row.checkedOutBookings}
+                      </TableCell>
+                      <TableCell className="text-right font-semibold">
+                        {row.pendingBookings}
+                      </TableCell>
+                      <TableCell className="text-right font-bold text-emerald-600">
+                        {row.processingRate.toFixed(2)}%
+                      </TableCell>
+                      <TableCell className="text-right font-bold text-amber-600">
+                        {row.pendingRate.toFixed(2)}%
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
 
       {/* Charts Section */}
       <div className="flex flex-col gap-4">
