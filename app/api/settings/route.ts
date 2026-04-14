@@ -4,6 +4,18 @@ import { getSettings, updateSettings } from "@/services/settings";
 import { checkPermission } from "@/services/permissions";
 import { z } from "zod";
 
+const pricingHolidayPeriodSchema = z
+  .object({
+    id: z.string().min(1),
+    label: z.string().min(1),
+    start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    surcharge_percent: z.coerce.number().min(0).max(100),
+  })
+  .refine((d) => d.start_date <= d.end_date, {
+    message: "Ngày kết thúc phải sau hoặc bằng ngày bắt đầu",
+    path: ["end_date"],
+  });
 
 const settingsInputSchema = z.object({
   site_title: z.string().nullable().optional(),
@@ -15,6 +27,10 @@ const settingsInputSchema = z.object({
   pricing_weekday_rates: z
     .array(z.coerce.number().min(0).max(100))
     .length(7)
+    .nullable()
+    .optional(),
+  pricing_holiday_periods: z
+    .array(pricingHolidayPeriodSchema)
     .nullable()
     .optional(),
   contact_email: z

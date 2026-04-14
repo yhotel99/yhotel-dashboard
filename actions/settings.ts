@@ -46,6 +46,23 @@ export async function getSettingsAction(): Promise<Settings | null> {
       settings.social_media_links = {};
     }
 
+    if (Array.isArray(settings.pricing_holiday_periods)) {
+      // keep as-is
+    } else if (
+      settings.pricing_holiday_periods &&
+      typeof settings.pricing_holiday_periods === "string"
+    ) {
+      try {
+        settings.pricing_holiday_periods = JSON.parse(
+          settings.pricing_holiday_periods
+        );
+      } catch {
+        settings.pricing_holiday_periods = [];
+      }
+    } else if (!settings.pricing_holiday_periods) {
+      settings.pricing_holiday_periods = [];
+    }
+
     return settings as Settings;
   } catch (err) {
     // Silently handle dynamic server usage errors during static generation
@@ -116,6 +133,23 @@ export async function updateSettingsAction(
       }
     } else if (!settings.hero_images) {
       settings.hero_images = [];
+    }
+
+    if (Array.isArray(settings.pricing_holiday_periods)) {
+      // keep as-is
+    } else if (
+      settings.pricing_holiday_periods &&
+      typeof settings.pricing_holiday_periods === "string"
+    ) {
+      try {
+        settings.pricing_holiday_periods = JSON.parse(
+          settings.pricing_holiday_periods
+        );
+      } catch {
+        settings.pricing_holiday_periods = [];
+      }
+    } else if (!settings.pricing_holiday_periods) {
+      settings.pricing_holiday_periods = [];
     }
 
     // Revalidate settings page and root layout

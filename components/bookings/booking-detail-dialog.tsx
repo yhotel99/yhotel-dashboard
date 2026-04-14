@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import Image from "next/image";
 import {
   Dialog,
@@ -28,6 +29,12 @@ import { BANK_ACCOUNT, PAYMENT_TYPE } from "@/lib/constants";
 import { PaymentStatusBadge } from "@/components/payments/status";
 import type { Room } from "@/lib/types";
 import { getRoomsByIds } from "@/actions/rooms";
+import { useSettings } from "@/hooks/use-settings";
+import {
+  calculateTotalWithWeekdayRates,
+  normalizeHolidayPeriods,
+  normalizeWeekdayRates,
+} from "@/lib/pricing";
 
 interface BookingDetailDialogProps {
   open: boolean;
@@ -86,6 +93,36 @@ export function BookingDetailDialog({
 
   const advancePayment = getLatestPaymentByType(PAYMENT_TYPE.ADVANCE_PAYMENT);
   const roomChargePayment = getLatestPaymentByType(PAYMENT_TYPE.ROOM_CHARGE);
+  const { settings } = useSettings();
+
+  const pricingBreakdown = useMemo(() => {
+    if (!booking || !roomsData || roomsData.length === 0) return [];
+
+    const checkInDate = booking.check_in.split("T")[0] ?? "";
+    const checkOutDate = booking.check_out.split("T")[0] ?? "";
+    if (!checkInDate || !checkOutDate) return [];
+
+    const nightlyBaseTotal = roomsData.reduce(
+      (sum, room) => sum + Number(room.price_per_night || 0),
+      0
+    );
+    if (!Number.isFinite(nightlyBaseTotal) || nightlyBaseTotal <= 0) return [];
+
+    const weekdayRates = normalizeWeekdayRates(
+      settings?.pricing_weekday_rates ?? undefined
+    );
+    const holidayPeriods = normalizeHolidayPeriods(
+      settings?.pricing_holiday_periods
+    );
+
+    return calculateTotalWithWeekdayRates({
+      basePrice: nightlyBaseTotal,
+      checkInDate,
+      checkOutDate,
+      weekdayRates,
+      holidayPeriods,
+    }).breakdown;
+  }, [booking, roomsData, settings?.pricing_weekday_rates, settings?.pricing_holiday_periods]);
 
   if (!booking) return null;
 
@@ -323,6 +360,39 @@ export function BookingDetailDialog({
                   </p>
                 </div>
               </div>
+
+              {pricingBreakdown.length > 0 && (
+                <div className="pl-7 mt-4">
+                  <p className="text-sm font-semibold mb-2">Chi tiết giá từng ngày</p>
+                  <div className="rounded-lg border overflow-hidden">
+                    <div className="grid grid-cols-12 bg-muted/60 px-3 py-2 text-xs font-semibold text-muted-foreground">
+                      <div className="col-span-4">Ngày</div>
+                      <div className="col-span-2 text-right">% áp dụng</div>
+                      <div className="col-span-3 text-right">Giá / đêm</div>
+                      <div className="col-span-3">Ghi chú</div>
+                    </div>
+                    {pricingBreakdown.map((d) => (
+                      <div
+                        key={d.date}
+                        className="grid grid-cols-12 items-center border-t px-3 py-2 text-sm"
+                      >
+                        <div className="col-span-4 font-medium">
+                          {formatDateOnly(`${d.date}T00:00:00`)}
+                        </div>
+                        <div className="col-span-2 text-right font-medium">
+                          +{d.percent}%
+                        </div>
+                        <div className="col-span-3 text-right">
+                          {formatCurrency(d.price)}
+                        </div>
+                        <div className="col-span-3 text-xs text-muted-foreground">
+                          {d.holiday_label ? `Lễ: ${d.holiday_label}` : "Theo thứ"}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* QR Code Payment */}
               <div className="pl-7 mt-4">

@@ -44,6 +44,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { format, parseISO } from "date-fns";
 import {
   calculateTotalWithWeekdayRates,
+  normalizeHolidayPeriods,
   normalizeWeekdayRates,
 } from "@/lib/pricing";
 
@@ -187,6 +188,9 @@ export function QuickBookingDialog({
     const weekdayRates = normalizeWeekdayRates(
       settings?.pricing_weekday_rates ?? undefined
     );
+    const holidayPeriods = normalizeHolidayPeriods(
+      settings?.pricing_holiday_periods
+    );
     const totalAmount =
       nights > 0
         ? calculateTotalWithWeekdayRates({
@@ -194,6 +198,7 @@ export function QuickBookingDialog({
             checkInDate: formValues.check_in_date,
             checkOutDate: formValues.check_out_date,
             weekdayRates,
+            holidayPeriods,
           }).total
         : 0;
 
@@ -203,6 +208,7 @@ export function QuickBookingDialog({
     formValues.check_out_date,
     room.price_per_night,
     settings?.pricing_weekday_rates,
+    settings?.pricing_holiday_periods,
   ]);
 
   // If total changes while voucher applied, clear voucher to avoid stale discount
@@ -261,12 +267,16 @@ export function QuickBookingDialog({
     const weekdayRates = normalizeWeekdayRates(
       settings?.pricing_weekday_rates ?? undefined
     );
+    const holidayPeriods = normalizeHolidayPeriods(
+      settings?.pricing_holiday_periods
+    );
 
     const totalAmount = calculateTotalWithWeekdayRates({
       basePrice: room.price_per_night,
       checkInDate: formValues.check_in_date,
       checkOutDate: formValues.check_out_date,
       weekdayRates,
+      holidayPeriods,
     }).total;
 
     const payload: BookingInput = {

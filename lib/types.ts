@@ -777,6 +777,10 @@ export type Settings = {
    * Example default: [0,0,0,0,0,15,20] => Fri +15%, Sat +20%.
    */
   pricing_weekday_rates: number[] | null;
+  /**
+   * Các kỳ lễ/Tết: mỗi đêm lấy max(% theo thứ, % phụ thu kỳ) nếu ngày nằm trong [start_date, end_date] (inclusive).
+   */
+  pricing_holiday_periods?: PricingHolidayPeriod[] | null;
   created_at: string;
   updated_at: string;
 };
@@ -796,11 +800,23 @@ export type SettingsInput = {
   bank_bin?: string | null;
   bank_account_owner?: string | null;
   pricing_weekday_rates?: number[] | null;
+  pricing_holiday_periods?: PricingHolidayPeriod[] | null;
 };
 
 // ============================================================================
 // Pricing Types
 // ============================================================================
+
+/** Một kỳ lễ/Tết áp phụ thu % lên giá gốc (cạnh tranh với % theo thứ — lấy max). */
+export type PricingHolidayPeriod = {
+  id: string;
+  label: string;
+  /** YYYY-MM-DD */
+  start_date: string;
+  /** YYYY-MM-DD inclusive */
+  end_date: string;
+  surcharge_percent: number;
+};
 
 /**
  * Weekday-based increase rates (percent).
@@ -832,6 +848,8 @@ export type DailyPricingBreakdownItem = {
   weekday: number; // 0..6
   percent: number;
   price: number;
+  /** Tên kỳ lễ nếu % áp dụng đến từ lịch lễ (hoặc hòa với thứ nhưng trùng kỳ lễ). */
+  holiday_label?: string | null;
 };
 
 
