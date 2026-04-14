@@ -30,7 +30,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { MultiBookingInput, PaymentMethod } from "@/lib/types";
+import type {
+  DailyPricingBreakdownItem,
+  MultiBookingInput,
+  PaymentMethod,
+} from "@/lib/types";
 import { getAvailableRoomsAction } from "@/actions/rooms";
 import { searchCustomersAction, createCustomerAction } from "@/actions/customers";
 import { validateVoucherForBooking } from "@/actions/vouchers";
@@ -65,10 +69,15 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useSettings } from "@/hooks/use-settings";
 import {
   calculateTotalWithWeekdayRates,
+  normalizeHolidayPeriods,
   normalizeWeekdayRates,
 } from "@/lib/pricing";
 
-type SelectedRoom = { room: Room; amount: number };
+type SelectedRoom = {
+  room: Room;
+  amount: number;
+  breakdown: DailyPricingBreakdownItem[];
+};
 
 const SEARCH_CUSTOMER_MIN_LENGTH = 2;
 
@@ -168,20 +177,28 @@ export function CreateMultiBookingDialog({
     const weekdayRates = normalizeWeekdayRates(
       settings?.pricing_weekday_rates ?? undefined
     );
+    const holidayPeriods = normalizeHolidayPeriods(
+      settings?.pricing_holiday_periods
+    );
     return availableRooms
       .filter((r) => selectedRoomIds.has(r.id))
-      .map((r) => ({
-        room: r,
-        amount:
-          checkInDate && checkOutDate && nights > 0
-            ? calculateTotalWithWeekdayRates({
-                basePrice: r.price_per_night,
-                checkInDate,
-                checkOutDate,
-                weekdayRates,
-              }).total
-            : 0,
-      }));
+      .map((r) => {
+        if (!checkInDate || !checkOutDate || nights <= 0) {
+          return { room: r, amount: 0, breakdown: [] };
+        }
+        const calc = calculateTotalWithWeekdayRates({
+          basePrice: r.price_per_night,
+          checkInDate,
+          checkOutDate,
+          weekdayRates,
+          holidayPeriods,
+        });
+        return {
+          room: r,
+          amount: calc.total,
+          breakdown: calc.breakdown,
+        };
+      });
   }, [
     availableRooms,
     selectedRoomIds,
@@ -189,6 +206,7 @@ export function CreateMultiBookingDialog({
     checkInDate,
     checkOutDate,
     settings?.pricing_weekday_rates,
+    settings?.pricing_holiday_periods,
   ]);
 
   const totalAmount = useMemo(
@@ -342,393 +360,456 @@ export function CreateMultiBookingDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="min-w-2xl max-w-4xl max-h-[90vh] flex flex-col overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Đặt nhiều phòng - Thanh toán 1 lần</DialogTitle>
-          <DialogDescription>
-            Chọn ngày, nhiều phòng trống, thanh toán gộp một lần cho toàn bộ đơn.
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent
+        className={
+          "flex max-h-[90vh] w-[min(96vw,1280px)] max-w-[min(96vw,1280px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-[min(96vw,1280px)]"
+        }
+      >
+        <div className="shrink-0 border-b px-6 pb-4 pt-6 pr-14">
+          <DialogHeader className="text-left">
+            <DialogTitle>Đặt nhiều phòng - Thanh toán 1 lần</DialogTitle>
+            <DialogDescription>
+              Chọn ngày, nhiều phòng trống, thanh toán gộp một lần cho toàn bộ đơn.
+            </DialogDescription>
+          </DialogHeader>
+        </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 gap-4">
-          <div className="grid gap-4 md:grid-cols-2 shrink-0">
-            <div className="space-y-2 md:col-span-2 relative">
-              <Label>Khách hàng *</Label>
-              <div className="relative">
-                <IconSearch className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Nhập tên, SĐT khách hàng"
-                  value={customerSearch}
-                  onChange={(e) => {
-                    setCustomerSearch(e.target.value);
-                    if (!e.target.value) {
-                      setSelectedCustomer(null);
-                    }
-                  }}
-                  className="pl-9 pr-10"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="absolute right-1 top-1/2 -translate-y-1/2 size-8"
-                  onClick={() => setIsCreateCustomerDialogOpen(true)}
-                  title="Tạo khách hàng mới"
-                >
-                  <IconPlus className="size-4" />
-                </Button>
-              </div>
-              {selectedCustomer && (
-                <p className="text-xs text-muted-foreground">
-                  Đã chọn: {selectedCustomer.full_name}
-                  {selectedCustomer.phone && ` - ${selectedCustomer.phone}`}
-                </p>
-              )}
-              {displaySearchResults.length > 0 && !selectedCustomer && (
-                <div className="absolute z-50 mt-1 max-h-48 w-full overflow-auto rounded-md border bg-popover shadow-xl">
-                  {displaySearchResults.map((c) => (
-                    <button
-                      key={c.id}
-                      type="button"
-                      onClick={() => handleCustomerSelect(c)}
-                      className="w-full px-4 py-3 text-left hover:bg-accent"
-                    >
-                      <div className="font-medium">{c.full_name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {c.phone && `${c.phone} • `}
-                        {c.email}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label>Ngày check-in *</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-between font-normal"
-                  >
-                    {formatDisplayDate(checkInDate) || "Chọn ngày"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent align="start" className="w-auto p-2">
-                  <Calendar
-                    mode="single"
-                    selected={checkInDate ? parseISO(checkInDate) : undefined}
-                    onSelect={handleDateSelect("check_in")}
-                    disabled={(d) => d < new Date(new Date().setHours(0, 0, 0, 0))}
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Ngày check-out * {nights > 0 ? `(${nights} đêm)` : ""}</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-between font-normal"
-                  >
-                    {formatDisplayDate(checkOutDate) || "Chọn ngày"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent align="start" className="w-auto p-2">
-                  <Calendar
-                    mode="single"
-                    selected={checkOutDate ? parseISO(checkOutDate) : undefined}
-                    onSelect={handleDateSelect("check_out")}
-                    disabled={(d) => {
-                      if (!checkInDate) return false;
-                      const checkIn = parseISO(checkInDate);
-                      checkIn.setHours(0, 0, 0, 0);
-                      const day = new Date(d);
-                      day.setHours(0, 0, 0, 0);
-                      return day.getTime() < checkIn.getTime();
+        <form
+          onSubmit={handleSubmit}
+          className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden"
+        >
+          <div className="grid min-h-0 flex-1 grid-cols-1 gap-0 lg:grid-cols-12">
+            {/* Cột trái: khách, ngày, danh sách phòng */}
+            <div className="flex min-h-0 min-w-0 flex-col gap-4 overflow-y-auto border-b p-6 lg:col-span-7 lg:border-b-0 lg:border-r">
+              <div className="space-y-2 relative shrink-0">
+                <Label>Khách hàng *</Label>
+                <div className="relative">
+                  <IconSearch className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Nhập tên, SĐT khách hàng"
+                    value={customerSearch}
+                    onChange={(e) => {
+                      setCustomerSearch(e.target.value);
+                      if (!e.target.value) {
+                        setSelectedCustomer(null);
+                      }
                     }}
+                    className="pl-9 pr-10"
                   />
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Số khách *</Label>
-              <Input
-                type="number"
-                min={1}
-                value={totalGuests}
-                onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                  setTotalGuests(e.target.value)
-                }
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="payment_method">Phương thức thanh toán</Label>
-              <Select
-                value={paymentMethod}
-                onValueChange={(v) => setPaymentMethod(v as PaymentMethod)}
-              >
-                <SelectTrigger id="payment_method" className="w-full">
-                  <SelectValue placeholder="Chọn phương thức thanh toán" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={PAYMENT_METHOD.BANK_TRANSFER}>
-                    {paymentMethodLabels[PAYMENT_METHOD.BANK_TRANSFER]}
-                  </SelectItem>
-                  <SelectItem value={PAYMENT_METHOD.PAY_AT_HOTEL}>
-                    {paymentMethodLabels[PAYMENT_METHOD.PAY_AT_HOTEL]}
-                  </SelectItem>
-                  <SelectItem value={PAYMENT_METHOD.EXTERNAL}>
-                    {paymentMethodLabels[PAYMENT_METHOD.EXTERNAL]}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="flex-1 flex flex-col space-y-2">
-            <Label>Chọn phòng trống *</Label>
-            <p className="text-xs text-muted-foreground">
-              Danh sách phòng trống theo khoảng ngày check-in / check-out đã chọn.
-            </p>
-            {!checkInISO || !checkOutISO || nights <= 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Vui lòng chọn ngày check-in và check-out trước
-              </p>
-            ) : isLoadingRooms ? (
-              <div className="flex items-center gap-2 py-4">
-                <Loader2 className="size-5 animate-spin" />
-                <span>Đang tải danh sách phòng trống...</span>
-              </div>
-            ) : availableRooms.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Không có phòng trống trong khoảng thời gian này
-              </p>
-            ) : (
-              <div className="flex-1 flex flex-col min-h-0 min-w-0 space-y-2 overflow-hidden">
-                <ScrollArea className="flex-1 border rounded-md">
-                  <div className="p-3 space-y-2 h-[320px]">
-                    {availableRooms.map((room) => (
-                      <div
-                        key={room.id}
-                        className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors"
-                        onClick={() => toggleRoom(room.id)}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 size-8"
+                    onClick={() => setIsCreateCustomerDialogOpen(true)}
+                    title="Tạo khách hàng mới"
+                  >
+                    <IconPlus className="size-4" />
+                  </Button>
+                </div>
+                {selectedCustomer && (
+                  <p className="text-xs text-muted-foreground">
+                    Đã chọn: {selectedCustomer.full_name}
+                    {selectedCustomer.phone && ` - ${selectedCustomer.phone}`}
+                  </p>
+                )}
+                {displaySearchResults.length > 0 && !selectedCustomer && (
+                  <div className="absolute z-50 mt-1 max-h-48 w-full overflow-auto rounded-md border bg-popover shadow-xl">
+                    {displaySearchResults.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => handleCustomerSelect(c)}
+                        className="w-full px-4 py-3 text-left hover:bg-accent"
                       >
-                        <div onClick={(e) => e.stopPropagation()}>
-                          <Checkbox
-                            checked={selectedRoomIds.has(room.id)}
-                            onCheckedChange={() => toggleRoom(room.id)}
-                          />
+                        <div className="font-medium">{c.full_name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {c.phone && `${c.phone} • `}
+                          {c.email}
                         </div>
-                        <div className="flex-1">
-                          <div className="font-medium">{room.name}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {room.room_number && (
-                              <span>Số phòng: <strong>{room.room_number}</strong> • </span>
-                            )}
-                            {room.floor_number !== null && room.floor_number !== undefined && (
-                              <span>Tầng <strong>{room.floor_number}</strong> • </span>
-                            )}
-                            <strong>{roomTypeLabels[room.room_type]}</strong> • Tối đa{" "}
-                            {room.max_guests} khách
-                          </div>
-                        </div>
-                        <div className="text-right flex items-center gap-2">
-                          <div>
-                            <div className="font-semibold">
-                              {formatCurrency(room.price_per_night)}/đêm
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                            Giá gốc: {nights} đêm ={" "}
-                            {formatCurrency(room.price_per_night * nights)}
-                            </div>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="size-8 shrink-0"
-                            onClick={(e) => handleViewRoomDetail(room, e)}
-                            title="Xem chi tiết phòng"
-                          >
-                            <IconEye className="size-4" />
-                          </Button>
-                        </div>
-                      </div>
+                      </button>
                     ))}
                   </div>
-                </ScrollArea>
+                )}
               </div>
-            )}
-          </div>
 
-          {selectedRoomsWithAmounts.length > 0 && (
-            <div className="rounded-lg border p-4 bg-muted/30 shrink-0 space-y-2">
-              <div className="space-y-1 text-sm">
-                {selectedRoomsWithAmounts.map(({ room, amount }) => (
-                  <div
-                    key={room.id}
-                    className="flex justify-between"
-                  >
-                    <span>{room.name}</span>
-                    <span>{formatCurrency(amount)}</span>
-                  </div>
-                ))}
-                <div className="flex justify-between font-semibold pt-2 border-t">
-                  <span>Tổng cộng (đã áp dụng theo thứ)</span>
-                  <span>{formatCurrency(totalAmount)}</span>
+              <div className="grid shrink-0 gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Ngày check-in *</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-between font-normal"
+                      >
+                        {formatDisplayDate(checkInDate) || "Chọn ngày"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent align="start" className="w-auto p-2">
+                      <Calendar
+                        mode="single"
+                        selected={checkInDate ? parseISO(checkInDate) : undefined}
+                        onSelect={handleDateSelect("check_in")}
+                        disabled={(d) => d < new Date(new Date().setHours(0, 0, 0, 0))}
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
-                {voucherState ? (
-                  <>
-                    <div className="flex justify-between">
-                      <span>Giảm voucher ({voucherState.code})</span>
-                      <span>-{formatCurrency(voucherState.discount)}</span>
-                    </div>
-                    <div className="flex justify-between font-semibold">
-                      <span>Thành tiền</span>
-                      <span>{formatCurrency(voucherState.finalAmount)}</span>
-                    </div>
-                  </>
-                ) : null}
+
+                <div className="space-y-2">
+                  <Label>
+                    Ngày check-out * {nights > 0 ? `(${nights} đêm)` : ""}
+                  </Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full justify-between font-normal"
+                      >
+                        {formatDisplayDate(checkOutDate) || "Chọn ngày"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent align="start" className="w-auto p-2">
+                      <Calendar
+                        mode="single"
+                        selected={checkOutDate ? parseISO(checkOutDate) : undefined}
+                        onSelect={handleDateSelect("check_out")}
+                        disabled={(d) => {
+                          if (!checkInDate) return false;
+                          const checkIn = parseISO(checkInDate);
+                          checkIn.setHours(0, 0, 0, 0);
+                          const day = new Date(d);
+                          day.setHours(0, 0, 0, 0);
+                          return day.getTime() < checkIn.getTime();
+                        }}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <div className="space-y-2 sm:col-span-1">
+                  <Label>Số khách *</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={totalGuests}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                      setTotalGuests(e.target.value)
+                    }
+                  />
+                </div>
+
+                <div className="space-y-2 sm:col-span-1">
+                  <Label htmlFor="payment_method">Phương thức thanh toán</Label>
+                  <Select
+                    value={paymentMethod}
+                    onValueChange={(v) => setPaymentMethod(v as PaymentMethod)}
+                  >
+                    <SelectTrigger id="payment_method" className="w-full">
+                      <SelectValue placeholder="Chọn phương thức thanh toán" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={PAYMENT_METHOD.BANK_TRANSFER}>
+                        {paymentMethodLabels[PAYMENT_METHOD.BANK_TRANSFER]}
+                      </SelectItem>
+                      <SelectItem value={PAYMENT_METHOD.PAY_AT_HOTEL}>
+                        {paymentMethodLabels[PAYMENT_METHOD.PAY_AT_HOTEL]}
+                      </SelectItem>
+                      <SelectItem value={PAYMENT_METHOD.EXTERNAL}>
+                        {paymentMethodLabels[PAYMENT_METHOD.EXTERNAL]}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="flex min-h-0 flex-1 flex-col space-y-2">
+                <Label>Chọn phòng trống *</Label>
+                <p className="text-xs text-muted-foreground">
+                  Danh sách phòng trống theo khoảng ngày check-in / check-out đã chọn.
+                </p>
+                {!checkInISO || !checkOutISO || nights <= 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Vui lòng chọn ngày check-in và check-out trước
+                  </p>
+                ) : isLoadingRooms ? (
+                  <div className="flex items-center gap-2 py-4">
+                    <Loader2 className="size-5 animate-spin" />
+                    <span>Đang tải danh sách phòng trống...</span>
+                  </div>
+                ) : availableRooms.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Không có phòng trống trong khoảng thời gian này
+                  </p>
+                ) : (
+                  <div className="flex min-h-0 flex-1 flex-col space-y-2 overflow-hidden">
+                    <ScrollArea className="h-[min(42vh,420px)] min-h-[240px] rounded-md border">
+                      <div className="space-y-2 p-3">
+                        {availableRooms.map((room) => (
+                          <div
+                            key={room.id}
+                            className="flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
+                            onClick={() => toggleRoom(room.id)}
+                          >
+                            <div onClick={(e) => e.stopPropagation()}>
+                              <Checkbox
+                                checked={selectedRoomIds.has(room.id)}
+                                onCheckedChange={() => toggleRoom(room.id)}
+                              />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="font-medium">{room.name}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {room.room_number && (
+                                  <span>
+                                    Số phòng: <strong>{room.room_number}</strong> •{" "}
+                                  </span>
+                                )}
+                                {room.floor_number !== null &&
+                                  room.floor_number !== undefined && (
+                                    <span>
+                                      Tầng <strong>{room.floor_number}</strong> •{" "}
+                                    </span>
+                                  )}
+                                <strong>{roomTypeLabels[room.room_type]}</strong> • Tối đa{" "}
+                                {room.max_guests} khách
+                              </div>
+                            </div>
+                            <div className="flex shrink-0 items-center gap-2 text-right">
+                              <div>
+                                <div className="font-semibold">
+                                  {formatCurrency(room.price_per_night)}/đêm
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  Giá gốc: {nights} đêm ={" "}
+                                  {formatCurrency(room.price_per_night * nights)}
+                                </div>
+                              </div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="size-8 shrink-0"
+                                onClick={(e) => handleViewRoomDetail(room, e)}
+                                title="Xem chi tiết phòng"
+                              >
+                                <IconEye className="size-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </div>
+                )}
               </div>
             </div>
-          )}
 
-          <div className="space-y-2 shrink-0">
-            <Label>Số tiền thanh toán cuối cùng (VNĐ)</Label>
-            <Input
-              type="text"
-              inputMode="numeric"
-              value={finalAmount}
-              onChange={(e) => {
-                setIsFinalAmountDirty(true);
-                setFinalAmount(formatNumberWithSeparators(e.target.value));
-              }}
-              placeholder="Mặc định bằng tổng cộng phía trên"
-              readOnly={!!voucherState}
-              className={voucherState ? "bg-muted" : undefined}
-            />
-            <p className="text-xs text-muted-foreground">
-              {voucherState
-                ? `Đang áp dụng voucher: giảm ${formatCurrency(voucherState.discount)}.`
-                : "Đây là số tiền khách sẽ thanh toán sau cùng cho toàn bộ booking."}
-            </p>
-          </div>
-
-          <div className="space-y-2 shrink-0">
-            <Label>Mã voucher</Label>
-            <div className="flex gap-2">
-              <Input
-                type="text"
-                value={voucherCode}
-                onChange={(e) => setVoucherCode(e.target.value)}
-                placeholder="VD: SUMMER2026"
-                disabled={isApplyingVoucher || !!voucherState}
-              />
-              {voucherState ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setVoucherState(null);
-                    setVoucherCode("");
-                    setIsFinalAmountDirty(false);
-                    if (totalAmount > 0) setFinalAmount(formatNumberWithSeparators(String(totalAmount)));
-                    else setFinalAmount("");
-                  }}
-                  disabled={isApplyingVoucher}
-                >
-                  Xóa
-                </Button>
+            {/* Cột phải: tổng tiền, thanh toán, voucher */}
+            <div className="flex max-h-[min(90vh,720px)] min-h-0 flex-col gap-4 overflow-y-auto p-6 lg:col-span-5 lg:max-h-none">
+              {selectedRoomsWithAmounts.length > 0 ? (
+                <div className="space-y-2 rounded-lg border bg-muted/30 p-4">
+                  <p className="text-sm font-medium">Chi tiết và tổng tiền</p>
+                  <div className="space-y-1 text-sm">
+                    {selectedRoomsWithAmounts.map(({ room, amount, breakdown }) => (
+                      <div key={room.id} className="space-y-2">
+                        <div className="flex justify-between gap-2">
+                          <span className="min-w-0 truncate">{room.name}</span>
+                          <span className="shrink-0">{formatCurrency(amount)}</span>
+                        </div>
+                        {breakdown.length > 0 && (
+                          <div className="rounded-md border bg-background/70">
+                            <div className="grid grid-cols-12 px-2 py-1 text-[11px] font-medium text-muted-foreground">
+                              <div className="col-span-4">Ngày</div>
+                              <div className="col-span-2 text-right">%</div>
+                              <div className="col-span-3 text-right">Giá</div>
+                              <div className="col-span-3">Ghi chú</div>
+                            </div>
+                            {breakdown.map((d) => (
+                              <div
+                                key={`${room.id}-${d.date}`}
+                                className="grid grid-cols-12 border-t px-2 py-1 text-[11px]"
+                              >
+                                <div className="col-span-4">
+                                  {formatDisplayDate(d.date)}
+                                </div>
+                                <div className="col-span-2 text-right">+{d.percent}%</div>
+                                <div className="col-span-3 text-right">
+                                  {formatCurrency(d.price)}
+                                </div>
+                                <div className="col-span-3 text-muted-foreground">
+                                  {d.holiday_label ? `Lễ: ${d.holiday_label}` : "Theo thứ"}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    <div className="flex justify-between border-t pt-2 font-semibold">
+                      <span>Tổng cộng (đã áp dụng theo thứ/lễ)</span>
+                      <span>{formatCurrency(totalAmount)}</span>
+                    </div>
+                    {voucherState ? (
+                      <>
+                        <div className="flex justify-between">
+                          <span>Giảm voucher ({voucherState.code})</span>
+                          <span>-{formatCurrency(voucherState.discount)}</span>
+                        </div>
+                        <div className="flex justify-between font-semibold">
+                          <span>Thành tiền</span>
+                          <span>{formatCurrency(voucherState.finalAmount)}</span>
+                        </div>
+                      </>
+                    ) : null}
+                  </div>
+                </div>
               ) : (
-                <Button
-                  type="button"
-                  onClick={async () => {
-                    try {
-                      setError(null);
-                      const code = voucherCode.trim();
-                      if (!code) {
-                        setError("Vui lòng nhập mã voucher.");
-                        return;
-                      }
-                      if (!Number.isFinite(totalAmount) || totalAmount <= 0) {
-                        setError("Tổng tiền không hợp lệ để áp dụng voucher.");
-                        return;
-                      }
-                      setIsApplyingVoucher(true);
-                      const result = await validateVoucherForBooking({
-                        code,
-                        totalAmount,
-                      });
-                      if (!result.ok) {
-                        setError(result.message);
-                        return;
-                      }
-                      setVoucherState({
-                        code: result.data.voucher.code,
-                        discount: result.data.discount,
-                        finalAmount: result.data.finalAmount,
-                      });
-                      setVoucherCode(result.data.voucher.code);
-                      setIsFinalAmountDirty(false);
-                      setFinalAmount(formatNumberWithSeparators(String(result.data.finalAmount)));
-                      // Cap advance payment if needed
-                      const adv = parseFormattedNumber(advancePayment || "0");
-                      if (adv > result.data.finalAmount) {
-                        setAdvancePayment(formatNumberWithSeparators(String(result.data.finalAmount)));
-                      }
-                    } finally {
-                      setIsApplyingVoucher(false);
-                    }
+                <div className="rounded-lg border border-dashed bg-muted/20 p-4 text-center text-sm text-muted-foreground">
+                  Chọn ít nhất một phòng bên trái để xem chi tiết giá và thanh toán.
+                </div>
+              )}
+
+              <div className="space-y-2 shrink-0">
+                <Label>Số tiền thanh toán cuối cùng (VNĐ)</Label>
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  value={finalAmount}
+                  onChange={(e) => {
+                    setIsFinalAmountDirty(true);
+                    setFinalAmount(formatNumberWithSeparators(e.target.value));
                   }}
-                  disabled={isApplyingVoucher}
-                >
-                  {isApplyingVoucher ? "Đang áp dụng..." : "Áp dụng"}
-                </Button>
+                  placeholder="Mặc định bằng tổng cộng phía trên"
+                  readOnly={!!voucherState}
+                  className={voucherState ? "bg-muted" : undefined}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {voucherState
+                    ? `Đang áp dụng voucher: giảm ${formatCurrency(voucherState.discount)}.`
+                    : "Đây là số tiền khách sẽ thanh toán sau cùng cho toàn bộ booking."}
+                </p>
+              </div>
+
+              <div className="space-y-2 shrink-0">
+                <Label>Mã voucher</Label>
+                <div className="flex gap-2">
+                  <Input
+                    type="text"
+                    value={voucherCode}
+                    onChange={(e) => setVoucherCode(e.target.value)}
+                    placeholder="VD: SUMMER2026"
+                    disabled={isApplyingVoucher || !!voucherState}
+                    className="min-w-0 flex-1"
+                  />
+                  {voucherState ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="shrink-0"
+                      onClick={() => {
+                        setVoucherState(null);
+                        setVoucherCode("");
+                        setIsFinalAmountDirty(false);
+                        if (totalAmount > 0)
+                          setFinalAmount(formatNumberWithSeparators(String(totalAmount)));
+                        else setFinalAmount("");
+                      }}
+                      disabled={isApplyingVoucher}
+                    >
+                      Xóa
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      className="shrink-0"
+                      onClick={async () => {
+                        try {
+                          setError(null);
+                          const code = voucherCode.trim();
+                          if (!code) {
+                            setError("Vui lòng nhập mã voucher.");
+                            return;
+                          }
+                          if (!Number.isFinite(totalAmount) || totalAmount <= 0) {
+                            setError("Tổng tiền không hợp lệ để áp dụng voucher.");
+                            return;
+                          }
+                          setIsApplyingVoucher(true);
+                          const result = await validateVoucherForBooking({
+                            code,
+                            totalAmount,
+                          });
+                          if (!result.ok) {
+                            setError(result.message);
+                            return;
+                          }
+                          setVoucherState({
+                            code: result.data.voucher.code,
+                            discount: result.data.discount,
+                            finalAmount: result.data.finalAmount,
+                          });
+                          setVoucherCode(result.data.voucher.code);
+                          setIsFinalAmountDirty(false);
+                          setFinalAmount(
+                            formatNumberWithSeparators(String(result.data.finalAmount))
+                          );
+                          const adv = parseFormattedNumber(advancePayment || "0");
+                          if (adv > result.data.finalAmount) {
+                            setAdvancePayment(
+                              formatNumberWithSeparators(String(result.data.finalAmount))
+                            );
+                          }
+                        } finally {
+                          setIsApplyingVoucher(false);
+                        }
+                      }}
+                      disabled={isApplyingVoucher}
+                    >
+                      {isApplyingVoucher ? "Đang áp dụng..." : "Áp dụng"}
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2 shrink-0">
+                <Label>Tiền cọc (VNĐ)</Label>
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  value={advancePayment}
+                  onChange={(e) =>
+                    setAdvancePayment(formatNumberWithSeparators(e.target.value))
+                  }
+                  placeholder="VD: 1.000.000"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Tối đa:{" "}
+                  {formatCurrency(
+                    parseFormattedNumber(finalAmount || "0") || totalAmount
+                  )}
+                </p>
+              </div>
+
+              <div className="space-y-2 shrink-0">
+                <Label>Ghi chú</Label>
+                <Textarea
+                  value={notes}
+                  onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
+                    setNotes(e.target.value)
+                  }
+                  placeholder="Ghi chú cho đơn đặt phòng"
+                  className="min-h-[88px] resize-y"
+                />
+              </div>
+
+              {error && (
+                <p className="text-sm text-destructive shrink-0">{error}</p>
               )}
             </div>
           </div>
 
-          <div className="space-y-2 shrink-0">
-            <Label>Tiền cọc (VNĐ)</Label>
-            <Input
-              type="text"
-              inputMode="numeric"
-              value={advancePayment}
-              onChange={(e) =>
-                setAdvancePayment(formatNumberWithSeparators(e.target.value))
-              }
-              placeholder="VD: 1.000.000"
-            />
-            <p className="text-xs text-muted-foreground">
-              Tối đa:{" "}
-              {formatCurrency(
-                parseFormattedNumber(finalAmount || "0") || totalAmount
-              )}
-            </p>
-          </div>
-
-          <div className="space-y-2 shrink-0">
-            <Label>Ghi chú</Label>
-            <Textarea
-              value={notes}
-              onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
-                setNotes(e.target.value)
-              }
-              placeholder="Ghi chú cho đơn đặt phòng"
-            />
-          </div>
-
-          {error && (
-            <p className="text-sm text-destructive shrink-0">{error}</p>
-          )}
-
-          <DialogFooter className="shrink-0">
+          <DialogFooter className="shrink-0 gap-2 border-t bg-muted/20 px-6 py-4">
             <Button
               type="button"
               variant="outline"

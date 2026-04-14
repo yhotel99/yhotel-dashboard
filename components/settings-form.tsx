@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useState, useEffect } from "react";
@@ -8,6 +8,10 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { updateSettingsAction } from "@/actions/settings";
 import type { Settings } from "@/lib/types";
+import {
+  getSuggestedVnHolidayPeriods,
+  getSupportedPresetYears,
+} from "@/lib/vn-holiday-presets";
 import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
@@ -34,9 +38,93 @@ import { Separator } from "@/components/ui/separator";
 import { ImageListSelector } from "@/components/image-selector";
 import type { ImageValue } from "@/lib/types";
 import { IconPlus, IconTrash } from "@tabler/icons-react";
-import { DEFAULT_WEEKDAY_RATES } from "@/lib/pricing";
+import { DEFAULT_WEEKDAY_RATES, normalizeHolidayPeriods } from "@/lib/pricing";
 import type { WeekdayRates } from "@/lib/types";
-import { Banknote, CreditCard, Globe, Settings as SettingsIcon } from "lucide-react";
+import { Banknote, CalendarRange, CreditCard, Globe, Settings as SettingsIcon } from "lucide-react";
+
+function ymdToday(): string {
+  const d = new Date();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${mm}-${dd}`;
+}
+
+function formatYmdToDmy(ymd?: string | null): string {
+  if (!ymd || !/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return "";
+  const [yyyy, mm, dd] = ymd.split("-");
+  return `${dd}/${mm}/${yyyy}`;
+}
+
+function parseDmyToYmd(dmy?: string | null): string | null {
+  if (!dmy) return null;
+  const m = dmy.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!m) return null;
+  const dd = Number(m[1]);
+  const mm = Number(m[2]);
+  const yyyy = Number(m[3]);
+  if (mm < 1 || mm > 12 || dd < 1 || dd > 31 || yyyy < 1900) return null;
+  const iso = `${String(yyyy).padStart(4, "0")}-${String(mm).padStart(
+    2,
+    "0"
+  )}-${String(dd).padStart(2, "0")}`;
+  const date = new Date(`${iso}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return null;
+  const check =
+    date.getFullYear() === yyyy &&
+    date.getMonth() + 1 === mm &&
+    date.getDate() === dd;
+  return check ? iso : null;
+}
+
+function DateDmyInput({
+  value,
+  onChange,
+}: {
+  value?: string | null;
+  onChange: (next: string) => void;
+}) {
+  const [draft, setDraft] = useState<string>(formatYmdToDmy(value));
+
+  useEffect(() => {
+    setDraft(formatYmdToDmy(value));
+  }, [value]);
+
+  return (
+    <Input
+      type="text"
+      inputMode="numeric"
+      placeholder="dd/mm/yyyy"
+      value={draft}
+      onChange={(e) => {
+        const raw = e.target.value;
+        setDraft(raw);
+        const normalized = parseDmyToYmd(raw);
+        if (normalized) onChange(normalized);
+      }}
+      onBlur={() => {
+        const normalized = parseDmyToYmd(draft);
+        if (normalized) {
+          onChange(normalized);
+          setDraft(formatYmdToDmy(normalized));
+        } else {
+          setDraft(formatYmdToDmy(value));
+        }
+      }}
+    />
+  );
+}
+
+const holidayPeriodRowSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1, "Tên kỳ không được để trống"),
+  start_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Định dạng YYYY-MM-DD"),
+  end_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Định dạng YYYY-MM-DD"),
+  surcharge_percent: z.coerce.number().min(0).max(100),
+});
 
 const settingsSchema = z.object({
   site_title: z.string().min(1, "Tiêu đề không được để trống"),
@@ -82,6 +170,7 @@ const settingsSchema = z.object({
     ])
     .nullable()
     .optional(),
+  pricing_holiday_periods: z.array(holidayPeriodRowSchema),
   bank_account_number: z
     .union([z.string(), z.literal(""), z.null()])
     .transform((val) => (val === "" ? null : val)),
@@ -94,6 +183,16 @@ const settingsSchema = z.object({
   bank_account_owner: z
     .union([z.string(), z.literal(""), z.null()])
     .transform((val) => (val === "" ? null : val)),
+}).superRefine((data, ctx) => {
+  data.pricing_holiday_periods.forEach((row, i) => {
+    if (row.start_date > row.end_date) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Ngày kết thúc phải sau hoặc bằng ngày bắt đầu",
+        path: ["pricing_holiday_periods", i, "end_date"],
+      });
+    }
+  });
 });
 
 type SettingsFormValues = z.infer<typeof settingsSchema>;
@@ -108,6 +207,11 @@ export function SettingsForm({ initialData }: SettingsFormProps) {
   const [activeTab, setActiveTab] = useState<
     "general" | "pricing" | "social" | "bank"
   >("general");
+  const presetYears = getSupportedPresetYears();
+  const [presetYear, setPresetYear] = useState<number>(() => {
+    if (presetYears.includes(2026)) return 2026;
+    return presetYears[presetYears.length - 1] ?? new Date().getFullYear();
+  });
   const [heroImages, setHeroImages] = useState<ImageValue[]>(
     initialData?.hero_images || []
   );
@@ -117,7 +221,7 @@ export function SettingsForm({ initialData }: SettingsFormProps) {
   >(new Map());
 
   const form = useForm<SettingsFormValues>({
-    resolver: zodResolver(settingsSchema),
+    resolver: zodResolver(settingsSchema) as Resolver<SettingsFormValues>,
     defaultValues: {
       site_title: initialData?.site_title || "Dashboard Yhotel",
       site_description: initialData?.site_description || "Dashboard for Yhotel",
@@ -135,7 +239,16 @@ export function SettingsForm({ initialData }: SettingsFormProps) {
       bank_name: initialData?.bank_name || null,
       bank_bin: initialData?.bank_bin || null,
       bank_account_owner: initialData?.bank_account_owner || null,
+      pricing_holiday_periods: normalizeHolidayPeriods(
+        initialData?.pricing_holiday_periods
+      ),
     },
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "pricing_holiday_periods",
+    keyName: "_rhfRowId",
   });
 
   // Update form when initialData changes
@@ -159,6 +272,9 @@ export function SettingsForm({ initialData }: SettingsFormProps) {
         bank_name: initialData.bank_name || null,
         bank_bin: initialData.bank_bin || null,
         bank_account_owner: initialData.bank_account_owner || null,
+        pricing_holiday_periods: normalizeHolidayPeriods(
+          initialData.pricing_holiday_periods
+        ),
       });
       setHeroImages(initialData.hero_images || []);
     }
@@ -235,6 +351,7 @@ export function SettingsForm({ initialData }: SettingsFormProps) {
         bank_name: data.bank_name || null,
         bank_bin: data.bank_bin || null,
         bank_account_owner: data.bank_account_owner || null,
+        pricing_holiday_periods: data.pricing_holiday_periods ?? [],
       };
 
       await updateSettingsAction(cleanedData);
@@ -605,6 +722,187 @@ export function SettingsForm({ initialData }: SettingsFormProps) {
                         );
                       }}
                     />
+                  </div>
+
+                  <div className="rounded-lg border p-4">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                      <div className="flex gap-3">
+                        <span className="mt-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                          <CalendarRange className="size-4" />
+                        </span>
+                        <div>
+                          <div className="font-semibold">Lịch lễ / Tết trong năm</div>
+                          <p className="text-sm text-muted-foreground">
+                            Mỗi đêm trong booking dùng{" "}
+                            <strong>max(% theo thứ trong tuần, % phụ thu kỳ)</strong> nếu ngày
+                            nằm trong khoảng (cận trên dưới gồm cả hai ngày).
+                          </p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Gợi ý VN chỉ mang tính tham khảo — nên kiểm tra lại theo lịch nghỉ
+                            chính thức từng năm.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 md:justify-end">
+                        <select
+                          className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+                          value={presetYear}
+                          onChange={(e) => setPresetYear(Number(e.target.value))}
+                        >
+                          {presetYears.map((y) => (
+                            <option key={y} value={y}>
+                              Năm {y}
+                            </option>
+                          ))}
+                        </select>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => {
+                            const rows = getSuggestedVnHolidayPeriods(presetYear);
+                            if (!rows.length) {
+                              toast.error(`Chưa có gợi ý cho năm ${presetYear}`);
+                              return;
+                            }
+                            rows.forEach((row) => append(row));
+                            toast.success(`Đã thêm ${rows.length} kỳ gợi ý năm ${presetYear}`);
+                          }}
+                        >
+                          Thêm gợi ý VN
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const day = ymdToday();
+                            append({
+                              id:
+                                typeof crypto !== "undefined" &&
+                                "randomUUID" in crypto
+                                  ? crypto.randomUUID()
+                                  : `holiday_${Date.now()}`,
+                              label: "Kỳ lễ mới",
+                              start_date: day,
+                              end_date: day,
+                              surcharge_percent: 25,
+                            });
+                          }}
+                        >
+                          <IconPlus className="mr-1 size-4" />
+                          Thêm kỳ
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 space-y-3">
+                      {fields.length === 0 ? (
+                        <p className="rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">
+                          Chưa có kỳ lễ. Dùng &quot;Thêm gợi ý VN&quot; hoặc &quot;Thêm kỳ&quot; để bắt đầu.
+                        </p>
+                      ) : (
+                        fields.map((row, index) => (
+                          <div
+                            key={(row as { _rhfRowId?: string })._rhfRowId ?? index}
+                            className="grid gap-3 rounded-xl border border-border/60 bg-muted/20 p-3 md:grid-cols-12 md:items-end"
+                          >
+                            <div className="md:col-span-4">
+                              <FormField
+                                control={form.control}
+                                name={`pricing_holiday_periods.${index}.label`}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel className="text-xs">Tên kỳ</FormLabel>
+                                    <FormControl>
+                                      <Input placeholder="VD: Tết Nguyên đán" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+                            <div className="md:col-span-2">
+                              <FormField
+                                control={form.control}
+                                name={`pricing_holiday_periods.${index}.start_date`}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel className="text-xs">Từ ngày</FormLabel>
+                                    <FormControl>
+                                      <DateDmyInput
+                                        value={field.value}
+                                        onChange={field.onChange}
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+                            <div className="md:col-span-2">
+                              <FormField
+                                control={form.control}
+                                name={`pricing_holiday_periods.${index}.end_date`}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel className="text-xs">Đến ngày</FormLabel>
+                                    <FormControl>
+                                      <DateDmyInput
+                                        value={field.value}
+                                        onChange={field.onChange}
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+                            <div className="md:col-span-2">
+                              <FormField
+                                control={form.control}
+                                name={`pricing_holiday_periods.${index}.surcharge_percent`}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel className="text-xs">Phụ thu %</FormLabel>
+                                    <FormControl>
+                                      <div className="flex items-center gap-1">
+                                        <Input
+                                          type="number"
+                                          min={0}
+                                          max={100}
+                                          step={1}
+                                          className="font-semibold"
+                                          {...field}
+                                          onChange={(e) =>
+                                            field.onChange(Number(e.target.value || 0))
+                                          }
+                                          value={String(field.value ?? 0)}
+                                        />
+                                        <span className="text-sm text-muted-foreground">%</span>
+                                      </div>
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+                            <div className="flex justify-end md:col-span-2">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive hover:text-destructive"
+                                onClick={() => remove(index)}
+                                aria-label="Xóa kỳ"
+                              >
+                                <IconTrash className="size-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
                   </div>
                 </div>
               </TabsContent>

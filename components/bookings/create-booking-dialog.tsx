@@ -58,6 +58,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { format, parseISO } from "date-fns";
 import {
   calculateTotalWithWeekdayRates,
+  normalizeHolidayPeriods,
   normalizeWeekdayRates,
 } from "@/lib/pricing";
 
@@ -267,12 +268,16 @@ export function CreateBookingDialog({
     const weekdayRates = normalizeWeekdayRates(
       settings?.pricing_weekday_rates ?? undefined
     );
+    const holidayPeriods = normalizeHolidayPeriods(
+      settings?.pricing_holiday_periods
+    );
 
     const { total } = calculateTotalWithWeekdayRates({
       basePrice: selectedRoom.price_per_night,
       checkInDate: formValues.check_in_date,
       checkOutDate: formValues.check_out_date,
       weekdayRates,
+      holidayPeriods,
     });
 
     return total;
@@ -281,6 +286,7 @@ export function CreateBookingDialog({
     formValues.check_in_date,
     formValues.check_out_date,
     settings?.pricing_weekday_rates,
+    settings?.pricing_holiday_periods,
   ]);
 
   // Check if room capacity is exceeded

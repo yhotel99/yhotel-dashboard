@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { BookingRecord, TransferBookingInput } from "@/lib/types";
 import { useRooms } from "@/hooks/use-rooms";
+import { useSettings } from "@/hooks/use-settings";
 import { checkAdvancePaymentStatusAction } from "@/actions/payments";
 import {
   formatCurrency,
@@ -33,6 +34,11 @@ import {
   parseFormattedNumber,
 } from "@/lib/functions";
 import { BOOKING_STATUS } from "@/lib/constants";
+import {
+  calculateTotalWithWeekdayRates,
+  normalizeHolidayPeriods,
+  normalizeWeekdayRates,
+} from "@/lib/pricing";
 import {
   Popover,
   PopoverContent,
@@ -72,6 +78,7 @@ export function TransferRoomDialog({
   const [advancePaymentIsPaid, setAdvancePaymentIsPaid] = useState(false);
   const [isCheckingAdvancePayment, setIsCheckingAdvancePayment] =
     useState(false);
+  const { settings } = useSettings();
 
   // Check if booking is in pending status
   const isPending = booking?.status === BOOKING_STATUS.PENDING;
@@ -133,7 +140,19 @@ export function TransferRoomDialog({
 
   // Calculate total amount from room price and nights
   const calculatedTotalAmount =
-    selectedRoom && nights > 0 ? selectedRoom.price_per_night * nights : 0;
+    selectedRoom && nights > 0 && formValues.check_in_date && formValues.check_out_date
+      ? calculateTotalWithWeekdayRates({
+          basePrice: selectedRoom.price_per_night,
+          checkInDate: formValues.check_in_date,
+          checkOutDate: formValues.check_out_date,
+          weekdayRates: normalizeWeekdayRates(
+            settings?.pricing_weekday_rates ?? undefined
+          ),
+          holidayPeriods: normalizeHolidayPeriods(
+            settings?.pricing_holiday_periods
+          ),
+        }).total
+      : 0;
 
   // Auto-update total amount when room or dates change
   useEffect(() => {

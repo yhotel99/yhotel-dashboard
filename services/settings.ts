@@ -42,6 +42,23 @@ export async function getSettings(): Promise<Settings | null> {
       settings.social_media_links = {};
     }
 
+    if (Array.isArray(settings.pricing_holiday_periods)) {
+      // keep as-is
+    } else if (
+      settings.pricing_holiday_periods &&
+      typeof settings.pricing_holiday_periods === "string"
+    ) {
+      try {
+        settings.pricing_holiday_periods = JSON.parse(
+          settings.pricing_holiday_periods
+        );
+      } catch {
+        settings.pricing_holiday_periods = [];
+      }
+    } else if (!settings.pricing_holiday_periods) {
+      settings.pricing_holiday_periods = [];
+    }
+
     return settings as Settings;
   } catch (err) {
     console.error("Error getting settings:", err);
@@ -105,6 +122,23 @@ export async function updateSettings(
       }
     } else if (!settings.social_media_links) {
       settings.social_media_links = {};
+    }
+
+    if (Array.isArray(settings.pricing_holiday_periods)) {
+      // keep as-is
+    } else if (
+      settings.pricing_holiday_periods &&
+      typeof settings.pricing_holiday_periods === "string"
+    ) {
+      try {
+        settings.pricing_holiday_periods = JSON.parse(
+          settings.pricing_holiday_periods
+        );
+      } catch {
+        settings.pricing_holiday_periods = [];
+      }
+    } else if (!settings.pricing_holiday_periods) {
+      settings.pricing_holiday_periods = [];
     }
 
     return settings as Settings;
