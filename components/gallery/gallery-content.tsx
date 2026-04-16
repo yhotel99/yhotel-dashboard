@@ -26,6 +26,7 @@ import { useGallery } from "@/hooks/use-gallery";
 import { useStorage } from "@/hooks/use-storage";
 import {
   addGalleryImagesAction,
+  convertGalleryImagesToWebPAction,
   deleteGalleryImageAction,
 } from "@/actions/gallery";
 import { ImageZoom } from "@/components/ui/shadcn-io/image-zoom";
@@ -42,6 +43,21 @@ const DEFAULT_GALLERY_LIMIT = 24;
 /** Lưới responsive: số cột theo width, mỗi ô tối thiểu ~192px — tránh 8–10 cột chật trên màn rộng. */
 const GALLERY_GRID_CLASS =
   "grid gap-3 md:gap-4 mb-4 [grid-template-columns:repeat(auto-fill,minmax(min(100%,12rem),1fr))]";
+
+function getImageFormatFromUrl(url: string): string {
+  if (!url) return "UNKNOWN";
+  const cleanUrl = url.split("?")[0];
+  const fileName = cleanUrl.split("/").pop() ?? "";
+  const extension = fileName.split(".").pop()?.trim().toUpperCase();
+  return extension || "UNKNOWN";
+}
+
+function getImageFormatFromFile(file: File): string {
+  if (!file.type) return "UNKNOWN";
+  const subtype = file.type.split("/")[1];
+  if (!subtype) return "UNKNOWN";
+  return subtype.toUpperCase();
+}
 
 export function GalleryContent() {
   const router = useRouter();
@@ -102,6 +118,7 @@ export function GalleryContent() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [imageIdToDelete, setImageIdToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isConvertingToWebP, setIsConvertingToWebP] = useState(false);
 
   const [previewItems, setPreviewItems] = useState<PreviewItem[]>([]);
 
@@ -146,6 +163,10 @@ export function GalleryContent() {
     }
 
     try {
+      toast.info("Đang xử lý ảnh trước khi tải lên", {
+        description: "Các ảnh mới sẽ được tự động chuyển sang định dạng WebP",
+      });
+
       // Upload files to storage
       const filesToUpload = previewItems.map((item) => item.file);
       const results = await upload(filesToUpload);
@@ -175,7 +196,9 @@ export function GalleryContent() {
         fileInputRef.current.value = "";
       }
 
-      toast.success(`Đã tải lên thành công ${results.length} hình ảnh`);
+      toast.success(`Đã tải lên thành công ${results.length} hình ảnh`, {
+        description: "Ảnh đã được lưu dưới định dạng WebP để tối ưu dung lượng",
+      });
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Không thể tải lên hình ảnh";
@@ -215,6 +238,55 @@ export function GalleryContent() {
       setIsDeleting(false);
     }
   }, [imageIdToDelete, isDeleting, mutate]);
+
+  const handleConvertExistingToWebP = useCallback(async () => {
+    if (isConvertingToWebP) return;
+
+    try {
+      setIsConvertingToWebP(true);
+      toast.info("Đang chuẩn hóa ảnh cũ sang WebP", {
+        description: "Quá trình này có thể mất vài giây tùy số lượng ảnh",
+      });
+
+      const result = await convertGalleryImagesToWebPAction();
+
+      if (!result.ok) {
+        throw new Error(result.message);
+      }
+
+      await mutate();
+
+      const { converted, skipped, failed } = result.data;
+      const descriptionParts = [
+        `Đã chuyển: ${converted}`,
+        `Đã bỏ qua (đã là WebP): ${skipped}`,
+      ];
+
+      if (failed > 0) {
+        descriptionParts.push(`Lỗi: ${failed}`);
+      }
+
+      const topErrors = result.data.errors.slice(0, 3).join(" | ");
+
+      toast.success("Hoàn tất chuyển đổi ảnh sang WebP", {
+        description:
+          descriptionParts.join(" | ") +
+          (failed > 0
+            ? `. Một số ảnh chưa chuyển được, vui lòng thử lại.${
+                topErrors ? ` Chi tiết: ${topErrors}` : ""
+              }`
+            : ""),
+      });
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Không thể chuyển đổi ảnh sang WebP";
+      toast.error("Chuyển đổi WebP thất bại", {
+        description: errorMessage,
+      });
+    } finally {
+      setIsConvertingToWebP(false);
+    }
+  }, [isConvertingToWebP, mutate]);
 
   // Remove preview image
   const handleRemovePreview = useCallback((id: string) => {
@@ -295,6 +367,13 @@ export function GalleryContent() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={handleConvertExistingToWebP}
+            disabled={isConvertingToWebP || isLoading}
+          >
+            {isConvertingToWebP ? "Đang chuyển WebP..." : "Chuẩn hóa ảnh WebP"}
+          </Button>
           <Button onClick={() => setIsUploadDialogOpen(true)} className="gap-2">
             <IconPlus className="size-4" />
             Tải ảnh lên
@@ -340,6 +419,9 @@ export function GalleryContent() {
                         className="object-contain"
                         loading="lazy"
                       />
+                      <span className="absolute left-2 top-2 z-10 rounded bg-black/70 px-2 py-0.5 text-[10px] font-semibold text-white">
+                        {getImageFormatFromUrl(image.url)}
+                      </span>
                     </ImageZoom>
                   )}
                   <Button
@@ -403,7 +485,8 @@ export function GalleryContent() {
             <DialogHeader>
               <DialogTitle>Tải ảnh lên</DialogTitle>
               <DialogDescription>
-                Chọn file ảnh từ máy tính của bạn
+                Chọn file ảnh từ máy tính của bạn (ảnh upload mới sẽ tự chuyển sang
+                WebP)
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -440,6 +523,9 @@ export function GalleryContent() {
                           fill
                           className="w-full h-full object-cover rounded border"
                         />
+                        <span className="absolute left-1 top-1 z-10 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                          {getImageFormatFromFile(item.file)}
+                        </span>
                         <Button
                           variant="destructive"
                           size="icon"
