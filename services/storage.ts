@@ -3,6 +3,57 @@ import { createClient } from "@/lib/supabase/client";
 import type { UploadResult } from "@/lib/types";
 import { isValidImageFile, generateFileName } from "@/lib/functions";
 
+const CLIENT_WEBP_QUALITY = 0.85;
+
+function changeFileExtensionToWebP(fileName: string): string {
+  const baseName = fileName.replace(/\.[^/.]+$/, "");
+  return `${baseName}.webp`;
+}
+
+async function convertImageFileToWebP(file: File): Promise<File> {
+  if (file.type === "image/webp" || file.type === "image/svg+xml") {
+    return file;
+  }
+
+  const objectUrl = URL.createObjectURL(file);
+  const image = new Image();
+  image.decoding = "async";
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve();
+      image.onerror = () => reject(new Error(`Không thể đọc file ${file.name}`));
+      image.src = objectUrl;
+    });
+
+    const canvas = document.createElement("canvas");
+    canvas.width = image.naturalWidth || image.width;
+    canvas.height = image.naturalHeight || image.height;
+    const context = canvas.getContext("2d");
+
+    if (!context) {
+      throw new Error("Trình duyệt không hỗ trợ chuyển đổi ảnh");
+    }
+
+    context.drawImage(image, 0, 0);
+
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob(resolve, "image/webp", CLIENT_WEBP_QUALITY);
+    });
+
+    if (!blob) {
+      throw new Error(`Không thể chuyển đổi file ${file.name} sang WebP`);
+    }
+
+    return new File([blob], changeFileExtensionToWebP(file.name), {
+      type: "image/webp",
+      lastModified: Date.now(),
+    });
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
 /**
  * Upload single file to Supabase Storage
  * @param file - File to upload
@@ -19,16 +70,18 @@ export async function uploadFile(
     throw new Error(`File ${file.name} không phải là hình ảnh`);
   }
 
+  const normalizedFile = await convertImageFileToWebP(file);
   const supabase = createClient();
-  const fileName = generateFileName(file);
+  const fileName = generateFileName(normalizedFile);
   const filePath = folder ? `${folder}/${fileName}` : fileName;
 
   // Upload file to Supabase Storage
   const { error: uploadError } = await supabase.storage
     .from(bucket)
-    .upload(filePath, file, {
+    .upload(filePath, normalizedFile, {
       cacheControl: "3600",
       upsert: false,
+      contentType: normalizedFile.type,
     });
 
   if (uploadError) {
