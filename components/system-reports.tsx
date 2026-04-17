@@ -133,6 +133,10 @@ type SummaryResponse = {
   revenueByCheckIn: number;
   bookingsByCheckIn: number;
   occupancyPctFromRoomNights: number;
+  roomUsage: number;
+  roomTurnoverRate: number;
+  earlyCheckOutCount: number;
+  resoldRoomCount: number;
   refundCashflowByUpdatedAt: number;
 };
 
@@ -291,6 +295,10 @@ export function SystemReports() {
     bookingsByCheckIn: summaryData?.bookingsByCheckIn ?? 0,
     occupancyPctFromRoomNights:
       summaryData?.occupancyPctFromRoomNights ?? 0,
+    roomUsage: summaryData?.roomUsage ?? 0,
+    roomTurnoverRate: summaryData?.roomTurnoverRate ?? 0,
+    earlyCheckOutCount: summaryData?.earlyCheckOutCount ?? 0,
+    resoldRoomCount: summaryData?.resoldRoomCount ?? 0,
     refundCashflowByUpdatedAt:
       summaryData?.refundCashflowByUpdatedAt ?? 0,
   };
@@ -372,9 +380,13 @@ export function SystemReports() {
         summaryStats.bookingsByCheckIn.toString(),
       ],
       [
-        "Tỷ lệ lấp đầy (đêm phòng trong kỳ)",
+        "Night Occupancy (đêm phòng trong kỳ)",
         `${summaryStats.occupancyPctFromRoomNights.toFixed(2)}%`,
       ],
+      ["Room Usage", summaryStats.roomUsage.toString()],
+      ["Room Turnover", summaryStats.roomTurnoverRate.toFixed(2)],
+      ["Check-out sớm", summaryStats.earlyCheckOutCount.toString()],
+      ["Phòng bán lại trong ngày", summaryStats.resoldRoomCount.toString()],
       [
         "Hoàn tiền (theo ngày cập nhật trạng thái hoàn)",
         formatCurrency(summaryStats.refundCashflowByUpdatedAt),
@@ -613,9 +625,9 @@ export function SystemReports() {
         <Card className="border-primary/20 bg-linear-to-br from-primary/5 to-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0">
             <div>
-              <CardTitle className="text-sm font-medium">Tỷ lệ lấp đầy</CardTitle>
+              <CardTitle className="text-sm font-medium">Night Occupancy</CardTitle>
               <CardDescription className="text-xs pt-1">
-                Đêm phòng bán / đêm phòng khả dụng (kỳ chồng lấn lưu trú)
+                Chỉ tính overnight stay, tối đa 1 phòng / 1 đêm
               </CardDescription>
             </div>
             <div className="rounded-full bg-primary/10 p-2">
@@ -628,6 +640,14 @@ export function SystemReports() {
             </div>
           </CardContent>
         </Card>
+
+        {/*
+          Hidden temporarily per request:
+          - Room Usage
+          - Room Turnover
+          - Check-out sớm
+          - Phòng bán lại trong ngày
+        */}
 
       </div>
 
@@ -1412,7 +1432,7 @@ export function SystemReports() {
                                         </span>
                                       </div>
                                       <div className="flex items-center justify-between gap-4 text-xs">
-                                        <span className="text-muted-foreground">Lấp đầy</span>
+                                        <span className="text-muted-foreground">Night Occupancy</span>
                                         <span className="font-semibold text-primary">
                                           {Number(data.occupancy).toFixed(1)}%
                                         </span>

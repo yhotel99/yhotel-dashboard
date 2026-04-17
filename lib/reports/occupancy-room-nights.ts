@@ -69,8 +69,11 @@ function inclusiveLocalDayCount(a: Date, b: Date): number {
 }
 
 export type OccupancyBookingRow = {
+  id?: string;
+  room_id?: string | null;
   check_in: string | null;
   check_out: string | null;
+  actual_check_out?: string | null;
   status: (typeof BOOKING_STATUS)[keyof typeof BOOKING_STATUS];
   booking_rooms?: Array<{ room_id: string }> | null;
 };
@@ -103,7 +106,9 @@ export function roomNightsInPeriodForBooking(
   }
 
   const checkIn = startOfLocalDay(new Date(booking.check_in));
-  const checkOut = startOfLocalDay(new Date(booking.check_out));
+  const checkOut = startOfLocalDay(
+    new Date(booking.actual_check_out ?? booking.check_out)
+  );
   const p0 = startOfLocalDay(periodStart);
   const p1 = startOfLocalDay(periodEnd);
 
@@ -139,4 +144,102 @@ export function totalRoomNightsInPeriod(
     sum += roomNightsInPeriodForBooking(b, periodStart, periodEnd, validStatuses);
   }
   return sum;
+}
+
+type RoomUsageSummary = {
+  roomUsage: number;
+  earlyCheckOutCount: number;
+  resoldRoomCount: number;
+};
+
+function getBookingRoomIds(booking: OccupancyBookingRow): string[] {
+  if (booking.booking_rooms?.length) {
+    return booking.booking_rooms
+      .map((item) => item.room_id)
+      .filter((id): id is string => Boolean(id));
+  }
+
+  if (booking.room_id) return [booking.room_id];
+  return [`booking:${booking.id ?? "unknown"}`];
+}
+
+function toYyyyMmDdLocal(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+/**
+ * Room Usage = tổng số lần sử dụng phòng theo ngày (bao gồm overnight + short stay + bán lại trong ngày).
+ * Một phòng có thể được đếm nhiều lần trong cùng ngày nếu có nhiều booking khác nhau chạm vào ngày đó.
+ */
+export function summarizeRoomUsageInPeriod(
+  bookings: OccupancyBookingRow[],
+  periodStart: Date,
+  periodEnd: Date,
+  validStatuses: readonly OccupancyBookingRow["status"][]
+): RoomUsageSummary {
+  const from = startOfLocalDay(periodStart);
+  const to = startOfLocalDay(periodEnd);
+
+  const roomDayUsageMap = new Map<string, number>();
+  let roomUsage = 0;
+  let earlyCheckOutCount = 0;
+
+  for (const booking of bookings) {
+    if (
+      !booking.check_in ||
+      !booking.check_out ||
+      !validStatuses.includes(booking.status)
+    ) {
+      continue;
+    }
+
+    const checkInDay = startOfLocalDay(new Date(booking.check_in));
+    const plannedCheckOutDay = startOfLocalDay(new Date(booking.check_out));
+    const actualCheckOutDay = booking.actual_check_out
+      ? startOfLocalDay(new Date(booking.actual_check_out))
+      : null;
+    const effectiveCheckOutDay = actualCheckOutDay ?? plannedCheckOutDay;
+
+    if (
+      actualCheckOutDay &&
+      actualCheckOutDay.getTime() < plannedCheckOutDay.getTime() &&
+      actualCheckOutDay.getTime() >= from.getTime() &&
+      actualCheckOutDay.getTime() <= to.getTime()
+    ) {
+      earlyCheckOutCount += 1;
+    }
+
+    const usageStart =
+      checkInDay.getTime() > from.getTime() ? checkInDay : from;
+    const usageEnd =
+      effectiveCheckOutDay.getTime() < to.getTime() ? effectiveCheckOutDay : to;
+
+    if (usageStart.getTime() > usageEnd.getTime()) continue;
+
+    const roomIds = getBookingRoomIds(booking);
+    const cursor = new Date(usageStart);
+    while (cursor.getTime() <= usageEnd.getTime()) {
+      const dayKey = toYyyyMmDdLocal(cursor);
+      for (const roomId of roomIds) {
+        const key = `${dayKey}|${roomId}`;
+        roomDayUsageMap.set(key, (roomDayUsageMap.get(key) ?? 0) + 1);
+        roomUsage += 1;
+      }
+      cursor.setDate(cursor.getDate() + 1);
+    }
+  }
+
+  let resoldRoomCount = 0;
+  for (const usageCount of roomDayUsageMap.values()) {
+    if (usageCount > 1) resoldRoomCount += 1;
+  }
+
+  return {
+    roomUsage,
+    earlyCheckOutCount,
+    resoldRoomCount,
+  };
 }

@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
         supabase
           .from("bookings")
           .select(
-            "id, check_in, check_out, status, final_amount, total_amount, booking_rooms(room_id)"
+            "id, room_id, check_in, check_out, actual_check_out, status, final_amount, total_amount, booking_rooms(room_id)"
           )
           .is("deleted_at", null)
           .in("status", [...REPORT_METRICS_BOOKING_STATUSES])
