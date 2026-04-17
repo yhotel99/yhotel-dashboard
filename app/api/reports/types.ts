@@ -9,7 +9,8 @@
  * **Mixed time models (by design for ops dashboards):**
  * - `revenueByCheckIn` / `bookingsByCheckIn` — event-based on `bookings.check_in`
  * - `refundCashflowByUpdatedAt` — transaction-based on `refund_requests.updated_at`
- * - `occupancyPctFromRoomNights` — duration-based (stay overlap × room-nights vs sellable capacity)
+ * - `occupancyPctFromRoomNights` — night occupancy (overnight room-nights only)
+ * - `roomUsage` / `roomTurnoverRate` — operational room usage per day, includes short stay + resale
  */
 export interface ReportSummary {
   /**
@@ -27,6 +28,14 @@ export interface ReportSummary {
    * count currently uses today’s room snapshot (historical OOO-by-day not in schema yet).
    */
   occupancyPctFromRoomNights: number;
+  /** Tổng số lần sử dụng phòng trong kỳ (bao gồm overnight + short stay + bán lại trong ngày). */
+  roomUsage: number;
+  /** Hiệu suất khai thác phòng = roomUsage / số phòng khả dụng. Có thể > 1. */
+  roomTurnoverRate: number;
+  /** Số booking check-out thực tế sớm hơn check_out dự kiến trong kỳ. */
+  earlyCheckOutCount: number;
+  /** Số phòng-ngày có bán lại (cùng 1 phòng được dùng > 1 lần trong ngày). */
+  resoldRoomCount: number;
   /**
    * Refund totals in the range by settlement / record time: refunded rows with `updated_at`
    * in the window. Compare carefully to revenue-by-check-in (different time basis).

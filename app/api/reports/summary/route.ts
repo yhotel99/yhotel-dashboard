@@ -9,6 +9,7 @@ import { ReportSummary } from "../types";
 import { parseBookingRevenueAmount } from "@/lib/reports/booking-revenue";
 import {
   countInventoryRoomsForOccupancy,
+  summarizeRoomUsageInPeriod,
   sumAvailableRoomNightsInRange,
   totalRoomNightsInPeriod,
 } from "@/lib/reports/occupancy-room-nights";
@@ -76,7 +77,9 @@ export async function GET(req: NextRequest) {
       // (3) Occupancy — chỉ confirmed / checked_in / checked_out (không pending); overlap kỳ
       supabase
         .from("bookings")
-        .select("id, check_in, check_out, status, booking_rooms(room_id)")
+        .select(
+          "id, room_id, check_in, check_out, actual_check_out, status, booking_rooms(room_id)"
+        )
         .is("deleted_at", null)
         .in("status", [...REPORT_METRICS_BOOKING_STATUSES])
         .lt("check_in", toISO)
@@ -122,11 +125,20 @@ export async function GET(req: NextRequest) {
       toDate,
       REPORT_METRICS_BOOKING_STATUSES
     );
+    const { roomUsage, earlyCheckOutCount, resoldRoomCount } =
+      summarizeRoomUsageInPeriod(
+        currentBookingsForOccupancy || [],
+        fromDate,
+        toDate,
+        REPORT_METRICS_BOOKING_STATUSES
+      );
 
     const occupancyPctFromRoomNights =
       availableRoomNightsInRange > 0
         ? (currentRoomNights / availableRoomNightsInRange) * 100
         : 0;
+    const roomTurnoverRate =
+      inventoryRoomCount > 0 ? roomUsage / inventoryRoomCount : 0;
 
     const summary: ReportSummary = {
       revenueByCheckIn: isNaN(revenueByCheckIn) ? 0 : revenueByCheckIn,
@@ -141,6 +153,12 @@ export async function GET(req: NextRequest) {
       refundCashflowByUpdatedAt: isNaN(refundCashflowByUpdatedAt)
         ? 0
         : refundCashflowByUpdatedAt,
+      roomUsage: isNaN(roomUsage) ? 0 : roomUsage,
+      roomTurnoverRate: isNaN(roomTurnoverRate)
+        ? 0
+        : Math.round(roomTurnoverRate * 100) / 100,
+      earlyCheckOutCount: isNaN(earlyCheckOutCount) ? 0 : earlyCheckOutCount,
+      resoldRoomCount: isNaN(resoldRoomCount) ? 0 : resoldRoomCount,
     };
 
     return NextResponse.json(summary);
