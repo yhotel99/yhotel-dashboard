@@ -75,7 +75,6 @@ export async function GET() {
   try {
     const supabase = await createClient();
 
-    // Check permissions using permission system
     const { data: currentUser } = await supabase.auth.getUser();
     
     if (!currentUser.user) {
@@ -95,21 +94,6 @@ export async function GET() {
       return NextResponse.json(
         { error: "Profile not found" },
         { status: 404 }
-      );
-    }
-
-    // Check if user has view:settings permission
-    const hasPermission = await checkPermission(
-      profileData.role,
-      "view",
-      "settings",
-      supabase
-    );
-
-    if (!hasPermission) {
-      return NextResponse.json(
-        { error: "Permission denied" },
-        { status: 403 }
       );
     }
 
