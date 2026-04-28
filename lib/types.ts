@@ -239,6 +239,9 @@ export type BookingRecord = {
     phone: string | null;
     email?: string | null;
   } | null;
+  created_by_profile?: {
+    full_name: string | null;
+  } | null;
   rooms?: {
     id: string;
     name: string;

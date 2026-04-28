@@ -19,6 +19,10 @@ export function useBookings({
   page = 1,
   limit = 10,
   customerId = null,
+  creatorId = null,
+  dateField = null,
+  dateFrom = null,
+  dateTo = null,
   status = "",
   cursorCreatedAt = "",
   cursorId = "",
@@ -28,6 +32,10 @@ export function useBookings({
   page?: number;
   limit?: number;
   customerId?: string | null;
+  creatorId?: string | null;
+  dateField?: "created_at" | "check_in" | null;
+  dateFrom?: string | null;
+  dateTo?: string | null;
   status?: string;
   cursorCreatedAt?: string;
   cursorId?: string;
@@ -46,6 +54,18 @@ export function useBookings({
   }
   if (customerId) {
     params.append("customerId", customerId);
+  }
+  if (creatorId) {
+    params.append("creatorId", creatorId);
+  }
+  if (dateField) {
+    params.append("dateField", dateField);
+  }
+  if (dateFrom) {
+    params.append("dateFrom", dateFrom);
+  }
+  if (dateTo) {
+    params.append("dateTo", dateTo);
   }
   if (status && status.trim() !== "") {
     params.append("status", status.trim());

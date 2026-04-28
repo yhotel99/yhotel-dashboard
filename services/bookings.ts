@@ -1073,6 +1073,10 @@ export async function getBookingsListWithPagination({
   page = 1,
   limit = 10,
   customerId,
+  creatorId,
+  dateField,
+  dateFrom,
+  dateTo,
   status,
   cursorCreatedAt,
   cursorId,
@@ -1081,6 +1085,10 @@ export async function getBookingsListWithPagination({
   page?: number;
   limit?: number;
   customerId?: string | null;
+  creatorId?: string | null;
+  dateField?: "created_at" | "check_in" | null;
+  dateFrom?: string | null;
+  dateTo?: string | null;
   status?: string | null;
   cursorCreatedAt?: string | null;
   cursorId?: string | null;
@@ -1099,6 +1107,13 @@ export async function getBookingsListWithPagination({
     // Trim and normalize search and customerId
     const trimmedSearch = search?.trim() || null;
     const trimmedCustomerId = customerId?.trim() || null;
+    const trimmedCreatorId = creatorId?.trim() || null;
+    const normalizedDateField =
+      dateField === "created_at" || dateField === "check_in"
+        ? dateField
+        : null;
+    const trimmedDateFrom = dateFrom?.trim() || null;
+    const trimmedDateTo = dateTo?.trim() || null;
     const trimmedStatus = status?.trim() || null;
     const trimmedCursorAt = cursorCreatedAt?.trim() || null;
     const trimmedCursorId = cursorId?.trim() || null;
@@ -1109,6 +1124,10 @@ export async function getBookingsListWithPagination({
       p_page: page,
       p_limit: limit,
       p_customer_id: trimmedCustomerId,
+      p_created_by: trimmedCreatorId,
+      p_date_field: normalizedDateField,
+      p_date_from: trimmedDateFrom,
+      p_date_to: trimmedDateTo,
       p_status: trimmedStatus,
       p_cursor_created_at: useKeyset ? trimmedCursorAt : null,
       p_cursor_id: useKeyset ? trimmedCursorId : null,

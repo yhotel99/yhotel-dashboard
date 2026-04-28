@@ -10,6 +10,14 @@ export default async function BookingsPage({ searchParams }: PageProps) {
   const limit = params.limit ? Number(params.limit) : 10;
   const search = params.search ? String(params.search) : "";
   const status = params.status ? String(params.status) : null;
+  const creatorId = params.creatorId ? String(params.creatorId) : null;
+  const dateFieldRaw = params.dateField ? String(params.dateField) : null;
+  const dateField =
+    dateFieldRaw === "created_at" || dateFieldRaw === "check_in"
+      ? dateFieldRaw
+      : null;
+  const dateFrom = params.dateFrom ? String(params.dateFrom) : null;
+  const dateTo = params.dateTo ? String(params.dateTo) : null;
   const cursorCreatedAt = params.cursorCreatedAt
     ? String(params.cursorCreatedAt)
     : null;
@@ -19,6 +27,10 @@ export default async function BookingsPage({ searchParams }: PageProps) {
     page,
     limit,
     search,
+    creatorId,
+    dateField,
+    dateFrom,
+    dateTo,
     status,
     cursorCreatedAt,
     cursorId,

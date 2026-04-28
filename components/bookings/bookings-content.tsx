@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { IconPlus, IconSearch } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -11,6 +12,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { DataTable } from "@/components/data-table";
 import { useBookings } from "@/hooks/use-bookings";
 import {
@@ -50,6 +56,9 @@ import { toast } from "sonner";
 import { useRealtimeContext } from "@/contexts/realtime-context";
 import { useRoomNumberLookup } from "@/hooks/use-room-number-lookup";
 import { BOOKING_STATUS, bookingStatusLabels } from "@/lib/constants";
+import { useProfiles } from "@/hooks/use-profiles";
+import { SlidersHorizontal } from "lucide-react";
+import { DateRangePicker } from "@/components/date-range/date-range-picker";
 
 const BOOKING_STATUS_FILTER_VALUES = new Set<string>([
   BOOKING_STATUS.PENDING,
@@ -58,6 +67,13 @@ const BOOKING_STATUS_FILTER_VALUES = new Set<string>([
   BOOKING_STATUS.CHECKED_OUT,
   BOOKING_STATUS.CANCELLED,
 ]);
+
+const toDateParam = (date: Date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
 
 export function BookingsContent({
   initialData,
@@ -93,6 +109,19 @@ export function BookingsContent({
   const status = React.useMemo(() => {
     return searchParams.get("status") || "";
   }, [searchParams]);
+  const creatorId = React.useMemo(() => {
+    return searchParams.get("creatorId") || "";
+  }, [searchParams]);
+  const dateField = React.useMemo(() => {
+    const raw = searchParams.get("dateField") || "created_at";
+    return raw === "check_in" ? "check_in" : "created_at";
+  }, [searchParams]);
+  const dateFrom = React.useMemo(() => {
+    return searchParams.get("dateFrom") || "";
+  }, [searchParams]);
+  const dateTo = React.useMemo(() => {
+    return searchParams.get("dateTo") || "";
+  }, [searchParams]);
 
   const cursorCreatedAt = React.useMemo(
     () => searchParams.get("cursorCreatedAt") || "",
@@ -113,6 +142,10 @@ export function BookingsContent({
       newLimit: number,
       newSearch: string,
       newStatus?: string,
+      newCreatorId?: string,
+      newDateField?: "created_at" | "check_in",
+      newDateFrom?: string,
+      newDateTo?: string,
       options?: { resetCursor?: boolean }
     ) => {
       const params = new URLSearchParams(searchParams.toString());
@@ -137,22 +170,62 @@ export function BookingsContent({
       } else {
         params.delete("status");
       }
+      const nextCreatorId = newCreatorId !== undefined ? newCreatorId : creatorId;
+      if (nextCreatorId && nextCreatorId.trim() !== "") {
+        params.set("creatorId", nextCreatorId.trim());
+      } else {
+        params.delete("creatorId");
+      }
+      const nextDateField = newDateField ?? dateField;
+      params.set("dateField", nextDateField);
+      const nextDateFrom = newDateFrom !== undefined ? newDateFrom : dateFrom;
+      if (nextDateFrom && nextDateFrom.trim() !== "") {
+        params.set("dateFrom", nextDateFrom.trim());
+      } else {
+        params.delete("dateFrom");
+      }
+      const nextDateTo = newDateTo !== undefined ? newDateTo : dateTo;
+      if (nextDateTo && nextDateTo.trim() !== "") {
+        params.set("dateTo", nextDateTo.trim());
+      } else {
+        params.delete("dateTo");
+      }
       if (options?.resetCursor) {
         params.delete("cursorCreatedAt");
         params.delete("cursorId");
       }
       router.push(`/dashboard/bookings?${params.toString()}`);
     },
-    [router, searchParams, status]
+    [router, searchParams, status, creatorId, dateField, dateFrom, dateTo]
   );
 
   React.useEffect(() => {
     if (debouncedSearch !== search) {
-      updateSearchParams(1, limit, debouncedSearch, status, {
-        resetCursor: true,
-      });
+      updateSearchParams(
+        1,
+        limit,
+        debouncedSearch,
+        status,
+        creatorId,
+        dateField,
+        dateFrom,
+        dateTo,
+        {
+          resetCursor: true,
+        }
+      );
     }
-  }, [debouncedSearch, search, limit, status, updateSearchParams]);
+  }, [
+    creatorId,
+    dateField,
+    dateFrom,
+    dateTo,
+    debouncedSearch,
+    limit,
+    search,
+    status,
+    updateSearchParams,
+  ]);
 
   const statusFilterValue = React.useMemo(() => {
     const s = status.trim();
@@ -166,10 +239,19 @@ export function BookingsContent({
     return BOOKING_STATUS_FILTER_VALUES.has(s) ? s : "";
   }, [status]);
 
+  const creatorIdForFetch = React.useMemo(() => {
+    const c = creatorId.trim();
+    return c === "" ? null : c;
+  }, [creatorId]);
+
   const { bookings, isLoading, pagination, mutate } = useBookings({
     search,
     page,
     limit,
+    creatorId: creatorIdForFetch,
+    dateField,
+    dateFrom: dateFrom || null,
+    dateTo: dateTo || null,
     status: statusForFetch,
     cursorCreatedAt,
     cursorId,
@@ -179,10 +261,110 @@ export function BookingsContent({
   const handleStatusFilterChange = React.useCallback(
     (value: string) => {
       const nextStatus = value === "all" ? "" : value;
-      updateSearchParams(1, limit, search, nextStatus, { resetCursor: true });
+      updateSearchParams(
+        1,
+        limit,
+        search,
+        nextStatus,
+        creatorId,
+        dateField,
+        dateFrom,
+        dateTo,
+        {
+          resetCursor: true,
+        }
+      );
     },
-    [limit, search, updateSearchParams]
+    [creatorId, dateField, dateFrom, dateTo, limit, search, updateSearchParams]
   );
+
+  const { profiles } = useProfiles({ page: 1, limit: 100 });
+  const collaboratorOptions = React.useMemo(
+    () => profiles.filter((p) => p.status === "active"),
+    [profiles]
+  );
+  const creatorName = React.useMemo(() => {
+    if (!creatorIdForFetch) return null;
+    return (
+      collaboratorOptions.find((profile) => profile.id === creatorIdForFetch)
+        ?.full_name ?? "Không xác định"
+    );
+  }, [collaboratorOptions, creatorIdForFetch]);
+  const hasActiveFilters = React.useMemo(
+    () =>
+      Boolean(status.trim()) ||
+      Boolean(creatorId.trim()) ||
+      Boolean(dateFrom.trim()) ||
+      Boolean(dateTo.trim()) ||
+      dateField !== "created_at",
+    [creatorId, dateField, dateFrom, dateTo, status]
+  );
+
+  const handleCollaboratorChange = React.useCallback(
+    (value: string) => {
+      const nextCreatorId = value === "all" ? "" : value;
+      updateSearchParams(
+        1,
+        limit,
+        search,
+        status,
+        nextCreatorId,
+        dateField,
+        dateFrom,
+        dateTo,
+        { resetCursor: true }
+      );
+    },
+    [dateField, dateFrom, dateTo, limit, search, status, updateSearchParams]
+  );
+
+  const handleDateFieldChange = React.useCallback(
+    (value: "created_at" | "check_in") => {
+      updateSearchParams(
+        1,
+        limit,
+        search,
+        status,
+        creatorId,
+        value,
+        dateFrom,
+        dateTo,
+        { resetCursor: true }
+      );
+    },
+    [
+      creatorId,
+      dateFrom,
+      dateTo,
+      limit,
+      search,
+      status,
+      updateSearchParams,
+    ]
+  );
+
+  const handleDateRangeChange = React.useCallback(
+    (from: string, to: string) => {
+      updateSearchParams(
+        1,
+        limit,
+        search,
+        status,
+        creatorId,
+        dateField,
+        from,
+        to,
+        { resetCursor: true }
+      );
+    },
+    [creatorId, dateField, limit, search, status, updateSearchParams]
+  );
+
+  const handleResetFilters = React.useCallback(() => {
+    updateSearchParams(1, limit, search, "", "", "created_at", "", "", {
+      resetCursor: true,
+    });
+  }, [limit, search, updateSearchParams]);
 
   const { data: roomNumberById } = useRoomNumberLookup();
 
@@ -428,58 +610,166 @@ export function BookingsContent({
 
   return (
     <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-      <div className="flex flex-col gap-4 px-4 sm:flex-row sm:items-start sm:justify-between lg:px-6">
-        <div>
-          <h1 className="text-2xl font-bold">Quản lý đặt phòng</h1>
-          <p className="text-muted-foreground text-sm">
-            Quản lý và theo dõi các đặt phòng trong khách sạn
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-          <Button
-            variant="outline"
-            onClick={() => setIsCheckAvailableRoomsDialogOpen(true)}
-            className="gap-2"
-          >
-            <IconSearch className="size-4" />
-            Kiểm tra
-          </Button>
-          <div className="flex items-center gap-2">
-            <Select value={statusFilterValue} onValueChange={handleStatusFilterChange}>
-              <SelectTrigger
-                id="booking-status-filter"
-                className="h-9 w-[min(100%,220px)] min-w-[160px] sm:w-[200px]"
-              >
-                <SelectValue placeholder="Tất cả trạng thái" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả trạng thái</SelectItem>
-                <SelectItem value={BOOKING_STATUS.PENDING}>
-                  {bookingStatusLabels[BOOKING_STATUS.PENDING]}
-                </SelectItem>
-                <SelectItem value={BOOKING_STATUS.CONFIRMED}>
-                  {bookingStatusLabels[BOOKING_STATUS.CONFIRMED]}
-                </SelectItem>
-                <SelectItem value={BOOKING_STATUS.CHECKED_IN}>
-                  {bookingStatusLabels[BOOKING_STATUS.CHECKED_IN]}
-                </SelectItem>
-                <SelectItem value={BOOKING_STATUS.CHECKED_OUT}>
-                  {bookingStatusLabels[BOOKING_STATUS.CHECKED_OUT]}
-                </SelectItem>
-                <SelectItem value={BOOKING_STATUS.CANCELLED}>
-                  {bookingStatusLabels[BOOKING_STATUS.CANCELLED]}
-                </SelectItem>
-              </SelectContent>
-            </Select>
+      <div className="flex flex-col gap-4 px-4 lg:px-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Quản lý đặt phòng</h1>
+            <p className="text-muted-foreground text-sm">
+              Quản lý và theo dõi các đặt phòng trong khách sạn
+            </p>
           </div>
-          <Button onClick={handleCreateMultiBooking} className="gap-2">
-            <IconPlus className="size-4" />
-            Đặt nhiều phòng
-          </Button>
-          {/* <Button onClick={handleCreateBooking} className="gap-2">
-            <IconPlus className="size-4" />
-            Tạo booking mới
-          </Button> */}
+          <div className="flex flex-wrap items-center justify-start gap-2 sm:justify-end">
+            <Button onClick={handleCreateMultiBooking} className="gap-2">
+              <IconPlus className="size-4" />
+              Đặt nhiều phòng
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setIsCheckAvailableRoomsDialogOpen(true)}
+              className="gap-2"
+            >
+              <IconSearch className="size-4" />
+              Kiểm tra
+            </Button>
+          </div>
+        </div>
+        <div className="rounded-xl border bg-card px-3 py-2 shadow-xs">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="mr-1 text-xs font-medium text-muted-foreground">
+              Bộ lọc:
+            </div>
+            <div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 gap-2">
+                    <SlidersHorizontal className="size-4" />
+                    Bộ lọc
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="start" className="w-[340px] p-4">
+                  <div className="mb-3 text-sm font-medium">Lọc booking</div>
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 gap-2">
+                      <Select
+                        value={dateField}
+                        onValueChange={(v) =>
+                          handleDateFieldChange(v as "created_at" | "check_in")
+                        }
+                      >
+                        <SelectTrigger className="h-9 w-full">
+                          <SelectValue placeholder="Loại ngày" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="created_at">Theo ngày tạo</SelectItem>
+                          <SelectItem value="check_in">Theo ngày check-in</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <DateRangePicker
+                        key={`${dateFrom}-${dateTo}`}
+                        initialDateFrom={dateFrom || new Date()}
+                        initialDateTo={dateTo || dateFrom || undefined}
+                        showCompare={false}
+                        locale="vi-VN"
+                        align="start"
+                        onUpdate={(values) => {
+                          const from = values.range.from;
+                          const to = values.range.to;
+                          if (!from || !to) {
+                            handleDateRangeChange("", "");
+                            return;
+                          }
+                          handleDateRangeChange(
+                            toDateParam(from),
+                            toDateParam(to)
+                          );
+                        }}
+                      />
+                      <Select
+                        value={creatorIdForFetch ?? "all"}
+                        onValueChange={handleCollaboratorChange}
+                      >
+                        <SelectTrigger className="h-9 w-full">
+                          <SelectValue placeholder="Created by" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Tất cả người tạo</SelectItem>
+                          {collaboratorOptions.map((profile) => (
+                            <SelectItem key={profile.id} value={profile.id}>
+                              {profile.full_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Select
+                        value={statusFilterValue}
+                        onValueChange={handleStatusFilterChange}
+                      >
+                        <SelectTrigger id="booking-status-filter" className="h-9 w-full">
+                          <SelectValue placeholder="Tất cả trạng thái" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Tất cả trạng thái</SelectItem>
+                          <SelectItem value={BOOKING_STATUS.PENDING}>
+                            {bookingStatusLabels[BOOKING_STATUS.PENDING]}
+                          </SelectItem>
+                          <SelectItem value={BOOKING_STATUS.CONFIRMED}>
+                            {bookingStatusLabels[BOOKING_STATUS.CONFIRMED]}
+                          </SelectItem>
+                          <SelectItem value={BOOKING_STATUS.CHECKED_IN}>
+                            {bookingStatusLabels[BOOKING_STATUS.CHECKED_IN]}
+                          </SelectItem>
+                          <SelectItem value={BOOKING_STATUS.CHECKED_OUT}>
+                            {bookingStatusLabels[BOOKING_STATUS.CHECKED_OUT]}
+                          </SelectItem>
+                          <SelectItem value={BOOKING_STATUS.CANCELLED}>
+                            {bookingStatusLabels[BOOKING_STATUS.CANCELLED]}
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button
+                      variant="outline"
+                      className="h-9 w-full"
+                      onClick={handleResetFilters}
+                      disabled={!hasActiveFilters}
+                    >
+                      Xóa bộ lọc
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+            {dateField !== "created_at" && (
+              <Badge variant="outline" className="h-7 rounded-md">
+                Loại ngày: Check-in
+              </Badge>
+            )}
+            {dateFrom && (
+              <Badge variant="outline" className="h-7 rounded-md">
+                Từ: {dateFrom}
+              </Badge>
+            )}
+            {dateTo && (
+              <Badge variant="outline" className="h-7 rounded-md">
+                Đến: {dateTo}
+              </Badge>
+            )}
+            {creatorName && (
+              <Badge variant="outline" className="h-7 rounded-md">
+                Created by: {creatorName}
+              </Badge>
+            )}
+            {statusFilterValue !== "all" && (
+              <Badge variant="outline" className="h-7 rounded-md">
+                Trạng thái: {bookingStatusLabels[statusFilterValue as BookingStatus]}
+              </Badge>
+            )}
+            {!hasActiveFilters && (
+              <span className="text-xs text-muted-foreground">
+                Chưa áp dụng bộ lọc
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -498,14 +788,34 @@ export function BookingsContent({
           isLoading={isLoading}
           serverPagination={pagination}
           onPageChange={(newPage) =>
-            updateSearchParams(newPage, limit, search, status, {
-              resetCursor: true,
-            })
+            updateSearchParams(
+              newPage,
+              limit,
+              search,
+              status,
+              creatorId,
+              dateField,
+              dateFrom,
+              dateTo,
+              {
+                resetCursor: true,
+              }
+            )
           }
           onLimitChange={(newLimit) =>
-            updateSearchParams(1, newLimit, search, status, {
-              resetCursor: true,
-            })
+            updateSearchParams(
+              1,
+              newLimit,
+              search,
+              status,
+              creatorId,
+              dateField,
+              dateFrom,
+              dateTo,
+              {
+                resetCursor: true,
+              }
+            )
           }
           serverSearch={localSearch}
           onSearchChange={setLocalSearch}

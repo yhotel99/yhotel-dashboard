@@ -547,6 +547,16 @@ export function BookingDetailDialog({
               <h3 className="text-lg font-semibold">Thời gian hệ thống</h3>
               <div className="grid grid-cols-2 gap-4 pl-7 text-sm">
                 <div>
+                  <p className="text-muted-foreground">Tên người tạo</p>
+                  <p className="font-medium">
+                    {booking.created_by_profile?.full_name || "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">ID người tạo</p>
+                  <p className="font-medium">{booking.created_by || "N/A"}</p>
+                </div>
+                <div>
                   <p className="text-muted-foreground">Ngày tạo</p>
                   <p className="font-medium">
                     {formatDateOnly(booking.created_at)}
