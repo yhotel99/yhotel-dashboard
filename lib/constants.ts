@@ -313,6 +313,7 @@ export const customerSourceLabels: Record<
  */
 export const SIDEBAR_URLS = {
   DASHBOARD: "/dashboard",
+  ANALYTICS: "/dashboard/analytics",
   ROOMS: "/dashboard/rooms",
   BOOKINGS: "/dashboard/bookings",
   RESERVATION: "/dashboard/reservation",
@@ -438,6 +439,7 @@ export function translateBookingErrorMessage(
 
 export const PATH_TO_RESOURCE: Record<string, string> = {
   [SIDEBAR_URLS.DASHBOARD]: "dashboard",
+  [SIDEBAR_URLS.ANALYTICS]: "dashboard",
   [SIDEBAR_URLS.ROOMS]: "rooms",
   [SIDEBAR_URLS.BOOKINGS]: "bookings",
   [SIDEBAR_URLS.RESERVATION]: "reservations",
@@ -458,6 +460,12 @@ export const allNavItems = [
     title: "Tổng Quan",
     url: SIDEBAR_URLS.DASHBOARD,
     icon: IconDashboard,
+    resource: "dashboard",
+  },
+  {
+    title: "Hiệu Suất & Báo Cáo",
+    url: SIDEBAR_URLS.ANALYTICS,
+    icon: IconChartBar,
     resource: "dashboard",
   },
   {
@@ -560,6 +568,8 @@ export const AMENITIES_OPTIONS = [
 
 export const DASHBOARD_URLS = {
   DASHBOARD: "/dashboard",
+  /** Hotel PMS Analytics — KPI, AR, heatmap, aging */
+  ANALYTICS: "/dashboard/analytics",
   ROOMS: "/dashboard/rooms",
   BOOKINGS: "/dashboard/bookings",
   RESERVATION: "/dashboard/reservation",

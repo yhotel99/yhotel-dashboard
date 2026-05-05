@@ -8,6 +8,7 @@ import { User } from "@supabase/supabase-js";
 // Mapping between URL paths and resource names
 const PATH_TO_RESOURCE: Record<string, string> = {
   [DASHBOARD_URLS.DASHBOARD]: "dashboard",
+  [DASHBOARD_URLS.ANALYTICS]: "dashboard",
   [DASHBOARD_URLS.ROOMS]: "rooms",
   [DASHBOARD_URLS.BOOKINGS]: "bookings",
   [DASHBOARD_URLS.RESERVATION]: "reservations",

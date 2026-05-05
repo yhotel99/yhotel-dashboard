@@ -62,6 +62,7 @@ import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
 import { endOfDay, startOfMonth, format } from "date-fns";
 import Link from "next/link";
+import { DASHBOARD_URLS } from "@/lib/constants";
 import { PaymentStatusBadge } from "@/components/payments/status";
 import type { PaymentWithBooking } from "@/lib/types";
 import Papa from "papaparse";
@@ -532,7 +533,10 @@ export function SystemReports() {
             Theo dõi và phân tích hiệu suất hoạt động
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button asChild variant="secondary" className="border-primary/20">
+            <Link href={DASHBOARD_URLS.ANALYTICS}>Hotel Performance Overview</Link>
+          </Button>
           <DateRangePicker
             initialDateFrom={dateRange.from}
             initialDateTo={dateRange.to}
