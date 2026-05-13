@@ -20,7 +20,11 @@ import {
 } from "@/lib/functions";
 import { useRoomNumberLookup } from "@/hooks/use-room-number-lookup";
 import { PaymentStatusBadge } from "./status";
-import { paymentTypeLabels, paymentMethodLabels } from "@/lib/constants";
+import {
+  paymentTypeLabels,
+  paymentMethodLabels,
+  REPORTING_STATUS,
+} from "@/lib/constants";
 
 interface PaymentDetailDialogProps {
   payment: PaymentWithBooking;
@@ -36,6 +40,10 @@ export function PaymentDetailDialog({ payment }: PaymentDetailDialogProps) {
     },
     roomNumberById
   );
+  const reportingStatusLabel =
+    payment.reporting_status === REPORTING_STATUS.INCLUDED
+      ? "Được tính báo cáo"
+      : "Loại khỏi báo cáo";
 
   return (
     <Dialog>
@@ -127,6 +135,14 @@ export function PaymentDetailDialog({ payment }: PaymentDetailDialogProps) {
                 <div className="text-sm mt-1">
                   <PaymentStatusBadge status={payment.payment_status} />
                 </div>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Reporting status
+                </p>
+                <Badge variant="outline" className="mt-1">
+                  {reportingStatusLabel}
+                </Badge>
               </div>
               <div>
                 <p className="text-sm font-medium text-muted-foreground">

@@ -211,6 +211,14 @@ export const PAYMENT_STATUS = {
 } as const;
 
 /**
+ * Reporting status for paid payments in revenue reports
+ */
+export const REPORTING_STATUS = {
+  INCLUDED: "included",
+  EXCLUDED: "excluded",
+} as const;
+
+/**
  * Payment status labels mapping
  */
 export const paymentStatusLabels: Record<

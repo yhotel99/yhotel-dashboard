@@ -405,6 +405,8 @@ export type PaymentStatus =
   | "refunded"
   | "cancelled";
 
+export type PaymentReportingStatus = "included" | "excluded";
+
 // Payment record matching database schema (payments table)
 export type Payment = {
   id: string;
@@ -413,6 +415,7 @@ export type Payment = {
   payment_type: PaymentType;
   payment_method: PaymentMethod;
   payment_status: PaymentStatus;
+  reporting_status: PaymentReportingStatus;
   paid_at: string | null;
   verified_at: string | null;
   refunded_at: string | null;
@@ -427,6 +430,7 @@ export type PaymentInput = {
   payment_type: PaymentType;
   payment_method?: PaymentMethod;
   payment_status?: PaymentStatus;
+  reporting_status?: PaymentReportingStatus;
   paid_at?: string | null;
   verified_at?: string | null;
   refunded_at?: string | null;
@@ -454,17 +458,20 @@ export type PaymentSearchRow = {
   payment_type: string;
   payment_method: string;
   payment_status: string;
+  reporting_status?: string;
   paid_at: string | null;
   verified_at: string | null;
   refunded_at: string | null;
   created_at: string;
   updated_at: string;
+  total_count?: number;
   customers: {
     full_name: string | null;
     phone: string | null;
   } | null;
   rooms: {
     name: string | null;
+    items?: Array<{ id: string; name?: string | null }>;
   } | null;
 };
 

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPaymentsListWithPagination } from "@/services/payments";
+import type { PaymentStatus, PaymentType } from "@/lib/types";
+import { PAYMENT_TYPE } from "@/lib/constants";
 
 /**
  * GET /api/payments
@@ -10,6 +12,11 @@ import { getPaymentsListWithPagination } from "@/services/payments";
  * - limit: Items per page (default: 10)
  * - bookingId: Filter by booking ID (optional)
  * - customerId: Filter by customer ID (optional)
+ * - paymentStatus: Filter by payment status (optional)
+ * - paymentType: Filter by payment type (optional)
+ * - dateField: Date field for range filter (`created_at` | `paid_at`)
+ * - dateFrom: Start datetime for selected dateField (optional, ISO)
+ * - dateTo: End datetime for selected dateField (optional, ISO)
  */
 export async function GET(req: NextRequest) {
   try {
@@ -19,6 +26,18 @@ export async function GET(req: NextRequest) {
     const limit = Number(searchParams.get("limit") || 10);
     const bookingId = searchParams.get("bookingId") || null;
     const customerId = searchParams.get("customerId") || null;
+    const paymentStatus = (searchParams.get("paymentStatus") || null) as PaymentStatus | null;
+    const paymentTypeRaw = searchParams.get("paymentType") || null;
+    const paymentTypes = Object.values(PAYMENT_TYPE) as PaymentType[];
+    const paymentType =
+      paymentTypeRaw && paymentTypes.includes(paymentTypeRaw as PaymentType)
+        ? (paymentTypeRaw as PaymentType)
+        : null;
+    const dateFieldRaw = searchParams.get("dateField") || "created_at";
+    const dateField =
+      dateFieldRaw === "paid_at" ? "paid_at" : "created_at";
+    const dateFrom = searchParams.get("dateFrom") || null;
+    const dateTo = searchParams.get("dateTo") || null;
 
     if (page < 1 || limit < 1) {
       return NextResponse.json(
@@ -33,6 +52,11 @@ export async function GET(req: NextRequest) {
       limit,
       bookingId,
       customerId,
+      paymentStatus,
+      paymentType,
+      dateField,
+      dateFrom,
+      dateTo,
     });
 
     return NextResponse.json(response);

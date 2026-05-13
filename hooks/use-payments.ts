@@ -18,12 +18,22 @@ export function usePayments({
   page = 1,
   limit = 10,
   bookingId = null,
+  paymentStatus = null,
+  paymentType = null,
+  dateField = "created_at",
+  dateFrom = null,
+  dateTo = null,
   fallbackData,
 }: {
   search?: string;
   page?: number;
   limit?: number;
   bookingId?: string | null;
+  paymentStatus?: string | null;
+  paymentType?: string | null;
+  dateField?: "created_at" | "paid_at";
+  dateFrom?: string | null;
+  dateTo?: string | null;
   fallbackData?: PaymentsResponse;
 }) {
 
@@ -37,6 +47,21 @@ export function usePayments({
   }
   if (bookingId) {
     params.append("bookingId", bookingId);
+  }
+  if (paymentStatus) {
+    params.append("paymentStatus", paymentStatus);
+  }
+  if (paymentType) {
+    params.append("paymentType", paymentType);
+  }
+  if (dateField) {
+    params.append("dateField", dateField);
+  }
+  if (dateFrom) {
+    params.append("dateFrom", dateFrom);
+  }
+  if (dateTo) {
+    params.append("dateTo", dateTo);
   }
 
   const config: SWRConfiguration<PaymentsResponse> = {

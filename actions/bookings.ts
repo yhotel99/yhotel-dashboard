@@ -480,7 +480,7 @@ export type CancelBookingActionOptions = {
 };
 
 /**
- * Cancel booking (update status and cancel pending payments)
+ * Cancel booking (update status, cancel pending payments, exclude paid payments from reports)
  */
 export async function cancelBookingAction(
   bookingId: string,

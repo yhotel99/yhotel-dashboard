@@ -131,6 +131,7 @@ const PAYMENT_METHOD_COLORS = [
 
 // Types for API responses
 type SummaryResponse = {
+  grossRevenueByPaidAt: number;
   revenueByCheckIn: number;
   bookingsByCheckIn: number;
   occupancyPctFromRoomNights: number;
@@ -292,6 +293,7 @@ export function SystemReports() {
 
   // Derived state with safe defaults - ensure arrays are always arrays
   const summaryStats = {
+    grossRevenueByPaidAt: summaryData?.grossRevenueByPaidAt ?? 0,
     revenueByCheckIn: summaryData?.revenueByCheckIn ?? 0,
     bookingsByCheckIn: summaryData?.bookingsByCheckIn ?? 0,
     occupancyPctFromRoomNights:
@@ -373,7 +375,11 @@ export function SystemReports() {
     const summaryData = [
       ["Chỉ số", "Giá trị"],
       [
-        "Tổng thu (theo ngày check-in)",
+        "Tổng thu (Gross, theo ngày thanh toán — paid_at)",
+        formatCurrency(summaryStats.grossRevenueByPaidAt),
+      ],
+      [
+        "Doanh thu booking (theo ngày check-in, final/total)",
         formatCurrency(summaryStats.revenueByCheckIn),
       ],
       [
@@ -572,7 +578,7 @@ export function SystemReports() {
                 🟩 Tổng thu (Gross)
               </CardTitle>
               <CardDescription className="text-xs pt-1">
-                Theo ngày check-in · không phải doanh thu kế toán theo thanh toán
+                Tổng số tiền đã thu (paid), theo mốc paid_at trong kỳ
               </CardDescription>
             </div>
             <div className="rounded-full bg-green-500/10 p-2">
@@ -581,7 +587,7 @@ export function SystemReports() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {formatCurrency(summaryStats.revenueByCheckIn)}
+              {formatCurrency(summaryStats.grossRevenueByPaidAt)}
             </div>
           </CardContent>
         </Card>

@@ -7,11 +7,11 @@ import type {
   PaymentType,
   PaymentMethod,
   PaymentStatus,
+  PaymentReportingStatus,
   PaymentSearchRow,
   PaymentsResponse,
 } from "@/lib/types";
-import { PAYMENT_STATUS, PAYMENT_TYPE } from "@/lib/constants";
-import { enrichRowsWithBookingRoomItems } from "@/services/enrich-booking-rooms";
+import { PAYMENT_STATUS, PAYMENT_TYPE, REPORTING_STATUS } from "@/lib/constants";
 
 /**
  * Search payments with pagination and search
@@ -130,6 +130,10 @@ export async function createPayment(input: {
         payment_type: input.payment_type,
         payment_method: input.payment_method || "pay_at_hotel",
         payment_status: input.payment_status || "pending",
+        reporting_status:
+          input.payment_status === PAYMENT_STATUS.PAID
+            ? REPORTING_STATUS.INCLUDED
+            : REPORTING_STATUS.EXCLUDED,
       })
       .select()
       .single();
@@ -161,6 +165,7 @@ export async function updatePaymentStatus(
     const supabase = await createClient();
     const updateData: {
       payment_status: string;
+      reporting_status?: PaymentReportingStatus;
       paid_at?: string | null;
     } = {
       payment_status: status,
@@ -168,8 +173,12 @@ export async function updatePaymentStatus(
 
     if (status === "paid" && paidAt) {
       updateData.paid_at = paidAt;
-    } else if (status !== "paid") {
+      updateData.reporting_status = REPORTING_STATUS.INCLUDED;
+    } else if (status === "paid") {
+      updateData.reporting_status = REPORTING_STATUS.INCLUDED;
+    } else {
       updateData.paid_at = null;
+      updateData.reporting_status = REPORTING_STATUS.EXCLUDED;
     }
 
     const { error } = await supabase
@@ -204,6 +213,7 @@ export async function updatePaymentStatusByBookingId(
     const supabase = await createClient();
     const updateData: {
       payment_status: string;
+      reporting_status?: PaymentReportingStatus;
       paid_at?: string | null;
     } = {
       payment_status: status,
@@ -211,8 +221,12 @@ export async function updatePaymentStatusByBookingId(
 
     if (status === "paid" && paidAt) {
       updateData.paid_at = paidAt;
-    } else if (status !== "paid") {
+      updateData.reporting_status = REPORTING_STATUS.INCLUDED;
+    } else if (status === "paid") {
+      updateData.reporting_status = REPORTING_STATUS.INCLUDED;
+    } else {
       updateData.paid_at = null;
+      updateData.reporting_status = REPORTING_STATUS.EXCLUDED;
     }
 
     const { error } = await supabase
@@ -292,6 +306,7 @@ export async function markAdvancePaymentAsPaid(
       .update({
         payment_status: PAYMENT_STATUS.PAID,
         paid_at: now,
+        reporting_status: REPORTING_STATUS.INCLUDED,
       })
       .eq("booking_id", bookingId)
       .eq("payment_type", PAYMENT_TYPE.ADVANCE_PAYMENT);
@@ -348,12 +363,22 @@ export async function getPaymentsListWithPagination({
   limit = 10,
   bookingId,
   customerId,
+  paymentStatus,
+  paymentType,
+  dateField,
+  dateFrom,
+  dateTo,
 }: {
   search?: string | null;
   page?: number;
   limit?: number;
   bookingId?: string | null;
   customerId?: string | null;
+  paymentStatus?: PaymentStatus | null;
+  paymentType?: PaymentType | null;
+  dateField?: "created_at" | "paid_at" | null;
+  dateFrom?: string | null;
+  dateTo?: string | null;
   }): Promise<PaymentsResponse> {
   try {
     // Validate pagination parameters
@@ -366,32 +391,29 @@ export async function getPaymentsListWithPagination({
     // Use RPC functions for search
     const trimmedSearch = search?.trim() || null;
 
-    // Call both RPC functions in parallel
-    const [paymentsResult, countResult] = await Promise.all([
-      supabase.rpc("search_payments", {
-        p_search: trimmedSearch,
-        p_page: page,
-        p_limit: limit,
-        p_customer_id: customerId || null,
-        p_booking_id: bookingId || null,
-      }),
-      supabase.rpc("count_payments", {
-        p_search: trimmedSearch,
-        p_customer_id: customerId || null,
-        p_booking_id: bookingId || null,
-      }),
-    ]);
+    // Single RPC: rows + total_count
+    const paymentsResult = await supabase.rpc("search_payments", {
+      p_search: trimmedSearch,
+      p_page: page,
+      p_limit: limit,
+      p_customer_id: customerId || null,
+      p_booking_id: bookingId || null,
+      p_payment_status: paymentStatus || null,
+      p_payment_type: paymentType || null,
+      p_date_field: dateField || "created_at",
+      p_date_from: dateFrom || null,
+      p_date_to: dateTo || null,
+    });
 
     if (paymentsResult.error) {
       throw new Error(paymentsResult.error.message);
     }
 
-    if (countResult.error) {
-      throw new Error(countResult.error.message);
-    }
-
     const searchRows = (paymentsResult.data || []) as PaymentSearchRow[];
-    const total = (countResult.data as number) || 0;
+    const total =
+      searchRows.length > 0
+        ? Number(searchRows[0].total_count || 0)
+        : 0;
 
     // Map payment_search_row to PaymentWithBooking format
     const paymentsData: PaymentWithBooking[] = searchRows.map((row) => ({
@@ -402,6 +424,11 @@ export async function getPaymentsListWithPagination({
       payment_type: (row.payment_type || "room_charge") as PaymentType,
       payment_method: row.payment_method as PaymentMethod,
       payment_status: row.payment_status as PaymentStatus,
+      reporting_status:
+        (row.reporting_status as PaymentReportingStatus) ??
+        (row.payment_status === PAYMENT_STATUS.PAID
+          ? REPORTING_STATUS.INCLUDED
+          : REPORTING_STATUS.EXCLUDED),
       paid_at: row.paid_at,
       verified_at: row.verified_at,
       refunded_at: row.refunded_at,
@@ -416,20 +443,21 @@ export async function getPaymentsListWithPagination({
           : null,
         rooms:
           row.rooms != null
-            ? { name: row.rooms.name ?? "" }
+            ? {
+                name: row.rooms.name ?? "",
+                items: (row.rooms.items ?? []).map((item) => ({
+                  id: item.id,
+                  name: item.name ?? undefined,
+                })),
+              }
             : null,
       },
     }));
 
-    const withRoomIds = await enrichRowsWithBookingRoomItems(
-      supabase,
-      paymentsData
-    );
-
     const totalPages = Math.ceil(total / limit);
 
     return {
-      data: withRoomIds,
+      data: paymentsData,
       pagination: {
         total,
         page,

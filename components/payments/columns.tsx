@@ -9,7 +9,11 @@ import {
 import type { PaymentMethod, PaymentWithBooking } from "@/lib/types";
 import { PaymentStatusBadge } from "./status";
 import { PaymentDetailDialog } from "./detail-dialog";
-import { paymentMethodLabels, paymentTypeLabels } from "@/lib/constants";
+import {
+  paymentMethodLabels,
+  paymentTypeLabels,
+  REPORTING_STATUS,
+} from "@/lib/constants";
 import {
   Tooltip,
   TooltipContent,
@@ -25,6 +29,7 @@ export const PAYMENTS_COLUMNS = {
   PAYMENT_TYPE: { accessorKey: "Loại thanh toán", header: "Loại thanh toán" },
   PAYMENT_METHOD: { accessorKey: "Phương thức thanh toán", header: "Phương thức thanh toán" },
   PAYMENT_STATUS: { accessorKey: "Trạng thái", header: "Trạng thái" },
+  REPORTING_STATUS: { accessorKey: "Reporting", header: "Reporting" },
   PAID_AT: { accessorKey: "Ngày thanh toán", header: "Ngày thanh toán" },
   CREATED_AT: { accessorKey: "Ngày tạo", header: "Ngày tạo" },
   ACTIONS: { accessorKey: "Hành động", header: "" },
@@ -127,6 +132,20 @@ export function createPaymentsColumns(options?: {
       ),
       size: 130,
       minSize: 120,
+    },
+    {
+      accessorKey: PAYMENTS_COLUMNS.REPORTING_STATUS.accessorKey,
+      header: PAYMENTS_COLUMNS.REPORTING_STATUS.header,
+      cell: ({ row }) => (
+        <Badge variant="outline">
+          {row.original.reporting_status === REPORTING_STATUS.INCLUDED
+            ? "Included"
+            : "Excluded"}
+        </Badge>
+      ),
+      size: 110,
+      minSize: 100,
+      maxSize: 130,
     },
     {
       accessorKey: PAYMENTS_COLUMNS.PAID_AT.accessorKey,
