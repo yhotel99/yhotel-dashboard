@@ -1,7 +1,8 @@
 import { Suspense } from "react";
 import { PaymentsContent } from "@/components/payments/payments-content";
-import type { PageProps } from "@/lib/types";
+import type { PageProps, PaymentStatus, PaymentType } from "@/lib/types";
 import { getPaymentsListWithPagination } from "@/services/payments";
+import { PAYMENT_STATUS, PAYMENT_TYPE } from "@/lib/constants";
 
 export default async function PaymentsPage({ searchParams }: PageProps) {
   const params = await searchParams;
@@ -9,11 +10,37 @@ export default async function PaymentsPage({ searchParams }: PageProps) {
   const page = params.page ? Number(params.page) : 1;
   const limit = params.limit ? Number(params.limit) : 10;
   const search = params.search ? String(params.search) : "";
+  const paymentStatus = params.paymentStatus
+    ? String(params.paymentStatus)
+    : null;
+  const paymentType = params.paymentType ? String(params.paymentType) : null;
+  const dateFieldRaw = params.dateField ? String(params.dateField) : "created_at";
+  const dateField = dateFieldRaw === "paid_at" ? "paid_at" : "created_at";
+  const dateFrom = params.dateFrom ? String(params.dateFrom) : null;
+  const dateTo = params.dateTo ? String(params.dateTo) : null;
+
+  const paymentStatuses = Object.values(PAYMENT_STATUS) as PaymentStatus[];
+  const paymentTypes = Object.values(PAYMENT_TYPE) as PaymentType[];
+  const normalizedPaymentStatus =
+    paymentStatus &&
+    paymentStatuses.includes(paymentStatus as PaymentStatus)
+      ? (paymentStatus as PaymentStatus)
+      : null;
+  const normalizedPaymentType =
+    paymentType &&
+    paymentTypes.includes(paymentType as PaymentType)
+      ? (paymentType as PaymentType)
+      : null;
 
   const initialData = await getPaymentsListWithPagination({
     page,
     limit,
     search,
+    paymentStatus: normalizedPaymentStatus,
+    paymentType: normalizedPaymentType,
+    dateField,
+    dateFrom,
+    dateTo,
   });
 
   return (

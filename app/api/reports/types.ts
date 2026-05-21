@@ -7,16 +7,24 @@
  * Summary KPIs for the selected `[fromDate, toDate]` window.
  *
  * **Mixed time models (by design for ops dashboards):**
- * - `revenueByCheckIn` / `bookingsByCheckIn` — event-based on `bookings.check_in`
+ * - `grossRevenueByPaidAt` — cash-like gross: sum of `payments.amount` with
+ *   `payment_status = paid` + `reporting_status = included` and `paid_at` in the window
+ * - `revenueByCheckIn` / `bookingsByCheckIn` — booking value / count by `bookings.check_in`
  * - `refundCashflowByUpdatedAt` — transaction-based on `refund_requests.updated_at`
  * - `occupancyPctFromRoomNights` — night occupancy (overnight room-nights only)
  * - `roomUsage` / `roomTurnoverRate` — operational room usage per day, includes short stay + resale
  */
 export interface ReportSummary {
   /**
+   * Gross thu về theo ngày thanh toán: tổng `payments.amount` có
+   * `payment_status = paid` + `reporting_status = included` và `paid_at` trong khoảng lọc
+   * (tiền mặt / đã ghi nhận thanh toán tại thời điểm đó).
+   */
+  grossRevenueByPaidAt: number;
+  /**
    * Recognized booking revenue for the range: sum of `final_amount ?? total_amount` for
    * `REPORT_METRICS_BOOKING_STATUSES` bookings with `check_in` in the filter window.
-   * KPI / ops metric — not P&L by payment date.
+   * Khác `grossRevenueByPaidAt` (mốc check-in, không phải ngày paid_at).
    */
   revenueByCheckIn: number;
   /** Count of those same bookings (confirmed | checked_in | checked_out). */

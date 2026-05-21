@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { PAYMENT_STATUS, PAYMENT_TYPE } from "@/lib/constants";
+import { PAYMENT_STATUS, PAYMENT_TYPE, REPORTING_STATUS } from "@/lib/constants";
 import type { PaymentWithBooking } from "@/lib/types";
 import { logPaymentUpdate } from "@/lib/audit-helpers";
 
@@ -85,6 +85,7 @@ export async function markAdvancePaymentAsPaidAction(
       .update({
         payment_status: PAYMENT_STATUS.PAID,
         paid_at: now,
+        reporting_status: REPORTING_STATUS.INCLUDED,
       })
       .eq("booking_id", bookingId)
       .eq("payment_type", PAYMENT_TYPE.ADVANCE_PAYMENT);
@@ -105,7 +106,11 @@ export async function markAdvancePaymentAsPaidAction(
           user.id,
           user.email!,
           { payment_status: payment.payment_status },
-          { payment_status: PAYMENT_STATUS.PAID, paid_at: now },
+          {
+            payment_status: PAYMENT_STATUS.PAID,
+            paid_at: now,
+            reporting_status: REPORTING_STATUS.INCLUDED,
+          },
           { bookingId, paymentType: PAYMENT_TYPE.ADVANCE_PAYMENT }
         );
       }

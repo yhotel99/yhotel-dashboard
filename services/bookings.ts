@@ -12,6 +12,7 @@ import {
   PAYMENT_METHOD,
   PAYMENT_STATUS,
   PAYMENT_TYPE,
+  REPORTING_STATUS,
 } from "@/lib/constants";
 
 /**
@@ -445,6 +446,7 @@ export async function confirmBooking(
       .update({
         payment_status: PAYMENT_STATUS.PAID,
         paid_at: now,
+        reporting_status: REPORTING_STATUS.INCLUDED,
       })
       .eq("booking_id", bookingId);
 
@@ -503,13 +505,29 @@ export async function cancelBooking(bookingId: string): Promise<BookingRecord> {
     if (paymentsToUpdate.length > 0) {
       const { error: updateError } = await supabase
         .from("payments")
-        .update({ payment_status: PAYMENT_STATUS.CANCELLED })
+        .update({
+          payment_status: PAYMENT_STATUS.CANCELLED,
+          reporting_status: REPORTING_STATUS.EXCLUDED,
+        })
         .in("id", paymentsToUpdate);
 
       if (updateError) {
         console.error("Error updating payment status:", updateError);
         // Don't throw error here, booking is already cancelled
         // Just log the error
+      }
+    }
+
+    const paidPaymentIds = payments
+      .filter((p) => p.payment_status === PAYMENT_STATUS.PAID)
+      .map((p) => p.id);
+    if (paidPaymentIds.length > 0) {
+      const { error: reportingError } = await supabase
+        .from("payments")
+        .update({ reporting_status: REPORTING_STATUS.EXCLUDED })
+        .in("id", paidPaymentIds);
+      if (reportingError) {
+        console.error("Error updating paid payments reporting status:", reportingError);
       }
     }
 

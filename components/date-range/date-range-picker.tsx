@@ -36,6 +36,8 @@ export interface DateRangePickerProps {
   locale?: string;
   /** Option for showing compare feature */
   showCompare?: boolean;
+  /** Render trigger button full width */
+  fullWidth?: boolean;
 }
 
 const formatDate = (date: Date, locale: string = "en-us"): string => {
@@ -93,6 +95,7 @@ export const DateRangePicker: FC<DateRangePickerProps> = ({
   align = "end",
   locale = "en-US",
   showCompare = true,
+  fullWidth = false,
 }): JSX.Element => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -339,10 +342,14 @@ export const DateRangePicker: FC<DateRangePickerProps> = ({
       }}
     >
       <PopoverTrigger asChild>
-        <Button size={"lg"} variant="outline">
-          <div className="text-right">
+        <Button
+          size={"lg"}
+          variant="outline"
+          className={cn(fullWidth && "w-full justify-between")}
+        >
+          <div className={cn("text-right", fullWidth && "flex-1 min-w-0")}>
             <div className="py-1">
-              <div>{`${formatDate(range.from, locale)}${
+              <div className={cn(fullWidth && "truncate")}>{`${formatDate(range.from, locale)}${
                 range.to != null ? " - " + formatDate(range.to, locale) : ""
               }`}</div>
             </div>

@@ -10,6 +10,7 @@ import {
   BOOKING_STATUS,
   CUSTOMER_SOURCE,
   PAYMENT_METHOD,
+  REPORTING_STATUS,
   PAYMENT_STATUS,
   PAYMENT_TYPE,
   REPORT_METRICS_BOOKING_STATUSES,
@@ -336,6 +337,7 @@ export async function GET(req: NextRequest) {
               "amount, paid_at, payment_status, booking_id, payment_type, payment_method"
             )
             .eq("payment_status", PAYMENT_STATUS.PAID)
+            .eq("reporting_status", REPORTING_STATUS.INCLUDED)
             .not("paid_at", "is", null)
             .gte("paid_at", fromISO)
             .lte("paid_at", toISO)
@@ -348,6 +350,7 @@ export async function GET(req: NextRequest) {
               "amount, paid_at, payment_status, booking_id, payment_type, payment_method"
             )
             .eq("payment_status", PAYMENT_STATUS.PAID)
+            .eq("reporting_status", REPORTING_STATUS.INCLUDED)
             .not("paid_at", "is", null)
             .gte("paid_at", prevFromISO)
             .lte("paid_at", prevToISO)
@@ -358,6 +361,7 @@ export async function GET(req: NextRequest) {
             .from("payments")
             .select("amount, payment_status, booking_id")
             .eq("payment_status", PAYMENT_STATUS.PAID)
+            .eq("reporting_status", REPORTING_STATUS.INCLUDED)
             .in("booking_id", candIds)
         : { data: [] as Record<string, unknown>[] },
       candPrevIds.length
@@ -365,6 +369,7 @@ export async function GET(req: NextRequest) {
             .from("payments")
             .select("amount, payment_status, booking_id")
             .eq("payment_status", PAYMENT_STATUS.PAID)
+            .eq("reporting_status", REPORTING_STATUS.INCLUDED)
             .in("booking_id", candPrevIds)
         : { data: [] as Record<string, unknown>[] },
     ]);

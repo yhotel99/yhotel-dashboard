@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import {
+  PAYMENT_STATUS,
+  REPORTING_STATUS,
   REFUND_REQUEST_STATUS,
   REPORT_METRICS_BOOKING_STATUSES,
   ROOM_STATUS,
@@ -19,6 +21,10 @@ import {
  *
  * Returns **mixed operational metrics** (different time bases). See `ReportSummary` JSDoc.
  * Query: `fromDate`, `toDate` (ISO).
+ *
+ * Gross revenue on the dashboard uses `grossRevenueByPaidAt` (sum of paid+included
+ * `payments.amount` with `paid_at` in the window). `revenueByCheckIn` is booking value
+ * by `check_in` date.
  */
 export async function GET(req: NextRequest) {
   try {
@@ -50,6 +56,7 @@ export async function GET(req: NextRequest) {
 
     const [
       { data: currentBookings, error: bookingsError },
+      { data: paidPaymentsInPeriod, error: paymentsSummaryError },
       { data: currentRefunds, error: refundsError },
       { data: totalRooms, error: roomsError },
       { data: currentBookingsForOccupancy, error: occupancyError },
@@ -62,6 +69,15 @@ export async function GET(req: NextRequest) {
         .in("status", [...REPORT_METRICS_BOOKING_STATUSES])
         .gte("check_in", fromISO)
         .lte("check_in", toISO),
+      // (1b) Gross cash collected — payments marked paid with paid_at in window
+      supabase
+        .from("payments")
+        .select("amount")
+        .eq("payment_status", PAYMENT_STATUS.PAID)
+        .eq("reporting_status", REPORTING_STATUS.INCLUDED)
+        .not("paid_at", "is", null)
+        .gte("paid_at", fromISO)
+        .lte("paid_at", toISO),
       // (2) Refunds — transaction basis: updated_at in window (cashflow / ops)
       supabase
         .from("refund_requests")
@@ -86,7 +102,13 @@ export async function GET(req: NextRequest) {
         .gt("check_out", fromISO),
     ]);
 
-    if (bookingsError || refundsError || roomsError || occupancyError) {
+    if (
+      bookingsError ||
+      paymentsSummaryError ||
+      refundsError ||
+      roomsError ||
+      occupancyError
+    ) {
       return NextResponse.json(
         { error: "Error fetching report data" },
         { status: 500 }
@@ -98,6 +120,14 @@ export async function GET(req: NextRequest) {
         (sum, b) => sum + parseBookingRevenueAmount(b),
         0
       ) || 0;
+    const grossRevenueByPaidAt =
+      paidPaymentsInPeriod?.reduce((sum, p) => {
+        const val =
+          typeof p.amount === "string"
+            ? parseFloat(p.amount)
+            : p.amount || 0;
+        return sum + (isNaN(val) ? 0 : val);
+      }, 0) || 0;
     const bookingsByCheckIn = currentBookings?.length || 0;
     const refundCashflowByUpdatedAt =
       currentRefunds?.reduce(
@@ -142,6 +172,9 @@ export async function GET(req: NextRequest) {
 
     const summary: ReportSummary = {
       revenueByCheckIn: isNaN(revenueByCheckIn) ? 0 : revenueByCheckIn,
+      grossRevenueByPaidAt: isNaN(grossRevenueByPaidAt)
+        ? 0
+        : grossRevenueByPaidAt,
       bookingsByCheckIn: isNaN(bookingsByCheckIn) ? 0 : bookingsByCheckIn,
       occupancyPctFromRoomNights: Math.min(
         Math.round(
