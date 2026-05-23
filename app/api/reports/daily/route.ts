@@ -8,6 +8,7 @@ import {
   totalRoomNightsInPeriod,
 } from "@/lib/reports/occupancy-room-nights";
 import { DailyReportData } from "../types";
+import { getReportBranchIdFromRequest } from "@/lib/reports/branch-filter";
 
 /**
  * GET /api/reports/daily
@@ -41,21 +42,25 @@ export async function GET(req: NextRequest) {
     const fromISO = fromDate.toISOString();
     const toISO = toDate.toISOString();
 
+    const branchId = await getReportBranchIdFromRequest(searchParams);
     const supabase = await createClient();
 
+    let bookingsQuery = supabase
+      .from("bookings")
+      .select(
+        "id, room_id, check_in, check_out, actual_check_out, status, final_amount, total_amount, booking_rooms(room_id)"
+      )
+      .is("deleted_at", null)
+      .in("status", [...REPORT_METRICS_BOOKING_STATUSES])
+      .lt("check_in", toISO)
+      .gt("check_out", fromISO);
+    if (branchId) bookingsQuery = bookingsQuery.eq("branch_id", branchId);
+
+    let roomsQuery = supabase.from("rooms").select("id, status").is("deleted_at", null);
+    if (branchId) roomsQuery = roomsQuery.eq("branch_id", branchId);
+
     const [{ data: bookings, error: bookingsError }, { data: rooms, error: roomsError }] =
-      await Promise.all([
-        supabase
-          .from("bookings")
-          .select(
-            "id, room_id, check_in, check_out, actual_check_out, status, final_amount, total_amount, booking_rooms(room_id)"
-          )
-          .is("deleted_at", null)
-          .in("status", [...REPORT_METRICS_BOOKING_STATUSES])
-          .lt("check_in", toISO)
-          .gt("check_out", fromISO),
-        supabase.from("rooms").select("id, status").is("deleted_at", null),
-      ]);
+      await Promise.all([bookingsQuery, roomsQuery]);
 
     if (bookingsError || roomsError) {
       return NextResponse.json(

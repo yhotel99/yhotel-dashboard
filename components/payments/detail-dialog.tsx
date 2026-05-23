@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,7 +11,10 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Eye } from "lucide-react";
+import { Building2, Eye } from "lucide-react";
+import { useBranch } from "@/contexts/branch-context";
+import { resolveBranchDisplay } from "@/lib/branch";
+import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { PaymentWithBooking } from "@/lib/types";
 import {
@@ -31,6 +35,11 @@ interface PaymentDetailDialogProps {
 }
 
 export function PaymentDetailDialog({ payment }: PaymentDetailDialogProps) {
+  const { branches } = useBranch();
+  const branchDisplay = useMemo(
+    () => resolveBranchDisplay(payment.branch_id, branches),
+    [payment.branch_id, branches]
+  );
   const { data: roomNumberById } = useRoomNumberLookup();
   const roomLabel = formatRoomNumbersWithTypeNameFallback(
     {
@@ -61,6 +70,29 @@ export function PaymentDetailDialog({ payment }: PaymentDetailDialogProps) {
         </DialogHeader>
         <ScrollArea className="max-h-[80vh]">
           <div className="space-y-4">
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <Building2 className="size-4" />
+                Chi nhánh
+              </h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Tên chi nhánh
+                  </p>
+                  <p className="text-sm font-semibold">{branchDisplay.name}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Mã chi nhánh
+                  </p>
+                  <p className="text-sm font-mono">{branchDisplay.code}</p>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">

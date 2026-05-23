@@ -23,6 +23,7 @@ export function usePayments({
   dateField = "created_at",
   dateFrom = null,
   dateTo = null,
+  branchId = null,
   fallbackData,
 }: {
   search?: string;
@@ -34,6 +35,7 @@ export function usePayments({
   dateField?: "created_at" | "paid_at";
   dateFrom?: string | null;
   dateTo?: string | null;
+  branchId?: string | null;
   fallbackData?: PaymentsResponse;
 }) {
 
@@ -62,6 +64,9 @@ export function usePayments({
   }
   if (dateTo) {
     params.append("dateTo", dateTo);
+  }
+  if (branchId) {
+    params.append("branchId", branchId);
   }
 
   const config: SWRConfiguration<PaymentsResponse> = {

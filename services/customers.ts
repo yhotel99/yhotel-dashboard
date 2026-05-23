@@ -1,5 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Customer, PaginationMeta } from "@/lib/types";
+import {
+  getCurrentUserBranchScope,
+  resolveBranchFilterId,
+} from "@/lib/branch.server";
 
 /**
  * Get customers list with pagination (optimized with RPC)
@@ -16,10 +20,12 @@ export async function getCustomersListWithPagination({
   search,
   page = 1,
   limit = 10,
+  branchId = null,
 }: {
   search?: string | null;
   page?: number;
   limit?: number;
+  branchId?: string | null;
 }): Promise<{
   data: Customer[];
   pagination: PaginationMeta;
@@ -37,10 +43,14 @@ export async function getCustomersListWithPagination({
     const to = from + limit - 1;
 
     // 🔥 Call optimized RPC function (1 query instead of 41 queries)
+    const { scope } = await getCurrentUserBranchScope();
+    const p_branch_id = resolveBranchFilterId(scope, branchId);
+
     const { data, error } = await supabase.rpc("get_customers_with_stats", {
       p_search: search?.trim() || null,
       p_from: from,
       p_to: to,
+      p_branch_id,
     });
 
     if (error) {

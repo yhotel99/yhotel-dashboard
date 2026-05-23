@@ -9,8 +9,10 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { IconRefresh } from '@tabler/icons-react';
 import { useDebounce } from '@/hooks/use-debounce';
+import { useBranch } from '@/contexts/branch-context';
 
 export function AuditLogsContent() {
+  const { filterBranchId } = useBranch();
   const [activeTab, setActiveTab] = useState('all');
   const [entityId, setEntityId] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
@@ -79,8 +81,9 @@ export function AuditLogsContent() {
             </CardHeader>
             <CardContent>
               <AuditLogViewer 
-                key={`all-${refreshKey}-${debouncedEntityId}`}
+                key={`all-${refreshKey}-${debouncedEntityId}-${filterBranchId ?? "all"}`}
                 entityId={debouncedEntityId || undefined}
+                branchId={filterBranchId}
                 limit={20}
               />
             </CardContent>
@@ -95,9 +98,10 @@ export function AuditLogsContent() {
             </CardHeader>
             <CardContent>
               <AuditLogViewer 
-                key={`booking-${refreshKey}-${debouncedEntityId}`}
+                key={`booking-${refreshKey}-${debouncedEntityId}-${filterBranchId ?? "all"}`}
                 entityType="booking"
                 entityId={debouncedEntityId || undefined}
+                branchId={filterBranchId}
                 limit={20}
               />
             </CardContent>
@@ -112,9 +116,10 @@ export function AuditLogsContent() {
             </CardHeader>
             <CardContent>
               <AuditLogViewer 
-                key={`refund-${refreshKey}-${debouncedEntityId}`}
+                key={`refund-${refreshKey}-${debouncedEntityId}-${filterBranchId ?? "all"}`}
                 entityType="refund"
                 entityId={debouncedEntityId || undefined}
+                branchId={filterBranchId}
                 limit={20}
               />
             </CardContent>
@@ -129,9 +134,10 @@ export function AuditLogsContent() {
             </CardHeader>
             <CardContent>
               <AuditLogViewer 
-                key={`room-${refreshKey}-${debouncedEntityId}`}
+                key={`room-${refreshKey}-${debouncedEntityId}-${filterBranchId ?? "all"}`}
                 entityType="room"
                 entityId={debouncedEntityId || undefined}
+                branchId={filterBranchId}
                 limit={20}
               />
             </CardContent>
@@ -146,9 +152,10 @@ export function AuditLogsContent() {
             </CardHeader>
             <CardContent>
               <AuditLogViewer 
-                key={`payment-${refreshKey}-${debouncedEntityId}`}
+                key={`payment-${refreshKey}-${debouncedEntityId}-${filterBranchId ?? "all"}`}
                 entityType="payment"
                 entityId={debouncedEntityId || undefined}
+                branchId={filterBranchId}
                 limit={20}
               />
             </CardContent>

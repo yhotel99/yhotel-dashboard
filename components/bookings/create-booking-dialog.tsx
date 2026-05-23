@@ -31,6 +31,7 @@ import { Label } from "@/components/ui/label";
 import { IconSearch, IconPlus } from "@tabler/icons-react";
 import type { BookingInput, PaymentMethod } from "@/lib/types";
 import { useRooms } from "@/hooks/use-rooms";
+import { useBranch } from "@/contexts/branch-context";
 import { useSettings } from "@/hooks/use-settings";
 import { searchCustomersAction, createCustomerAction } from "@/actions/customers";
 import { validateVoucherForBooking } from "@/actions/vouchers";
@@ -189,10 +190,12 @@ export function CreateBookingDialog({
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchResultsRef = useRef<HTMLDivElement>(null);
   const lastSearchRef = useRef<string>("");
+  const { filterBranchId } = useBranch();
   const { rooms, mutate: refetch } = useRooms({
     page: 1,
     limit: 20,
     search: "",
+    branchId: filterBranchId,
   });
   const { settings } = useSettings();
   const debouncedSearch = useDebounce(customerSearch, 300);
@@ -222,14 +225,14 @@ export function CreateBookingDialog({
 
     lastSearchRef.current = trimmedSearch;
 
-    searchCustomersAction(trimmedSearch, 10).then((result) => {
+    searchCustomersAction(trimmedSearch, 10, filterBranchId).then((result) => {
       if (result.ok) {
         setSearchCustomers(result.data);
       } else {
         setSearchCustomers([]);
       }
     });
-  }, [debouncedSearch]);
+  }, [debouncedSearch, filterBranchId]);
 
   // Cùng ngày: check-in 00:00, check-out 12:00 (1 đêm). Nhiều ngày: 14:00 / 12:00
   const checkInISO = useMemo(
@@ -811,6 +814,9 @@ export function CreateBookingDialog({
                         const result = await validateVoucherForBooking({
                           code,
                           totalAmount: total,
+                          branchId:
+                            selectedRoom?.branch_id ?? filterBranchId,
+                          roomId: formValues.room_id || undefined,
                         });
                         if (!result.ok) {
                           setError(result.message);

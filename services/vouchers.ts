@@ -1,20 +1,28 @@
 import { createClient } from "@/lib/supabase/server";
 import type { PaginationMeta, Voucher, VouchersResponse } from "@/lib/types";
+import {
+  getCurrentUserBranchScope,
+  resolveBranchFilterId,
+} from "@/lib/branch.server";
 
 export async function getVouchersListWithPagination({
   search,
   page = 1,
   limit = 10,
+  branchId = null,
 }: {
   search?: string | null;
   page?: number;
   limit?: number;
+  branchId?: string | null;
 }): Promise<VouchersResponse> {
   if (page < 1 || limit < 1) {
     throw new Error("Page and limit must be greater than 0");
   }
 
   const supabase = await createClient();
+  const { scope } = await getCurrentUserBranchScope();
+  const filterBranchId = resolveBranchFilterId(scope, branchId);
   const from = (page - 1) * limit;
   const to = from + limit - 1;
 
@@ -22,6 +30,12 @@ export async function getVouchersListWithPagination({
     .from("vouchers")
     .select("*", { count: "exact" })
     .is("deleted_at", null);
+
+  if (filterBranchId) {
+    query = query.or(
+      `branch_id.is.null,branch_id.eq.${filterBranchId}`
+    );
+  }
 
   if (search?.trim()) {
     const term = `%${search.trim()}%`;

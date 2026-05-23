@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import type { PaginationMeta, Voucher } from "@/lib/types";
+import { getVouchersListWithPagination } from "@/services/vouchers";
 
 /**
  * GET /api/vouchers
@@ -8,6 +7,7 @@ import type { PaginationMeta, Voucher } from "@/lib/types";
  * - search: Search by code/name (optional)
  * - page: Page number (default: 1)
  * - limit: Items per page (default: 10)
+ * - branchId: Filter by branch (optional; includes global vouchers with null branch_id)
  */
 export async function GET(req: NextRequest) {
   try {
@@ -15,6 +15,7 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get("search") || "";
     const page = Number(searchParams.get("page") || 1);
     const limit = Number(searchParams.get("limit") || 10);
+    const branchId = searchParams.get("branchId") || null;
 
     if (page < 1 || limit < 1) {
       return NextResponse.json(
@@ -23,35 +24,12 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const supabase = await createClient();
-    const from = (page - 1) * limit;
-    const to = from + limit - 1;
-
-    let query = supabase
-      .from("vouchers")
-      .select("*", { count: "exact" })
-      .is("deleted_at", null);
-
-    if (search.trim() !== "") {
-      const term = `%${search.trim()}%`;
-      query = query.or(`code.ilike.${term},name.ilike.${term}`);
-    }
-
-    const { data, error, count } = await query
-      .order("created_at", { ascending: false })
-      .range(from, to);
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
-    }
-
-    const total = count || 0;
-    const totalPages = Math.ceil(total / limit);
-
-    const response: { data: Voucher[]; pagination: PaginationMeta } = {
-      data: (data || []) as Voucher[],
-      pagination: { total, page, limit, totalPages },
-    };
+    const response = await getVouchersListWithPagination({
+      search: search.trim() || null,
+      page,
+      limit,
+      branchId,
+    });
 
     return NextResponse.json(response);
   } catch (err) {
@@ -61,4 +39,3 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
-

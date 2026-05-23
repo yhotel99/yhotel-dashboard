@@ -22,6 +22,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { useBranch } from "@/contexts/branch-context";
+import { useAuth } from "@/contexts/auth-context";
+import { canViewAllBranches } from "@/lib/branch";
 
 type VoucherFormState = {
   code: string;
@@ -32,6 +35,7 @@ type VoucherFormState = {
   start_at: string;
   end_at: string;
   is_active: boolean;
+  branch_id: string;
 };
 
 function toInput(state: VoucherFormState): VoucherInput {
@@ -44,6 +48,7 @@ function toInput(state: VoucherFormState): VoucherInput {
     start_at: state.start_at ? new Date(state.start_at).toISOString() : null,
     end_at: state.end_at ? new Date(state.end_at).toISOString() : null,
     is_active: state.is_active,
+    branch_id: state.branch_id === "__global__" ? null : state.branch_id,
   };
 }
 
@@ -57,6 +62,7 @@ function fromVoucher(voucher?: Voucher | null): VoucherFormState {
     start_at: voucher?.start_at ? voucher.start_at.slice(0, 16) : "",
     end_at: voucher?.end_at ? voucher.end_at.slice(0, 16) : "",
     is_active: voucher?.is_active ?? true,
+    branch_id: voucher?.branch_id ?? "__global__",
   };
 }
 
@@ -73,9 +79,18 @@ export function VoucherFormDialog({
   initialVoucher?: Voucher | null;
   onSubmitVoucher: (input: VoucherInput) => Promise<void>;
 }) {
-  const [formValues, setFormValues] = useState<VoucherFormState>(() =>
-    fromVoucher(initialVoucher)
-  );
+  const { profile } = useAuth();
+  const { branches, filterBranchId } = useBranch();
+  const showBranchScope =
+    profile && canViewAllBranches(profile.role) && branches.length > 0;
+
+  const [formValues, setFormValues] = useState<VoucherFormState>(() => {
+    const base = fromVoucher(initialVoucher);
+    if (mode === "create" && filterBranchId) {
+      return { ...base, branch_id: filterBranchId };
+    }
+    return base;
+  });
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -197,6 +212,30 @@ export function VoucherFormDialog({
               onChange={handleInputChange("description")}
             />
           </div>
+
+          {showBranchScope ? (
+            <div className="space-y-2">
+              <Label>Phạm vi chi nhánh</Label>
+              <Select
+                value={formValues.branch_id}
+                onValueChange={(value) =>
+                  setFormValues((prev) => ({ ...prev, branch_id: value }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn phạm vi" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__global__">Toàn hệ thống</SelectItem>
+                  {branches.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">

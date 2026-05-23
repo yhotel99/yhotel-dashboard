@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { getAvailableRoomsAction } from "@/actions/rooms";
+import { useBranch } from "@/contexts/branch-context";
 import type { Room } from "@/lib/types";
 import {
   formatCurrency,
@@ -41,6 +42,7 @@ export function CheckAvailableRoomsDialog({
   open,
   onOpenChange,
 }: CheckAvailableRoomsDialogProps) {
+  const { filterBranchId } = useBranch();
   const [checkInDate, setCheckInDate] = useState("");
   const [checkOutDate, setCheckOutDate] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -71,7 +73,7 @@ export function CheckAvailableRoomsDialog({
 
     setIsLoading(true);
     setHasSearched(true);
-    const result = await getAvailableRoomsAction(checkInISO, checkOutISO);
+    const result = await getAvailableRoomsAction(checkInISO, checkOutISO, filterBranchId);
 
     if (result.ok) {
       setAvailableRooms(result.data);

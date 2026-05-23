@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getReportBranchIdFromRequest } from "@/lib/reports/branch-filter";
 
 export const dynamic = "force-dynamic";
 
@@ -8,25 +9,27 @@ export const dynamic = "force-dynamic";
  * Returns payment method statistics from payments table
  * Query params: fromDate, toDate (ISO strings)
  */
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const fromDate = searchParams.get("fromDate");
     const toDate = searchParams.get("toDate");
+    const branchId = await getReportBranchIdFromRequest(searchParams);
 
     const supabase = await createClient();
 
-    // Build query
     let query = supabase
       .from("payments")
-      .select("payment_method, created_at")
+      .select("payment_method, created_at");
 
-    // Apply date filters if provided
     if (fromDate) {
       query = query.gte("created_at", fromDate);
     }
     if (toDate) {
       query = query.lte("created_at", toDate);
+    }
+    if (branchId) {
+      query = query.eq("branch_id", branchId);
     }
 
     const { data, error } = await query;

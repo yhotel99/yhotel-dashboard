@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -17,8 +18,11 @@ import {
   AMENITIES_OPTIONS,
 } from "@/lib/constants";
 import { formatCurrency } from "@/lib/functions";
-import { IconHome, IconTag } from "@tabler/icons-react";
+import { resolveBranchDisplay } from "@/lib/branch";
+import { useBranch } from "@/contexts/branch-context";
+import { IconHome, IconTag, IconBuilding } from "@tabler/icons-react";
 import Image from "next/image";
+import { Separator } from "@/components/ui/separator";
 
 interface RoomDetailDialogProps {
   room: Room;
@@ -31,6 +35,12 @@ export function RoomDetailDialog({
   open,
   onOpenChange,
 }: RoomDetailDialogProps) {
+  const { branches } = useBranch();
+  const branchDisplay = useMemo(
+    () => resolveBranchDisplay(room.branch_id, branches),
+    [room.branch_id, branches]
+  );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl!">
@@ -46,6 +56,29 @@ export function RoomDetailDialog({
         </DialogHeader>
         <ScrollArea className="max-h-[80vh] scrollbar-hide pb-2">
           <div className="space-y-6">
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <IconBuilding className="size-4" />
+                Chi nhánh
+              </h3>
+              <div className="grid grid-cols-2 gap-4 pl-6">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Tên chi nhánh
+                  </p>
+                  <p className="text-sm font-semibold">{branchDisplay.name}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Mã chi nhánh
+                  </p>
+                  <p className="text-sm font-mono">{branchDisplay.code}</p>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
             {/* Room Info */}
             <div className="grid grid-cols-2 gap-4">
               <div>

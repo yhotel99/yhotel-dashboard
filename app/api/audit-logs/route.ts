@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
       endDate: searchParams.get('endDate') || undefined,
       page: parseInt(searchParams.get('page') || '1'),
       limit: parseInt(searchParams.get('limit') || '20'),
+      branchId: searchParams.get('branchId') || null,
     };
 
     const result = await getAuditLogs(filters);

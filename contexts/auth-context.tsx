@@ -3,11 +3,14 @@
 import { createContext, useContext, useState, ReactNode, useCallback } from "react";
 import type { User } from "@supabase/supabase-js";
 import type { Profile } from "@/lib/types";
+import { canViewAllBranches as checkCanViewAllBranches } from "@/lib/branch";
 
 interface AuthContextType {
   currentUser: User | null;
   profile: Profile | null;
   isLoading: boolean;
+  branchId: string | null;
+  canViewAllBranches: boolean;
   setAuthData: (user: User | null, profile: Profile | null) => void;
   setLoading: (loading: boolean) => void;
 }
@@ -36,8 +39,23 @@ export function AuthProvider({
     setIsLoading(loading);
   }, []);
 
+  const branchId = profile?.branch_id ?? null;
+  const canViewAllBranches = profile
+    ? checkCanViewAllBranches(profile.role)
+    : false;
+
   return (
-    <AuthContext.Provider value={{ currentUser, profile, isLoading, setAuthData, setLoading }}>
+    <AuthContext.Provider
+      value={{
+        currentUser,
+        profile,
+        isLoading,
+        branchId,
+        canViewAllBranches,
+        setAuthData,
+        setLoading,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

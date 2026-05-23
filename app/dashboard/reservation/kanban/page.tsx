@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { KanbanContent } from "@/components/reservation/kanban-content";
 import { getUpcomingCheckinsWithPagination } from "@/services/reservation";
+import { getCurrentUserBranchScope, resolveBranchFilterId } from "@/lib/branch.server";
 import type { PageProps } from "@/lib/types";
 
 export default async function KanbanPage({ searchParams }: PageProps) {
@@ -9,11 +10,15 @@ export default async function KanbanPage({ searchParams }: PageProps) {
   const page = params.page ? Number(params.page) : 1;
   const limit = params.limit ? Number(params.limit) : 50;
   const search = params.search ? String(params.search) : "";
+  const requestedBranchId = params.branchId ? String(params.branchId) : null;
+  const { scope } = await getCurrentUserBranchScope();
+  const branchId = resolveBranchFilterId(scope, requestedBranchId);
 
   const initialData = await getUpcomingCheckinsWithPagination({
     page,
     limit,
     search,
+    branchId,
   });
 
   return (

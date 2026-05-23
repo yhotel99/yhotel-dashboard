@@ -1,4 +1,5 @@
 import { createAuditLog } from '@/services/audit-logs';
+import { resolveAuditBranchId } from '@/lib/audit-branch';
 import { headers } from 'next/headers';
 
 // Helper to get request metadata
@@ -25,11 +26,18 @@ export async function logBookingUpdate(
   metadata?: Record<string, unknown>
 ) {
   const requestMeta = await getRequestMetadata();
-  
+  const branchId = await resolveAuditBranchId({
+    entityType: 'booking',
+    entityId: bookingId,
+    branchId:
+      typeof metadata?.branchId === 'string' ? metadata.branchId : null,
+  });
+
   return createAuditLog({
     action: 'booking.update',
     entityType: 'booking',
     entityId: bookingId,
+    branchId,
     userId,
     userEmail,
     changes: {
@@ -50,11 +58,18 @@ export async function logBookingCancel(
   metadata?: Record<string, unknown>
 ) {
   const requestMeta = await getRequestMetadata();
-  
+  const branchId = await resolveAuditBranchId({
+    entityType: 'booking',
+    entityId: bookingId,
+    branchId:
+      typeof metadata?.branchId === 'string' ? metadata.branchId : null,
+  });
+
   return createAuditLog({
     action: 'booking.cancel',
     entityType: 'booking',
     entityId: bookingId,
+    branchId,
     userId,
     userEmail,
     metadata: {
@@ -73,11 +88,18 @@ export async function logBookingCreate(
   metadata?: Record<string, unknown>
 ) {
   const requestMeta = await getRequestMetadata();
+  const branchId = await resolveAuditBranchId({
+    entityType: 'booking',
+    entityId: bookingId,
+    branchId:
+      typeof metadata?.branchId === 'string' ? metadata.branchId : null,
+  });
 
   return createAuditLog({
     action: 'booking.create',
     entityType: 'booking',
     entityId: bookingId,
+    branchId,
     userId,
     userEmail,
     metadata,
@@ -106,11 +128,20 @@ export async function logRefundProcess(
   } else {
     action = 'refund.refunded';
   }
-  
+
+  const branchId = await resolveAuditBranchId({
+    entityType: 'refund',
+    entityId: refundId,
+    bookingId,
+    branchId:
+      typeof metadata?.branchId === 'string' ? metadata.branchId : null,
+  });
+
   return createAuditLog({
     action,
     entityType: 'refund',
     entityId: refundId,
+    branchId,
     userId,
     userEmail,
     metadata: {
@@ -133,11 +164,18 @@ export async function logPriceUpdate(
   metadata?: Record<string, unknown>
 ) {
   const requestMeta = await getRequestMetadata();
-  
+  const branchId = await resolveAuditBranchId({
+    entityType: 'room',
+    entityId: roomId,
+    branchId:
+      typeof metadata?.branchId === 'string' ? metadata.branchId : null,
+  });
+
   return createAuditLog({
     action: 'price.update',
     entityType: 'room',
     entityId: roomId,
+    branchId,
     userId,
     userEmail,
     changes: {
@@ -163,11 +201,18 @@ export async function logPaymentUpdate(
   metadata?: Record<string, unknown>
 ) {
   const requestMeta = await getRequestMetadata();
-  
+  const branchId = await resolveAuditBranchId({
+    entityType: 'payment',
+    entityId: paymentId,
+    branchId:
+      typeof metadata?.branchId === 'string' ? metadata.branchId : null,
+  });
+
   return createAuditLog({
     action: 'payment.update',
     entityType: 'payment',
     entityId: paymentId,
+    branchId,
     userId,
     userEmail,
     changes: {

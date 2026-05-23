@@ -22,6 +22,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Badge } from "@/components/ui/badge";
 import { SlidersHorizontal } from "lucide-react";
 import { DateRangePicker } from "@/components/date-range/date-range-picker";
+import { useBranch } from "@/contexts/branch-context";
 
 const toDateParam = (date: Date) => {
   const y = date.getFullYear();
@@ -37,6 +38,11 @@ export function PaymentsContent({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { filterBranchId, branches } = useBranch();
+  const branchNameById = useMemo(
+    () => Object.fromEntries(branches.map((b) => [b.id, b.name])),
+    [branches]
+  );
   const [localSearch, setLocalSearch] = useState("");
 
   // Get pagination and search from URL params
@@ -166,6 +172,7 @@ export function PaymentsContent({
     dateField,
     dateFrom,
     dateTo,
+    branchId: filterBranchId,
     fallbackData: initialData,
   });
 
@@ -197,10 +204,11 @@ export function PaymentsContent({
 
   const columns = useMemo(
     () =>
-      createPaymentsColumns(
-        roomNumberById ? { roomNumberById } : undefined
-      ),
-    [roomNumberById]
+      createPaymentsColumns({
+        ...(roomNumberById ? { roomNumberById } : {}),
+        branchNameById,
+      }),
+    [roomNumberById, branchNameById]
   );
   const hasActiveFilters = Boolean(
     (paymentStatus && paymentStatus !== "all") ||
@@ -407,6 +415,7 @@ export function PaymentsContent({
           initialColumnVisibility={{
             [PAYMENTS_COLUMNS.PAYMENT_METHOD.accessorKey]: false,
             [PAYMENTS_COLUMNS.REPORTING_STATUS.accessorKey]: false,
+            [PAYMENTS_COLUMNS.BRANCH.accessorKey]: false,
           }}
         />
       </div>

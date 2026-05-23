@@ -1,5 +1,9 @@
 
 import { createClient } from "@/lib/supabase/server";
+import {
+  getCurrentUserBranchScope,
+  resolveBranchFilterId,
+} from "@/lib/branch.server";
 import type {
   PaymentLogWithBooking,
   PaymentLogsResponse,
@@ -17,10 +21,12 @@ export async function getPaymentLogsListWithPagination({
   search,
   page = 1,
   limit = 10,
+  branchId: requestedBranchId,
 }: {
   search?: string | null;
   page?: number;
   limit?: number;
+  branchId?: string | null;
 }): Promise<PaymentLogsResponse> {
   try {
     // Validate pagination parameters
@@ -29,18 +35,16 @@ export async function getPaymentLogsListWithPagination({
     }
 
     const supabase = await createClient();
+    const { scope } = await getCurrentUserBranchScope();
+    const branchId = resolveBranchFilterId(scope, requestedBranchId);
 
     // Calculate offset
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
-    // Build query with bookings join
-    const query = supabase
-      .from("payment_logs")
-      .select(
-        `
-        *,
-        bookings:booking_id (
+    const bookingsSelect = branchId
+      ? `bookings:booking_id!inner (
+          branch_id,
           customers:customer_id (
             full_name,
             phone
@@ -48,15 +52,30 @@ export async function getPaymentLogsListWithPagination({
           rooms:room_id (
             name
           )
-        )
-      `,
-        { count: "exact" }
-      );
+        )`
+      : `bookings:booking_id (
+          branch_id,
+          customers:customer_id (
+            full_name,
+            phone
+          ),
+          rooms:room_id (
+            name
+          )
+        )`;
+
+    let query = supabase
+      .from("payment_logs")
+      .select(`*, ${bookingsSelect}`, { count: "exact" });
+
+    if (branchId) {
+      query = query.eq("bookings.branch_id", branchId);
+    }
 
     // Apply search filter if provided
     if (search && search.trim() !== "") {
       const trimmedSearch = search.trim();
-      query.or(
+      query = query.or(
         `booking_code.ilike.%${trimmedSearch}%,transaction_id.ilike.%${trimmedSearch}%,content.ilike.%${trimmedSearch}%`
       );
     }

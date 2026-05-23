@@ -21,7 +21,10 @@ import {
   DollarSignIcon,
   ClockIcon,
   PhoneIcon,
+  Building2,
 } from "lucide-react";
+import { useBranch } from "@/contexts/branch-context";
+import { resolveBranchDisplay } from "@/lib/branch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
@@ -94,6 +97,12 @@ export function BookingDetailDialog({
   const advancePayment = getLatestPaymentByType(PAYMENT_TYPE.ADVANCE_PAYMENT);
   const roomChargePayment = getLatestPaymentByType(PAYMENT_TYPE.ROOM_CHARGE);
   const { settings } = useSettings();
+  const { branches } = useBranch();
+
+  const branchDisplay = useMemo(() => {
+    if (!booking) return { name: "—", code: "—" };
+    return resolveBranchDisplay(booking.branch_id, branches);
+  }, [booking, branches]);
 
   const pricingBreakdown = useMemo(() => {
     if (!booking || !roomsData || roomsData.length === 0) return [];
@@ -124,6 +133,20 @@ export function BookingDetailDialog({
     }).breakdown;
   }, [booking, roomsData, settings?.pricing_weekday_rates, settings?.pricing_holiday_periods]);
 
+  const bankInfo = useMemo(
+    () => ({
+      acc: settings?.bank_account_number?.trim() || BANK_ACCOUNT.ACC,
+      bank:
+        settings?.bank_bin?.trim() ||
+        settings?.bank_name?.trim() ||
+        BANK_ACCOUNT.BANK,
+      bankLabel: settings?.bank_name?.trim() || BANK_ACCOUNT.BANK,
+      accountName:
+        settings?.bank_account_owner?.trim() || BANK_ACCOUNT.ACCOUNT_NAME,
+    }),
+    [settings]
+  );
+
   if (!booking) return null;
 
   return (
@@ -144,6 +167,25 @@ export function BookingDetailDialog({
 
         <ScrollArea className="max-h-[70vh] pr-4 scrollbar-hide">
           <div className="space-y-6">
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Building2 className="size-5" />
+                Chi nhánh
+              </h3>
+              <div className="grid grid-cols-2 gap-4 pl-7">
+                <div>
+                  <p className="text-sm text-muted-foreground">Tên chi nhánh</p>
+                  <p className="font-medium">{branchDisplay.name}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Mã chi nhánh</p>
+                  <p className="font-medium font-mono">{branchDisplay.code}</p>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
             {/* Customer Information */}
             <div className="space-y-3">
               <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -402,8 +444,8 @@ export function BookingDetailDialog({
                     <div className="flex flex-col items-center gap-3">
                       <div className="bg-white p-3 rounded-lg shadow-md">
                         <Image
-                          src={`https://qr.sepay.vn/img?acc=${BANK_ACCOUNT.ACC
-                            }&bank=${BANK_ACCOUNT.BANK
+                          src={`https://qr.sepay.vn/img?acc=${bankInfo.acc
+                            }&bank=${bankInfo.bank
                             }&amount=${booking.final_amount ?? booking.total_amount
                             }&des=${encodeURIComponent(
                               booking.booking_code
@@ -425,15 +467,15 @@ export function BookingDetailDialog({
                       <div className="space-y-2">
                         <div className="flex items-start gap-2">
                           <span className="text-sm text-muted-foreground min-w-[100px]">Ngân hàng:</span>
-                          <span className="font-medium">{BANK_ACCOUNT.BANK}</span>
+                          <span className="font-medium">{bankInfo.bankLabel}</span>
                         </div>
                         <div className="flex items-start gap-2">
                           <span className="text-sm text-muted-foreground min-w-[100px]">Số tài khoản:</span>
-                          <span className="font-mono font-bold text-lg">{BANK_ACCOUNT.ACC}</span>
+                          <span className="font-mono font-bold text-lg">{bankInfo.acc}</span>
                         </div>
                         <div className="flex items-start gap-2">
                           <span className="text-sm text-muted-foreground min-w-[100px]">Chủ tài khoản:</span>
-                          <span className="font-medium">{BANK_ACCOUNT.ACCOUNT_NAME}</span>
+                          <span className="font-medium">{bankInfo.accountName}</span>
                         </div>
                         <div className="flex items-start gap-2">
                           <span className="text-sm text-muted-foreground min-w-[100px]">Số tiền:</span>

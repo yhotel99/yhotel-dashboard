@@ -16,10 +16,16 @@ import { createColumns, ROOMS_COLUMNS } from "@/components/rooms/columns";
 import { DeleteRoomDialog } from "@/components/rooms/delete-room-dialog";
 import { RoomDetailDialog } from "@/components/rooms/room-detail-dialog";
 import type { Room, RoomsResponse } from "@/lib/types";
+import { useBranch } from "@/contexts/branch-context";
 
 export function RoomsContent({ initialData }: { initialData: RoomsResponse }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { filterBranchId, branches } = useBranch();
+  const branchNameById = useMemo(
+    () => Object.fromEntries(branches.map((b) => [b.id, b.name])),
+    [branches]
+  );
 
   // Get page, limit, and search from URL search params
   const page = useMemo(() => {
@@ -82,6 +88,7 @@ export function RoomsContent({ initialData }: { initialData: RoomsResponse }) {
     search,
     page,
     limit,
+    branchId: filterBranchId,
     fallbackData: initialData,
   });
 
@@ -179,9 +186,10 @@ export function RoomsContent({ initialData }: { initialData: RoomsResponse }) {
       createColumns(
         handleDeleteClick,
         handleInlineStatusChange,
-        handleViewDetail
+        handleViewDetail,
+        { branchNameById }
       ),
-    [handleDeleteClick, handleInlineStatusChange, handleViewDetail]
+    [handleDeleteClick, handleInlineStatusChange, handleViewDetail, branchNameById]
   );
 
   return (
@@ -219,6 +227,7 @@ export function RoomsContent({ initialData }: { initialData: RoomsResponse }) {
           onSearchChange={setLocalSearch}
           initialColumnVisibility={{
             [ROOMS_COLUMNS.AMENITIES.accessorKey]: false,
+            [ROOMS_COLUMNS.BRANCH.accessorKey]: false,
           }}
         ></DataTable>
       </div>

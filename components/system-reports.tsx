@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { useBranch } from "@/contexts/branch-context";
 
 import {
   IconTrendingDown,
@@ -207,7 +208,22 @@ type PaymentsResponse = {
   };
 };
 
+function appendBranchId(url: string, branchId: string | null): string {
+  if (!branchId) return url;
+  const sep = url.includes("?") ? "&" : "?";
+  return `${url}${sep}branchId=${encodeURIComponent(branchId)}`;
+}
+
 export function SystemReports() {
+  const { scope, selectedBranchId } = useBranch();
+  const branchIdForFetch =
+    scope.mode === "single" ? scope.branchId : selectedBranchId;
+
+  const branchQ = useMemo(
+    () => (branchIdForFetch ? `&branchId=${encodeURIComponent(branchIdForFetch)}` : ""),
+    [branchIdForFetch]
+  );
+
   /** Mặc định: ngày 1 tháng này → hết ngày hôm nay (không kéo tới cuối tháng). */
   const getMonthToDateRange = () => {
     const now = new Date();
@@ -226,18 +242,23 @@ export function SystemReports() {
 
   const summaryUrl = `/api/reports/summary?fromDate=${encodeURIComponent(
     fromISO
-  )}&toDate=${encodeURIComponent(toISO)}`;
-  const monthlyUrl = `/api/reports/monthly?months=${monthRange === "6_months" ? "6" : "12"
-    }`;
-  const roomStatsUrl = "/api/reports/room-stats";
-  const customerSourcesUrl = "/api/reports/customer-sources";
-  const countryStatsUrl = "/api/reports/country-stats";
+  )}&toDate=${encodeURIComponent(toISO)}${branchQ}`;
+  const monthlyUrl = `/api/reports/monthly?months=${
+    monthRange === "6_months" ? "6" : "12"
+  }${branchQ}`;
+  const roomStatsUrl = `/api/reports/room-stats${branchQ ? `?${branchQ.slice(1)}` : ""}`;
+  const customerSourcesUrl = `/api/reports/customer-sources${
+    branchQ ? `?${branchQ.slice(1)}` : ""
+  }`;
+  const countryStatsUrl = `/api/reports/country-stats${
+    branchQ ? `?${branchQ.slice(1)}` : ""
+  }`;
   const paymentMethodsUrl = `/api/reports/payment-methods?fromDate=${encodeURIComponent(
     fromISO
-  )}&toDate=${encodeURIComponent(toISO)}`;
+  )}&toDate=${encodeURIComponent(toISO)}${branchQ}`;
   const usersKpiUrl = `/api/reports/users?fromDate=${encodeURIComponent(
     fromISO
-  )}&toDate=${encodeURIComponent(toISO)}`;
+  )}&toDate=${encodeURIComponent(toISO)}${branchQ}`;
 
   // Use SWR for all data fetching
   const {
@@ -273,7 +294,10 @@ export function SystemReports() {
     data: roomStatusData,
     isLoading: isLoadingRoomStatus,
     error: roomStatusError,
-  } = useSWR<RoomStatusResponse>("/api/reports/room-status", fetcher);
+  } = useSWR<RoomStatusResponse>(
+    appendBranchId("/api/reports/room-status", branchIdForFetch),
+    fetcher
+  );
   const {
     data: dailyOccupancyData,
     isLoading: isLoadingDailyOccupancy,
@@ -281,7 +305,7 @@ export function SystemReports() {
   } = useSWR<DailyOccupancyResponse>(
     `/api/reports/daily?fromDate=${encodeURIComponent(
       fromISO
-    )}&toDate=${encodeURIComponent(toISO)}`,
+    )}&toDate=${encodeURIComponent(toISO)}${branchQ}`,
     fetcher
   );
   const {
@@ -289,7 +313,10 @@ export function SystemReports() {
     isLoading: isLoadingUsersKpi,
   } = useSWR<UserKpiRow>(usersKpiUrl, fetcher);
   const { data: recentPaymentsData, isLoading: isLoadingRecentPayments } =
-    useSWR<PaymentsResponse>("/api/payments?page=1&limit=10", fetcher);
+    useSWR<PaymentsResponse>(
+      appendBranchId("/api/payments?page=1&limit=10", branchIdForFetch),
+      fetcher
+    );
 
   // Derived state with safe defaults - ensure arrays are always arrays
   const summaryStats = {

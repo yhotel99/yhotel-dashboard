@@ -11,6 +11,7 @@ import type {
 import { useRefundRequests } from "@/hooks/use-refund-requests";
 import { updateRefundRequestStatusAction } from "@/actions/refund-requests";
 import { useDebounce } from "@/hooks/use-debounce";
+import { useBranch } from "@/contexts/branch-context";
 import { RefundRequestDetailDialog } from "./refund-request-detail-dialog";
 import { createRefundRequestColumns } from "./columns";
 
@@ -22,6 +23,7 @@ export function RefundRequestsContent({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { filterBranchId } = useBranch();
   const [localSearch, setLocalSearch] = useState("");
   const [selectedRefundRequestId, setSelectedRefundRequestId] = useState<
     string | null
@@ -84,6 +86,7 @@ export function RefundRequestsContent({
       page,
       limit,
       search,
+      branchId: filterBranchId,
       fallbackData: initialData,
     });
 

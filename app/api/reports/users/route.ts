@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { UserBookingsKpiRow } from "../types";
+import { getReportBranchIdFromRequest } from "@/lib/reports/branch-filter";
 
 /**
  * GET /api/reports/users
@@ -33,14 +34,16 @@ export async function GET(req: NextRequest) {
     const toISO = toDate.toISOString();
 
     const supabase = await createClient();
+    const branchId = await getReportBranchIdFromRequest(searchParams);
 
-    // Fetch bookings created in range (created_at), grouped in app code
-    const { data: bookings, error: bookingsError } = await supabase
+    let bookingsQuery = supabase
       .from("bookings")
       .select("id, created_by, status")
       .is("deleted_at", null)
       .gte("created_at", fromISO)
       .lte("created_at", toISO);
+    if (branchId) bookingsQuery = bookingsQuery.eq("branch_id", branchId);
+    const { data: bookings, error: bookingsError } = await bookingsQuery;
 
     if (bookingsError) {
       return NextResponse.json({ error: bookingsError.message }, { status: 500 });

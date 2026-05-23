@@ -17,11 +17,13 @@ export function useProfiles(
     page = 1,
     limit = 10,
     search = "",
+    branchId = null,
     fallbackData,
   }: {
     page?: number;
     limit?: number;
     search?: string;
+    branchId?: string | null;
     fallbackData?: ProfilesResponse;
   }
 ) {
@@ -32,6 +34,9 @@ export function useProfiles(
   });
   if (search && search.trim() !== "") {
     params.append("search", search.trim());
+  }
+  if (branchId) {
+    params.append("branchId", branchId);
   }
 
   const config: SWRConfiguration<ProfilesResponse> = {

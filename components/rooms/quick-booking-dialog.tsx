@@ -568,6 +568,8 @@ export function QuickBookingDialog({
                       const result = await validateVoucherForBooking({
                         code,
                         totalAmount: total,
+                        branchId: room.branch_id,
+                        roomId: room.id,
                       });
                       if (!result.ok) {
                         setError(result.message);

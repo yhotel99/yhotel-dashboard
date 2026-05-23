@@ -15,6 +15,8 @@ import {
   type CreateUserFormValues,
   type EditUserFormValues,
 } from "@/components/users/user-form-dialog";
+import { useBranch } from "@/contexts/branch-context";
+import { DEFAULT_BRANCH_ID } from "@/lib/constants";
 
 export function UsersContent({
   initialData,
@@ -81,10 +83,17 @@ export function UsersContent({
     return () => clearTimeout(timer);
   }, [localSearch, limit, search, updateSearchParams]);
 
+  const { branches, filterBranchId } = useBranch();
+  const branchNameById = React.useMemo(
+    () => Object.fromEntries(branches.map((b) => [b.id, b.name])),
+    [branches]
+  );
+
   const { profiles, isLoading, pagination, refetch, mutate } = useProfiles({
     page,
     limit,
     search,
+    branchId: filterBranchId,
     fallbackData: initialData,
   });
 
@@ -144,6 +153,8 @@ export function UsersContent({
         phone: data.phone || null,
         role: data.role,
         status: data.status,
+        branch_id:
+          data.role === "staff" ? (data.branch_id ?? null) : null,
       });
       toast.success("Tạo người dùng thành công!", {
         description: `Người dùng ${data.full_name} đã được tạo thành công.`,
@@ -166,6 +177,10 @@ export function UsersContent({
         phone: data.phone || null,
         role: data.role,
         status: data.status,
+        branch_id:
+          data.role === "staff"
+            ? data.branch_id || DEFAULT_BRANCH_ID
+            : null,
       });
       toast.success("Cập nhật người dùng thành công!", {
         description: `Người dùng ${updatedProfile.full_name} đã được cập nhật thành công.`,
@@ -197,7 +212,7 @@ export function UsersContent({
 
       <div className="px-4 lg:px-6">
         <DataTable
-          columns={createColumns(handleEditUser)}
+          columns={createColumns(handleEditUser, branchNameById)}
           data={profiles}
           searchKey="full_name"
           searchPlaceholder="Tìm kiếm theo tên, email, số điện thoại..."
@@ -217,6 +232,7 @@ export function UsersContent({
       {openUserDialog && (
         <UserFormDialog
           profile={editingProfile}
+          branches={branches}
           open={openUserDialog}
           onOpenChange={(open) => {
             if (!open) {

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
 import { useBookings } from "@/hooks/use-bookings";
 import { useDebounce } from "@/hooks/use-debounce";
+import { useBranch } from "@/contexts/branch-context";
 import { StatusBadge } from "@/components/bookings/status";
 import { formatCurrency, formatDateOnly } from "@/lib/functions";
 import { BookingRecord } from "@/lib/types";
@@ -107,6 +108,9 @@ export default function CustomerBookingsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const customerId = params.id as string;
+  const { scope, selectedBranchId } = useBranch();
+  const branchIdForFetch =
+    scope.mode === "single" ? scope.branchId : selectedBranchId;
 
   const [localSearch, setLocalSearch] = useState("");
 
@@ -167,6 +171,7 @@ export default function CustomerBookingsPage() {
     limit,
     search,
     customerId: customerId || null,
+    branchId: branchIdForFetch,
   });
 
   const customerInfo = useMemo(() => {

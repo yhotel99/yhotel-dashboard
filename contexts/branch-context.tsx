@@ -1,0 +1,121 @@
+"use client";
+
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
+import type { Branch, BranchScope } from "@/lib/types";
+import { useAuth } from "@/contexts/auth-context";
+import { canViewAllBranches } from "@/lib/branch";
+import { DEFAULT_BRANCH_ID } from "@/lib/constants";
+
+const STORAGE_KEY = "yhotel_selected_branch_id";
+
+type BranchContextType = {
+  branches: Branch[];
+  scope: BranchScope;
+  selectedBranchId: string | null;
+  setSelectedBranchId: (id: string | null) => void;
+  /** @deprecated Prefer filterBranchId for list/report API queries. */
+  effectiveBranchId: string | null;
+  /** Branch id for API filters; null when admin views all branches. */
+  filterBranchId: string | null;
+  canSelectBranch: boolean;
+  setBranches: (branches: Branch[]) => void;
+};
+
+const BranchContext = createContext<BranchContextType | undefined>(undefined);
+
+export function BranchProvider({
+  children,
+  initialBranches = [],
+}: {
+  children: ReactNode;
+  initialBranches?: Branch[];
+}) {
+  const { profile } = useAuth();
+  const [branches, setBranches] = useState<Branch[]>(initialBranches);
+  const [selectedBranchId, setSelectedBranchIdState] = useState<string | null>(
+    null
+  );
+
+  const canSelectBranch = profile ? canViewAllBranches(profile.role) : false;
+
+  const scope: BranchScope = useMemo(() => {
+    if (!profile) return { mode: "all", branchId: null };
+    if (canSelectBranch) {
+      return selectedBranchId
+        ? { mode: "single", branchId: selectedBranchId }
+        : { mode: "all", branchId: null };
+    }
+    if (profile.branch_id) {
+      return { mode: "single", branchId: profile.branch_id };
+    }
+    return { mode: "all", branchId: null };
+  }, [profile, canSelectBranch, selectedBranchId]);
+
+  useEffect(() => {
+    if (!canSelectBranch) return;
+    const stored =
+      typeof window !== "undefined"
+        ? window.localStorage.getItem(STORAGE_KEY)
+        : null;
+    if (stored) {
+      setSelectedBranchIdState(stored);
+    }
+  }, [canSelectBranch]);
+
+  const setSelectedBranchId = useCallback(
+    (id: string | null) => {
+      setSelectedBranchIdState(id);
+      if (typeof window !== "undefined") {
+        if (id) {
+          window.localStorage.setItem(STORAGE_KEY, id);
+        } else {
+          window.localStorage.removeItem(STORAGE_KEY);
+        }
+      }
+    },
+    []
+  );
+
+  const filterBranchId = useMemo(() => {
+    if (scope.mode === "single") return scope.branchId;
+    return selectedBranchId;
+  }, [scope, selectedBranchId]);
+
+  const effectiveBranchId = useMemo(() => {
+    if (scope.mode === "single") return scope.branchId;
+    return selectedBranchId ?? DEFAULT_BRANCH_ID;
+  }, [scope, selectedBranchId]);
+
+  return (
+    <BranchContext.Provider
+      value={{
+        branches,
+        scope,
+        selectedBranchId,
+        setSelectedBranchId,
+        effectiveBranchId,
+        filterBranchId,
+        canSelectBranch,
+        setBranches,
+      }}
+    >
+      {children}
+    </BranchContext.Provider>
+  );
+}
+
+export function useBranch() {
+  const ctx = useContext(BranchContext);
+  if (!ctx) {
+    throw new Error("useBranch must be used inside BranchProvider");
+  }
+  return ctx;
+}

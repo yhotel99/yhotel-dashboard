@@ -1,4 +1,8 @@
 import { createClient } from '@/lib/supabase/server';
+import {
+  getCurrentUserBranchScope,
+  resolveBranchFilterId,
+} from '@/lib/branch.server';
 
 export type AuditAction = 
   | 'booking.update'
@@ -15,6 +19,7 @@ export interface AuditLogData {
   action: AuditAction;
   entityType: 'booking' | 'refund' | 'room' | 'payment';
   entityId: string;
+  branchId?: string | null;
   userId?: string;
   userEmail?: string;
   changes?: {
@@ -34,6 +39,7 @@ export async function createAuditLog(data: AuditLogData) {
       action: data.action,
       entity_type: data.entityType,
       entity_id: data.entityId,
+      branch_id: data.branchId ?? null,
       user_id: data.userId,
       user_email: data.userEmail,
       changes: data.changes,
@@ -70,9 +76,12 @@ export async function getAuditLogs(filters?: {
   endDate?: string;
   page?: number;
   limit?: number;
+  branchId?: string | null;
 }) {
   try {
     const supabase = await createClient();
+    const { scope } = await getCurrentUserBranchScope();
+    const branchId = resolveBranchFilterId(scope, filters?.branchId);
     const page = filters?.page || 1;
     const limit = filters?.limit || 20;
     const from = (page - 1) * limit;
@@ -82,6 +91,10 @@ export async function getAuditLogs(filters?: {
       .from('audit_logs')
       .select('*', { count: 'exact' })
       .order('created_at', { ascending: false });
+
+    if (branchId) {
+      query = query.eq('branch_id', branchId);
+    }
 
     if (filters?.entityType) {
       query = query.eq('entity_type', filters.entityType);

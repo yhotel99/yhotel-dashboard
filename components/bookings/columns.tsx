@@ -36,6 +36,7 @@ export const COLUMNS = {
   ADVANCE_PAYMENT: { accessorKey: "Tiền đặt cọc", header: "Tiền đặt cọc" },
   STATUS: { accessorKey: "Trạng thái", header: "Trạng thái" },
   NOTES: { accessorKey: "Ghi chú", header: "Ghi chú" },
+  BRANCH: { accessorKey: "Chi nhánh", header: "Chi nhánh" },
 } as const;
 
 export function createColumns(
@@ -68,9 +69,12 @@ export function createColumns(
   options?: {
     /** id phòng → số phòng (bảng rooms, cùng nguồn /dashboard/rooms) */
     roomNumberById?: Readonly<Record<string, string>>;
+    /** id chi nhánh → tên (cột ẩn mặc định, bật qua "Cột hiển thị") */
+    branchNameById?: Readonly<Record<string, string>>;
   }
 ): ColumnDef<BookingRecord>[] {
   const roomNumberById = options?.roomNumberById;
+  const branchNameById = options?.branchNameById;
   return [
     {
       accessorKey: COLUMNS.BOOKING_CODE.accessorKey,
@@ -153,6 +157,30 @@ export function createColumns(
       size: 140,
       minSize: 100,
       maxSize: 140,
+    },
+    {
+      accessorKey: COLUMNS.BRANCH.accessorKey,
+      header: COLUMNS.BRANCH.header,
+      cell: ({ row }) => {
+        const branchId = row.original.branch_id;
+        const label =
+          branchId && branchNameById
+            ? branchNameById[branchId] ?? "—"
+            : "—";
+        return (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="max-w-[140px] truncate font-medium">{label}</div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{label}</p>
+            </TooltipContent>
+          </Tooltip>
+        );
+      },
+      size: 120,
+      minSize: 100,
+      maxSize: 160,
     },
     {
       accessorKey: COLUMNS.CHECK_IN.accessorKey,

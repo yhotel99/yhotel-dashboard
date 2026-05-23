@@ -12,6 +12,10 @@ import type {
   PaymentsResponse,
 } from "@/lib/types";
 import { PAYMENT_STATUS, PAYMENT_TYPE, REPORTING_STATUS } from "@/lib/constants";
+import {
+  getCurrentUserBranchScope,
+  resolveBranchFilterId,
+} from "@/lib/branch.server";
 
 /**
  * Search payments with pagination and search
@@ -368,6 +372,7 @@ export async function getPaymentsListWithPagination({
   dateField,
   dateFrom,
   dateTo,
+  branchId,
 }: {
   search?: string | null;
   page?: number;
@@ -379,7 +384,8 @@ export async function getPaymentsListWithPagination({
   dateField?: "created_at" | "paid_at" | null;
   dateFrom?: string | null;
   dateTo?: string | null;
-  }): Promise<PaymentsResponse> {
+  branchId?: string | null;
+}): Promise<PaymentsResponse> {
   try {
     // Validate pagination parameters
     if (page < 1 || limit < 1) {
@@ -390,6 +396,8 @@ export async function getPaymentsListWithPagination({
 
     // Use RPC functions for search
     const trimmedSearch = search?.trim() || null;
+    const { scope } = await getCurrentUserBranchScope();
+    const p_branch_id = resolveBranchFilterId(scope, branchId);
 
     // Single RPC: rows + total_count
     const paymentsResult = await supabase.rpc("search_payments", {
@@ -403,6 +411,7 @@ export async function getPaymentsListWithPagination({
       p_date_field: dateField || "created_at",
       p_date_from: dateFrom || null,
       p_date_to: dateTo || null,
+      p_branch_id,
     });
 
     if (paymentsResult.error) {

@@ -6,7 +6,8 @@ import { UserActionsCell } from "./actions-cell";
 import { formatDate } from "@/lib/functions";
 
 export function createColumns(
-  onEdit: (profile: Profile) => void
+  onEdit: (profile: Profile) => void,
+  branchNameById: Record<string, string> = {}
 ): ColumnDef<Profile>[] {
   return [
     {
@@ -28,6 +29,15 @@ export function createColumns(
       accessorKey: "Vai trò",
       header: "Vai trò",
       cell: ({ row }) => <RoleBadge role={row.original.role} />,
+    },
+    {
+      id: "branch",
+      header: "Chi nhánh",
+      cell: ({ row }) => {
+        const id = row.original.branch_id;
+        if (!id) return "—";
+        return branchNameById[id] ?? id;
+      },
     },
     {
       accessorKey: "Trạng thái",

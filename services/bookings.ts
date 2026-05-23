@@ -14,6 +14,10 @@ import {
   PAYMENT_TYPE,
   REPORTING_STATUS,
 } from "@/lib/constants";
+import {
+  getCurrentUserBranchScope,
+  resolveBranchFilterId,
+} from "@/lib/branch.server";
 
 /**
  * Search bookings with pagination
@@ -1098,6 +1102,7 @@ export async function getBookingsListWithPagination({
   status,
   cursorCreatedAt,
   cursorId,
+  branchId,
 }: {
   search?: string | null;
   page?: number;
@@ -1110,6 +1115,7 @@ export async function getBookingsListWithPagination({
   status?: string | null;
   cursorCreatedAt?: string | null;
   cursorId?: string | null;
+  branchId?: string | null;
 }): Promise<{
   data: BookingRecord[];
   pagination: PaginationMeta;
@@ -1137,6 +1143,9 @@ export async function getBookingsListWithPagination({
     const trimmedCursorId = cursorId?.trim() || null;
     const useKeyset = Boolean(trimmedCursorAt && trimmedCursorId);
 
+    const { scope } = await getCurrentUserBranchScope();
+    const p_branch_id = resolveBranchFilterId(scope, branchId);
+
     const { data, error } = await supabase.rpc("list_bookings_json", {
       p_search: trimmedSearch,
       p_page: page,
@@ -1149,6 +1158,7 @@ export async function getBookingsListWithPagination({
       p_status: trimmedStatus,
       p_cursor_created_at: useKeyset ? trimmedCursorAt : null,
       p_cursor_id: useKeyset ? trimmedCursorId : null,
+      p_branch_id,
     });
 
     if (error) {

@@ -30,6 +30,7 @@ export async function GET(req: NextRequest) {
     const status = searchParams.get("status") || null;
     const cursorCreatedAt = searchParams.get("cursorCreatedAt") || null;
     const cursorId = searchParams.get("cursorId") || null;
+    const branchId = searchParams.get("branchId") || null;
 
     if (page < 1 || limit < 1) {
       return NextResponse.json(
@@ -53,6 +54,7 @@ export async function GET(req: NextRequest) {
       status,
       cursorCreatedAt,
       cursorId,
+      branchId,
     });
 
     return NextResponse.json({

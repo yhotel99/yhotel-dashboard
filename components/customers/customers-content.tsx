@@ -6,7 +6,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
 import { useDebounce } from "@/hooks/use-debounce";
-import { createColumns } from "@/components/customers/columns";
+import { createColumns, CUSTOMER_COLUMNS } from "@/components/customers/columns";
 import { CreateCustomerDialog } from "@/components/customers/create-customer-dialog";
 import { EditCustomerDialog } from "@/components/customers/edit-customer-dialog";
 import { DeleteCustomerDialog } from "@/components/customers/delete-customer-dialog";
@@ -19,6 +19,7 @@ import {
   deleteCustomerAction,
 } from "@/actions/customers";
 import { type Customer, CustomersResponse } from "@/lib/types";
+import { useBranch } from "@/contexts/branch-context";
 
 export function CustomersContent({
   initialData,
@@ -27,6 +28,11 @@ export function CustomersContent({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { filterBranchId, branches } = useBranch();
+  const branchNameById = React.useMemo(
+    () => Object.fromEntries(branches.map((b) => [b.id, b.name])),
+    [branches]
+  );
   const [localSearch, setLocalSearch] = React.useState("");
   const [openCreateDialog, setOpenCreateDialog] = React.useState(false);
   const [openEditDialog, setOpenEditDialog] = React.useState(false);
@@ -95,6 +101,7 @@ export function CustomersContent({
     search,
     page,
     limit,
+    branchId: filterBranchId,
     fallbackData: initialData,
   });
 
@@ -194,7 +201,8 @@ export function CustomersContent({
           columns={createColumns(
             handleEditCustomer,
             handleViewDetail,
-            handleViewBookings
+            handleViewBookings,
+            { branchNameById }
           )}
           data={customers}
           searchKey="full_name"
@@ -211,6 +219,9 @@ export function CustomersContent({
           onLimitChange={(newLimit) => updateSearchParams(1, newLimit, search)}
           serverSearch={localSearch}
           onSearchChange={setLocalSearch}
+          initialColumnVisibility={{
+            [CUSTOMER_COLUMNS.BRANCH.accessorKey]: false,
+          }}
         />
       </div>
 

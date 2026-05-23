@@ -11,7 +11,9 @@ insert into permissions (name, description) values
   ('view:settings', 'View settings page'),
   ('view:customers', 'View customers management page'),
   ('view:refund-requests', 'View refund requests page'),
-  ('view:reservations', 'View reservations page')
+  ('view:reservations', 'View reservations page'),
+  ('view:branches', 'View branches list'),
+  ('manage:branches', 'Create, update, delete branches')
 on conflict (name) do nothing;
 
 -- Seed role_permissions for ADMIN role
@@ -31,7 +33,9 @@ where name in (
   'view:settings',
   'view:customers',
   'view:refund-requests',
-  'view:reservations'
+  'view:reservations',
+  'view:branches',
+  'manage:branches'
 )
 on conflict (role, permission_id) do nothing;
 
@@ -50,7 +54,8 @@ where name in (
   'view:blogs',
   'view:customers',
   'view:refund-requests',
-  'view:reservations'
+  'view:reservations',
+  'view:branches'
 )
 on conflict (role, permission_id) do nothing;
 
@@ -64,6 +69,9 @@ where name in (
   'view:customers'
 )
 on conflict (role, permission_id) do nothing;
+
+-- Default branch (main) — must match 20260521100000_create_branches.sql
+-- branch_id: a0000000-0000-4000-8000-000000000001
 
 -- Seed payment_logs with sample data
 -- Note: These are sample payment logs for testing different statuses
@@ -204,6 +212,7 @@ room1 AS (
     status,
     room_number,
     floor_number,
+    branch_id,
     created_at,
     updated_at
   )
@@ -217,6 +226,7 @@ room1 AS (
     'available',
     '401',
     4,
+    'a0000000-0000-4000-8000-000000000001'::uuid,
     now(),
     now()
   )
@@ -244,6 +254,7 @@ room2 AS (
     status,
     room_number,
     floor_number,
+    branch_id,
     created_at,
     updated_at
   )
@@ -257,6 +268,7 @@ room2 AS (
     'available',
     '402',
     4,
+    'a0000000-0000-4000-8000-000000000001'::uuid,
     now(),
     now()
   )
@@ -268,30 +280,39 @@ FROM room2, room2_image
 ON CONFLICT DO NOTHING;
 
 -- Room 3-10: Thêm nhiều phòng để test đặt nhiều phòng
-INSERT INTO rooms (name, description, room_type, price_per_night, max_guests, amenities, status, room_number, floor_number, created_at, updated_at)
+INSERT INTO rooms (name, description, room_type, price_per_night, max_guests, amenities, status, room_number, floor_number, branch_id, created_at, updated_at)
 VALUES
-  ('Phòng Standard 101', 'Phòng tiêu chuẩn ấm cúng, giá hợp lý.', 'standard', 800000, 2, '["wifi_high_speed", "parking"]'::jsonb, 'available', '101', 1, now(), now()),
-  ('Phòng Standard 102', 'Phòng tiêu chuẩn view nội thị.', 'standard', 750000, 2, '["wifi_high_speed"]'::jsonb, 'available', '102', 1, now(), now()),
-  ('Phòng Superior 201', 'Phòng superior view biển.', 'superior', 1300000, 2, '["wifi_high_speed", "parking", "breakfast_service"]'::jsonb, 'available', '201', 2, now(), now()),
-  ('Phòng Deluxe 202', 'Phòng deluxe không gian rộng.', 'deluxe', 1600000, 3, '["wifi_high_speed", "parking", "coffee", "breakfast_service", "laundry"]'::jsonb, 'available', '202', 2, now(), now()),
-  ('Phòng Family 301', 'Phòng gia đình lớn, phù hợp 4-5 người.', 'family', 2200000, 5, '["wifi_high_speed", "parking", "breakfast_service", "laundry", "taxi_support"]'::jsonb, 'available', '301', 3, now(), now()),
-  ('Phòng Family 302', 'Phòng gia đình có ban công.', 'family', 2400000, 5, '["wifi_high_speed", "parking", "coffee", "breakfast_service"]'::jsonb, 'available', '302', 3, now(), now()),
-  ('Phòng Deluxe 203', 'Phòng deluxe góc tầng view đẹp.', 'deluxe', 1800000, 4, '["wifi_high_speed", "parking", "coffee", "breakfast_service"]'::jsonb, 'available', '203', 2, now(), now()),
-  ('Phòng Standard 103', 'Phòng tiêu chuẩn gần thang máy.', 'standard', 700000, 2, '["wifi_high_speed", "parking"]'::jsonb, 'available', '103', 1, now(), now());
+  ('Phòng Standard 101', 'Phòng tiêu chuẩn ấm cúng, giá hợp lý.', 'standard', 800000, 2, '["wifi_high_speed", "parking"]'::jsonb, 'available', '101', 1, 'a0000000-0000-4000-8000-000000000001'::uuid, now(), now()),
+  ('Phòng Standard 102', 'Phòng tiêu chuẩn view nội thị.', 'standard', 750000, 2, '["wifi_high_speed"]'::jsonb, 'available', '102', 1, 'a0000000-0000-4000-8000-000000000001'::uuid, now(), now()),
+  ('Phòng Superior 201', 'Phòng superior view biển.', 'superior', 1300000, 2, '["wifi_high_speed", "parking", "breakfast_service"]'::jsonb, 'available', '201', 2, 'a0000000-0000-4000-8000-000000000001'::uuid, now(), now()),
+  ('Phòng Deluxe 202', 'Phòng deluxe không gian rộng.', 'deluxe', 1600000, 3, '["wifi_high_speed", "parking", "coffee", "breakfast_service", "laundry"]'::jsonb, 'available', '202', 2, 'a0000000-0000-4000-8000-000000000001'::uuid, now(), now()),
+  ('Phòng Family 301', 'Phòng gia đình lớn, phù hợp 4-5 người.', 'family', 2200000, 5, '["wifi_high_speed", "parking", "breakfast_service", "laundry", "taxi_support"]'::jsonb, 'available', '301', 3, 'a0000000-0000-4000-8000-000000000001'::uuid, now(), now()),
+  ('Phòng Family 302', 'Phòng gia đình có ban công.', 'family', 2400000, 5, '["wifi_high_speed", "parking", "coffee", "breakfast_service"]'::jsonb, 'available', '302', 3, 'a0000000-0000-4000-8000-000000000001'::uuid, now(), now()),
+  ('Phòng Deluxe 203', 'Phòng deluxe góc tầng view đẹp.', 'deluxe', 1800000, 4, '["wifi_high_speed", "parking", "coffee", "breakfast_service"]'::jsonb, 'available', '203', 2, 'a0000000-0000-4000-8000-000000000001'::uuid, now(), now()),
+  ('Phòng Standard 103', 'Phòng tiêu chuẩn gần thang máy.', 'standard', 700000, 2, '["wifi_high_speed", "parking"]'::jsonb, 'available', '103', 1, 'a0000000-0000-4000-8000-000000000001'::uuid, now(), now());
 
 -- ============================================================================
 -- Demo bookings + booking_rooms (~20, created_at lệch nhau cho keyset / sort)
 -- Idempotent: ON CONFLICT (id) / (booking_id, room_id) DO NOTHING
 -- ============================================================================
 
-INSERT INTO public.customers (full_name, email, phone, customer_type, created_at, updated_at)
-VALUES
-  ('Trần Minh Khoa', 'seed.booking.c1@local.test', '0911000001', 'regular', now(), now()),
-  ('Lê Thu Hà', 'seed.booking.c2@local.test', '0911000002', 'regular', now(), now()),
-  ('Phạm Quốc An', 'seed.booking.c3@local.test', '0911000003', 'vip', now(), now()),
-  ('Hoàng Mai Linh', 'seed.booking.c4@local.test', '0911000004', 'regular', now(), now()),
-  ('Đỗ Văn Hùng', 'seed.booking.c5@local.test', '0911000005', 'regular', now(), now())
-ON CONFLICT (email) DO NOTHING;
+INSERT INTO public.customers (full_name, email, phone, customer_type, branch_id, created_at, updated_at)
+SELECT v.full_name, v.email, v.phone, v.customer_type::public.customer_type, 'a0000000-0000-4000-8000-000000000001'::uuid, now(), now()
+FROM (
+  VALUES
+    ('Trần Minh Khoa', 'seed.booking.c1@local.test', '0911000001', 'regular'),
+    ('Lê Thu Hà', 'seed.booking.c2@local.test', '0911000002', 'regular'),
+    ('Phạm Quốc An', 'seed.booking.c3@local.test', '0911000003', 'vip'),
+    ('Hoàng Mai Linh', 'seed.booking.c4@local.test', '0911000004', 'regular'),
+    ('Đỗ Văn Hùng', 'seed.booking.c5@local.test', '0911000005', 'regular')
+) AS v(full_name, email, phone, customer_type)
+WHERE NOT EXISTS (
+  SELECT 1
+  FROM public.customers c
+  WHERE c.branch_id = 'a0000000-0000-4000-8000-000000000001'::uuid
+    AND lower(c.email) = lower(v.email)
+    AND c.deleted_at IS NULL
+);
 
 INSERT INTO public.bookings (
   id,
@@ -306,6 +327,7 @@ INSERT INTO public.bookings (
   total_amount,
   advance_payment,
   final_amount,
+  branch_id,
   created_at,
   updated_at,
   booking_code,
@@ -326,6 +348,7 @@ VALUES
     1600000,
     0,
     1600000,
+    'a0000000-0000-4000-8000-000000000001'::uuid,
     timestamptz '2026-02-15 08:00:00+07',
     timestamptz '2026-02-15 08:00:00+07',
     'YHSEED260301001',
@@ -344,6 +367,7 @@ VALUES
     1500000,
     0,
     1500000,
+    'a0000000-0000-4000-8000-000000000001'::uuid,
     timestamptz '2026-02-15 09:17:00+07',
     timestamptz '2026-02-15 09:17:00+07',
     'YHSEED260301002',
@@ -362,6 +386,7 @@ VALUES
     1400000,
     200000,
     1400000,
+    'a0000000-0000-4000-8000-000000000001'::uuid,
     timestamptz '2026-02-15 10:34:00+07',
     timestamptz '2026-02-15 10:34:00+07',
     'YHSEED260301003',
@@ -380,6 +405,7 @@ VALUES
     2600000,
     0,
     2600000,
+    'a0000000-0000-4000-8000-000000000001'::uuid,
     timestamptz '2026-02-15 11:51:00+07',
     timestamptz '2026-02-15 11:51:00+07',
     'YHSEED260301004',
@@ -398,6 +424,7 @@ VALUES
     3200000,
     0,
     3200000,
+    'a0000000-0000-4000-8000-000000000001'::uuid,
     timestamptz '2026-02-15 13:08:00+07',
     timestamptz '2026-02-15 13:08:00+07',
     'YHSEED260301005',
@@ -416,6 +443,7 @@ VALUES
     3600000,
     0,
     3600000,
+    'a0000000-0000-4000-8000-000000000001'::uuid,
     timestamptz '2026-02-15 14:25:00+07',
     timestamptz '2026-02-15 14:25:00+07',
     'YHSEED260301006',
@@ -434,6 +462,7 @@ VALUES
     4400000,
     4400000,
     4400000,
+    'a0000000-0000-4000-8000-000000000001'::uuid,
     timestamptz '2026-02-15 15:42:00+07',
     timestamptz '2026-02-15 15:42:00+07',
     'YHSEED260301007',
@@ -452,6 +481,7 @@ VALUES
     4800000,
     0,
     4800000,
+    'a0000000-0000-4000-8000-000000000001'::uuid,
     timestamptz '2026-02-15 16:59:00+07',
     timestamptz '2026-02-15 16:59:00+07',
     'YHSEED260301008',
@@ -471,6 +501,7 @@ VALUES
     3000000,
     0,
     NULL,
+    'a0000000-0000-4000-8000-000000000001'::uuid,
     timestamptz '2026-02-15 18:16:00+07',
     timestamptz '2026-02-15 18:16:00+07',
     'YHSEED260301009',
@@ -489,6 +520,7 @@ VALUES
     2400000,
     0,
     NULL,
+    'a0000000-0000-4000-8000-000000000001'::uuid,
     timestamptz '2026-02-15 19:33:00+07',
     timestamptz '2026-02-15 19:33:00+07',
     'YHSEED260301010',
@@ -508,6 +540,7 @@ VALUES
     3200000,
     0,
     3200000,
+    'a0000000-0000-4000-8000-000000000001'::uuid,
     timestamptz '2026-02-15 20:50:00+07',
     timestamptz '2026-02-15 20:50:00+07',
     'YHSEED260301011',
@@ -527,6 +560,7 @@ VALUES
     1600000,
     500000,
     1600000,
+    'a0000000-0000-4000-8000-000000000001'::uuid,
     timestamptz '2026-02-15 22:07:00+07',
     timestamptz '2026-02-15 22:07:00+07',
     'YHSEED260301012',
@@ -545,6 +579,7 @@ VALUES
     1500000,
     0,
     1500000,
+    'a0000000-0000-4000-8000-000000000001'::uuid,
     timestamptz '2026-02-16 08:22:00+07',
     timestamptz '2026-02-16 08:22:00+07',
     'YHSEED260301013',
@@ -563,6 +598,7 @@ VALUES
     2600000,
     2600000,
     2600000,
+    'a0000000-0000-4000-8000-000000000001'::uuid,
     timestamptz '2026-02-16 09:39:00+07',
     timestamptz '2026-02-16 09:39:00+07',
     'YHSEED260301014',
@@ -582,6 +618,7 @@ VALUES
     1500000,
     0,
     1500000,
+    'a0000000-0000-4000-8000-000000000001'::uuid,
     timestamptz '2026-02-16 10:56:00+07',
     timestamptz '2026-02-16 10:56:00+07',
     'YHSEED260301015',
@@ -600,6 +637,7 @@ VALUES
     3200000,
     0,
     3200000,
+    'a0000000-0000-4000-8000-000000000001'::uuid,
     timestamptz '2026-02-16 12:13:00+07',
     timestamptz '2026-02-16 12:13:00+07',
     'YHSEED260301016',
@@ -618,6 +656,7 @@ VALUES
     3600000,
     0,
     3600000,
+    'a0000000-0000-4000-8000-000000000001'::uuid,
     timestamptz '2026-02-16 13:30:00+07',
     timestamptz '2026-02-16 13:30:00+07',
     'YHSEED260301017',
@@ -637,6 +676,7 @@ VALUES
     4400000,
     0,
     4400000,
+    'a0000000-0000-4000-8000-000000000001'::uuid,
     timestamptz '2026-02-16 14:47:00+07',
     timestamptz '2026-02-16 14:47:00+07',
     'YHSEED260301018',
@@ -655,6 +695,7 @@ VALUES
     4800000,
     0,
     4800000,
+    'a0000000-0000-4000-8000-000000000001'::uuid,
     timestamptz '2026-02-16 16:04:00+07',
     timestamptz '2026-02-16 16:04:00+07',
     'YHSEED260301019',
@@ -674,6 +715,7 @@ VALUES
     5400000,
     1000000,
     5400000,
+    'a0000000-0000-4000-8000-000000000001'::uuid,
     timestamptz '2026-02-16 17:21:00+07',
     timestamptz '2026-02-16 17:21:00+07',
     'YHSEED260301020',

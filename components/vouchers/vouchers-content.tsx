@@ -21,6 +21,7 @@ import { createVoucherColumns } from "@/components/vouchers/columns";
 import { VoucherFormDialog } from "@/components/vouchers/voucher-form-dialog";
 import { DeleteVoucherDialog } from "@/components/vouchers/delete-voucher-dialog";
 import { usePermissions } from "@/contexts/permissions-context";
+import { useBranch } from "@/contexts/branch-context";
 
 export function VouchersContent({ initialData }: { initialData: VouchersResponse }) {
   const router = useRouter();
@@ -29,6 +30,7 @@ export function VouchersContent({ initialData }: { initialData: VouchersResponse
   const canCreate = hasPermission("create:vouchers");
   const canUpdate = hasPermission("update:vouchers");
   const canDelete = hasPermission("delete:vouchers");
+  const { filterBranchId } = useBranch();
 
   const page = useMemo(() => {
     const pageParam = searchParams.get("page");
@@ -77,6 +79,7 @@ export function VouchersContent({ initialData }: { initialData: VouchersResponse
     search,
     page,
     limit,
+    branchId: filterBranchId,
     fallbackData: initialData,
   });
 

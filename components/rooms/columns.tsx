@@ -25,14 +25,19 @@ export const ROOMS_COLUMNS = {
   PRICE_PER_NIGHT: { accessorKey: "Giá mỗi đêm", header: "Giá mỗi đêm" },
   MAX_GUESTS: { accessorKey: "Số khách tối đa", header: "Số khách tối đa" },
   AMENITIES: { accessorKey: "Tiện ích", header: "Tiện ích" },
+  BRANCH: { accessorKey: "Chi nhánh", header: "Chi nhánh" },
   ACTIONS: { accessorKey: "Hành động", header: "" },
 } as const;
 
 export function createColumns(
   onDelete: (room: Room) => void,
   onChangeStatus?: (roomId: string, newStatus: Room["status"]) => void,
-  onViewDetail?: (room: Room) => void
+  onViewDetail?: (room: Room) => void,
+  options?: {
+    branchNameById?: Readonly<Record<string, string>>;
+  }
 ): ColumnDef<Room>[] {
+  const branchNameById = options?.branchNameById;
   return [
     {
       accessorKey: ROOMS_COLUMNS.IMAGE.accessorKey,
@@ -117,6 +122,21 @@ export function createColumns(
       },
       size: 140,
       minSize: 120,
+    },
+    {
+      accessorKey: ROOMS_COLUMNS.BRANCH.accessorKey,
+      header: ROOMS_COLUMNS.BRANCH.header,
+      cell: ({ row }) => {
+        const branchId = row.original.branch_id;
+        const label =
+          branchId && branchNameById
+            ? branchNameById[branchId] ?? "—"
+            : "—";
+        return <span className="max-w-[140px] truncate block font-medium">{label}</span>;
+      },
+      size: 120,
+      minSize: 100,
+      maxSize: 160,
     },
     {
       id: "actions",

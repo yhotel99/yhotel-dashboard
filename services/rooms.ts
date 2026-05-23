@@ -32,14 +32,22 @@ type RoomFromRPC = {
 
 export async function getAvailableRooms(
   checkIn: string,
-  checkOut: string
+  checkOut: string,
+  branchId?: string | null
 ): Promise<Room[]> {
   try {
     const supabase = await createClient();
-    // Use type assertion to bypass Supabase type checking
+    const { getCurrentUserBranchScope, resolveBranchFilterId } = await import(
+      "@/lib/branch.server"
+    );
+    const { scope } = await getCurrentUserBranchScope();
+    const p_branch_id = resolveBranchFilterId(scope, branchId);
+
     const { data, error } = (await supabase.rpc("get_available_rooms", {
       p_check_in: checkIn,
       p_check_out: checkOut,
+      p_branch_id,
+      p_branch_code: null,
     })) as { data: RoomFromRPC[] | null; error: { message: string } | null };
 
     if (error) {
@@ -62,6 +70,7 @@ export async function getAvailableRooms(
       status: room.status,
       room_number: room.room_number || null,
       floor_number: room.floor_number || null,
+      branch_id: (room as RoomFromRPC & { branch_id?: string }).branch_id ?? "",
       deleted_at: room.deleted_at,
       created_at: room.created_at,
       updated_at: room.updated_at,
@@ -423,10 +432,12 @@ export async function getRoomsListWithPagination({
   search,
   page = 1,
   limit = 10,
+  branchId,
 }: {
   search?: string | null;
   page?: number;
   limit?: number;
+  branchId?: string | null;
 }): Promise<{
   data: Room[];
   pagination: PaginationMeta;
@@ -438,6 +449,11 @@ export async function getRoomsListWithPagination({
     }
 
     const supabase = await createClient();
+    const { getCurrentUserBranchScope, resolveBranchFilterId } = await import(
+      "@/lib/branch.server"
+    );
+    const { scope } = await getCurrentUserBranchScope();
+    const filterBranchId = resolveBranchFilterId(scope, branchId);
 
     // Calculate offset
     const from = (page - 1) * limit;
@@ -463,6 +479,10 @@ export async function getRoomsListWithPagination({
         { count: "exact" }
       )
       .is("deleted_at", null);
+
+    if (filterBranchId) {
+      query = query.eq("branch_id", filterBranchId);
+    }
 
     // Add search filter: tên phòng hoặc số phòng (room_number)
     if (search && search.trim() !== "") {

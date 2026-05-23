@@ -32,13 +32,16 @@ export const PAYMENTS_COLUMNS = {
   REPORTING_STATUS: { accessorKey: "Reporting", header: "Reporting" },
   PAID_AT: { accessorKey: "Ngày thanh toán", header: "Ngày thanh toán" },
   CREATED_AT: { accessorKey: "Ngày tạo", header: "Ngày tạo" },
+  BRANCH: { accessorKey: "Chi nhánh", header: "Chi nhánh" },
   ACTIONS: { accessorKey: "Hành động", header: "" },
 } as const;
 
 export function createPaymentsColumns(options?: {
   roomNumberById?: Readonly<Record<string, string>>;
+  branchNameById?: Readonly<Record<string, string>>;
 }): ColumnDef<PaymentWithBooking>[] {
   const roomNumberById = options?.roomNumberById;
+  const branchNameById = options?.branchNameById;
   return [
     {
       accessorKey: PAYMENTS_COLUMNS.CUSTOMER_NAME.accessorKey,
@@ -163,6 +166,32 @@ export function createPaymentsColumns(options?: {
       size: 100,
       minSize: 100,
       maxSize: 120,
+    },
+    {
+      accessorKey: PAYMENTS_COLUMNS.BRANCH.accessorKey,
+      header: PAYMENTS_COLUMNS.BRANCH.header,
+      cell: ({ row }) => {
+        const branchId = row.original.branch_id;
+        const label =
+          branchId && branchNameById
+            ? branchNameById[branchId] ?? "—"
+            : "—";
+        return (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="max-w-[140px] truncate block font-medium">
+                {label}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{label}</p>
+            </TooltipContent>
+          </Tooltip>
+        );
+      },
+      size: 120,
+      minSize: 100,
+      maxSize: 160,
     },
     {
       id: "actions",

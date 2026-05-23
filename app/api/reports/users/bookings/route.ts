@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { REPORT_METRICS_BOOKING_STATUSES } from "@/lib/constants";
 import { UserBookingDetailRow } from "../../types";
 import { parseBookingRevenueAmount } from "@/lib/reports/booking-revenue";
+import { getReportBranchIdFromRequest } from "@/lib/reports/branch-filter";
 
 /**
  * GET /api/reports/users/bookings
@@ -36,7 +37,9 @@ export async function GET(req: NextRequest) {
     const toISO = toDate.toISOString();
 
     const supabase = await createClient();
-    const { data, error } = await supabase
+    const branchId = await getReportBranchIdFromRequest(searchParams);
+
+    let query = supabase
       .from("bookings")
       .select(
         "id, booking_code, check_in, check_out, status, final_amount, total_amount, created_at, customers:customer_id(full_name), booking_rooms(rooms:room_id(name))"
@@ -45,8 +48,11 @@ export async function GET(req: NextRequest) {
       .in("status", [...REPORT_METRICS_BOOKING_STATUSES])
       .eq("created_by", userId)
       .gte("created_at", fromISO)
-      .lte("created_at", toISO)
-      .order("created_at", { ascending: false });
+      .lte("created_at", toISO);
+    if (branchId) query = query.eq("branch_id", branchId);
+    const { data, error } = await query.order("created_at", {
+      ascending: false,
+    });
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });

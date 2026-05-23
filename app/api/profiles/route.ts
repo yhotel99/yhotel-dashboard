@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import {
+  getCurrentUserBranchScope,
+  resolveBranchFilterId,
+} from "@/lib/branch.server";
 import type { Profile } from "@/lib/types";
 
 /**
@@ -14,6 +18,9 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get("search") || "";
     const page = Number(searchParams.get("page") || 1);
     const limit = Number(searchParams.get("limit") || 10);
+    const requestedBranchId = searchParams.get("branchId") || null;
+    const { scope } = await getCurrentUserBranchScope();
+    const branchId = resolveBranchFilterId(scope, requestedBranchId);
 
     // Calculate offset
     const from = (page - 1) * limit;
@@ -24,6 +31,10 @@ export async function GET(req: NextRequest) {
       .from("profiles")
       .select("*", { count: "exact" })
       .is("deleted_at", null);
+
+    if (branchId) {
+      query = query.eq("branch_id", branchId);
+    }
 
     // Add search filter if search term exists
     // Search in full_name, email, and phone using OR operator

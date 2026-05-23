@@ -76,6 +76,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { useBranch } from "@/contexts/branch-context";
 import { ChevronDown, Filter, RotateCcw } from "lucide-react";
 
 const CYAN = "#00FFFF";
@@ -307,11 +308,18 @@ export function HotelPerformanceDashboard() {
   const [drill, setDrill] = React.useState<string | null>(null);
   const [showAdvancedFilters, setShowAdvancedFilters] = React.useState(false);
 
+  const { scope, selectedBranchId } = useBranch();
+  const branchIdForFetch =
+    scope.mode === "single" ? scope.branchId : selectedBranchId;
+
   const buildQuery = React.useCallback(() => {
     const p = new URLSearchParams({
       fromDate: range.from.toISOString(),
       toDate: range.to.toISOString(),
     });
+    if (branchIdForFetch) {
+      p.set("branchId", branchIdForFetch);
+    }
     if (roomType !== "all") p.set("roomType", roomType);
     if (source !== "all") p.set("source", source);
     if (statusPresets.length > 0) {
@@ -341,6 +349,7 @@ export function HotelPerformanceDashboard() {
     minNights,
     maxNights,
     searchDebounced,
+    branchIdForFetch,
   ]);
 
   const url = `/api/reports/hotel-performance?${buildQuery().toString()}`;

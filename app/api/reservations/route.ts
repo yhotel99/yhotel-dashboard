@@ -1,21 +1,31 @@
-import {  NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { RoomWithBooking, Room, RoomStatusViewData } from "@/lib/types";
 import { ROOM_STATUS, type RoomMapStatus } from "@/lib/constants";
+import {
+  getCurrentUserBranchScope,
+  resolveBranchFilterId,
+} from "@/lib/branch.server";
 
 /**
  * GET /api/reservations
  * Fetch reservation data from room_status_view
  * Returns array of rooms with booking information and status
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const { searchParams } = new URL(req.url);
+    const requestedBranchId = searchParams.get("branchId");
+    const { scope } = await getCurrentUserBranchScope();
+    const filterBranchId = resolveBranchFilterId(scope, requestedBranchId);
+
     const supabase = await createClient();
 
-    // Fetch data from room_status_view
-    const { data, error } = await supabase
-      .from("room_status_view")
-      .select("*")
+    let query = supabase.from("room_status_view").select("*");
+    if (filterBranchId) {
+      query = query.eq("branch_id", filterBranchId);
+    }
+    const { data, error } = await query
       .order("floor_number", { ascending: true, nullsFirst: false })
       .order("room_number", { ascending: true, nullsFirst: false })
       .order("name", { ascending: true });
@@ -42,6 +52,7 @@ export async function GET() {
           status: item.status as Room["status"],
           room_number: item.room_number || null,
           floor_number: item.floor_number || null,
+          branch_id: item.branch_id,
           deleted_at: item.deleted_at,
           created_at: item.created_at,
           updated_at: item.updated_at,

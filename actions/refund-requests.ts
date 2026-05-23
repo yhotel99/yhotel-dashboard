@@ -12,6 +12,7 @@ import { getRefundRequestById } from "@/services/refund-requests";
 import { REFUND_REQUEST_STATUS, PAYMENT_STATUS } from "@/lib/constants";
 import { formatVND } from "@/lib/functions";
 import { logRefundProcess } from "@/lib/audit-helpers";
+import { assertCanAccessBooking } from "@/lib/branch.server";
 
 /**
  * Calculate total refunded amount for a booking
@@ -236,6 +237,8 @@ export async function updateRefundRequestStatusAction(
         fetchError?.message || "Không tìm thấy yêu cầu hoàn tiền"
       );
     }
+
+    await assertCanAccessBooking(refundRequest.booking_id);
 
     // If status is being changed to REFUNDED, validate total refunded amount
     if (status === REFUND_REQUEST_STATUS.REFUNDED) {

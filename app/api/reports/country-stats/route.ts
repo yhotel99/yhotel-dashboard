@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getReportBranchIdFromRequest } from "@/lib/reports/branch-filter";
 
 type CountryStat = { country: string; label: string; count: number };
 
@@ -7,11 +8,13 @@ type CountryStat = { country: string; label: string; count: number };
  * GET /api/reports/country-stats
  * Get booking statistics by customer nationality (country)
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const { searchParams } = new URL(req.url);
+    const branchId = await getReportBranchIdFromRequest(searchParams);
     const supabase = await createClient();
 
-    const { data: bookings, error: bookingsError } = await supabase
+    let query = supabase
       .from("bookings")
       .select(
         `
@@ -22,6 +25,9 @@ export async function GET() {
       `
       )
       .is("deleted_at", null);
+    if (branchId) query = query.eq("branch_id", branchId);
+
+    const { data: bookings, error: bookingsError } = await query;
 
     if (bookingsError) {
       return NextResponse.json(

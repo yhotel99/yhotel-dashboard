@@ -73,7 +73,12 @@ export function TransferRoomDialog({
   });
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { rooms } = useRooms({ page: 1, limit: 100, search: "" });
+  const { rooms } = useRooms({
+    page: 1,
+    limit: 100,
+    search: "",
+    branchId: booking?.branch_id ?? null,
+  });
   // checkAdvancePaymentStatus is now imported directly from services
   const [advancePaymentIsPaid, setAdvancePaymentIsPaid] = useState(false);
   const [isCheckingAdvancePayment, setIsCheckingAdvancePayment] =

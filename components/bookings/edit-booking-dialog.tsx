@@ -52,7 +52,12 @@ export function EditBookingDialog({
   booking: BookingRecord | null;
   onUpdate: (id: string, input: UpdateBookingInput) => Promise<void>;
 }) {
-  const { rooms, mutate: refetch } = useRooms({ page: 1, limit: 100, search: "" });
+  const { rooms, mutate: refetch } = useRooms({
+    page: 1,
+    limit: 100,
+    search: "",
+    branchId: booking?.branch_id ?? null,
+  });
 
   // Fetch rooms when dialog opens
   useEffect(() => {

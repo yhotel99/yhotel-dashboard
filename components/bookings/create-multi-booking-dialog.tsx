@@ -36,6 +36,7 @@ import type {
   PaymentMethod,
 } from "@/lib/types";
 import { getAvailableRoomsAction } from "@/actions/rooms";
+import { useBranch } from "@/contexts/branch-context";
 import { searchCustomersAction, createCustomerAction } from "@/actions/customers";
 import { validateVoucherForBooking } from "@/actions/vouchers";
 import { useDebounce } from "@/hooks/use-debounce";
@@ -90,6 +91,7 @@ export function CreateMultiBookingDialog({
   onOpenChange: (open: boolean) => void;
   onCreate: (input: MultiBookingInput) => Promise<void>;
 }) {
+  const { filterBranchId } = useBranch();
   const { settings } = useSettings();
   const [customerSearch, setCustomerSearch] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
@@ -146,7 +148,7 @@ export function CreateMultiBookingDialog({
       return;
     }
     setIsLoadingRooms(true);
-    getAvailableRoomsAction(checkInISO, checkOutISO).then((result) => {
+    getAvailableRoomsAction(checkInISO, checkOutISO, filterBranchId).then((result) => {
       setIsLoadingRooms(false);
       if (result.ok) {
         setAvailableRooms(result.data);
@@ -155,7 +157,7 @@ export function CreateMultiBookingDialog({
         setAvailableRooms([]);
       }
     });
-  }, [checkInISO, checkOutISO, nights]);
+  }, [checkInISO, checkOutISO, nights, filterBranchId]);
 
   useEffect(() => {
     const trimmed = debouncedSearch.trim();
@@ -167,11 +169,11 @@ export function CreateMultiBookingDialog({
       return;
     }
     lastSearchRef.current = trimmed;
-    searchCustomersAction(trimmed, 10).then((result) => {
+    searchCustomersAction(trimmed, 10, filterBranchId).then((result) => {
       if (result.ok) setSearchCustomers(result.data);
       else setSearchCustomers([]);
     });
-  }, [debouncedSearch]);
+  }, [debouncedSearch, filterBranchId]);
 
   const selectedRoomsWithAmounts = useMemo((): SelectedRoom[] => {
     const weekdayRates = normalizeWeekdayRates(
@@ -739,6 +741,7 @@ export function CreateMultiBookingDialog({
                           const result = await validateVoucherForBooking({
                             code,
                             totalAmount,
+                            branchId: filterBranchId,
                           });
                           if (!result.ok) {
                             setError(result.message);

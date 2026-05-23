@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin/server";
 import type { Profile } from "@/lib/types";
-import { USER_ROLE } from "@/lib/constants";
+import { USER_ROLE, DEFAULT_BRANCH_ID } from "@/lib/constants";
 
 /**
  * Create a new user (creates user in auth, profile will be created automatically)
@@ -12,6 +12,7 @@ import { USER_ROLE } from "@/lib/constants";
 export async function createProfileAction(
   input: Omit<Profile, "id" | "created_at" | "updated_at" | "deleted_at"> & {
     password: string;
+    branch_id?: string | null;
   }
 ): Promise<void> {
   try {
@@ -72,11 +73,21 @@ export async function createProfileAction(
       throw new Error("Không thể tạo tài khoản. Vui lòng thử lại.");
     }
 
+    const branchId =
+      input.role === USER_ROLE.STAFF
+        ? input.branch_id || DEFAULT_BRANCH_ID
+        : null;
+
+    if (input.role === USER_ROLE.STAFF && !branchId) {
+      throw new Error("Nhân viên phải được gán chi nhánh");
+    }
+
     const { error: profileUpdateError } = await adminSupabase
       .from("profiles")
       .update({
         role: input.role,
         status: input.status,
+        branch_id: branchId,
         updated_at: new Date().toISOString(),
       })
       .eq("id", newUserId);
@@ -133,9 +144,61 @@ export async function updateProfileAction(
 ): Promise<Profile> {
   try {
     const supabase = await createClient();
-    const { data, error } = await supabase
+    const adminSupabase = createAdminClient();
+
+    const { data: currentUser } = await supabase.auth.getUser();
+    const { data: actorProfile } = await supabase
       .from("profiles")
-      .update({ ...input, updated_at: new Date().toISOString() })
+      .select("role")
+      .eq("id", currentUser.user?.id)
+      .single();
+
+    if (
+      ![USER_ROLE.ADMIN, USER_ROLE.MANAGER].includes(actorProfile?.role) ||
+      !actorProfile
+    ) {
+      throw new Error("Không có quyền cập nhật người dùng");
+    }
+
+    const { data: existing, error: fetchError } = await adminSupabase
+      .from("profiles")
+      .select("role")
+      .eq("id", id)
+      .is("deleted_at", null)
+      .single();
+
+    if (fetchError || !existing) {
+      throw new Error("Không tìm thấy người dùng");
+    }
+
+    if (
+      actorProfile.role === USER_ROLE.MANAGER &&
+      existing.role === USER_ROLE.ADMIN
+    ) {
+      throw new Error("Quản lý không thể chỉnh sửa tài khoản admin");
+    }
+
+    const effectiveRole = input.role ?? existing.role;
+    const payload: Partial<Profile> & { updated_at: string } = {
+      ...input,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (
+      effectiveRole === USER_ROLE.ADMIN ||
+      effectiveRole === USER_ROLE.MANAGER
+    ) {
+      payload.branch_id = null;
+    } else if (effectiveRole === USER_ROLE.STAFF) {
+      payload.branch_id = input.branch_id || DEFAULT_BRANCH_ID;
+      if (!payload.branch_id) {
+        throw new Error("Nhân viên phải có chi nhánh");
+      }
+    }
+
+    const { data, error } = await adminSupabase
+      .from("profiles")
+      .update(payload)
       .eq("id", id)
       .select()
       .single();

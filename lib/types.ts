@@ -33,6 +33,34 @@ export type Result<T> = ResultSuccess<T> | ResultError;
 export type ResultVoid = ResultSuccessVoid | ResultError;
 
 // ============================================================================
+// Branch Types
+// ============================================================================
+
+export type Branch = {
+  id: string;
+  code: string;
+  name: string;
+  address: string | null;
+  phone: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+};
+
+export type BranchInput = {
+  code: string;
+  name: string;
+  address?: string | null;
+  phone?: string | null;
+  is_active?: boolean;
+};
+
+export type BranchScope =
+  | { mode: "all"; branchId: null }
+  | { mode: "single"; branchId: string };
+
+// ============================================================================
 // User & Profile Types
 // ============================================================================
 
@@ -44,6 +72,7 @@ export type Profile = {
   phone: string | null;
   role: UserRole;
   status: UserStatus;
+  branch_id: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -78,6 +107,7 @@ export type Room = {
   status: RoomStatus;
   room_number?: string | null;
   floor_number?: number | null;
+  branch_id: string;
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
@@ -96,6 +126,7 @@ export type RoomInput = {
   status: RoomStatus;
   room_number?: string | null;
   floor_number?: number | null;
+  branch_id?: string;
 };
 
 // ============================================================================
@@ -148,6 +179,7 @@ export type RoomStatusViewData = {
   status: string;
   room_number: string | null;
   floor_number: number | null;
+  branch_id: string;
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
@@ -214,6 +246,7 @@ export type BookingRecord = {
   customer_id: string | null;
   room_id: string | null;
   created_by?: string | null;
+  branch_id?: string;
   check_in: string;
   check_out: string;
   number_of_nights: number;
@@ -419,6 +452,7 @@ export type Payment = {
   paid_at: string | null;
   verified_at: string | null;
   refunded_at: string | null;
+  branch_id?: string;
   created_at: string;
   updated_at: string;
 };
@@ -493,6 +527,7 @@ export type Customer = {
   customer_type: CustomerType;
   date_of_birth: string | null;
   source: string | null;
+  branch_id: string;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -512,6 +547,7 @@ export type CustomerInput = {
   customer_type?: CustomerType;
   date_of_birth?: string | null;
   source?: string | null;
+  branch_id?: string;
 };
 
 // ============================================================================
@@ -741,6 +777,7 @@ export type Voucher = {
   start_at: string | null;
   end_at: string | null;
   is_active: boolean;
+  branch_id?: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -755,6 +792,7 @@ export type VoucherInput = {
   start_at?: string | null;
   end_at?: string | null;
   is_active?: boolean;
+  branch_id?: string | null;
 };
 
 export type VouchersResponse = {

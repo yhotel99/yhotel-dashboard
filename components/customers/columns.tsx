@@ -11,11 +11,19 @@ import {
 } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 
+export const CUSTOMER_COLUMNS = {
+  BRANCH: { accessorKey: "Chi nhánh", header: "Chi nhánh" },
+} as const;
+
 export function createColumns(
   onEdit: (customer: Customer) => void,
   onViewDetail?: (customer: Customer) => void,
-  onViewBookings?: (customer: Customer) => void
+  onViewBookings?: (customer: Customer) => void,
+  options?: {
+    branchNameById?: Readonly<Record<string, string>>;
+  }
 ): ColumnDef<Customer>[] {
+  const branchNameById = options?.branchNameById;
   return [
     {
       accessorKey: "Họ tên",
@@ -123,6 +131,32 @@ export function createColumns(
       },
       size: 70,
       minSize: 60,
+    },
+    {
+      accessorKey: CUSTOMER_COLUMNS.BRANCH.accessorKey,
+      header: CUSTOMER_COLUMNS.BRANCH.header,
+      cell: ({ row }) => {
+        const branchId = row.original.branch_id;
+        const label =
+          branchId && branchNameById
+            ? branchNameById[branchId] ?? "—"
+            : "—";
+        return (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="max-w-[140px] truncate block font-medium">
+                {label}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{label}</p>
+            </TooltipContent>
+          </Tooltip>
+        );
+      },
+      size: 120,
+      minSize: 100,
+      maxSize: 160,
     },
     {
       id: "actions",

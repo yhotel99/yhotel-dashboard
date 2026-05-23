@@ -38,6 +38,7 @@ export async function GET(req: NextRequest) {
       dateFieldRaw === "paid_at" ? "paid_at" : "created_at";
     const dateFrom = searchParams.get("dateFrom") || null;
     const dateTo = searchParams.get("dateTo") || null;
+    const branchId = searchParams.get("branchId") || null;
 
     if (page < 1 || limit < 1) {
       return NextResponse.json(
@@ -57,6 +58,7 @@ export async function GET(req: NextRequest) {
       dateField,
       dateFrom,
       dateTo,
+      branchId,
     });
 
     return NextResponse.json(response);

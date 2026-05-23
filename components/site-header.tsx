@@ -18,6 +18,7 @@ import {
 import { allNavItems } from "@/lib/constants";
 import { useAuth } from "@/contexts/auth-context";
 import { usePermissions } from "@/contexts/permissions-context";
+import { BranchSelector } from "@/components/branch-selector";
 
 export function SiteHeader() {
   const router = useRouter();
@@ -86,6 +87,9 @@ export function SiteHeader() {
               <span>K</span>
             </kbd>
           </button>
+          <div className="ml-auto">
+            <BranchSelector />
+          </div>
         </div>
       </header>
 

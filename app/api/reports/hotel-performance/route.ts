@@ -35,6 +35,8 @@ import {
   countInventoryRoomsForOccupancy,
   sumAvailableRoomNightsInRange,
 } from "@/lib/reports/occupancy-room-nights";
+import { getReportBranchIdFromRequest } from "@/lib/reports/branch-filter";
+import { listBranches } from "@/services/branches";
 import {
   checkoutCalendarDate,
   countOngoingStayContributions,
@@ -247,8 +249,9 @@ export async function GET(req: NextRequest) {
     const statusList = parseStatusPresetsFromSearchParams(searchParams);
 
     const supabase = await createClient();
+    const branchId = await getReportBranchIdFromRequest(searchParams);
 
-    const bookingSelect = `id, booking_code, check_in, check_out, actual_check_out, status, final_amount, total_amount, voucher_discount, customer_id,
+    const bookingSelect = `id, booking_code, check_in, check_out, actual_check_out, status, final_amount, total_amount, voucher_discount, customer_id, branch_id,
           customers:customer_id ( id, full_name, source ),
           rooms:room_id ( name, room_type, floor_number ),
           booking_rooms ( room_id, rooms:room_id ( name, room_type, floor_number ) )`;
@@ -264,32 +267,48 @@ export async function GET(req: NextRequest) {
       { data: rawBookingsPrev, error: bookingsPrevError },
       { count: cancelledInPeriod = 0 },
     ] = await Promise.all([
-      supabase
-        .from("rooms")
-        .select("id, status, floor_number")
-        .is("deleted_at", null)
-        .neq("status", ROOM_STATUS.MAINTENANCE),
-      supabase
-        .from("bookings")
-        .select(bookingSelect)
-        .is("deleted_at", null)
-        .in("status", [...statusList])
-        .lt("check_in", toISO)
-        .gt("check_out", fromISO),
-      supabase
-        .from("bookings")
-        .select(bookingSelectPrev)
-        .is("deleted_at", null)
-        .in("status", [...statusList])
-        .lt("check_in", prevToISO)
-        .gt("check_out", prevFromISO),
-      supabase
-        .from("bookings")
-        .select("id", { count: "exact", head: true })
-        .eq("status", BOOKING_STATUS.CANCELLED)
-        .is("deleted_at", null)
-        .gte("updated_at", fromISO)
-        .lte("updated_at", toISO),
+      (() => {
+        let q = supabase
+          .from("rooms")
+          .select("id, status, floor_number")
+          .is("deleted_at", null)
+          .neq("status", ROOM_STATUS.MAINTENANCE);
+        if (branchId) q = q.eq("branch_id", branchId);
+        return q;
+      })(),
+      (() => {
+        let q = supabase
+          .from("bookings")
+          .select(bookingSelect)
+          .is("deleted_at", null)
+          .in("status", [...statusList])
+          .lt("check_in", toISO)
+          .gt("check_out", fromISO);
+        if (branchId) q = q.eq("branch_id", branchId);
+        return q;
+      })(),
+      (() => {
+        let q = supabase
+          .from("bookings")
+          .select(bookingSelectPrev)
+          .is("deleted_at", null)
+          .in("status", [...statusList])
+          .lt("check_in", prevToISO)
+          .gt("check_out", prevFromISO);
+        if (branchId) q = q.eq("branch_id", branchId);
+        return q;
+      })(),
+      (() => {
+        let q = supabase
+          .from("bookings")
+          .select("id", { count: "exact", head: true })
+          .eq("status", BOOKING_STATUS.CANCELLED)
+          .is("deleted_at", null)
+          .gte("updated_at", fromISO)
+          .lte("updated_at", toISO);
+        if (branchId) q = q.eq("branch_id", branchId);
+        return q;
+      })(),
     ]);
 
     if (roomsError || bookingsError || bookingsPrevError) {
@@ -872,6 +891,17 @@ export async function GET(req: NextRequest) {
     const taxesNote =
       "Thuế suất chưa được tách dòng trong hệ thống — hiển thị 0 cho đến khi tích hợp kế toán.";
 
+    let branchNote = "Tất cả chi nhánh";
+    if (branchId) {
+      try {
+        const branchList = await listBranches();
+        branchNote =
+          branchList.find((b) => b.id === branchId)?.name ?? "Chi nhánh đã chọn";
+      } catch {
+        branchNote = "Chi nhánh đã chọn";
+      }
+    }
+
     return NextResponse.json({
       executive: {
         operatingRevenue,
@@ -932,7 +962,7 @@ export async function GET(req: NextRequest) {
         ongoingStaysContributing: ongoingStays,
         unpaidOperatingGap: unpaidActiveContributing,
         filterOptions,
-        branchNote: "Đơn cơ sở — mở rộng đa chi nhánh khi có dữ liệu.",
+        branchNote,
       },
     });
   } catch (err) {

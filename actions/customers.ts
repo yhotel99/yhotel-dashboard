@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { CustomerInput, Customer, Result, ResultVoid } from "@/lib/types";
-import { BOOKING_STATUS } from "@/lib/constants";
+import { BOOKING_STATUS, DEFAULT_BRANCH_ID } from "@/lib/constants";
+import { getCurrentUserBranchScope, resolveBranchFilterId } from "@/lib/branch.server";
 
 /**
  * Search customers (simple search without stats - for booking dialogs)
@@ -14,7 +15,8 @@ import { BOOKING_STATUS } from "@/lib/constants";
  */
 export async function searchCustomersAction(
   search: string,
-  limit: number = 10
+  limit: number = 10,
+  requestedBranchId?: string | null
 ): Promise<Result<Customer[]>> {
   try {
     if (!search || search.trim().length < 2) {
@@ -26,15 +28,20 @@ export async function searchCustomersAction(
 
     const supabase = await createClient();
     const trimmedSearch = search.trim();
+    const { scope } = await getCurrentUserBranchScope();
+    const filterBranchId = resolveBranchFilterId(scope, requestedBranchId);
 
-    // Simple query - only basic customer fields, no stats
-    const { data, error } = await supabase
+    let query = supabase
       .from("customers")
       .select("id, full_name, email, phone, customer_type, source, created_at, updated_at, deleted_at")
       .is("deleted_at", null)
       .or(
         `full_name.ilike.%${trimmedSearch}%,email.ilike.%${trimmedSearch}%,phone.ilike.%${trimmedSearch}%`
-      )
+      );
+    if (filterBranchId) {
+      query = query.eq("branch_id", filterBranchId);
+    }
+    const { data, error } = await query
       .order("created_at", { ascending: false })
       .limit(limit);
 
@@ -69,9 +76,13 @@ export async function createCustomerAction(
   input: CustomerInput
 ): Promise<Result<Customer>> {
   const supabase = await createClient();
+  const { scope } = await getCurrentUserBranchScope();
+  const branchId =
+    resolveBranchFilterId(scope, input.branch_id) ?? DEFAULT_BRANCH_ID;
+
   const { data, error } = await supabase
     .from("customers")
-    .insert([input])
+    .insert([{ ...input, branch_id: branchId }])
     .select()
     .single();
 

@@ -20,9 +20,17 @@ export type AvailableRoomsResponse = {
 /**
  * Hook for fetching available rooms in the next 30 days
  */
-export function useAvailableRooms() {
+export function useAvailableRooms(branchId: string | null = null) {
+  const params = new URLSearchParams();
+  if (branchId) {
+    params.append("branchId", branchId);
+  }
+  const url = params.toString()
+    ? `/api/available-rooms-30days?${params.toString()}`
+    : "/api/available-rooms-30days";
+
   const { data, error, isLoading, mutate, isValidating } =
-    useSWR<AvailableRoomsResponse>("/api/available-rooms-30days", fetcher, {
+    useSWR<AvailableRoomsResponse>(url, fetcher, {
       refreshInterval: 60000, // Refresh every minute
       revalidateOnFocus: false,
     });
