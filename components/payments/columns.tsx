@@ -172,10 +172,9 @@ export function createPaymentsColumns(options?: {
       header: PAYMENTS_COLUMNS.BRANCH.header,
       cell: ({ row }) => {
         const branchId = row.original.branch_id;
-        const label =
-          branchId && branchNameById
-            ? branchNameById[branchId] ?? "—"
-            : "—";
+        const label = branchId
+          ? (branchNameById?.[branchId] ?? "—")
+          : "—";
         return (
           <Tooltip>
             <TooltipTrigger asChild>

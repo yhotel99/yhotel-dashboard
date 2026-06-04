@@ -443,6 +443,7 @@ export async function getPaymentsListWithPagination({
       refunded_at: row.refunded_at,
       created_at: row.created_at,
       updated_at: row.updated_at,
+      branch_id: row.branch_id ?? undefined,
       bookings: {
         customers: row.customers?.full_name
           ? {

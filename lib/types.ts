@@ -501,6 +501,7 @@ export type PaymentSearchRow = {
   refunded_at: string | null;
   created_at: string;
   updated_at: string;
+  branch_id?: string | null;
   total_count?: number;
   customers: {
     full_name: string | null;
