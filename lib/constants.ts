@@ -681,7 +681,14 @@ export const BANK_ACCOUNT = {
   ACC: "01801807326",
   BANK: "TPBank",
   ACCOUNT_NAME: "CÔNG TY CỔ PHẦN KHÁCH SẠN YQ"
-} as const
+} as const;
+
+/** Static assets served from /public */
+export const PUBLIC_ASSETS = {
+  LOGO: encodeURI("/Y HOTEL_CIP (1).png"),
+  PAYMENT_SOUND_APPLE: "/apple-pay-original.mp3",
+  PAYMENT_SOUND_MONEY: "/money-soundfx.mp3",
+} as const;
 
 /**
  * Room category codes for classification

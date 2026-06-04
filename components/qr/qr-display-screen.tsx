@@ -2,14 +2,19 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import { BANK_ACCOUNT, DEFAULT_BRANCH_CODE, SETTINGS_ID } from "@/lib/constants";
+import {
+  BANK_ACCOUNT,
+  DEFAULT_BRANCH_CODE,
+  PUBLIC_ASSETS,
+  SETTINGS_ID,
+} from "@/lib/constants";
 import { formatCurrency, formatDateOnly } from "@/lib/functions";
 import { createClient } from "@/lib/supabase/client";
 
 function playPaymentSuccessSound() {
   if (typeof window === "undefined") return;
   try {
-    const audio = new Audio("/apple-pay-original.mp3");
+    const audio = new Audio(PUBLIC_ASSETS.PAYMENT_SOUND_APPLE);
     audio.currentTime = 0;
     audio.volume = 1;
     void audio.play().catch(() => {});
@@ -367,7 +372,7 @@ export function QRDisplayScreen({ branchCode }: { branchCode: string }) {
         <div className="flex flex-col items-center justify-center text-center px-4">
           <div className="relative w-[32rem] h-[32rem] mx-auto -mb-16 sm:w-[36rem] sm:h-[36rem]">
             <Image
-              src="/logo.png"
+              src={PUBLIC_ASSETS.LOGO}
               alt="Y HOTEL"
               fill
               className="object-contain"
