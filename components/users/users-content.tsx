@@ -12,11 +12,20 @@ import type { Profile, ProfilesResponse } from "@/lib/types";
 import { createColumns } from "@/components/users/columns";
 import {
   UserFormDialog,
+  BRANCH_NONE_VALUE,
   type CreateUserFormValues,
   type EditUserFormValues,
 } from "@/components/users/user-form-dialog";
 import { useBranch } from "@/contexts/branch-context";
-import { DEFAULT_BRANCH_ID } from "@/lib/constants";
+import { DEFAULT_BRANCH_ID, USER_ROLE } from "@/lib/constants";
+
+function resolveProfileBranchId(
+  role: string,
+  branchId: string | null | undefined
+): string | null {
+  if (!branchId || branchId === BRANCH_NONE_VALUE) return null;
+  return branchId;
+}
 
 export function UsersContent({
   initialData,
@@ -154,7 +163,10 @@ export function UsersContent({
         role: data.role,
         status: data.status,
         branch_id:
-          data.role === "staff" ? (data.branch_id ?? null) : null,
+          data.role === USER_ROLE.STAFF
+            ? resolveProfileBranchId(data.role, data.branch_id) ??
+              DEFAULT_BRANCH_ID
+            : resolveProfileBranchId(data.role, data.branch_id),
       });
       toast.success("Tạo người dùng thành công!", {
         description: `Người dùng ${data.full_name} đã được tạo thành công.`,
@@ -178,9 +190,10 @@ export function UsersContent({
         role: data.role,
         status: data.status,
         branch_id:
-          data.role === "staff"
-            ? data.branch_id || DEFAULT_BRANCH_ID
-            : null,
+          data.role === USER_ROLE.STAFF
+            ? resolveProfileBranchId(data.role, data.branch_id) ??
+              DEFAULT_BRANCH_ID
+            : resolveProfileBranchId(data.role, data.branch_id),
       });
       toast.success("Cập nhật người dùng thành công!", {
         description: `Người dùng ${updatedProfile.full_name} đã được cập nhật thành công.`,

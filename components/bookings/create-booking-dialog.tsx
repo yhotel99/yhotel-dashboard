@@ -31,7 +31,13 @@ import { Label } from "@/components/ui/label";
 import { IconSearch, IconPlus } from "@tabler/icons-react";
 import type { BookingInput, PaymentMethod } from "@/lib/types";
 import { useRooms } from "@/hooks/use-rooms";
+import { useAuth } from "@/contexts/auth-context";
 import { useBranch } from "@/contexts/branch-context";
+import { BranchFormField } from "@/components/branch-form-field";
+import {
+  getBranchCodeById,
+  getDefaultFormBranchId,
+} from "@/lib/branch";
 import { useSettings } from "@/hooks/use-settings";
 import { searchCustomersAction, createCustomerAction } from "@/actions/customers";
 import { validateVoucherForBooking } from "@/actions/vouchers";
@@ -99,12 +105,31 @@ function validateBookingForm({
   selectedCustomer,
   selectedRoom,
   nights,
+  formBranchId,
 }: {
   formValues: CreateBookingFormState;
   selectedCustomer: Customer | null;
   selectedRoom: Room | null;
   nights: number;
+  formBranchId: string;
 }): string | null {
+  if (!formBranchId) {
+    return "Vui lòng chọn chi nhánh trước khi tạo booking.";
+  }
+
+  if (
+    selectedRoom?.branch_id &&
+    selectedRoom.branch_id !== formBranchId
+  ) {
+    return "Phòng đã chọn không thuộc chi nhánh đang chọn.";
+  }
+
+  if (
+    selectedCustomer?.branch_id &&
+    selectedCustomer.branch_id !== formBranchId
+  ) {
+    return "Khách hàng đã chọn không thuộc chi nhánh đang chọn.";
+  }
   if (!selectedCustomer) {
     return "👤 Vui lòng chọn khách hàng trước khi tạo booking.";
   }
@@ -190,12 +215,33 @@ export function CreateBookingDialog({
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchResultsRef = useRef<HTMLDivElement>(null);
   const lastSearchRef = useRef<string>("");
-  const { filterBranchId } = useBranch();
+  const { branches, filterBranchId, effectiveBranchId } = useBranch();
+  const { profile } = useAuth();
+  const [formBranchId, setFormBranchId] = useState(() =>
+    getDefaultFormBranchId({
+      profile: null,
+      filterBranchId: null,
+      effectiveBranchId: null,
+    })
+  );
+
+  useEffect(() => {
+    if (open) {
+      setFormBranchId(
+        getDefaultFormBranchId({
+          profile,
+          filterBranchId,
+          effectiveBranchId,
+        })
+      );
+    }
+  }, [open, profile, filterBranchId, effectiveBranchId]);
+
   const { rooms, mutate: refetch } = useRooms({
     page: 1,
     limit: 20,
     search: "",
-    branchId: filterBranchId,
+    branchId: formBranchId || null,
   });
   const { settings } = useSettings();
   const debouncedSearch = useDebounce(customerSearch, 300);
@@ -225,14 +271,33 @@ export function CreateBookingDialog({
 
     lastSearchRef.current = trimmedSearch;
 
-    searchCustomersAction(trimmedSearch, 10, filterBranchId).then((result) => {
+    searchCustomersAction(trimmedSearch, 10, formBranchId).then((result) => {
       if (result.ok) {
         setSearchCustomers(result.data);
       } else {
         setSearchCustomers([]);
       }
     });
-  }, [debouncedSearch, filterBranchId]);
+  }, [debouncedSearch, formBranchId]);
+
+  const handleBranchChange = (branchId: string) => {
+    setFormBranchId(branchId);
+    setSelectedCustomer(null);
+    setCustomerSearch("");
+    setFormValues((prev) => ({
+      ...prev,
+      customer_id: "",
+      room_id: "",
+    }));
+    setVoucherState(null);
+    lastSearchRef.current = "";
+  };
+
+  useEffect(() => {
+    if (open && formBranchId) {
+      refetch();
+    }
+  }, [open, formBranchId, refetch]);
 
   // Cùng ngày: check-in 00:00, check-out 12:00 (1 đêm). Nhiều ngày: 14:00 / 12:00
   const checkInISO = useMemo(
@@ -474,6 +539,7 @@ export function CreateBookingDialog({
         selectedCustomer,
         selectedRoom: submitSelectedRoom,
         nights: number_of_nights,
+        formBranchId,
       });
 
       if (validationError) {
@@ -502,6 +568,7 @@ export function CreateBookingDialog({
         final_amount: voucherState ? undefined : finalAmount,
         voucher_code: voucherState ? voucherState.code : null,
         payment_method: formValues.payment_method as PaymentMethod,
+        branch_code: getBranchCodeById(formBranchId, branches),
       };
 
       setIsSubmitting(true);
@@ -532,6 +599,11 @@ export function CreateBookingDialog({
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <BranchFormField
+            value={formBranchId}
+            onChange={handleBranchChange}
+            className="md:col-span-2"
+          />
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="customer_search">Khách hàng *</Label>
@@ -814,8 +886,7 @@ export function CreateBookingDialog({
                         const result = await validateVoucherForBooking({
                           code,
                           totalAmount: total,
-                          branchId:
-                            selectedRoom?.branch_id ?? filterBranchId,
+                          branchId: formBranchId,
                           roomId: formValues.room_id || undefined,
                         });
                         if (!result.ok) {
@@ -930,6 +1001,7 @@ export function CreateBookingDialog({
         <CreateCustomerDialog
           open={isCreateCustomerDialogOpen}
           onOpenChange={setIsCreateCustomerDialogOpen}
+          defaultBranchId={formBranchId}
           onCreate={async (input) => {
             const result = await createCustomerAction(input);
             if (result.ok) {

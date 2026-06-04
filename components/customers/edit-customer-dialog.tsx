@@ -40,6 +40,9 @@ import {
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format, parseISO } from "date-fns";
+import { BranchDetailSection } from "@/components/branch-form-field";
+import { RelatedCustomersAlert } from "@/components/customers/related-customers-alert";
+import { Separator } from "@/components/ui/separator";
 
 type EditCustomerFormState = {
   full_name: string;
@@ -239,6 +242,18 @@ export function EditCustomerDialog({
           <DialogDescription>Cập nhật thông tin khách hàng.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {customer ? (
+            <>
+              <BranchDetailSection branchId={customer.branch_id} />
+              <Separator />
+            </>
+          ) : null}
+          <RelatedCustomersAlert
+            email={formValues.email}
+            phone={formValues.phone}
+            excludeId={customer?.id}
+            currentBranchId={customer?.branch_id}
+          />
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="full_name">Họ và tên *</Label>

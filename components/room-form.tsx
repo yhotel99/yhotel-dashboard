@@ -303,6 +303,9 @@ export function RoomForm({
                           ))}
                         </SelectContent>
                       </Select>
+                      <FormDescription>
+                        Chọn chi nhánh để tạo phòng
+                      </FormDescription>
                     </FormItem>
                   )}
                 />

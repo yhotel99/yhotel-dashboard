@@ -2,9 +2,17 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import type { CustomerInput, Customer, Result, ResultVoid } from "@/lib/types";
+import type { Branch, CustomerInput, Customer, Result, ResultVoid } from "@/lib/types";
 import { BOOKING_STATUS, DEFAULT_BRANCH_ID } from "@/lib/constants";
 import { getCurrentUserBranchScope, resolveBranchFilterId } from "@/lib/branch.server";
+import { buildBranchNameById } from "@/lib/branch";
+
+export type RelatedCustomerRow = {
+  id: string;
+  full_name: string;
+  branch_id: string;
+  branch_name: string;
+};
 
 /**
  * Search customers (simple search without stats - for booking dialogs)
@@ -33,7 +41,9 @@ export async function searchCustomersAction(
 
     let query = supabase
       .from("customers")
-      .select("id, full_name, email, phone, customer_type, source, created_at, updated_at, deleted_at")
+      .select(
+        "id, full_name, email, phone, branch_id, customer_type, source, created_at, updated_at, deleted_at"
+      )
       .is("deleted_at", null)
       .or(
         `full_name.ilike.%${trimmedSearch}%,email.ilike.%${trimmedSearch}%,phone.ilike.%${trimmedSearch}%`
@@ -89,14 +99,18 @@ export async function createCustomerAction(
   if (error) {
     console.error("Error creating customer:", error);
     
-    // Check for duplicate email
-    if (error.code === "23505" && error.message.includes("customers_email_key")) {
+    if (error.code === "23505") {
+      const isBranchEmail =
+        error.message.includes("customers_branch_email_unique") ||
+        error.message.includes("customers_email_key");
       return {
         ok: false,
-        message: "Email này đã tồn tại trong hệ thống. Vui lòng sử dụng email khác.",
+        message: isBranchEmail
+          ? "Email này đã tồn tại tại chi nhánh này. Vui lòng sử dụng email khác."
+          : "Email này đã tồn tại. Vui lòng sử dụng email khác.",
       };
     }
-    
+
     return {
       ok: false,
       message: error.message,
@@ -130,23 +144,28 @@ export async function updateCustomerAction(
 ): Promise<ResultVoid> {
   const supabase = await createClient();
 
-  // Update customer data
+  const { branch_id: _branchId, ...updatePayload } = input;
+
   const { error } = await supabase
     .from("customers")
-    .update(input)
+    .update(updatePayload)
     .eq("id", id);
 
   if (error) {
     console.error("Error updating customer:", error);
     
-    // Check for duplicate email
-    if (error.code === "23505" && error.message.includes("customers_email_key")) {
+    if (error.code === "23505") {
+      const isBranchEmail =
+        error.message.includes("customers_branch_email_unique") ||
+        error.message.includes("customers_email_key");
       return {
         ok: false,
-        message: "Email này đã tồn tại trong hệ thống. Vui lòng sử dụng email khác.",
+        message: isBranchEmail
+          ? "Email này đã tồn tại tại chi nhánh này. Vui lòng sử dụng email khác."
+          : "Email này đã tồn tại. Vui lòng sử dụng email khác.",
       };
     }
-    
+
     return {
       ok: false,
       message: "Không thể cập nhật khách hàng",
@@ -212,4 +231,74 @@ export async function deleteCustomerAction(
   revalidatePath("/dashboard/customers");
   
   return { ok: true };
+}
+
+/**
+ * Find customers with same email or phone at other branches (for duplicate hints).
+ */
+export async function findRelatedCustomersAction(params: {
+  email?: string;
+  phone?: string;
+  excludeId?: string;
+  currentBranchId?: string | null;
+}): Promise<Result<RelatedCustomerRow[]>> {
+  const email = params.email?.trim();
+  const phone = params.phone?.trim();
+
+  if (!email && !phone) {
+    return { ok: true, data: [] };
+  }
+
+  try {
+    const supabase = await createClient();
+
+    let query = supabase
+      .from("customers")
+      .select("id, full_name, branch_id")
+      .is("deleted_at", null);
+
+    if (email && phone) {
+      query = query.or(`email.ilike.${email},phone.eq.${phone}`);
+    } else if (email) {
+      query = query.ilike("email", email);
+    } else if (phone) {
+      query = query.eq("phone", phone);
+    }
+
+    if (params.excludeId) {
+      query = query.neq("id", params.excludeId);
+    }
+
+    if (params.currentBranchId) {
+      query = query.neq("branch_id", params.currentBranchId);
+    }
+
+    const { data, error } = await query.limit(10);
+
+    if (error) {
+      return { ok: false, message: error.message };
+    }
+
+    const { data: branches } = await supabase
+      .from("branches")
+      .select("id, name, code")
+      .is("deleted_at", null);
+
+    const branchNameById = buildBranchNameById((branches || []) as Branch[]);
+
+    const rows: RelatedCustomerRow[] = (data || []).map((row) => ({
+      id: row.id,
+      full_name: row.full_name,
+      branch_id: row.branch_id,
+      branch_name: branchNameById[row.branch_id] ?? "—",
+    }));
+
+    return { ok: true, data: rows };
+  } catch (err) {
+    return {
+      ok: false,
+      message:
+        err instanceof Error ? err.message : "Không thể tra cứu khách liên quan",
+    };
+  }
 }

@@ -190,6 +190,7 @@ export async function createBooking(
       p_advance_payment: input.advance_payment ?? 0,
       p_final_amount: input.final_amount ?? null,
       p_voucher_code: input.voucher_code ?? null,
+      p_branch_code: input.branch_code?.trim() || null,
     }
   );
 
@@ -270,6 +271,7 @@ export async function createMultiBooking(
     p_advance_payment: input.advance_payment ?? 0,
     p_final_amount: input.final_amount ?? null,
     p_voucher_code: input.voucher_code ?? null,
+    p_branch_code: input.branch_code?.trim() || null,
   });
 
   if (error) {

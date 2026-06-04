@@ -34,6 +34,8 @@ import {
   parseFormattedNumber,
 } from "@/lib/functions";
 import { BOOKING_STATUS } from "@/lib/constants";
+import { BranchDetailSection } from "@/components/branch-form-field";
+import { Separator } from "@/components/ui/separator";
 import {
   calculateTotalWithWeekdayRates,
   normalizeHolidayPeriods,
@@ -283,6 +285,15 @@ export function TransferRoomDialog({
       return;
     }
 
+    if (
+      booking.branch_id &&
+      selectedRoom.branch_id &&
+      selectedRoom.branch_id !== booking.branch_id
+    ) {
+      setError("Chỉ được chọn phòng thuộc cùng chi nhánh với booking.");
+      return;
+    }
+
     // Use calculated total amount or booking's amount to pay (final_amount ?? total_amount)
     const totalAmount = calculatedTotalAmount || (booking.final_amount ?? booking.total_amount);
 
@@ -377,6 +388,11 @@ export function TransferRoomDialog({
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <BranchDetailSection
+            branchId={booking.branch_id}
+            hint="Chỉ chọn phòng thuộc chi nhánh này."
+          />
+          <Separator />
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2 md:col-span-2">
               <Label>Khách hàng</Label>

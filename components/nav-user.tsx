@@ -31,9 +31,18 @@ import { DASHBOARD_URLS } from "@/lib/constants";
 import { AccountDetailDialog } from "@/components/users/account-detail-dialog";
 import { usePermissions } from "@/contexts/permissions-context";
 import type { Profile } from "@/lib/types";
+import { useBranch } from "@/contexts/branch-context";
+import { getCurrentUserBranchLabel } from "@/lib/branch";
 
 export function NavUser({ profile }: { profile: Profile }) {
   const { isMobile } = useSidebar();
+  const { branches, canSelectBranch, selectedBranchId } = useBranch();
+  const branchLabel = getCurrentUserBranchLabel({
+    profile,
+    branches,
+    canSelectBranch,
+    selectedBranchId,
+  });
   const router = useRouter();
   const { hasViewPermission } = usePermissions();
   const [accountDialogOpen, setAccountDialogOpen] = useState(false);
@@ -70,6 +79,11 @@ export function NavUser({ profile }: { profile: Profile }) {
                 <span className="text-muted-foreground truncate text-xs">
                   {profile.email}
                 </span>
+                {branchLabel ? (
+                  <span className="text-muted-foreground truncate text-xs">
+                    {branchLabel}
+                  </span>
+                ) : null}
               </div>
               <IconDotsVertical className="ml-auto size-4" />
             </SidebarMenuButton>

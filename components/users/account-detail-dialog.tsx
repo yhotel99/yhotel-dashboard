@@ -23,6 +23,9 @@ import { formatDateOnly, generateGradient, getInitials } from "@/lib/functions";
 import { RoleBadge } from "./role-badge";
 import { StatusBadge } from "./status-badge";
 import { USER_ROLE } from "@/lib/constants";
+import { useBranch } from "@/contexts/branch-context";
+import { resolveBranchDisplay, canViewAllBranches } from "@/lib/branch";
+import { IconBuilding } from "@tabler/icons-react";
 
 interface AccountDetailDialogProps {
   open: boolean;
@@ -35,7 +38,15 @@ export function AccountDetailDialog({
   onOpenChange,
   profile,
 }: AccountDetailDialogProps) {
+  const { branches } = useBranch();
+
   if (!profile) return null;
+
+  const branchDisplay = profile.branch_id
+    ? resolveBranchDisplay(profile.branch_id, branches)
+    : canViewAllBranches(profile.role)
+      ? { name: "Toàn hệ thống", code: "—" }
+      : { name: "—", code: "—" };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -118,6 +129,29 @@ export function AccountDetailDialog({
                   <div>
                     <RoleBadge role={profile.role} />
                   </div>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <IconBuilding className="size-5" />
+                Chi nhánh
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-muted-foreground">
+                    Tên chi nhánh
+                  </label>
+                  <p className="text-base font-medium">{branchDisplay.name}</p>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-muted-foreground">
+                    Mã chi nhánh
+                  </label>
+                  <p className="text-base font-mono">{branchDisplay.code}</p>
                 </div>
               </div>
             </div>

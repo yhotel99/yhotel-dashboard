@@ -19,6 +19,7 @@ import { allNavItems } from "@/lib/constants";
 import { useAuth } from "@/contexts/auth-context";
 import { usePermissions } from "@/contexts/permissions-context";
 import { BranchSelector } from "@/components/branch-selector";
+import { CurrentBranchBadge } from "@/components/branch-form-field";
 
 export function SiteHeader() {
   const router = useRouter();
@@ -87,7 +88,8 @@ export function SiteHeader() {
               <span>K</span>
             </kbd>
           </button>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-2">
+            <CurrentBranchBadge className="hidden sm:inline-flex" />
             <BranchSelector />
           </div>
         </div>

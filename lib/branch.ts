@@ -55,3 +55,57 @@ export function resolveBranchFilterId(
   }
   return requestedBranchId?.trim() || null;
 }
+
+export function getBranchCodeById(
+  branchId: string | undefined | null,
+  branches: Branch[]
+): string | null {
+  if (!branchId) return null;
+  const branch = branches.find((b) => b.id === branchId);
+  return branch?.code ?? null;
+}
+
+export function getDefaultFormBranchId(params: {
+  profile: Profile | null;
+  filterBranchId: string | null;
+  effectiveBranchId: string | null;
+}): string {
+  const { profile, filterBranchId, effectiveBranchId } = params;
+  if (filterBranchId) return filterBranchId;
+  if (profile && !canViewAllBranches(profile.role) && profile.branch_id) {
+    return profile.branch_id;
+  }
+  return effectiveBranchId ?? DEFAULT_BRANCH_ID;
+}
+
+export function resolveBranchIdForSubmit(
+  scope: BranchScope,
+  formBranchId: string | undefined | null,
+  filterBranchId?: string | null
+): string {
+  const resolved = resolveBranchFilterId(scope, formBranchId ?? filterBranchId);
+  return resolved ?? DEFAULT_BRANCH_ID;
+}
+
+export function getCurrentUserBranchLabel(params: {
+  profile: Profile | null;
+  branches: Branch[];
+  canSelectBranch: boolean;
+  selectedBranchId: string | null;
+}): string | null {
+  const { profile, branches, canSelectBranch, selectedBranchId } = params;
+  if (!profile) return null;
+
+  if (canSelectBranch) {
+    if (selectedBranchId) {
+      return resolveBranchDisplay(selectedBranchId, branches).name;
+    }
+    return "Tất cả chi nhánh";
+  }
+
+  if (profile.branch_id) {
+    return resolveBranchDisplay(profile.branch_id, branches).name;
+  }
+
+  return null;
+}

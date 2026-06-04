@@ -76,7 +76,7 @@ export async function createProfileAction(
     const branchId =
       input.role === USER_ROLE.STAFF
         ? input.branch_id || DEFAULT_BRANCH_ID
-        : null;
+        : input.branch_id ?? null;
 
     if (input.role === USER_ROLE.STAFF && !branchId) {
       throw new Error("Nhân viên phải được gán chi nhánh");
@@ -184,16 +184,13 @@ export async function updateProfileAction(
       updated_at: new Date().toISOString(),
     };
 
-    if (
-      effectiveRole === USER_ROLE.ADMIN ||
-      effectiveRole === USER_ROLE.MANAGER
-    ) {
-      payload.branch_id = null;
-    } else if (effectiveRole === USER_ROLE.STAFF) {
+    if (effectiveRole === USER_ROLE.STAFF) {
       payload.branch_id = input.branch_id || DEFAULT_BRANCH_ID;
       if (!payload.branch_id) {
         throw new Error("Nhân viên phải có chi nhánh");
       }
+    } else if (input.branch_id !== undefined) {
+      payload.branch_id = input.branch_id || null;
     }
 
     const { data, error } = await adminSupabase

@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   IconCalendar,
@@ -9,10 +8,9 @@ import {
   IconId,
   IconWorld,
   IconUser,
-  IconBuilding,
 } from "@tabler/icons-react";
-import { useBranch } from "@/contexts/branch-context";
-import { resolveBranchDisplay } from "@/lib/branch";
+import { BranchDetailSection } from "@/components/branch-form-field";
+import { CustomerRelatedBranchesSection } from "@/components/customers/customer-related-branches-section";
 import {
   Dialog,
   DialogContent,
@@ -40,15 +38,6 @@ export function CustomerDetailDialog({
   customer,
 }: CustomerDetailDialogProps) {
   const router = useRouter();
-  const { branches } = useBranch();
-
-  const branchDisplay = useMemo(() => {
-    if (!customer) {
-      return { name: "—", code: "—" };
-    }
-    return resolveBranchDisplay(customer.branch_id, branches);
-  }, [customer, branches]);
-
   const handleViewBookings = () => {
     if (!customer) return;
     onOpenChange(false);
@@ -75,26 +64,8 @@ export function CustomerDetailDialog({
         <ScrollArea className="max-h-[70vh]">
           {customer && (
             <div className="space-y-6">
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <IconBuilding className="size-5" />
-                  Chi nhánh
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium text-muted-foreground">
-                      Tên chi nhánh
-                    </label>
-                    <p className="text-base font-medium">{branchDisplay.name}</p>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium text-muted-foreground">
-                      Mã chi nhánh
-                    </label>
-                    <p className="text-base font-mono">{branchDisplay.code}</p>
-                  </div>
-                </div>
-              </div>
+              <BranchDetailSection branchId={customer.branch_id} />
+              <CustomerRelatedBranchesSection customer={customer} />
 
               <Separator />
 

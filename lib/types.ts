@@ -385,6 +385,8 @@ export type BookingInput = {
   payment_method?: PaymentMethod;
   actual_check_in?: string | null;
   actual_check_out?: string | null;
+  /** Branch code for RPC resolve_booking_branch_id */
+  branch_code?: string | null;
 };
 
 // Partial booking input for simple updates (only total_guests and notes)
@@ -418,6 +420,7 @@ export type MultiBookingInput = {
   advance_payment: number;
   final_amount?: number | null;
   voucher_code?: string | null;
+  branch_code?: string | null;
 };
 
 // ============================================================================

@@ -32,6 +32,17 @@ import {
 import type { Branch, Profile } from "@/lib/types";
 import { DEFAULT_BRANCH_ID, USER_ROLE } from "@/lib/constants";
 
+/** Select value when admin/manager has no fixed branch (views all branches). */
+export const BRANCH_NONE_VALUE = "__none__";
+
+function branchIdToFormValue(
+  role: string,
+  branchId: string | null | undefined
+): string {
+  if (branchId) return branchId;
+  return role === USER_ROLE.STAFF ? DEFAULT_BRANCH_ID : BRANCH_NONE_VALUE;
+}
+
 // User form schema for create (with password)
 const createUserFormSchema = z.object({
   full_name: z.string().min(1, "Tên người dùng là bắt buộc"),
@@ -98,10 +109,7 @@ export function UserFormDialog({
           phone: profile.phone || "",
           role: profile.role,
           status: profile.status,
-          branch_id:
-            profile.role === USER_ROLE.STAFF
-              ? profile.branch_id ?? DEFAULT_BRANCH_ID
-              : undefined,
+          branch_id: branchIdToFormValue(profile.role, profile.branch_id),
         });
       } else {
         // Create mode - reset to default
@@ -119,19 +127,30 @@ export function UserFormDialog({
   }, [open, profile, form]);
 
   const watchedRole = form.watch("role");
-  const showBranchSelect = watchedRole === USER_ROLE.STAFF;
-  const assignedBranchName =
-    profile?.branch_id &&
-    branches.find((b) => b.id === profile.branch_id)?.name;
+  const isStaffRole = watchedRole === USER_ROLE.STAFF;
+  const showBranchSelect =
+    isStaffRole ||
+    (isEdit &&
+      (watchedRole === USER_ROLE.ADMIN ||
+        watchedRole === USER_ROLE.MANAGER));
 
   useEffect(() => {
-    if (watchedRole === USER_ROLE.STAFF && !form.getValues("branch_id")) {
-      form.setValue("branch_id", DEFAULT_BRANCH_ID);
+    const current = form.getValues("branch_id");
+    if (isStaffRole) {
+      if (!current || current === BRANCH_NONE_VALUE) {
+        form.setValue("branch_id", DEFAULT_BRANCH_ID);
+      }
+      return;
     }
-    if (watchedRole !== USER_ROLE.STAFF) {
-      form.setValue("branch_id", undefined);
+    if (
+      isEdit &&
+      (watchedRole === USER_ROLE.ADMIN || watchedRole === USER_ROLE.MANAGER)
+    ) {
+      if (!current) {
+        form.setValue("branch_id", BRANCH_NONE_VALUE);
+      }
     }
-  }, [watchedRole, form]);
+  }, [watchedRole, isStaffRole, isEdit, form]);
 
   const onSubmit = async (data: CreateUserFormValues | EditUserFormValues) => {
     try {
@@ -269,9 +288,14 @@ export function UserFormDialog({
                 name="branch_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Chi nhánh *</FormLabel>
+                    <FormLabel>
+                      Chi nhánh{isStaffRole ? " *" : ""}
+                    </FormLabel>
                     <Select
-                      value={field.value ?? DEFAULT_BRANCH_ID}
+                      value={
+                        field.value ??
+                        (isStaffRole ? DEFAULT_BRANCH_ID : BRANCH_NONE_VALUE)
+                      }
                       onValueChange={(value) => field.onChange(value)}
                       disabled={branches.length === 0}
                     >
@@ -281,6 +305,11 @@ export function UserFormDialog({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
+                        {!isStaffRole ? (
+                          <SelectItem value={BRANCH_NONE_VALUE}>
+                            Toàn hệ thống (không cố định)
+                          </SelectItem>
+                        ) : null}
                         {branches.map((b) => (
                           <SelectItem key={b.id} value={b.id}>
                             {b.name}
@@ -292,25 +321,17 @@ export function UserFormDialog({
                       <p className="text-sm text-muted-foreground">
                         Chưa có chi nhánh. Vui lòng tạo chi nhánh trước.
                       </p>
-                    ) : null}
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        {isStaffRole
+                          ? "Nhân viên làm việc tại một chi nhánh cố định."
+                          : "Quản trị viên / Quản lý vẫn xem được mọi chi nhánh; có thể gán chi nhánh mặc định nếu cần."}
+                      </p>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            ) : isEdit && (profile?.role === USER_ROLE.ADMIN || profile?.role === USER_ROLE.MANAGER) ? (
-              <FormItem>
-                <FormLabel>Chi nhánh</FormLabel>
-                <p className="text-sm text-muted-foreground rounded-md border border-dashed px-3 py-2">
-                  Vai trò Quản trị viên / Quản lý không gắn chi nhánh cố định
-                  (xem được mọi chi nhánh). Đổi vai trò thành{" "}
-                  <span className="font-medium">Nhân viên</span> để chọn chi
-                  nhánh
-                  {assignedBranchName
-                    ? ` (hiện tại: ${assignedBranchName})`
-                    : ""}
-                  .
-                </p>
-              </FormItem>
             ) : null}
             <FormField
               control={form.control}
