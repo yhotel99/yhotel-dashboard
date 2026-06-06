@@ -534,7 +534,7 @@ export function CreateMultiBookingDialog({
                   </p>
                 )}
                 {displaySearchResults.length > 0 && !selectedCustomer && (
-                  <div className="absolute z-50 mt-1 max-h-48 w-full overflow-auto rounded-md border bg-popover shadow-xl">
+                  <div className="absolute z-50 mt-1 max-h-72 w-full overflow-auto rounded-md border bg-popover shadow-xl">
                     {displaySearchResults.map((c) => (
                       <button
                         key={c.id}
