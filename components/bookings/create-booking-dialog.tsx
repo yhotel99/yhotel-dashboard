@@ -35,9 +35,12 @@ import { useAuth } from "@/contexts/auth-context";
 import { useBranch } from "@/contexts/branch-context";
 import { BranchFormField } from "@/components/branch-form-field";
 import {
+  buildBranchNameById,
   getBranchCodeById,
   getDefaultFormBranchId,
+  resolveBranchDisplay,
 } from "@/lib/branch";
+import { CustomerSearchOption } from "@/components/customers/customer-search-option";
 import { useSettings } from "@/hooks/use-settings";
 import { searchCustomersAction, createCustomerAction } from "@/actions/customers";
 import { validateVoucherForBooking } from "@/actions/vouchers";
@@ -124,12 +127,6 @@ function validateBookingForm({
     return "Phòng đã chọn không thuộc chi nhánh đang chọn.";
   }
 
-  if (
-    selectedCustomer?.branch_id &&
-    selectedCustomer.branch_id !== formBranchId
-  ) {
-    return "Khách hàng đã chọn không thuộc chi nhánh đang chọn.";
-  }
   if (!selectedCustomer) {
     return "👤 Vui lòng chọn khách hàng trước khi tạo booking.";
   }
@@ -216,6 +213,10 @@ export function CreateBookingDialog({
   const searchResultsRef = useRef<HTMLDivElement>(null);
   const lastSearchRef = useRef<string>("");
   const { branches, filterBranchId, effectiveBranchId } = useBranch();
+  const branchNameById = useMemo(
+    () => buildBranchNameById(branches),
+    [branches]
+  );
   const { profile } = useAuth();
   const [formBranchId, setFormBranchId] = useState(() =>
     getDefaultFormBranchId({
@@ -282,11 +283,8 @@ export function CreateBookingDialog({
 
   const handleBranchChange = (branchId: string) => {
     setFormBranchId(branchId);
-    setSelectedCustomer(null);
-    setCustomerSearch("");
     setFormValues((prev) => ({
       ...prev,
-      customer_id: "",
       room_id: "",
     }));
     setVoucherState(null);
@@ -654,13 +652,11 @@ export function CreateBookingDialog({
                           onClick={() => handleCustomerSelect(customer)}
                           className="w-full px-4 py-2 text-left hover:bg-accent hover:text-accent-foreground"
                         >
-                          <div className="font-medium">
-                            {customer.full_name}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {customer.phone && `${customer.phone} • `}
-                            {customer.email}
-                          </div>
+                          <CustomerSearchOption
+                            customer={customer}
+                            branchNameById={branchNameById}
+                            bookingBranchId={formBranchId}
+                          />
                         </button>
                       ))}
                     </div>
@@ -680,6 +676,10 @@ export function CreateBookingDialog({
                 <p className="text-xs text-muted-foreground">
                   Đã chọn: {selectedCustomer.full_name}
                   {selectedCustomer.phone && ` - ${selectedCustomer.phone}`}
+                  {selectedCustomer.branch_id &&
+                  selectedCustomer.branch_id !== formBranchId
+                    ? ` (CN gốc: ${resolveBranchDisplay(selectedCustomer.branch_id, branches).name})`
+                    : null}
                 </p>
               )}
             </div>

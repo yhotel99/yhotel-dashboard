@@ -36,7 +36,8 @@ import { validateVoucherForBooking } from "@/actions/vouchers";
 import { CreateCustomerDialog } from "@/components/customers/create-customer-dialog";
 import { BranchFormField } from "@/components/branch-form-field";
 import { useBranch } from "@/contexts/branch-context";
-import { getBranchCodeById } from "@/lib/branch";
+import { getBranchCodeById, buildBranchNameById, resolveBranchDisplay } from "@/lib/branch";
+import { CustomerSearchOption } from "@/components/customers/customer-search-option";
 import { useSettings } from "@/hooks/use-settings";
 import {
   Popover,
@@ -85,6 +86,10 @@ export function QuickBookingDialog({
   const { settings } = useSettings();
   const { branches } = useBranch();
   const branchId = room.branch_id;
+  const branchNameById = useMemo(
+    () => buildBranchNameById(branches),
+    [branches]
+  );
   const [formValues, setFormValues] =
     useState<QuickBookingFormState>(initialFormState);
   const [voucherState, setVoucherState] = useState<{
@@ -240,14 +245,6 @@ export function QuickBookingDialog({
       return;
     }
 
-    if (
-      selectedCustomer?.branch_id &&
-      selectedCustomer.branch_id !== branchId
-    ) {
-      setError("Khách hàng không thuộc chi nhánh của phòng này.");
-      return;
-    }
-
     // Cùng ngày: check-in 00:00, check-out 12:00
     const checkInISO = getCheckInDateISO(
       formValues.check_in_date,
@@ -384,11 +381,11 @@ export function QuickBookingDialog({
                       onClick={() => handleCustomerSelect(customer)}
                       className="w-full px-4 py-2 text-left hover:bg-accent hover:text-accent-foreground"
                     >
-                      <div className="font-medium">{customer.full_name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {customer.phone && `${customer.phone} • `}
-                        {customer.email}
-                      </div>
+                      <CustomerSearchOption
+                        customer={customer}
+                        branchNameById={branchNameById}
+                        bookingBranchId={branchId}
+                      />
                     </button>
                   ))}
                 </div>
@@ -406,6 +403,10 @@ export function QuickBookingDialog({
               <p className="text-xs text-muted-foreground">
                 Đã chọn: {selectedCustomer.full_name}
                 {selectedCustomer.phone && ` - ${selectedCustomer.phone}`}
+                {selectedCustomer.branch_id &&
+                selectedCustomer.branch_id !== branchId
+                  ? ` (CN gốc: ${resolveBranchDisplay(selectedCustomer.branch_id, branches).name})`
+                  : null}
               </p>
             )}
           </div>

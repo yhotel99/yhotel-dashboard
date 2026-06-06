@@ -17,14 +17,16 @@ export type RelatedCustomerRow = {
 /**
  * Search customers (simple search without stats - for booking dialogs)
  * Only returns basic customer info: id, full_name, email, phone
+ * Searches across all branches; optionally prioritizes matches from prioritizeBranchId.
  * @param search - Search term
  * @param limit - Maximum number of results (default: 10)
+ * @param prioritizeBranchId - Booking branch: same-branch customers appear first
  * @returns Array of customer records (basic info only, no stats)
  */
 export async function searchCustomersAction(
   search: string,
   limit: number = 10,
-  requestedBranchId?: string | null
+  prioritizeBranchId?: string | null
 ): Promise<Result<Customer[]>> {
   try {
     if (!search || search.trim().length < 2) {
@@ -36,10 +38,8 @@ export async function searchCustomersAction(
 
     const supabase = await createClient();
     const trimmedSearch = search.trim();
-    const { scope } = await getCurrentUserBranchScope();
-    const filterBranchId = resolveBranchFilterId(scope, requestedBranchId);
 
-    let query = supabase
+    const { data, error } = await supabase
       .from("customers")
       .select(
         "id, full_name, email, phone, branch_id, customer_type, source, created_at, updated_at, deleted_at"
@@ -47,13 +47,9 @@ export async function searchCustomersAction(
       .is("deleted_at", null)
       .or(
         `full_name.ilike.%${trimmedSearch}%,email.ilike.%${trimmedSearch}%,phone.ilike.%${trimmedSearch}%`
-      );
-    if (filterBranchId) {
-      query = query.eq("branch_id", filterBranchId);
-    }
-    const { data, error } = await query
+      )
       .order("created_at", { ascending: false })
-      .limit(limit);
+      .limit(Math.max(limit * 3, limit));
 
     if (error) {
       console.error("Error searching customers:", error);
@@ -63,9 +59,19 @@ export async function searchCustomersAction(
       };
     }
 
+    const rows = (data || []) as Customer[];
+    const prioritizedBranchId = prioritizeBranchId?.trim() || null;
+    const sorted = prioritizedBranchId
+      ? [...rows].sort((a, b) => {
+          const aMatch = a.branch_id === prioritizedBranchId ? 0 : 1;
+          const bMatch = b.branch_id === prioritizedBranchId ? 0 : 1;
+          return aMatch - bMatch;
+        })
+      : rows;
+
     return {
       ok: true,
-      data: (data || []) as Customer[],
+      data: sorted.slice(0, limit),
     };
   } catch (err) {
     const errorMessage =

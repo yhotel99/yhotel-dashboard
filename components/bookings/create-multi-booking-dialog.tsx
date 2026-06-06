@@ -46,6 +46,7 @@ import {
   getDefaultFormBranchId,
   resolveBranchDisplay,
 } from "@/lib/branch";
+import { CustomerSearchOption } from "@/components/customers/customer-search-option";
 import { searchCustomersAction, createCustomerAction } from "@/actions/customers";
 import { validateVoucherForBooking } from "@/actions/vouchers";
 import { useDebounce } from "@/hooks/use-debounce";
@@ -264,8 +265,6 @@ export function CreateMultiBookingDialog({
 
   const handleBranchChange = (branchId: string) => {
     setFormBranchId(branchId);
-    setSelectedCustomer(null);
-    setCustomerSearch("");
     setSelectedRoomIds(new Set());
     setAvailableRooms([]);
     lastSearchRef.current = "";
@@ -399,13 +398,6 @@ export function CreateMultiBookingDialog({
       setError("Vui lòng chọn khách hàng");
       return;
     }
-    if (
-      selectedCustomer.branch_id &&
-      selectedCustomer.branch_id !== branchIdForBooking
-    ) {
-      setError("Khách hàng không thuộc chi nhánh đang chọn");
-      return;
-    }
     const roomBranchMismatch = selectedRoomsWithAmounts.some(
       (item) =>
         item.room.branch_id && item.room.branch_id !== branchIdForBooking
@@ -535,6 +527,10 @@ export function CreateMultiBookingDialog({
                   <p className="text-xs text-muted-foreground">
                     Đã chọn: {selectedCustomer.full_name}
                     {selectedCustomer.phone && ` - ${selectedCustomer.phone}`}
+                    {selectedCustomer.branch_id &&
+                    selectedCustomer.branch_id !== branchIdForBooking
+                      ? ` (CN gốc: ${resolveBranchDisplay(selectedCustomer.branch_id, branches).name})`
+                      : null}
                   </p>
                 )}
                 {displaySearchResults.length > 0 && !selectedCustomer && (
@@ -546,11 +542,11 @@ export function CreateMultiBookingDialog({
                         onClick={() => handleCustomerSelect(c)}
                         className="w-full px-4 py-3 text-left hover:bg-accent"
                       >
-                        <div className="font-medium">{c.full_name}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {c.phone && `${c.phone} • `}
-                          {c.email}
-                        </div>
+                        <CustomerSearchOption
+                          customer={c}
+                          branchNameById={branchNameById}
+                          bookingBranchId={branchIdForBooking}
+                        />
                       </button>
                     ))}
                   </div>
