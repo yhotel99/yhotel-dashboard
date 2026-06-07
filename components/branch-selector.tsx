@@ -1,5 +1,6 @@
 "use client";
 
+import { Building2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -8,8 +9,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useBranch } from "@/contexts/branch-context";
+import { cn } from "@/lib/utils";
 
-export function BranchSelector() {
+type BranchSelectorProps = {
+  className?: string;
+};
+
+export function BranchSelector({ className }: BranchSelectorProps) {
   const {
     branches,
     canSelectBranch,
@@ -28,10 +34,11 @@ export function BranchSelector() {
         setSelectedBranchId(v === "__all__" ? null : v)
       }
     >
-      <SelectTrigger className="w-[200px] h-8">
+      <SelectTrigger className={cn("w-[min(200px,40vw)] h-10 gap-2", className)}>
+        <Building2 className="size-3.5 shrink-0 text-muted-foreground" />
         <SelectValue placeholder="Tất cả chi nhánh" />
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent align="end">
         <SelectItem value="__all__">Tất cả chi nhánh</SelectItem>
         {branches.map((b) => (
           <SelectItem key={b.id} value={b.id}>

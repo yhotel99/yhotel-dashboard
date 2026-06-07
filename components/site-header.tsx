@@ -3,7 +3,8 @@
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 
-import { Search } from "lucide-react";
+import { QrCode, Search } from "lucide-react";
+import { HeaderToolbar } from "@/components/header-toolbar";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
@@ -15,15 +16,13 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { allNavItems } from "@/lib/constants";
+import { allNavItems, DASHBOARD_URLS } from "@/lib/constants";
 import { useAuth } from "@/contexts/auth-context";
 import { usePermissions } from "@/contexts/permissions-context";
-import { BranchSelector } from "@/components/branch-selector";
-import { CurrentBranchBadge } from "@/components/branch-form-field";
 
 export function SiteHeader() {
   const router = useRouter();
-  const { profile } = useAuth();
+  const { profile, canViewAllBranches } = useAuth();
   const { hasViewPermission } = usePermissions();
   const [open, setOpen] = useState(false);
 
@@ -88,9 +87,8 @@ export function SiteHeader() {
               <span>K</span>
             </kbd>
           </button>
-          <div className="ml-auto flex items-center gap-2">
-            <CurrentBranchBadge className="hidden sm:inline-flex" />
-            <BranchSelector />
+          <div className="ml-auto flex items-center">
+            <HeaderToolbar />
           </div>
         </div>
       </header>
@@ -114,6 +112,17 @@ export function SiteHeader() {
               );
             })}
           </CommandGroup>
+          {canViewAllBranches ? (
+            <CommandGroup heading="Công cụ">
+              <CommandItem
+                value="Tạo mã QR thanh toán"
+                onSelect={() => handleSelect(DASHBOARD_URLS.PAYMENT_QR)}
+              >
+                <QrCode className="size-4" />
+                <span>Tạo mã QR thanh toán</span>
+              </CommandItem>
+            </CommandGroup>
+          ) : null}
         </CommandList>
       </CommandDialog>
     </>

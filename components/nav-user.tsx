@@ -5,6 +5,7 @@ import {
   IconCreditCard,
   IconDotsVertical,
   IconLogout,
+  IconQrcode,
   IconUserCircle,
 } from "@tabler/icons-react";
 import { logoutAction } from "@/actions/auth";
@@ -27,7 +28,7 @@ import {
 } from "@/components/ui/sidebar";
 import { generateGradient, getInitials } from "@/lib/functions";
 import { useRouter } from "next/navigation";
-import { DASHBOARD_URLS } from "@/lib/constants";
+import { DASHBOARD_URLS, USER_ROLE } from "@/lib/constants";
 import { AccountDetailDialog } from "@/components/users/account-detail-dialog";
 import { usePermissions } from "@/contexts/permissions-context";
 import type { Profile } from "@/lib/types";
@@ -45,6 +46,8 @@ export function NavUser({ profile }: { profile: Profile }) {
   });
   const router = useRouter();
   const { hasViewPermission } = usePermissions();
+  const canUsePaymentQr =
+    profile.role === USER_ROLE.ADMIN || profile.role === USER_ROLE.MANAGER;
   const [accountDialogOpen, setAccountDialogOpen] = useState(false);
 
   const handleLogout = async () => {
@@ -124,6 +127,14 @@ export function NavUser({ profile }: { profile: Profile }) {
                 <IconUserCircle />
                 Account
               </DropdownMenuItem>
+              {canUsePaymentQr ? (
+                <DropdownMenuItem
+                  onClick={() => router.push(DASHBOARD_URLS.PAYMENT_QR)}
+                >
+                  <IconQrcode />
+                  Tạo mã QR thanh toán
+                </DropdownMenuItem>
+              ) : null}
               {hasViewPermission("settings") && (
                 <DropdownMenuItem
                   onClick={() => router.push(DASHBOARD_URLS.SETTINGS)}
