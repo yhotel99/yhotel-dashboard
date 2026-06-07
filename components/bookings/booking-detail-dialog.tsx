@@ -11,7 +11,12 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import type { BookingRecord, PaymentWithBooking, PaymentsResponse } from "@/lib/types";
+import type {
+  BookingRecord,
+  BookingRoomDetail,
+  PaymentWithBooking,
+  PaymentsResponse,
+} from "@/lib/types";
 import { formatCurrency, formatDateOnly } from "@/lib/functions";
 import { StatusBadge } from "@/components/bookings/status";
 import {
@@ -31,6 +36,7 @@ import { fetcher } from "@/lib/fetcher";
 import { BANK_ACCOUNT, PAYMENT_TYPE } from "@/lib/constants";
 import { PaymentStatusBadge } from "@/components/payments/status";
 import type { Room } from "@/lib/types";
+import { getBookingRoomDetailsAction } from "@/actions/bookings";
 import { getRoomsByIds } from "@/actions/rooms";
 import { useSettings } from "@/hooks/use-settings";
 import {
@@ -61,14 +67,22 @@ export function BookingDetailDialog({
       revalidateOnFocus: false,
     });
 
-  // Fetch room data separately for all rooms in booking
-  const roomIds = booking?.rooms?.items?.map(item => item.id) ?? [];
-  
-  // For multi-room bookings, get room IDs from booking_rooms
-  const multiRoomIds = booking?.booking_rooms?.map(br => br.room_id) ?? [];
-  
-  // Combine both sources of room IDs
-  const allRoomIds = [...roomIds, ...multiRoomIds].filter((id, index, arr) => arr.indexOf(id) === index);
+  const { data: bookingRoomDetails = [], isLoading: isBookingRoomsLoading } =
+    useSWR<BookingRoomDetail[]>(
+      open && bookingId ? ["booking-room-details", bookingId] : null,
+      async () => {
+        const result = await getBookingRoomDetailsAction(bookingId!);
+        if (result.ok) return result.data;
+        throw new Error(result.message);
+      },
+      { revalidateOnFocus: false }
+    );
+
+  const roomIds = booking?.rooms?.items?.map((item) => item.id) ?? [];
+  const detailRoomIds = bookingRoomDetails.map((br) => br.room_id);
+  const allRoomIds = [...roomIds, ...detailRoomIds].filter(
+    (id, index, arr) => arr.indexOf(id) === index
+  );
 
   const { data: roomsData, isLoading: isRoomLoading } = useSWR<Room[]>(
     open && allRoomIds.length > 0 ? ["rooms", ...allRoomIds] : null,
@@ -103,6 +117,25 @@ export function BookingDetailDialog({
     if (!booking) return { name: "—", code: "—" };
     return resolveBranchDisplay(booking.branch_id, branches);
   }, [booking, branches]);
+
+  const roomAmountById = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const br of bookingRoomDetails) {
+      if (br.room_id && br.amount != null && Number(br.amount) > 0) {
+        map.set(br.room_id, Number(br.amount));
+      }
+    }
+    return map;
+  }, [bookingRoomDetails]);
+
+  const getRoomAmount = (roomId: string): number | null => {
+    const amount = roomAmountById.get(roomId);
+    if (amount != null) return amount;
+    if (allRoomIds.length === 1 && allRoomIds[0] === roomId) {
+      return booking?.total_amount ?? null;
+    }
+    return null;
+  };
 
   const pricingBreakdown = useMemo(() => {
     if (!booking || !roomsData || roomsData.length === 0) return [];
@@ -215,22 +248,24 @@ export function BookingDetailDialog({
             <div className="space-y-3">
               <h3 className="text-lg font-semibold flex items-center gap-2">
                 <MapPinIcon className="size-5" />
-                Thông tin phòng {(allRoomIds.length > 1 || (booking?.booking_rooms && booking.booking_rooms.length > 1)) && `(${Math.max(allRoomIds.length, booking?.booking_rooms?.length || 0)} phòng)`}
+                Thông tin phòng {allRoomIds.length > 1 && `(${allRoomIds.length} phòng)`}
               </h3>
-              {isRoomLoading ? (
+              {isRoomLoading || isBookingRoomsLoading ? (
                 <div className="pl-7 text-sm text-muted-foreground">
                   Đang tải thông tin phòng...
                 </div>
               ) : roomsData && roomsData.length > 0 ? (
                 <div className="pl-7 space-y-4">
-                  {roomsData.map((room, index) => (
+                  {roomsData.map((room, index) => {
+                    const roomAmount = getRoomAmount(room.id);
+                    return (
                     <div key={room.id} className="space-y-2">
                       {roomsData.length > 1 && (
                         <p className="text-sm font-semibold text-muted-foreground">
                           Phòng {index + 1}
                         </p>
                       )}
-                      <div className="grid grid-cols-3 gap-4">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                         <div>
                           <p className="text-sm text-muted-foreground">Tên phòng</p>
                           <p className="font-medium">{room.name}</p>
@@ -247,23 +282,34 @@ export function BookingDetailDialog({
                               : "-"}
                           </p>
                         </div>
+                        {roomAmount != null ? (
+                          <div>
+                            <p className="text-sm text-muted-foreground">Tổng tiền phòng</p>
+                            <p className="font-medium text-green-600">
+                              {formatCurrency(roomAmount)}
+                            </p>
+                          </div>
+                        ) : null}
                       </div>
                       {index < roomsData.length - 1 && (
                         <Separator className="mt-3" />
                       )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
-              ) : booking?.booking_rooms && booking.booking_rooms.length > 0 ? (
+              ) : bookingRoomDetails.length > 0 ? (
                 <div className="pl-7 space-y-4">
-                  {booking.booking_rooms.map((br, index) => (
+                  {bookingRoomDetails.map((br, index) => {
+                    const roomAmount = getRoomAmount(br.room_id);
+                    return (
                     <div key={br.room_id} className="space-y-2">
-                      {booking.booking_rooms && booking.booking_rooms.length > 1 && (
+                      {bookingRoomDetails.length > 1 && (
                         <p className="text-sm font-semibold text-muted-foreground">
                           Phòng {index + 1}
                         </p>
                       )}
-                      <div className="grid grid-cols-3 gap-4">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                         <div>
                           <p className="text-sm text-muted-foreground">Tên phòng</p>
                           <p className="font-medium">{br.rooms.name}</p>
@@ -280,22 +326,39 @@ export function BookingDetailDialog({
                               : "-"}
                           </p>
                         </div>
+                        {roomAmount != null ? (
+                          <div>
+                            <p className="text-sm text-muted-foreground">Tổng tiền phòng</p>
+                            <p className="font-medium text-green-600">
+                              {formatCurrency(roomAmount)}
+                            </p>
+                          </div>
+                        ) : null}
                       </div>
-                      {index < (booking.booking_rooms?.length || 0) - 1 && (
+                      {index < bookingRoomDetails.length - 1 && (
                         <Separator className="mt-3" />
                       )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : booking?.rooms?.items && booking.rooms.items.length > 0 ? (
                 <div className="pl-7">
                   <p className="text-sm text-muted-foreground">Danh sách phòng</p>
                   <div className="space-y-1 mt-1">
-                    {booking.rooms.items.map((item, index) => (
-                      <p key={item.id} className="font-medium">
-                        {index + 1}. {item.name}
-                      </p>
-                    ))}
+                    {booking.rooms.items.map((item, index) => {
+                      const roomAmount = getRoomAmount(item.id);
+                      return (
+                        <p key={item.id} className="font-medium">
+                          {index + 1}. {item.name}
+                          {roomAmount != null ? (
+                            <span className="text-green-600 ml-2">
+                              ({formatCurrency(roomAmount)})
+                            </span>
+                          ) : null}
+                        </p>
+                      );
+                    })}
                   </div>
                 </div>
               ) : (

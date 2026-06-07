@@ -300,6 +300,27 @@ export type BookingRecord = {
   }> | null;
 };
 
+export type BookingRoomDetailRoom = {
+  id: string;
+  name: string;
+  room_number?: string | null;
+  floor_number?: number | null;
+};
+
+/** Chi tiết phòng trong booking (fetch riêng khi xem detail). */
+export type BookingRoomDetail = {
+  room_id: string;
+  amount: number | null;
+  rooms: BookingRoomDetailRoom;
+};
+
+/** Raw row từ Supabase join `booking_rooms` → `rooms`. */
+export type BookingRoomDetailJoinRow = {
+  room_id: string;
+  amount: number | null;
+  rooms: BookingRoomDetailRoom | BookingRoomDetailRoom[] | null;
+};
+
 /**
  * Join `customer:customer_id(...)` khi select booking cho email (hủy / xác nhận).
  */
