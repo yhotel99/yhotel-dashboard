@@ -39,6 +39,7 @@ export async function createBranch(input: BranchInput): Promise<Branch> {
       name: input.name,
       address: input.address ?? null,
       phone: input.phone ?? null,
+      image_url: input.image_url ?? null,
       is_active: input.is_active ?? true,
     })
     .select()
@@ -64,6 +65,7 @@ export async function updateBranch(
   if (input.name !== undefined) payload.name = input.name;
   if (input.address !== undefined) payload.address = input.address;
   if (input.phone !== undefined) payload.phone = input.phone;
+  if (input.image_url !== undefined) payload.image_url = input.image_url;
   if (input.is_active !== undefined) payload.is_active = input.is_active;
 
   const { data, error } = await supabase

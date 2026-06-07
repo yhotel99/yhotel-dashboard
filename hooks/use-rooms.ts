@@ -37,9 +37,9 @@ export function useRooms({
     params.append("branchId", branchId);
   }
 
-  const config: SWRConfiguration<RoomsResponse> = {
-  }
-  if(fallbackData) {
+  const config: SWRConfiguration<RoomsResponse> = {};
+  // Chỉ dùng fallback SSR khi không lọc chi nhánh — tránh hiển thị phòng CN khác
+  if (fallbackData && !branchId) {
     config.revalidateOnMount = false;
     config.fallbackData = fallbackData;
   }

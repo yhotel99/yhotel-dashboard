@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { IconPlus } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -39,6 +40,7 @@ export function BranchesContent({
         name: data.name,
         address: data.address || null,
         phone: data.phone || null,
+        image_url: data.image_url?.url || null,
         is_active: data.is_active,
       };
       const created = await createBranchAction(input);
@@ -57,6 +59,7 @@ export function BranchesContent({
         name: data.name,
         address: data.address || null,
         phone: data.phone || null,
+        image_url: data.image_url?.url || null,
         is_active: data.is_active,
       });
       setBranches((prev) =>
@@ -104,6 +107,7 @@ export function BranchesContent({
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Ảnh</TableHead>
               <TableHead>Mã</TableHead>
               <TableHead>Tên</TableHead>
               <TableHead>Điện thoại</TableHead>
@@ -114,13 +118,30 @@ export function BranchesContent({
           <TableBody>
             {branches.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground">
+                <TableCell colSpan={6} className="text-center text-muted-foreground">
                   Chưa có chi nhánh
                 </TableCell>
               </TableRow>
             ) : (
               branches.map((b) => (
                 <TableRow key={b.id}>
+                  <TableCell>
+                    {b.image_url ? (
+                      <div className="relative h-12 w-20 overflow-hidden rounded-md border bg-muted">
+                        <Image
+                          src={b.image_url}
+                          alt={b.name}
+                          fill
+                          className="object-cover"
+                          sizes="80px"
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex h-12 w-20 items-center justify-center rounded-md border bg-muted text-xs text-muted-foreground">
+                        Chưa có
+                      </div>
+                    )}
+                  </TableCell>
                   <TableCell className="font-mono text-sm">{b.code}</TableCell>
                   <TableCell>{b.name}</TableCell>
                   <TableCell>{b.phone || "—"}</TableCell>

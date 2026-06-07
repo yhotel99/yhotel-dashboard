@@ -186,6 +186,13 @@ export async function updateRoom(
 ): Promise<ResultVoid> {
   try {
     const supabase = await createClient();
+    const { scope } = await getCurrentUserBranchScope();
+
+    const updatePayload: Partial<RoomInput> = { ...input };
+    if (input.branch_id !== undefined) {
+      updatePayload.branch_id =
+        resolveBranchFilterId(scope, input.branch_id) ?? DEFAULT_BRANCH_ID;
+    }
 
     // Get old price if being updated (only query if needed)
     let oldPrice = null;
@@ -199,7 +206,10 @@ export async function updateRoom(
     }
 
     // Update room data
-    const { error } = await supabase.from("rooms").update(input).eq("id", id);
+    const { error } = await supabase
+      .from("rooms")
+      .update(updatePayload)
+      .eq("id", id);
 
     if (error) {
       // Check for duplicate room number

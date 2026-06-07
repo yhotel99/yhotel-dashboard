@@ -98,6 +98,12 @@ export function RoomsContent({ initialData }: { initialData: RoomsResponse }) {
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
 
+  // Đóng chi tiết khi đổi chi nhánh để không giữ phòng của CN cũ
+  useEffect(() => {
+    setIsDetailDialogOpen(false);
+    setSelectedRoom(null);
+  }, [filterBranchId]);
+
   // Handle empty page after deletion or invalid page number
   useEffect(() => {
     if (!isLoading && pagination.totalPages > 0) {
@@ -243,6 +249,7 @@ export function RoomsContent({ initialData }: { initialData: RoomsResponse }) {
 
       {selectedRoom && (
         <RoomDetailDialog
+          key={selectedRoom.id}
           room={selectedRoom}
           open={isDetailDialogOpen}
           onOpenChange={(open) => {

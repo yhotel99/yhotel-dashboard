@@ -42,6 +42,7 @@ export type Branch = {
   name: string;
   address: string | null;
   phone: string | null;
+  image_url: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -53,6 +54,7 @@ export type BranchInput = {
   name: string;
   address?: string | null;
   phone?: string | null;
+  image_url?: string | null;
   is_active?: boolean;
 };
 

@@ -43,6 +43,7 @@ export default function EditRoomPage() {
       amenities: room.amenities,
       room_number: room.room_number || "",
       floor_number: room.floor_number?.toString() || "",
+      branch_id: room.branch_id,
       thumbnail: room.thumbnail,
       images: room.images,
     }

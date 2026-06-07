@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { ImageSelector } from "@/components/image-selector";
 import type { Branch } from "@/lib/types";
 
 const schema = z.object({
@@ -32,6 +33,13 @@ const schema = z.object({
   name: z.string().min(1, "Tên là bắt buộc"),
   address: z.string().optional(),
   phone: z.string().optional(),
+  image_url: z
+    .object({
+      id: z.string(),
+      url: z.string(),
+    })
+    .nullable()
+    .optional(),
   is_active: z.boolean(),
 });
 
@@ -60,6 +68,7 @@ export function BranchFormDialog({
       name: "",
       address: "",
       phone: "",
+      image_url: null,
       is_active: true,
     },
   });
@@ -72,6 +81,9 @@ export function BranchFormDialog({
         name: branch.name,
         address: branch.address || "",
         phone: branch.phone || "",
+        image_url: branch.image_url
+          ? { id: "", url: branch.image_url }
+          : null,
         is_active: branch.is_active,
       });
     } else {
@@ -80,6 +92,7 @@ export function BranchFormDialog({
         name: "",
         address: "",
         phone: "",
+        image_url: null,
         is_active: true,
       });
     }
@@ -96,7 +109,7 @@ export function BranchFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {isEdit ? "Sửa chi nhánh" : "Thêm chi nhánh"}
@@ -104,6 +117,23 @@ export function BranchFormDialog({
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="image_url"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Ảnh chi nhánh</FormLabel>
+                  <FormControl>
+                    <ImageSelector
+                      value={field.value || undefined}
+                      onChange={(value) => field.onChange(value ?? null)}
+                      description="Ảnh hiển thị trên trang chọn chi nhánh của website"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="code"

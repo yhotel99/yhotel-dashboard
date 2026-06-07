@@ -986,6 +986,7 @@ export function CreateMultiBookingDialog({
 
       {selectedRoomForDetail && (
         <RoomDetailDialog
+          key={selectedRoomForDetail.id}
           room={selectedRoomForDetail}
           open={isRoomDetailOpen}
           onOpenChange={(open) => {
