@@ -187,6 +187,9 @@ export function BookingDetailDialog({
 
   if (!booking) return null;
 
+  const finalAmount = booking.final_amount ?? booking.total_amount;
+  const amountDifference = booking.total_amount - finalAmount;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl!">
@@ -264,42 +267,42 @@ export function BookingDetailDialog({
                   {roomsData.map((room, index) => {
                     const roomAmount = getRoomAmount(room.id);
                     return (
-                    <div key={room.id} className="space-y-2">
-                      {roomsData.length > 1 && (
-                        <p className="text-sm font-semibold text-muted-foreground">
-                          Phòng {index + 1}
-                        </p>
-                      )}
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                        <div>
-                          <p className="text-sm text-muted-foreground">Tên phòng</p>
-                          <p className="font-medium">{room.name}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">Số phòng</p>
-                          <p className="font-medium">{room.room_number || "-"}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">Số tầng</p>
-                          <p className="font-medium">
-                            {room.floor_number !== null && room.floor_number !== undefined
-                              ? `Tầng ${room.floor_number}`
-                              : "-"}
+                      <div key={room.id} className="space-y-2">
+                        {roomsData.length > 1 && (
+                          <p className="text-sm font-semibold text-muted-foreground">
+                            Phòng {index + 1}
                           </p>
-                        </div>
-                        {roomAmount != null ? (
+                        )}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                           <div>
-                            <p className="text-sm text-muted-foreground">Tổng tiền phòng</p>
-                            <p className="font-medium text-green-600">
-                              {formatCurrency(roomAmount)}
+                            <p className="text-sm text-muted-foreground">Tên phòng</p>
+                            <p className="font-medium">{room.name}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Số phòng</p>
+                            <p className="font-medium">{room.room_number || "-"}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Số tầng</p>
+                            <p className="font-medium">
+                              {room.floor_number !== null && room.floor_number !== undefined
+                                ? `Tầng ${room.floor_number}`
+                                : "-"}
                             </p>
                           </div>
-                        ) : null}
+                          {roomAmount != null ? (
+                            <div>
+                              <p className="text-sm text-muted-foreground">Tổng tiền phòng</p>
+                              <p className="font-medium text-green-600">
+                                {formatCurrency(roomAmount)}
+                              </p>
+                            </div>
+                          ) : null}
+                        </div>
+                        {index < roomsData.length - 1 && (
+                          <Separator className="mt-3" />
+                        )}
                       </div>
-                      {index < roomsData.length - 1 && (
-                        <Separator className="mt-3" />
-                      )}
-                    </div>
                     );
                   })}
                 </div>
@@ -308,42 +311,42 @@ export function BookingDetailDialog({
                   {bookingRoomDetails.map((br, index) => {
                     const roomAmount = getRoomAmount(br.room_id);
                     return (
-                    <div key={br.room_id} className="space-y-2">
-                      {bookingRoomDetails.length > 1 && (
-                        <p className="text-sm font-semibold text-muted-foreground">
-                          Phòng {index + 1}
-                        </p>
-                      )}
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                        <div>
-                          <p className="text-sm text-muted-foreground">Tên phòng</p>
-                          <p className="font-medium">{br.rooms.name}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">Số phòng</p>
-                          <p className="font-medium">{br.rooms.room_number || "-"}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">Số tầng</p>
-                          <p className="font-medium">
-                            {br.rooms.floor_number !== null && br.rooms.floor_number !== undefined
-                              ? `Tầng ${br.rooms.floor_number}`
-                              : "-"}
+                      <div key={br.room_id} className="space-y-2">
+                        {bookingRoomDetails.length > 1 && (
+                          <p className="text-sm font-semibold text-muted-foreground">
+                            Phòng {index + 1}
                           </p>
-                        </div>
-                        {roomAmount != null ? (
+                        )}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                           <div>
-                            <p className="text-sm text-muted-foreground">Tổng tiền phòng</p>
-                            <p className="font-medium text-green-600">
-                              {formatCurrency(roomAmount)}
+                            <p className="text-sm text-muted-foreground">Tên phòng</p>
+                            <p className="font-medium">{br.rooms.name}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Số phòng</p>
+                            <p className="font-medium">{br.rooms.room_number || "-"}</p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Số tầng</p>
+                            <p className="font-medium">
+                              {br.rooms.floor_number !== null && br.rooms.floor_number !== undefined
+                                ? `Tầng ${br.rooms.floor_number}`
+                                : "-"}
                             </p>
                           </div>
-                        ) : null}
+                          {roomAmount != null ? (
+                            <div>
+                              <p className="text-sm text-muted-foreground">Tổng tiền phòng</p>
+                              <p className="font-medium text-green-600">
+                                {formatCurrency(roomAmount)}
+                              </p>
+                            </div>
+                          ) : null}
+                        </div>
+                        {index < bookingRoomDetails.length - 1 && (
+                          <Separator className="mt-3" />
+                        )}
                       </div>
-                      {index < bookingRoomDetails.length - 1 && (
-                        <Separator className="mt-3" />
-                      )}
-                    </div>
                     );
                   })}
                 </div>
@@ -460,13 +463,28 @@ export function BookingDetailDialog({
                     Số tiền thanh toán cuối cùng
                   </p>
                   <p className="font-medium text-green-600">
-                    {formatCurrency(booking.final_amount ?? booking.total_amount)}
+                    {formatCurrency(finalAmount)}
                   </p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Tiền đặt cọc</p>
                   <p className="font-medium text-blue-600">
                     {formatCurrency(booking.advance_payment)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">
+                    Chênh lệch (gốc − cuối)
+                  </p>
+                  <p
+                    className={`font-medium ${amountDifference > 0
+                        ? "text-orange-600"
+                        : amountDifference < 0
+                          ? "text-red-600"
+                          : ""
+                      }`}
+                  >
+                    {formatCurrency(amountDifference)}
                   </p>
                 </div>
               </div>
@@ -506,63 +524,63 @@ export function BookingDetailDialog({
 
               {/* QR Code Payment */}
               {bankInfo && bookingQrImageUrl ? (
-              <div className="pl-7 mt-4">
-                <div className="bg-linear-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
-                  <div className="flex flex-col md:flex-row gap-6">
-                    {/* QR Code */}
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="bg-white p-3 rounded-lg shadow-md">
-                        <Image
-                          src={bookingQrImageUrl}
-                          alt="QR Code thanh toán"
-                          width={192}
-                          height={192}
-                          className="size-48"
-                        />
-                      </div>
-                      <p className="text-xs text-center text-muted-foreground max-w-[200px]">
-                        Quét mã QR để thanh toán
-                      </p>
-                    </div>
-
-                    {/* Bank Info */}
-                    <div className="flex-1 space-y-3">
-                      <h4 className="font-semibold text-base">Thông tin chuyển khoản</h4>
-                      <div className="space-y-2">
-                        <div className="flex items-start gap-2">
-                          <span className="text-sm text-muted-foreground min-w-[100px]">Ngân hàng:</span>
-                          <span className="font-medium">{bankInfo.bankLabel}</span>
+                <div className="pl-7 mt-4">
+                  <div className="bg-linear-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
+                    <div className="flex flex-col md:flex-row gap-6">
+                      {/* QR Code */}
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="bg-white p-3 rounded-lg shadow-md">
+                          <Image
+                            src={bookingQrImageUrl}
+                            alt="QR Code thanh toán"
+                            width={192}
+                            height={192}
+                            className="size-48"
+                          />
                         </div>
-                        <div className="flex items-start gap-2">
-                          <span className="text-sm text-muted-foreground min-w-[100px]">Số tài khoản:</span>
-                          <span className="font-mono font-bold text-lg">{bankInfo.acc}</span>
-                        </div>
-                        <div className="flex items-start gap-2">
-                          <span className="text-sm text-muted-foreground min-w-[100px]">Chủ tài khoản:</span>
-                          <span className="font-medium">{bankInfo.accountName}</span>
-                        </div>
-                        <div className="flex items-start gap-2">
-                          <span className="text-sm text-muted-foreground min-w-[100px]">Số tiền:</span>
-                          <span className="font-bold text-green-600 text-lg">
-                            {formatCurrency(booking.final_amount ?? booking.total_amount)}
-                          </span>
-                        </div>
-                        <div className="flex items-start gap-2">
-                          <span className="text-sm text-muted-foreground min-w-[100px]">Nội dung:</span>
-                          <span className="font-mono font-bold text-blue-600">
-                            {booking.booking_code}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded p-3 mt-4">
-                        <p className="text-xs text-amber-800 dark:text-amber-200">
-                          ⚠️ Lưu ý: Vui lòng nhập đúng nội dung chuyển khoản để hệ thống tự động xác nhận thanh toán
+                        <p className="text-xs text-center text-muted-foreground max-w-[200px]">
+                          Quét mã QR để thanh toán
                         </p>
+                      </div>
+
+                      {/* Bank Info */}
+                      <div className="flex-1 space-y-3">
+                        <h4 className="font-semibold text-base">Thông tin chuyển khoản</h4>
+                        <div className="space-y-2">
+                          <div className="flex items-start gap-2">
+                            <span className="text-sm text-muted-foreground min-w-[100px]">Ngân hàng:</span>
+                            <span className="font-medium">{bankInfo.bankLabel}</span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="text-sm text-muted-foreground min-w-[100px]">Số tài khoản:</span>
+                            <span className="font-mono font-bold text-lg">{bankInfo.acc}</span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="text-sm text-muted-foreground min-w-[100px]">Chủ tài khoản:</span>
+                            <span className="font-medium">{bankInfo.accountName}</span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="text-sm text-muted-foreground min-w-[100px]">Số tiền:</span>
+                            <span className="font-bold text-green-600 text-lg">
+                              {formatCurrency(booking.final_amount ?? booking.total_amount)}
+                            </span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="text-sm text-muted-foreground min-w-[100px]">Nội dung:</span>
+                            <span className="font-mono font-bold text-blue-600">
+                              {booking.booking_code}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded p-3 mt-4">
+                          <p className="text-xs text-amber-800 dark:text-amber-200">
+                            ⚠️ Lưu ý: Vui lòng nhập đúng nội dung chuyển khoản để hệ thống tự động xác nhận thanh toán
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
               ) : null}
 
               {(isPaymentsLoading || roomChargePayment || advancePayment) && (
