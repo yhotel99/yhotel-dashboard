@@ -33,7 +33,9 @@ import { resolveBranchDisplay } from "@/lib/branch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
-import { BANK_ACCOUNT, PAYMENT_TYPE } from "@/lib/constants";
+import { PAYMENT_TYPE } from "@/lib/constants";
+import { resolveBankInfoFromSettings } from "@/lib/bank-info";
+import { buildSepayQrImageUrl } from "@/lib/payment-qr";
 import { PaymentStatusBadge } from "@/components/payments/status";
 import type { Room } from "@/lib/types";
 import { getBookingRoomDetailsAction } from "@/actions/bookings";
@@ -167,18 +169,21 @@ export function BookingDetailDialog({
   }, [booking, roomsData, settings?.pricing_weekday_rates, settings?.pricing_holiday_periods]);
 
   const bankInfo = useMemo(
-    () => ({
-      acc: settings?.bank_account_number?.trim() || BANK_ACCOUNT.ACC,
-      bank:
-        settings?.bank_bin?.trim() ||
-        settings?.bank_name?.trim() ||
-        BANK_ACCOUNT.BANK,
-      bankLabel: settings?.bank_name?.trim() || BANK_ACCOUNT.BANK,
-      accountName:
-        settings?.bank_account_owner?.trim() || BANK_ACCOUNT.ACCOUNT_NAME,
-    }),
+    () => resolveBankInfoFromSettings(settings),
     [settings]
   );
+
+  const bookingQrImageUrl = useMemo(() => {
+    if (!bankInfo || !booking) return null;
+    const amount = booking.final_amount ?? booking.total_amount;
+    if (!amount || amount <= 0) return null;
+    return buildSepayQrImageUrl({
+      acc: bankInfo.acc,
+      bank: bankInfo.bank,
+      amount,
+      description: booking.booking_code,
+    });
+  }, [bankInfo, booking]);
 
   if (!booking) return null;
 
@@ -500,6 +505,7 @@ export function BookingDetailDialog({
               )}
 
               {/* QR Code Payment */}
+              {bankInfo && bookingQrImageUrl ? (
               <div className="pl-7 mt-4">
                 <div className="bg-linear-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
                   <div className="flex flex-col md:flex-row gap-6">
@@ -507,12 +513,7 @@ export function BookingDetailDialog({
                     <div className="flex flex-col items-center gap-3">
                       <div className="bg-white p-3 rounded-lg shadow-md">
                         <Image
-                          src={`https://qr.sepay.vn/img?acc=${bankInfo.acc
-                            }&bank=${bankInfo.bank
-                            }&amount=${booking.final_amount ?? booking.total_amount
-                            }&des=${encodeURIComponent(
-                              booking.booking_code
-                            )}&template=compact`}
+                          src={bookingQrImageUrl}
                           alt="QR Code thanh toán"
                           width={192}
                           height={192}
@@ -562,6 +563,7 @@ export function BookingDetailDialog({
                   </div>
                 </div>
               </div>
+              ) : null}
 
               {(isPaymentsLoading || roomChargePayment || advancePayment) && (
                 <div className="pl-7 space-y-3 mt-4">
