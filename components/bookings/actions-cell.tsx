@@ -215,7 +215,10 @@ export function BookingActionsCell({
         return;
       }
       
-      toast.success("Đã cập nhật mã QR thành công");
+      const branchHint = result.branchCode
+        ? ` Màn QR chi nhánh: /qr/${result.branchCode}`
+        : "";
+      toast.success(`Đã cập nhật mã QR thành công.${branchHint}`);
     } catch (error) {
       console.error("Error showing QR:", error);
       toast.error("Không thể hiển thị mã QR");

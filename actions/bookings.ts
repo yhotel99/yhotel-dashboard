@@ -13,11 +13,13 @@ import type {
   ResultVoid,
   BookingForTransactionalEmail,
   BookingEmailBookingRoomsJoinRow,
+  BookingRoomDetail,
   ConfirmBookingEmailOptions,
 } from "@/lib/types";
 import { BOOKING_STATUS, PAYMENT_METHOD } from "@/lib/constants";
 import { mapBookingError, formatDateTimePretty } from "@/lib/functions";
 import { logBookingCreate, logBookingUpdate, logBookingCancel } from "@/lib/audit-helpers";
+import { getBookingRoomDetails } from "@/services/bookings";
 import { getSettings } from "@/services/settings";
 import { getResendClient, getResendFromAddress } from "@/lib/email/resend";
 import { renderCancelBookingHTML } from "@/lib/email/templates/cancel-booking";
@@ -73,6 +75,21 @@ export async function getBookingByIdForCheckoutAction(
     ok: true,
     data: data as BookingRecord,
   };
+}
+
+/** Server action: phòng + tổng tiền từng phòng khi xem chi tiết booking. */
+export async function getBookingRoomDetailsAction(
+  bookingId: string
+): Promise<Result<BookingRoomDetail[]>> {
+  try {
+    return { ok: true, data: await getBookingRoomDetails(bookingId) };
+  } catch (err) {
+    console.error("Error fetching booking room details:", err);
+    return {
+      ok: false,
+      message: "Không thể lấy thông tin phòng của booking",
+    };
+  }
 }
 
 /**
@@ -190,6 +207,7 @@ export async function createBooking(
       p_advance_payment: input.advance_payment ?? 0,
       p_final_amount: input.final_amount ?? null,
       p_voucher_code: input.voucher_code ?? null,
+      p_branch_code: input.branch_code?.trim() || null,
     }
   );
 
@@ -270,6 +288,7 @@ export async function createMultiBooking(
     p_advance_payment: input.advance_payment ?? 0,
     p_final_amount: input.final_amount ?? null,
     p_voucher_code: input.voucher_code ?? null,
+    p_branch_code: input.branch_code?.trim() || null,
   });
 
   if (error) {

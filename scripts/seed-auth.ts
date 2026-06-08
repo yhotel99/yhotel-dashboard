@@ -54,6 +54,7 @@ async function seed() {
         email: ADMIN_EMAIL,
         role: "admin",
         status: "active",
+        branch_id: null,
         updated_at: now,
       })
       .eq("id", userId);

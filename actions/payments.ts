@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PAYMENT_STATUS, PAYMENT_TYPE, REPORTING_STATUS } from "@/lib/constants";
 import type { PaymentWithBooking } from "@/lib/types";
 import { logPaymentUpdate } from "@/lib/audit-helpers";
+import { assertCanAccessBooking } from "@/lib/branch.server";
 
 /**
  * Check advance payment status by booking ID
@@ -70,7 +71,8 @@ export async function markAdvancePaymentAsPaidAction(
 ): Promise<void> {
   try {
     const supabase = await createClient();
-    
+    await assertCanAccessBooking(bookingId);
+
     // Get payment info (only needed fields)
     const { data: payment } = await supabase
       .from("payments")

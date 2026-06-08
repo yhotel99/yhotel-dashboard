@@ -2,20 +2,23 @@ import { createClient } from "@/lib/supabase/client";
 import { createClient as createServerClient } from "@/lib/supabase/server";
 import type { RoomWithBooking, Room, RoomStatusViewData, BookingRecord, PaginationMeta } from "@/lib/types";
 import { ROOM_STATUS, type RoomMapStatus } from "@/lib/constants";
+import { getCurrentUserBranchScope, resolveBranchFilterId } from "@/lib/branch.server";
 
 /**
  * Fetch reservation data from room_status_view
  * @returns Array of rooms with booking information and status
  */
-export async function fetchReservationData(): Promise<RoomWithBooking[]> {
+export async function fetchReservationData(
+  branchId?: string | null
+): Promise<RoomWithBooking[]> {
   try {
     const supabase = createClient();
 
-    // Lấy data từ room_status_view
-    const { data, error } = await supabase
-      .from("room_status_view")
-      .select("*")
-      .order("name", { ascending: true });
+    let query = supabase.from("room_status_view").select("*");
+    if (branchId) {
+      query = query.eq("branch_id", branchId);
+    }
+    const { data, error } = await query.order("name", { ascending: true });
 
     if (error) {
       throw new Error(error.message);
@@ -39,6 +42,7 @@ export async function fetchReservationData(): Promise<RoomWithBooking[]> {
           status: item.status as Room["status"],
           room_number: item.room_number || null,
           floor_number: item.floor_number || null,
+          branch_id: item.branch_id,
           deleted_at: item.deleted_at,
           created_at: item.created_at,
           updated_at: item.updated_at,
@@ -81,7 +85,9 @@ export async function fetchReservationData(): Promise<RoomWithBooking[]> {
  * Get available rooms in the next 30 days with their availability periods
  * @returns Array of rooms with their available date ranges
  */
-export async function getAvailableRoomsIn30Days(): Promise<Array<{
+export async function getAvailableRoomsIn30Days(
+  requestedBranchId?: string | null
+): Promise<Array<{
   room: Room;
   availablePeriods: Array<{
     from: string;
@@ -91,6 +97,8 @@ export async function getAvailableRoomsIn30Days(): Promise<Array<{
 }>> {
   try {
     const supabase = await createServerClient();
+    const { scope } = await getCurrentUserBranchScope();
+    const branchId = resolveBranchFilterId(scope, requestedBranchId);
 
     // Calculate date range (next 30 days)
     const today = new Date();
@@ -101,7 +109,7 @@ export async function getAvailableRoomsIn30Days(): Promise<Array<{
     const thirtyDaysStr = thirtyDaysFromNow.toISOString().split('T')[0];
 
     // Get all rooms
-    const { data: rooms, error: roomsError } = await supabase
+    let roomsQuery = supabase
       .from("rooms")
       .select("*")
       .eq("status", "available")
@@ -110,19 +118,26 @@ export async function getAvailableRoomsIn30Days(): Promise<Array<{
       .order("room_number", { ascending: true, nullsFirst: false })
       .order("name", { ascending: true });
 
+    if (branchId) {
+      roomsQuery = roomsQuery.eq("branch_id", branchId);
+    }
+
+    const { data: rooms, error: roomsError } = await roomsQuery;
+
     if (roomsError) {
       throw new Error(roomsError.message);
     }
 
     // Get all bookings in the next 30 days
-    const { data: bookings, error: bookingsError } = await supabase
+    let bookingRoomsQuery = supabase
       .from("booking_rooms")
       .select(`
         room_id,
         check_in,
         check_out,
         bookings!inner (
-          status
+          status,
+          branch_id
         )
       `)
       .gte("check_in", todayStr)
@@ -130,6 +145,12 @@ export async function getAvailableRoomsIn30Days(): Promise<Array<{
       .in("bookings.status", ["confirmed", "pending", "checked_in"])
       .order("room_id")
       .order("check_in");
+
+    if (branchId) {
+      bookingRoomsQuery = bookingRoomsQuery.eq("bookings.branch_id", branchId);
+    }
+
+    const { data: bookings, error: bookingsError } = await bookingRoomsQuery;
 
     if (bookingsError) {
       throw new Error(bookingsError.message);
@@ -211,10 +232,12 @@ export async function getUpcomingCheckinsWithPagination({
   search,
   page = 1,
   limit = 50,
+  branchId: requestedBranchId,
 }: {
   search?: string | null;
   page?: number;
   limit?: number;
+  branchId?: string | null;
 }): Promise<{
   data: BookingRecord[];
   pagination: PaginationMeta;
@@ -226,6 +249,8 @@ export async function getUpcomingCheckinsWithPagination({
     }
 
     const supabase = await createServerClient();
+    const { scope } = await getCurrentUserBranchScope();
+    const branchId = resolveBranchFilterId(scope, requestedBranchId);
 
     // Calculate date range (today to 30 days after)
     const today = new Date();
@@ -267,6 +292,10 @@ export async function getUpcomingCheckinsWithPagination({
       .lte("check_in", thirtyDaysStr)
       .is("deleted_at", null);
 
+    if (branchId) {
+      query = query.eq("branch_id", branchId);
+    }
+
     // Add search filter if provided
     if (search?.trim()) {
       const searchTerm = `%${search.trim()}%`;
@@ -285,6 +314,10 @@ export async function getUpcomingCheckinsWithPagination({
       .gte("check_in", startDateStr)
       .lte("check_in", thirtyDaysStr)
       .is("deleted_at", null);
+
+    if (branchId) {
+      countQuery = countQuery.eq("branch_id", branchId);
+    }
 
     // Add search filter to count query if provided
     if (search?.trim()) {

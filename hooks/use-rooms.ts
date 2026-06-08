@@ -16,11 +16,13 @@ export function useRooms({
   search = "",
   page = 1,
   limit = 10,
+  branchId = null,
   fallbackData,
 }: {
   search?: string;
   page?: number;
   limit?: number;
+  branchId?: string | null;
   fallbackData?: RoomsResponse;
 }) {
   // Build query parameters
@@ -31,10 +33,13 @@ export function useRooms({
   if (search && search.trim() !== "") {
     params.append("search", search.trim());
   }
-
-  const config: SWRConfiguration<RoomsResponse> = {
+  if (branchId) {
+    params.append("branchId", branchId);
   }
-  if(fallbackData) {
+
+  const config: SWRConfiguration<RoomsResponse> = {};
+  // Chỉ dùng fallback SSR khi không lọc chi nhánh — tránh hiển thị phòng CN khác
+  if (fallbackData && !branchId) {
     config.revalidateOnMount = false;
     config.fallbackData = fallbackData;
   }

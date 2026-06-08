@@ -34,6 +34,10 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { searchCustomersAction, createCustomerAction } from "@/actions/customers";
 import { validateVoucherForBooking } from "@/actions/vouchers";
 import { CreateCustomerDialog } from "@/components/customers/create-customer-dialog";
+import { BranchFormField } from "@/components/branch-form-field";
+import { useBranch } from "@/contexts/branch-context";
+import { getBranchCodeById, buildBranchNameById, resolveBranchDisplay } from "@/lib/branch";
+import { CustomerSearchOption } from "@/components/customers/customer-search-option";
 import { useSettings } from "@/hooks/use-settings";
 import {
   Popover,
@@ -80,6 +84,12 @@ export function QuickBookingDialog({
   onCreate: (input: BookingInput) => Promise<void>;
 }) {
   const { settings } = useSettings();
+  const { branches } = useBranch();
+  const branchId = room.branch_id;
+  const branchNameById = useMemo(
+    () => buildBranchNameById(branches),
+    [branches]
+  );
   const [formValues, setFormValues] =
     useState<QuickBookingFormState>(initialFormState);
   const [voucherState, setVoucherState] = useState<{
@@ -106,7 +116,11 @@ export function QuickBookingDialog({
   useEffect(() => {
     const searchCustomers = async () => {
       if (debouncedSearch.trim().length >= SEARCH_CUSTOMER_MIN_LENGTH) {
-        const result = await searchCustomersAction(debouncedSearch, 10);
+        const result = await searchCustomersAction(
+          debouncedSearch,
+          10,
+          branchId
+        );
         if (result.ok) {
           setSearchCustomers(result.data);
         } else {
@@ -118,7 +132,7 @@ export function QuickBookingDialog({
     };
 
     searchCustomers();
-  }, [debouncedSearch]);
+  }, [debouncedSearch, branchId]);
 
   // Calculate if we should show search results
   const shouldShowResults =
@@ -292,6 +306,7 @@ export function QuickBookingDialog({
       final_amount: voucherState ? undefined : totalAmount,
       voucher_code: voucherState ? voucherState.code : null,
       payment_method: formValues.payment_method as PaymentMethod,
+      branch_code: getBranchCodeById(branchId, branches),
     };
 
     try {
@@ -316,6 +331,12 @@ export function QuickBookingDialog({
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <BranchFormField
+            value={branchId}
+            onChange={() => {}}
+            mode="readonly"
+            lockedBranchId={branchId}
+          />
           <div className="space-y-2">
             <Label htmlFor="customer_search">Khách hàng *</Label>
             <div className="relative" ref={searchInputRef}>
@@ -360,11 +381,11 @@ export function QuickBookingDialog({
                       onClick={() => handleCustomerSelect(customer)}
                       className="w-full px-4 py-2 text-left hover:bg-accent hover:text-accent-foreground"
                     >
-                      <div className="font-medium">{customer.full_name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {customer.phone && `${customer.phone} • `}
-                        {customer.email}
-                      </div>
+                      <CustomerSearchOption
+                        customer={customer}
+                        branchNameById={branchNameById}
+                        bookingBranchId={branchId}
+                      />
                     </button>
                   ))}
                 </div>
@@ -382,6 +403,10 @@ export function QuickBookingDialog({
               <p className="text-xs text-muted-foreground">
                 Đã chọn: {selectedCustomer.full_name}
                 {selectedCustomer.phone && ` - ${selectedCustomer.phone}`}
+                {selectedCustomer.branch_id &&
+                selectedCustomer.branch_id !== branchId
+                  ? ` (CN gốc: ${resolveBranchDisplay(selectedCustomer.branch_id, branches).name})`
+                  : null}
               </p>
             )}
           </div>
@@ -568,6 +593,8 @@ export function QuickBookingDialog({
                       const result = await validateVoucherForBooking({
                         code,
                         totalAmount: total,
+                        branchId: room.branch_id,
+                        roomId: room.id,
                       });
                       if (!result.ok) {
                         setError(result.message);
@@ -611,6 +638,7 @@ export function QuickBookingDialog({
         <CreateCustomerDialog
           open={isCreateCustomerDialogOpen}
           onOpenChange={setIsCreateCustomerDialogOpen}
+          defaultBranchId={branchId}
           onCreate={async (input) => {
             const result = await createCustomerAction(input);
             if (result.ok) {

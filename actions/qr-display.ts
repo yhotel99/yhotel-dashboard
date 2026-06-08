@@ -2,16 +2,30 @@
 
 import { createClient } from "@/lib/supabase/server";
 import type { BookingRecord, ResultVoid } from "@/lib/types";
+import { DEFAULT_BRANCH_CODE, DEFAULT_BRANCH_ID } from "@/lib/constants";
+
+async function resolveBranchCodeForBooking(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  booking: BookingRecord
+): Promise<string> {
+  const branchId = booking.branch_id ?? DEFAULT_BRANCH_ID;
+  const { data } = await supabase
+    .from("branches")
+    .select("code")
+    .eq("id", branchId)
+    .maybeSingle();
+  return data?.code ?? DEFAULT_BRANCH_CODE;
+}
 
 /**
- * Update QR display state for realtime display
- * This will trigger realtime update on all connected QR display screens
+ * Update QR display state for the booking's branch (Realtime on /qr/{branchCode} only).
  */
 export async function updateQRDisplayAction(
   booking: BookingRecord
-): Promise<ResultVoid> {
+): Promise<ResultVoid & { branchCode?: string }> {
   try {
     const supabase = await createClient();
+    const branchCode = await resolveBranchCodeForBooking(supabase, booking);
 
     const { error } = await supabase.rpc("upsert_qr_display_state", {
       p_booking_id: booking.id,
@@ -22,6 +36,7 @@ export async function updateQRDisplayAction(
       p_check_out: booking.check_out,
       p_total_amount: booking.total_amount,
       p_final_amount: booking.final_amount ?? null,
+      p_branch_code: branchCode,
     });
 
     if (error) {
@@ -32,7 +47,7 @@ export async function updateQRDisplayAction(
       };
     }
 
-    return { ok: true };
+    return { ok: true, branchCode };
   } catch (error) {
     console.error("Error updating QR display state:", error);
     return {

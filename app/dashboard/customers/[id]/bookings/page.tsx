@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
 import { useBookings } from "@/hooks/use-bookings";
 import { useDebounce } from "@/hooks/use-debounce";
+import { useBranch } from "@/contexts/branch-context";
+import { buildBranchNameById } from "@/lib/branch";
 import { StatusBadge } from "@/components/bookings/status";
 import { formatCurrency, formatDateOnly } from "@/lib/functions";
 import { BookingRecord } from "@/lib/types";
@@ -21,6 +23,7 @@ import {
 const CUSTOMER_BOOKING_COLUMNS = {
   BOOKING_CODE: { accessorKey: "Mã booking", header: "Mã booking" },
   ROOM: { accessorKey: "Phòng", header: "Phòng" },
+  BRANCH: { accessorKey: "Chi nhánh", header: "Chi nhánh" },
   CHECK_IN: { accessorKey: "Ngày check-in", header: "Check-in" },
   CHECK_OUT: { accessorKey: "Ngày check-out", header: "Check-out" },
   NUMBER_OF_NIGHTS: { accessorKey: "Số đêm", header: "Số đêm" },
@@ -29,7 +32,9 @@ const CUSTOMER_BOOKING_COLUMNS = {
   STATUS: { accessorKey: "Trạng thái", header: "Trạng thái" },
 } as const;
 
-const createColumns = (): ColumnDef<BookingRecord>[] => [
+const createColumns = (
+  branchNameById: Readonly<Record<string, string>>
+): ColumnDef<BookingRecord>[] => [
   {
     accessorKey: CUSTOMER_BOOKING_COLUMNS.BOOKING_CODE.accessorKey,
     header: CUSTOMER_BOOKING_COLUMNS.BOOKING_CODE.header,
@@ -64,6 +69,27 @@ const createColumns = (): ColumnDef<BookingRecord>[] => [
           </TooltipTrigger>
           <TooltipContent>
             <p>{roomName}</p>
+          </TooltipContent>
+        </Tooltip>
+      );
+    },
+  },
+  {
+    accessorKey: CUSTOMER_BOOKING_COLUMNS.BRANCH.accessorKey,
+    header: CUSTOMER_BOOKING_COLUMNS.BRANCH.header,
+    cell: ({ row }) => {
+      const branchId = row.original.branch_id;
+      const label =
+        branchId && branchNameById[branchId]
+          ? branchNameById[branchId]
+          : "—";
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="max-w-[140px] truncate font-medium">{label}</div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{label}</p>
           </TooltipContent>
         </Tooltip>
       );
@@ -107,6 +133,9 @@ export default function CustomerBookingsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const customerId = params.id as string;
+  const { scope, selectedBranchId, branches } = useBranch();
+  const branchIdForFetch =
+    scope.mode === "single" ? scope.branchId : selectedBranchId;
 
   const [localSearch, setLocalSearch] = useState("");
 
@@ -167,6 +196,7 @@ export default function CustomerBookingsPage() {
     limit,
     search,
     customerId: customerId || null,
+    branchId: branchIdForFetch,
   });
 
   const customerInfo = useMemo(() => {
@@ -182,7 +212,15 @@ export default function CustomerBookingsPage() {
     };
   }, [bookings]);
 
-  const columns = useMemo(() => createColumns(), []);
+  const branchNameById = useMemo(
+    () => buildBranchNameById(branches),
+    [branches]
+  );
+
+  const columns = useMemo(
+    () => createColumns(branchNameById),
+    [branchNameById]
+  );
 
   return (
     <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">

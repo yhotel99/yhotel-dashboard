@@ -12,11 +12,13 @@ export async function GET(request: Request) {
     const page = searchParams.get("page") ? Number(searchParams.get("page")) : 1;
     const limit = searchParams.get("limit") ? Number(searchParams.get("limit")) : 100;
     const search = searchParams.get("search") || "";
+    const branchId = searchParams.get("branchId") || null;
 
     const result = await getUpcomingCheckinsWithPagination({
       page,
       limit,
       search,
+      branchId,
     });
 
     return NextResponse.json(result);

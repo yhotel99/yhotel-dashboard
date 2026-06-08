@@ -5,6 +5,7 @@ import {
   IconCreditCard,
   IconDotsVertical,
   IconLogout,
+  IconQrcode,
   IconUserCircle,
 } from "@tabler/icons-react";
 import { logoutAction } from "@/actions/auth";
@@ -27,15 +28,26 @@ import {
 } from "@/components/ui/sidebar";
 import { generateGradient, getInitials } from "@/lib/functions";
 import { useRouter } from "next/navigation";
-import { DASHBOARD_URLS } from "@/lib/constants";
+import { DASHBOARD_URLS, USER_ROLE } from "@/lib/constants";
 import { AccountDetailDialog } from "@/components/users/account-detail-dialog";
 import { usePermissions } from "@/contexts/permissions-context";
 import type { Profile } from "@/lib/types";
+import { useBranch } from "@/contexts/branch-context";
+import { getCurrentUserBranchLabel } from "@/lib/branch";
 
 export function NavUser({ profile }: { profile: Profile }) {
   const { isMobile } = useSidebar();
+  const { branches, canSelectBranch, selectedBranchId } = useBranch();
+  const branchLabel = getCurrentUserBranchLabel({
+    profile,
+    branches,
+    canSelectBranch,
+    selectedBranchId,
+  });
   const router = useRouter();
   const { hasViewPermission } = usePermissions();
+  const canUsePaymentQr =
+    profile.role === USER_ROLE.ADMIN || profile.role === USER_ROLE.MANAGER;
   const [accountDialogOpen, setAccountDialogOpen] = useState(false);
 
   const handleLogout = async () => {
@@ -70,6 +82,11 @@ export function NavUser({ profile }: { profile: Profile }) {
                 <span className="text-muted-foreground truncate text-xs">
                   {profile.email}
                 </span>
+                {branchLabel ? (
+                  <span className="text-muted-foreground truncate text-xs">
+                    {branchLabel}
+                  </span>
+                ) : null}
               </div>
               <IconDotsVertical className="ml-auto size-4" />
             </SidebarMenuButton>
@@ -110,6 +127,14 @@ export function NavUser({ profile }: { profile: Profile }) {
                 <IconUserCircle />
                 Account
               </DropdownMenuItem>
+              {canUsePaymentQr ? (
+                <DropdownMenuItem
+                  onClick={() => router.push(DASHBOARD_URLS.PAYMENT_QR)}
+                >
+                  <IconQrcode />
+                  Tạo mã QR thanh toán
+                </DropdownMenuItem>
+              ) : null}
               {hasViewPermission("settings") && (
                 <DropdownMenuItem
                   onClick={() => router.push(DASHBOARD_URLS.SETTINGS)}

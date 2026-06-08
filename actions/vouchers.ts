@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin/server";
+import { getCurrentUserBranchScope, resolveBranchFilterId } from "@/lib/branch.server";
 import type { Result, ResultVoid, VoucherInput, Voucher } from "@/lib/types";
 
 export async function createVoucher(input: VoucherInput): Promise<ResultVoid> {
@@ -185,6 +186,8 @@ export async function toggleVoucherActive(
 export async function validateVoucherForBooking(input: {
   code: string;
   totalAmount: number;
+  branchId?: string | null;
+  roomId?: string | null;
 }): Promise<Result<{ voucher: Voucher; discount: number; finalAmount: number }>> {
   try {
     const supabase = await createClient();
@@ -194,6 +197,20 @@ export async function validateVoucherForBooking(input: {
 
     if (!user) {
       return { ok: false, message: "Unauthorized" };
+    }
+
+    let bookingBranchId = input.branchId?.trim() || null;
+    if (!bookingBranchId && input.roomId) {
+      const { data: room } = await supabase
+        .from("rooms")
+        .select("branch_id")
+        .eq("id", input.roomId)
+        .maybeSingle();
+      bookingBranchId = room?.branch_id ?? null;
+    }
+    if (!bookingBranchId) {
+      const { scope: userScope } = await getCurrentUserBranchScope();
+      bookingBranchId = resolveBranchFilterId(userScope, null);
     }
 
     const code = input.code.trim();
@@ -226,6 +243,17 @@ export async function validateVoucherForBooking(input: {
     }
     if (data.end_at && new Date(data.end_at) < now) {
       return { ok: false, message: "Voucher đã hết hạn" };
+    }
+
+    if (
+      data.branch_id &&
+      bookingBranchId &&
+      data.branch_id !== bookingBranchId
+    ) {
+      return {
+        ok: false,
+        message: "Voucher không áp dụng cho chi nhánh này",
+      };
     }
 
     const total = input.totalAmount;

@@ -1,6 +1,11 @@
 "use client";
 
-import { useState, type ChangeEvent, type FormEvent } from "react";
+import { useState, useEffect, type ChangeEvent, type FormEvent } from "react";
+import { useAuth } from "@/contexts/auth-context";
+import { useBranch } from "@/contexts/branch-context";
+import { BranchFormField } from "@/components/branch-form-field";
+import { getDefaultFormBranchId } from "@/lib/branch";
+import { RelatedCustomersAlert } from "@/components/customers/related-customers-alert";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -64,18 +69,43 @@ interface CreateCustomerDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreate: (input: CustomerInput) => Promise<void>;
+  defaultBranchId?: string | null;
 }
 
 export function CreateCustomerDialog({
   open,
   onOpenChange,
   onCreate,
+  defaultBranchId,
 }: CreateCustomerDialogProps) {
+  const { profile } = useAuth();
+  const { filterBranchId, effectiveBranchId } = useBranch();
+  const [formBranchId, setFormBranchId] = useState(() =>
+    defaultBranchId ??
+      getDefaultFormBranchId({
+        profile: null,
+        filterBranchId: null,
+        effectiveBranchId: null,
+      })
+  );
   const [formValues, setFormValues] = useState<CreateCustomerFormState>(
     initialCreateCustomerState
   );
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setFormBranchId(
+        defaultBranchId ??
+          getDefaultFormBranchId({
+            profile,
+            filterBranchId,
+            effectiveBranchId,
+          })
+      );
+    }
+  }, [open, defaultBranchId, profile, filterBranchId, effectiveBranchId]);
 
   const handleInputChange =
     (field: keyof CreateCustomerFormState) =>
@@ -164,6 +194,7 @@ export function CreateCustomerDialog({
       customer_type: formValues.customer_type,
       date_of_birth: formValues.date_of_birth || null,
       source: formValues.source || null,
+      branch_id: formBranchId,
     };
 
     try {
@@ -204,6 +235,15 @@ export function CreateCustomerDialog({
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <BranchFormField
+            value={formBranchId}
+            onChange={setFormBranchId}
+          />
+          <RelatedCustomersAlert
+            email={formValues.email}
+            phone={formValues.phone}
+            currentBranchId={formBranchId}
+          />
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="full_name">Họ và tên *</Label>

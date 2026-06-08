@@ -15,19 +15,27 @@ import type {
   ResultVoid,
 } from "@/lib/types";
 import { logPriceUpdate } from "@/lib/audit-helpers";
+import { DEFAULT_BRANCH_ID } from "@/lib/constants";
+import { getCurrentUserBranchScope, resolveBranchFilterId } from "@/lib/branch.server";
 
 
 
 export async function getAvailableRoomsAction(
   checkIn: string,
-  checkOut: string
+  checkOut: string,
+  requestedBranchId?: string | null
 ): Promise<Result<Room[]>> {
   try {
     const supabase = await createClient();
     // Use type assertion to bypass Supabase type checking
+    const { scope } = await getCurrentUserBranchScope();
+    const p_branch_id = resolveBranchFilterId(scope, requestedBranchId);
+
     const { data, error } = (await supabase.rpc("get_available_rooms", {
       p_check_in: checkIn,
       p_check_out: checkOut,
+      p_branch_id,
+      p_branch_code: null,
     })) as { data: RoomFromRPC[] | null; error: { message: string } | null };
 
     if (error) {
@@ -54,6 +62,7 @@ export async function getAvailableRoomsAction(
       status: room.status,
       room_number: room.room_number || null,
       floor_number: room.floor_number || null,
+      branch_id: (room as RoomFromRPC & { branch_id?: string }).branch_id ?? "",
       deleted_at: room.deleted_at,
       created_at: room.created_at,
       updated_at: room.updated_at,
@@ -85,10 +94,13 @@ export async function createRoom(
 ): Promise<ResultVoid> {
   try {
     const supabase = await createClient();
+    const { scope } = await getCurrentUserBranchScope();
+    const branchId =
+      resolveBranchFilterId(scope, input.branch_id) ?? DEFAULT_BRANCH_ID;
 
     const { data, error } = await supabase
       .from("rooms")
-      .insert([input])
+      .insert([{ ...input, branch_id: branchId }])
       .select()
       .single();
 
@@ -174,6 +186,13 @@ export async function updateRoom(
 ): Promise<ResultVoid> {
   try {
     const supabase = await createClient();
+    const { scope } = await getCurrentUserBranchScope();
+
+    const updatePayload: Partial<RoomInput> = { ...input };
+    if (input.branch_id !== undefined) {
+      updatePayload.branch_id =
+        resolveBranchFilterId(scope, input.branch_id) ?? DEFAULT_BRANCH_ID;
+    }
 
     // Get old price if being updated (only query if needed)
     let oldPrice = null;
@@ -187,7 +206,10 @@ export async function updateRoom(
     }
 
     // Update room data
-    const { error } = await supabase.from("rooms").update(input).eq("id", id);
+    const { error } = await supabase
+      .from("rooms")
+      .update(updatePayload)
+      .eq("id", id);
 
     if (error) {
       // Check for duplicate room number

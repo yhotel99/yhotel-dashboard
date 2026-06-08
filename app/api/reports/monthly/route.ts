@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { REPORT_METRICS_BOOKING_STATUSES } from "@/lib/constants";
 import { MonthlyRevenueData } from "../types";
 import { parseBookingRevenueAmount } from "@/lib/reports/booking-revenue";
+import { getReportBranchIdFromRequest } from "@/lib/reports/branch-filter";
 
 function sumRevenueFromBookings(
   rows:
@@ -31,6 +32,7 @@ export async function GET(req: NextRequest) {
     );
 
     const supabase = await createClient();
+    const branchId = await getReportBranchIdFromRequest(searchParams);
 
     const now = new Date();
     const months: MonthlyRevenueData[] = [];
@@ -55,13 +57,15 @@ export async function GET(req: NextRequest) {
       const monthStartISO = monthStart.toISOString();
       const monthEndISO = monthEnd.toISOString();
 
-      const { data: bookingsInMonth, error: bookingsError } = await supabase
+      let bookingsQuery = supabase
         .from("bookings")
         .select("id, final_amount, total_amount, status")
         .is("deleted_at", null)
         .in("status", [...REPORT_METRICS_BOOKING_STATUSES])
         .gte("check_in", monthStartISO)
         .lte("check_in", monthEndISO);
+      if (branchId) bookingsQuery = bookingsQuery.eq("branch_id", branchId);
+      const { data: bookingsInMonth, error: bookingsError } = await bookingsQuery;
 
       if (bookingsError) {
         console.error("Error fetching monthly data:", bookingsError);

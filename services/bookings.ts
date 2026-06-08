@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import type {
   BookingRecord,
   BookingInput,
+  BookingRoomDetail,
+  BookingRoomDetailJoinRow,
   UpdateBookingInput,
   TransferBookingInput,
   PaginationMeta,
@@ -14,6 +16,10 @@ import {
   PAYMENT_TYPE,
   REPORTING_STATUS,
 } from "@/lib/constants";
+import {
+  getCurrentUserBranchScope,
+  resolveBranchFilterId,
+} from "@/lib/branch.server";
 
 /**
  * Search bookings with pagination
@@ -201,6 +207,55 @@ export async function getBookingByIdWithRelations(
     console.error("Error fetching booking:", err);
     return null;
   }
+}
+
+const BOOKING_ROOM_DETAIL_SELECT = `
+  room_id,
+  amount,
+  rooms:room_id (
+    id,
+    name,
+    room_number,
+    floor_number
+  )
+`;
+
+function mapBookingRoomDetailRows(
+  rows: BookingRoomDetailJoinRow[]
+): BookingRoomDetail[] {
+  const details: BookingRoomDetail[] = [];
+  for (const row of rows) {
+    const room = Array.isArray(row.rooms) ? row.rooms[0] : row.rooms;
+    if (!room) continue;
+    details.push({
+      room_id: row.room_id,
+      amount: row.amount != null ? Number(row.amount) : null,
+      rooms: room,
+    });
+  }
+  return details;
+}
+
+/**
+ * Phòng và tổng tiền từng phòng của một booking (1 query, indexed by booking_id).
+ */
+export async function getBookingRoomDetails(
+  bookingId: string
+): Promise<BookingRoomDetail[]> {
+  const id = bookingId.trim();
+  if (!id) return [];
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("booking_rooms")
+    .select(BOOKING_ROOM_DETAIL_SELECT)
+    .eq("booking_id", id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return mapBookingRoomDetailRows((data ?? []) as BookingRoomDetailJoinRow[]);
 }
 
 /**
@@ -1098,6 +1153,7 @@ export async function getBookingsListWithPagination({
   status,
   cursorCreatedAt,
   cursorId,
+  branchId,
 }: {
   search?: string | null;
   page?: number;
@@ -1110,6 +1166,7 @@ export async function getBookingsListWithPagination({
   status?: string | null;
   cursorCreatedAt?: string | null;
   cursorId?: string | null;
+  branchId?: string | null;
 }): Promise<{
   data: BookingRecord[];
   pagination: PaginationMeta;
@@ -1137,6 +1194,9 @@ export async function getBookingsListWithPagination({
     const trimmedCursorId = cursorId?.trim() || null;
     const useKeyset = Boolean(trimmedCursorAt && trimmedCursorId);
 
+    const { scope } = await getCurrentUserBranchScope();
+    const p_branch_id = resolveBranchFilterId(scope, branchId);
+
     const { data, error } = await supabase.rpc("list_bookings_json", {
       p_search: trimmedSearch,
       p_page: page,
@@ -1149,6 +1209,7 @@ export async function getBookingsListWithPagination({
       p_status: trimmedStatus,
       p_cursor_created_at: useKeyset ? trimmedCursorAt : null,
       p_cursor_id: useKeyset ? trimmedCursorId : null,
+      p_branch_id,
     });
 
     if (error) {

@@ -1,7 +1,8 @@
 "use server";
 
 import { hasViewPermission, getFirstAllowedPage } from "@/lib/permissions";
-import { DASHBOARD_URLS } from "@/lib/constants";
+import { canViewAllBranches } from "@/lib/branch";
+import { ADMIN_MANAGER_ONLY_PATHS, DASHBOARD_URLS } from "@/lib/constants";
 import { Profile } from "./types";
 import { User } from "@supabase/supabase-js";
 
@@ -54,6 +55,16 @@ export async function checkRoutePermissionStatus(
 ): Promise<{ hasPermission: boolean; fallbackUrl: string }> {
   if (!user || !profile) {
     return { hasPermission: false, fallbackUrl: "/login" };
+  }
+
+  const isAdminManagerOnlyRoute = ADMIN_MANAGER_ONLY_PATHS.some(
+    (path) => pathname === path || pathname.startsWith(`${path}/`)
+  );
+  if (isAdminManagerOnlyRoute) {
+    return {
+      hasPermission: canViewAllBranches(profile.role),
+      fallbackUrl: await getFirstAllowedPage(profile.role),
+    };
   }
 
   // Get resource from pathname

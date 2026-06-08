@@ -4,12 +4,14 @@ import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
 import type { ReservationsResponse } from "@/lib/types";
 
+export function useReservation(branchId: string | null = null) {
+  const params = new URLSearchParams();
+  if (branchId) {
+    params.set("branchId", branchId);
+  }
+  const query = params.toString();
+  const swrKey = query ? `/api/reservations?${query}` : "/api/reservations";
 
-export function useReservation() {
-  // Use a static key for reservation data
-  const swrKey = "/api/reservations";
-
-  // Use SWR to fetch reservation data with caching and deduplication
   const { data, error, isLoading, mutate, isValidating } =
     useSWR<ReservationsResponse>(swrKey, fetcher);
 

@@ -7,6 +7,8 @@ import { PermissionGuard } from "@/components/permission-guard";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { getProfileByIdAction } from "@/actions/profiles";
+import { BranchProvider } from "@/contexts/branch-context";
+import { listBranches } from "@/services/branches";
 
 export default async function DashboardLayout({
   children,
@@ -19,13 +21,20 @@ export default async function DashboardLayout({
   } = await supabase.auth.getUser();
 
   let profile = null;
+  let branches: Awaited<ReturnType<typeof listBranches>> = [];
   if (user) {
     profile = await getProfileByIdAction(user.id);
+    try {
+      branches = await listBranches();
+    } catch {
+      branches = [];
+    }
   }
 
   return (
     <AuthProvider initialUser={user} initialProfile={profile}>
       <PermissionsProvider>
+        <BranchProvider initialBranches={branches}>
         <ClientSync user={user} profile={profile} />
         <PermissionGuard user={user} profile={profile}>
         <SidebarProvider
@@ -47,6 +56,7 @@ export default async function DashboardLayout({
           </SidebarInset>
         </SidebarProvider>
       </PermissionGuard>
+        </BranchProvider>
       </PermissionsProvider>
     </AuthProvider>
   );

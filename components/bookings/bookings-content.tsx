@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/popover";
 import { DataTable } from "@/components/data-table";
 import { useBookings } from "@/hooks/use-bookings";
+import { useBranch } from "@/contexts/branch-context";
 import {
   createBooking as createBookingAction,
   createMultiBooking as createMultiBookingAction,
@@ -82,6 +83,13 @@ export function BookingsContent({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { scope, selectedBranchId, branches } = useBranch();
+  const branchNameById = React.useMemo(
+    () => Object.fromEntries(branches.map((b) => [b.id, b.name])),
+    [branches]
+  );
+  const branchIdForFetch =
+    scope.mode === "single" ? scope.branchId : selectedBranchId;
   const [localSearch, setLocalSearch] = React.useState("");
   const [isCheckAvailableRoomsDialogOpen, setIsCheckAvailableRoomsDialogOpen] =
     React.useState(false);
@@ -255,6 +263,7 @@ export function BookingsContent({
     status: statusForFetch,
     cursorCreatedAt,
     cursorId,
+    branchId: branchIdForFetch,
     fallbackData: initialData,
   });
 
@@ -591,7 +600,10 @@ export function BookingsContent({
           checkedOutBooking,
           cancelledBooking,
         },
-        roomNumberById ? { roomNumberById } : undefined
+        {
+          ...(roomNumberById ? { roomNumberById } : {}),
+          branchNameById,
+        }
       ),
     [
       handleUpdateStatus,
@@ -605,6 +617,7 @@ export function BookingsContent({
       checkedOutBooking,
       cancelledBooking,
       roomNumberById,
+      branchNameById,
     ]
   );
 
@@ -822,6 +835,7 @@ export function BookingsContent({
           initialColumnVisibility={{
             [COLUMNS.NUMBER_OF_NIGHTS.accessorKey]: false,
             [COLUMNS.TOTAL_GUESTS.accessorKey]: false,
+            [COLUMNS.BRANCH.accessorKey]: false,
           }}
         />
       </div>

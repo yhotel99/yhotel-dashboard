@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { Room, PaginationMeta } from "@/lib/types";
+import {
+  getCurrentUserBranchScope,
+  resolveBranchFilterId,
+} from "@/lib/branch.server";
 
 /**
  * GET /api/rooms
@@ -16,6 +20,9 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get("search") || "";
     const page = Number(searchParams.get("page") || 1);
     const limit = Number(searchParams.get("limit") || 10);
+    const requestedBranchId = searchParams.get("branchId");
+    const { scope } = await getCurrentUserBranchScope();
+    const filterBranchId = resolveBranchFilterId(scope, requestedBranchId);
 
     // Validate pagination parameters
     if (page < 1 || limit < 1) {
@@ -51,7 +58,10 @@ export async function GET(req: NextRequest) {
       .is("deleted_at", null)
       .eq("room_images.is_main", true);
 
-    // Add search filter: tên phòng hoặc số phòng (room_number)
+    if (filterBranchId) {
+      query = query.eq("branch_id", filterBranchId);
+    }
+
     if (search && search.trim() !== "") {
       const term = search.trim();
       const pattern = `%${term}%`;

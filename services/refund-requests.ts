@@ -1,5 +1,9 @@
 
 import { createClient } from "@/lib/supabase/server";
+import {
+  getCurrentUserBranchScope,
+  resolveBranchFilterId,
+} from "@/lib/branch.server";
 import type {
   RefundRequestWithRelations,
   RefundRequestsResponse,
@@ -13,10 +17,12 @@ export async function getRefundRequestsListWithPagination({
   search,
   page = 1,
   limit = 10,
+  branchId: requestedBranchId,
 }: {
   search?: string | null;
   page?: number;
   limit?: number;
+  branchId?: string | null;
 }): Promise<RefundRequestsResponse> {
   try {
     if (page < 1 || limit < 1) {
@@ -24,6 +30,8 @@ export async function getRefundRequestsListWithPagination({
     }
 
     const supabase = await createClient();
+    const { scope } = await getCurrentUserBranchScope();
+    const branchId = resolveBranchFilterId(scope, requestedBranchId);
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
@@ -35,13 +43,18 @@ export async function getRefundRequestsListWithPagination({
         status,
         created_at,
         request_by,
-        bookings:booking_id (
+        bookings:booking_id!inner (
+          branch_id,
           customers:customer_id ( full_name )
         ),
         request_by_profile:request_by ( full_name )
       `,
       { count: "exact" }
     );
+
+    if (branchId) {
+      query = query.eq("bookings.branch_id", branchId);
+    }
 
     if (search && search.trim() !== "") {
       const trimmedSearch = search.trim();

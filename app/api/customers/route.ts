@@ -15,6 +15,7 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get("search") || "";
     const page = Number(searchParams.get("page") || 1);
     const limit = Number(searchParams.get("limit") || 10);
+    const branchId = searchParams.get("branchId") || null;
 
     // Validate pagination parameters
     if (page < 1 || limit < 1) {
@@ -28,6 +29,7 @@ export async function GET(req: NextRequest) {
       search: search.trim() || null,
       page,
       limit,
+      branchId,
     });
 
     return NextResponse.json({

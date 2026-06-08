@@ -26,6 +26,7 @@ export function useBookings({
   status = "",
   cursorCreatedAt = "",
   cursorId = "",
+  branchId = null,
   fallbackData,
 }: {
   search?: string;
@@ -39,6 +40,7 @@ export function useBookings({
   status?: string;
   cursorCreatedAt?: string;
   cursorId?: string;
+  branchId?: string | null;
   fallbackData?: BookingsResponse;
 }) {
 
@@ -73,6 +75,9 @@ export function useBookings({
   if (cursorCreatedAt.trim() !== "" && cursorId.trim() !== "") {
     params.append("cursorCreatedAt", cursorCreatedAt.trim());
     params.append("cursorId", cursorId.trim());
+  }
+  if (branchId) {
+    params.append("branchId", branchId);
   }
 
   if(fallbackData) {

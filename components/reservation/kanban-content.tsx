@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { useUpcomingCheckins } from "@/hooks/use-upcoming-checkins";
 import { useAvailableRooms } from "@/hooks/use-available-rooms";
+import { useBranch } from "@/contexts/branch-context";
 import type { BookingRecord, BookingsResponse } from "@/lib/types";
 import { bookingStatusLabels } from "@/lib/constants";
 import Link from "next/link";
@@ -235,6 +236,7 @@ interface KanbanContentProps {
 }
 
 export function KanbanContent({ initialData }: KanbanContentProps) {
+  const { filterBranchId } = useBranch();
   const [search, setSearch] = useState("");
   const [selectedBooking, setSelectedBooking] = useState<BookingRecord | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
@@ -242,10 +244,11 @@ export function KanbanContent({ initialData }: KanbanContentProps) {
 
   const { bookings, isLoading, error, refetch } = useUpcomingCheckins({
     search,
+    branchId: filterBranchId,
     fallbackData: initialData,
   });
 
-  const { availableRooms, isLoading: isAvailableRoomsLoading, refetch: refetchAvailableRooms } = useAvailableRooms();
+  const { availableRooms, isLoading: isAvailableRoomsLoading, refetch: refetchAvailableRooms } = useAvailableRooms(filterBranchId);
 
   // Kanban theo ngày + trong mỗi cột nhóm theo tầng
   const groupedByDateWithFloors = useMemo(

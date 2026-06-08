@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -12,6 +12,10 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { getAvailableRoomsAction } from "@/actions/rooms";
+import { useAuth } from "@/contexts/auth-context";
+import { useBranch } from "@/contexts/branch-context";
+import { BranchFormField } from "@/components/branch-form-field";
+import { getDefaultFormBranchId } from "@/lib/branch";
 import type { Room } from "@/lib/types";
 import {
   formatCurrency,
@@ -41,11 +45,32 @@ export function CheckAvailableRoomsDialog({
   open,
   onOpenChange,
 }: CheckAvailableRoomsDialogProps) {
+  const { profile } = useAuth();
+  const { filterBranchId, effectiveBranchId } = useBranch();
+  const [formBranchId, setFormBranchId] = useState(() =>
+    getDefaultFormBranchId({
+      profile: null,
+      filterBranchId: null,
+      effectiveBranchId: null,
+    })
+  );
   const [checkInDate, setCheckInDate] = useState("");
   const [checkOutDate, setCheckOutDate] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [availableRooms, setAvailableRooms] = useState<Room[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setFormBranchId(
+        getDefaultFormBranchId({
+          profile,
+          filterBranchId,
+          effectiveBranchId,
+        })
+      );
+    }
+  }, [open, profile, filterBranchId, effectiveBranchId]);
 
   const handleSearch = async () => {
     if (!checkInDate || !checkOutDate) {
@@ -71,7 +96,16 @@ export function CheckAvailableRoomsDialog({
 
     setIsLoading(true);
     setHasSearched(true);
-    const result = await getAvailableRoomsAction(checkInISO, checkOutISO);
+    if (!formBranchId) {
+      toast.error("Vui lòng chọn chi nhánh");
+      return;
+    }
+
+    const result = await getAvailableRoomsAction(
+      checkInISO,
+      checkOutISO,
+      formBranchId
+    );
 
     if (result.ok) {
       setAvailableRooms(result.data);
@@ -123,7 +157,10 @@ export function CheckAvailableRoomsDialog({
         </DialogHeader>
 
         <div className="space-y-4 py-4 flex-1 flex flex-col min-h-0">
-          {/* Date inputs */}
+          <BranchFormField
+            value={formBranchId}
+            onChange={setFormBranchId}
+          />
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="check_in_date">Ngày check-in *</Label>

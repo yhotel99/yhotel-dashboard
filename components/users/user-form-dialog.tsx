@@ -29,7 +29,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Profile } from "@/lib/types";
+import type { Branch, Profile } from "@/lib/types";
+import { DEFAULT_BRANCH_ID, USER_ROLE } from "@/lib/constants";
+
+/** Select value when admin/manager has no fixed branch (views all branches). */
+export const BRANCH_NONE_VALUE = "__none__";
+
+function branchIdToFormValue(
+  role: string,
+  branchId: string | null | undefined
+): string {
+  if (branchId) return branchId;
+  return role === USER_ROLE.STAFF ? DEFAULT_BRANCH_ID : BRANCH_NONE_VALUE;
+}
 
 // User form schema for create (with password)
 const createUserFormSchema = z.object({
@@ -37,8 +49,9 @@ const createUserFormSchema = z.object({
   email: z.string().email("Email không hợp lệ"),
   password: z.string().min(6, "Mật khẩu tối thiểu 6 ký tự"),
   phone: z.string().optional(),
-  role: z.enum(["manager", "staff"]), // Only manager and staff when creating
+  role: z.enum([USER_ROLE.MANAGER, USER_ROLE.STAFF]), // Only manager and staff when creating
   status: z.enum(["active", "inactive", "suspended"]),
+  branch_id: z.string().optional(),
 });
 
 // User form schema for edit (without password)
@@ -46,8 +59,9 @@ const editUserFormSchema = z.object({
   full_name: z.string().min(1, "Tên người dùng là bắt buộc"),
   email: z.string().email("Email không hợp lệ"),
   phone: z.string().optional(),
-  role: z.enum(["admin", "manager", "staff"]), // All 3 roles
+  role: z.enum([USER_ROLE.ADMIN, USER_ROLE.MANAGER, USER_ROLE.STAFF]), // All 3 roles
   status: z.enum(["active", "inactive", "suspended"]),
+  branch_id: z.string().optional().nullable(),
 });
 
 export type CreateUserFormValues = z.infer<typeof createUserFormSchema>;
@@ -55,6 +69,7 @@ export type EditUserFormValues = z.infer<typeof editUserFormSchema>;
 
 interface UserFormDialogProps {
   profile?: Profile;
+  branches?: Branch[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreate: (data: CreateUserFormValues) => Promise<void>;
@@ -63,6 +78,7 @@ interface UserFormDialogProps {
 
 export function UserFormDialog({
   profile,
+  branches = [],
   open,
   onOpenChange,
   onCreate,
@@ -76,8 +92,9 @@ export function UserFormDialog({
       email: "",
       password: "",
       phone: "",
-      role: "staff",
+      role: USER_ROLE.STAFF,
       status: "active",
+      branch_id: DEFAULT_BRANCH_ID,
     },
   });
 
@@ -92,6 +109,7 @@ export function UserFormDialog({
           phone: profile.phone || "",
           role: profile.role,
           status: profile.status,
+          branch_id: branchIdToFormValue(profile.role, profile.branch_id),
         });
       } else {
         // Create mode - reset to default
@@ -100,12 +118,39 @@ export function UserFormDialog({
           email: "",
           password: "",
           phone: "",
-          role: "staff",
+          role: USER_ROLE.STAFF,
           status: "active",
+          branch_id: DEFAULT_BRANCH_ID,
         });
       }
     }
   }, [open, profile, form]);
+
+  const watchedRole = form.watch("role");
+  const isStaffRole = watchedRole === USER_ROLE.STAFF;
+  const showBranchSelect =
+    isStaffRole ||
+    (isEdit &&
+      (watchedRole === USER_ROLE.ADMIN ||
+        watchedRole === USER_ROLE.MANAGER));
+
+  useEffect(() => {
+    const current = form.getValues("branch_id");
+    if (isStaffRole) {
+      if (!current || current === BRANCH_NONE_VALUE) {
+        form.setValue("branch_id", DEFAULT_BRANCH_ID);
+      }
+      return;
+    }
+    if (
+      isEdit &&
+      (watchedRole === USER_ROLE.ADMIN || watchedRole === USER_ROLE.MANAGER)
+    ) {
+      if (!current) {
+        form.setValue("branch_id", BRANCH_NONE_VALUE);
+      }
+    }
+  }, [watchedRole, isStaffRole, isEdit, form]);
 
   const onSubmit = async (data: CreateUserFormValues | EditUserFormValues) => {
     try {
@@ -221,14 +266,14 @@ export function UserFormDialog({
                     <SelectContent>
                       {isEdit ? (
                         <>
-                          <SelectItem value="admin">Quản trị viên</SelectItem>
-                          <SelectItem value="manager">Quản lý</SelectItem>
-                          <SelectItem value="staff">Nhân viên</SelectItem>
+                          <SelectItem value={USER_ROLE.ADMIN}>Quản trị viên</SelectItem>
+                          <SelectItem value={USER_ROLE.MANAGER}>Quản lý</SelectItem>
+                          <SelectItem value={USER_ROLE.STAFF}>Nhân viên</SelectItem>
                         </>
                       ) : (
                         <>
-                          <SelectItem value="manager">Quản lý</SelectItem>
-                          <SelectItem value="staff">Nhân viên</SelectItem>
+                          <SelectItem value={USER_ROLE.MANAGER}>Quản lý</SelectItem>
+                          <SelectItem value={USER_ROLE.STAFF}>Nhân viên</SelectItem>
                         </>
                       )}
                     </SelectContent>
@@ -237,6 +282,57 @@ export function UserFormDialog({
                 </FormItem>
               )}
             />
+            {showBranchSelect ? (
+              <FormField
+                control={form.control}
+                name="branch_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Chi nhánh{isStaffRole ? " *" : ""}
+                    </FormLabel>
+                    <Select
+                      value={
+                        field.value ??
+                        (isStaffRole ? DEFAULT_BRANCH_ID : BRANCH_NONE_VALUE)
+                      }
+                      onValueChange={(value) => field.onChange(value)}
+                      disabled={branches.length === 0}
+                    >
+                      <FormControl className="w-full">
+                        <SelectTrigger>
+                          <SelectValue placeholder="Chọn chi nhánh" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {!isStaffRole ? (
+                          <SelectItem value={BRANCH_NONE_VALUE}>
+                            Toàn hệ thống (không cố định)
+                          </SelectItem>
+                        ) : null}
+                        {branches.map((b) => (
+                          <SelectItem key={b.id} value={b.id}>
+                            {b.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {branches.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        Chưa có chi nhánh. Vui lòng tạo chi nhánh trước.
+                      </p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        {isStaffRole
+                          ? "Nhân viên làm việc tại một chi nhánh cố định."
+                          : "Quản trị viên / Quản lý vẫn xem được mọi chi nhánh; có thể gán chi nhánh mặc định nếu cần."}
+                      </p>
+                    )}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ) : null}
             <FormField
               control={form.control}
               name="status"

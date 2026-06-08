@@ -9,6 +9,8 @@ import {
   IconWorld,
   IconUser,
 } from "@tabler/icons-react";
+import { BranchDetailSection } from "@/components/branch-form-field";
+import { CustomerRelatedBranchesSection } from "@/components/customers/customer-related-branches-section";
 import {
   Dialog,
   DialogContent,
@@ -36,7 +38,6 @@ export function CustomerDetailDialog({
   customer,
 }: CustomerDetailDialogProps) {
   const router = useRouter();
-
   const handleViewBookings = () => {
     if (!customer) return;
     onOpenChange(false);
@@ -63,6 +64,11 @@ export function CustomerDetailDialog({
         <ScrollArea className="max-h-[70vh]">
           {customer && (
             <div className="space-y-6">
+              <BranchDetailSection branchId={customer.branch_id} />
+              <CustomerRelatedBranchesSection customer={customer} />
+
+              <Separator />
+
               {/* Basic Information */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Thông tin cơ bản</h3>

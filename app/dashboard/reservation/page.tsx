@@ -24,6 +24,7 @@ import {
   roomMapStatusColors,
 } from "@/lib/constants";
 import type { RoomWithBooking } from "@/lib/types";
+import { useBranch } from "@/contexts/branch-context";
 
 const statusFilters: Array<{
   status: RoomMapStatus | "all";
@@ -117,8 +118,12 @@ function getRoomIdToUpcomingBooking(
 }
 
 export default function ReservationPage() {
-  const { rooms, isLoading, error, refetch } = useReservation();
-  const { bookings: upcomingBookings } = useUpcomingCheckins({ search: "" });
+  const { filterBranchId } = useBranch();
+  const { rooms, isLoading, error, refetch } = useReservation(filterBranchId);
+  const { bookings: upcomingBookings } = useUpcomingCheckins({
+    search: "",
+    branchId: filterBranchId,
+  });
   const [search, setSearch] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<RoomMapStatus | "all">(
     "all"

@@ -319,9 +319,16 @@ export const customerSourceLabels: Record<
 /**
  * Sidebar navigation URLs
  */
+/** Default branch UUID (seed migration) */
+export const DEFAULT_BRANCH_ID = "a0000000-0000-4000-8000-000000000001";
+export const DEFAULT_BRANCH_CODE = "main";
+/** Singleton global settings row id */
+export const SETTINGS_ID = "00000000-0000-0000-0000-000000000001";
+
 export const SIDEBAR_URLS = {
   DASHBOARD: "/dashboard",
   ANALYTICS: "/dashboard/analytics",
+  BRANCHES: "/dashboard/branches",
   ROOMS: "/dashboard/rooms",
   BOOKINGS: "/dashboard/bookings",
   RESERVATION: "/dashboard/reservation",
@@ -341,6 +348,7 @@ export const CUSTOMER_ERROR_PATTERNS = {
   DUPLICATE_EMAIL_KEY:
     'duplicate key value violates unique constraint "customers_email_key"',
   DUPLICATE_EMAIL_KEY_SHORT: "customers_email_key",
+  DUPLICATE_BRANCH_EMAIL_KEY: "customers_branch_email_unique",
   DUPLICATE_KEY_GENERAL: "duplicate key value violates unique constraint",
 } as const;
 
@@ -348,6 +356,7 @@ export const ROOM_ERROR_PATTERNS = {
   DUPLICATE_ROOM_NUMBER:
     'duplicate key value violates unique constraint "rooms_room_number_key"',
   DUPLICATE_ROOM_NUMBER_SHORT: "rooms_room_number_key",
+  DUPLICATE_BRANCH_ROOM_NUMBER: "rooms_branch_room_number_unique",
   FOREIGN_KEY_VIOLATION: "23503",
   HAS_BOOKINGS: "update or delete on table \"rooms\" violates foreign key constraint",
 } as const;
@@ -448,6 +457,7 @@ export function translateBookingErrorMessage(
 export const PATH_TO_RESOURCE: Record<string, string> = {
   [SIDEBAR_URLS.DASHBOARD]: "dashboard",
   [SIDEBAR_URLS.ANALYTICS]: "dashboard",
+  [SIDEBAR_URLS.BRANCHES]: "branches",
   [SIDEBAR_URLS.ROOMS]: "rooms",
   [SIDEBAR_URLS.BOOKINGS]: "bookings",
   [SIDEBAR_URLS.RESERVATION]: "reservations",
@@ -475,6 +485,12 @@ export const allNavItems = [
     url: SIDEBAR_URLS.ANALYTICS,
     icon: IconChartBar,
     resource: "dashboard",
+  },
+  {
+    title: "Chi nhánh",
+    url: SIDEBAR_URLS.BRANCHES,
+    icon: IconBuildingSkyscraper,
+    resource: "branches",
   },
   {
     title: "Phòng Khách Sạn",
@@ -591,7 +607,14 @@ export const DASHBOARD_URLS = {
   USERS: "/dashboard/users",
   BLOGS: "/dashboard/blogs",
   SETTINGS: "/dashboard/settings",
+  /** Công cụ tạo QR thanh toán (admin/manager, không có trong sidebar) */
+  PAYMENT_QR: "/dashboard/tools/payment-qr",
 } as const;
+
+/** Đường dẫn chỉ admin và manager được truy cập (không dùng permission DB). */
+export const ADMIN_MANAGER_ONLY_PATHS = [
+  DASHBOARD_URLS.PAYMENT_QR,
+] as const;
 
 
 export const CUSTOMER_TYPE = {
@@ -665,7 +688,14 @@ export const BANK_ACCOUNT = {
   ACC: "01801807326",
   BANK: "TPBank",
   ACCOUNT_NAME: "CÔNG TY CỔ PHẦN KHÁCH SẠN YQ"
-} as const
+} as const;
+
+/** Static assets served from /public */
+export const PUBLIC_ASSETS = {
+  LOGO: encodeURI("/Y HOTEL_CIP (1).png"),
+  PAYMENT_SOUND_APPLE: "/apple-pay-original.mp3",
+  PAYMENT_SOUND_MONEY: "/money-soundfx.mp3",
+} as const;
 
 /**
  * Room category codes for classification

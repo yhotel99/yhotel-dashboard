@@ -27,6 +27,8 @@ import {
   translateBookingError,
 } from "@/lib/functions";
 import { BOOKING_STATUS } from "@/lib/constants";
+import { BranchDetailSection } from "@/components/branch-form-field";
+import { Separator } from "@/components/ui/separator";
 
 type EditBookingFormState = {
   room_id: string;
@@ -52,7 +54,12 @@ export function EditBookingDialog({
   booking: BookingRecord | null;
   onUpdate: (id: string, input: UpdateBookingInput) => Promise<void>;
 }) {
-  const { rooms, mutate: refetch } = useRooms({ page: 1, limit: 100, search: "" });
+  const { rooms, mutate: refetch } = useRooms({
+    page: 1,
+    limit: 100,
+    search: "",
+    branchId: booking?.branch_id ?? null,
+  });
 
   // Fetch rooms when dialog opens
   useEffect(() => {
@@ -226,6 +233,8 @@ export function EditBookingDialog({
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <BranchDetailSection branchId={booking.branch_id} />
+          <Separator />
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2 md:col-span-2">
               <Label>Khách hàng</Label>

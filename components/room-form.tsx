@@ -45,6 +45,10 @@ import {
 } from "@/lib/constants";
 import { MultiSelect } from "@/components/multi-select";
 import { mutate } from "swr";
+import { useBranch } from "@/contexts/branch-context";
+import { useAuth } from "@/contexts/auth-context";
+import { canViewAllBranches } from "@/lib/branch";
+import { DEFAULT_BRANCH_ID } from "@/lib/constants";
 
 // Room type enum matching database
 export const roomTypeEnum = [
@@ -98,6 +102,7 @@ const baseRoomFormSchema = z.object({
       })
     )
     .optional(),
+  branch_id: z.string().optional(),
 });
 
 // Form validation schema for create (thumbnail required)
@@ -146,6 +151,12 @@ export function RoomForm({
   onCancel,
 }: RoomFormProps) {
   const router = useRouter();
+  const { profile } = useAuth();
+  const { branches, filterBranchId } = useBranch();
+  const showBranchPicker = Boolean(profile && branches.length > 0);
+  const canSelectRoomBranch = Boolean(
+    profile && canViewAllBranches(profile.role)
+  );
 
   const defaultFormValues: RoomFormValues = {
     name: "",
@@ -160,6 +171,7 @@ export function RoomForm({
     floor_number: "",
     thumbnail: undefined,
     images: undefined,
+    branch_id: filterBranchId ?? profile?.branch_id ?? DEFAULT_BRANCH_ID,
   };
 
   const form = useForm<RoomFormValues>({
@@ -194,6 +206,7 @@ export function RoomForm({
         amenities: data.amenities,
         room_number: data.room_number || null,
         floor_number: data.floor_number ? Number(data.floor_number) : null,
+        ...(data.branch_id ? { branch_id: data.branch_id } : {}),
       };
 
       if (mode === "edit") {
@@ -266,6 +279,65 @@ export function RoomForm({
             className="space-y-6"
           >
             <div className="grid gap-6 md:grid-cols-2">
+              {showBranchPicker ? (
+                <FormField
+                  control={form.control}
+                  name="branch_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      {canSelectRoomBranch ? (
+                        <>
+                          <FormLabel>Chi nhánh *</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={
+                              field.value ?? filterBranchId ?? DEFAULT_BRANCH_ID
+                            }
+                          >
+                            <FormControl className="w-full">
+                              <SelectTrigger>
+                                <SelectValue placeholder="Chọn chi nhánh" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {branches.map((b) => (
+                                <SelectItem key={b.id} value={b.id}>
+                                  {b.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>
+                            Chọn chi nhánh quản lý phòng này
+                          </FormDescription>
+                        </>
+                      ) : (
+                        <>
+                          <FormLabel>Chi nhánh *</FormLabel>
+                          <FormControl>
+                            <Input
+                              readOnly
+                              value={
+                                branches.find(
+                                  (b) =>
+                                    b.id ===
+                                    (field.value ??
+                                      profile?.branch_id ??
+                                      DEFAULT_BRANCH_ID)
+                                )?.name ?? "Chi nhánh mặc định"
+                              }
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Phòng thuộc chi nhánh của tài khoản bạn
+                          </FormDescription>
+                        </>
+                      )}
+                    </FormItem>
+                  )}
+                />
+              ) : null}
+
               <FormField
                 control={form.control}
                 name="name"

@@ -30,6 +30,7 @@ interface Pagination {
 interface AuditLogViewerProps {
   entityType?: string;
   entityId?: string;
+  branchId?: string | null;
   limit?: number;
 }
 
@@ -56,7 +57,7 @@ const actionColors: Record<string, string> = {
   'payment.update': 'bg-purple-100 text-purple-800',
 };
 
-export function AuditLogViewer({ entityType, entityId, limit = 20 }: AuditLogViewerProps) {
+export function AuditLogViewer({ entityType, entityId, branchId = null, limit = 20 }: AuditLogViewerProps) {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -71,7 +72,7 @@ export function AuditLogViewer({ entityType, entityId, limit = 20 }: AuditLogVie
   useEffect(() => {
     fetchLogs(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entityType, entityId]);
+  }, [entityType, entityId, branchId]);
 
   const fetchLogs = async (page: number) => {
     try {
@@ -81,6 +82,7 @@ export function AuditLogViewer({ entityType, entityId, limit = 20 }: AuditLogVie
       const params = new URLSearchParams();
       if (entityType) params.append('entityType', entityType);
       if (entityId) params.append('entityId', entityId);
+      if (branchId) params.append('branchId', branchId);
       params.append('page', page.toString());
       params.append('limit', limit.toString());
 

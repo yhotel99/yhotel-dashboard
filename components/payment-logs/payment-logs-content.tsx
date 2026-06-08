@@ -6,6 +6,7 @@ import { DataTable } from "@/components/data-table";
 import { usePaymentLogs } from "@/hooks/use-payment-logs";
 import type { PaymentLogsResponse } from "@/lib/types";
 import { useDebounce } from "@/hooks/use-debounce";
+import { useBranch } from "@/contexts/branch-context";
 import { createPaymentLogColumns, PAYMENT_LOG_COLUMNS } from "./columns";
 import { useRoomNumberLookup } from "@/hooks/use-room-number-lookup";
 
@@ -16,6 +17,7 @@ export function PaymentLogsContent({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { filterBranchId } = useBranch();
   const [localSearch, setLocalSearch] = useState("");
 
   // Get pagination and search from URL params
@@ -72,6 +74,7 @@ export function PaymentLogsContent({
     search,
     page,
     limit,
+    branchId: filterBranchId,
     fallbackData: initialData,
   });
 

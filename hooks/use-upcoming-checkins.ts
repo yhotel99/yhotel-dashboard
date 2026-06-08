@@ -11,9 +11,11 @@ import { fetcher } from "@/lib/fetcher";
  */
 export function useUpcomingCheckins({
   search = "",
+  branchId = null,
   fallbackData,
 }: {
   search?: string;
+  branchId?: string | null;
   fallbackData?: BookingsResponse;
 }) {
   const config: SWRConfiguration<BookingsResponse> = {
@@ -27,6 +29,10 @@ export function useUpcomingCheckins({
   
   if (search && search.trim() !== "") {
     params.append("search", search.trim());
+  }
+
+  if (branchId) {
+    params.append("branchId", branchId);
   }
 
   if (fallbackData) {

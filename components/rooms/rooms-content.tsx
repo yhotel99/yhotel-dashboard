@@ -16,10 +16,16 @@ import { createColumns, ROOMS_COLUMNS } from "@/components/rooms/columns";
 import { DeleteRoomDialog } from "@/components/rooms/delete-room-dialog";
 import { RoomDetailDialog } from "@/components/rooms/room-detail-dialog";
 import type { Room, RoomsResponse } from "@/lib/types";
+import { useBranch } from "@/contexts/branch-context";
 
 export function RoomsContent({ initialData }: { initialData: RoomsResponse }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { filterBranchId, branches } = useBranch();
+  const branchNameById = useMemo(
+    () => Object.fromEntries(branches.map((b) => [b.id, b.name])),
+    [branches]
+  );
 
   // Get page, limit, and search from URL search params
   const page = useMemo(() => {
@@ -82,6 +88,7 @@ export function RoomsContent({ initialData }: { initialData: RoomsResponse }) {
     search,
     page,
     limit,
+    branchId: filterBranchId,
     fallbackData: initialData,
   });
 
@@ -90,6 +97,12 @@ export function RoomsContent({ initialData }: { initialData: RoomsResponse }) {
   const [roomToDelete, setRoomToDelete] = useState<Room | null>(null);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+
+  // Đóng chi tiết khi đổi chi nhánh để không giữ phòng của CN cũ
+  useEffect(() => {
+    setIsDetailDialogOpen(false);
+    setSelectedRoom(null);
+  }, [filterBranchId]);
 
   // Handle empty page after deletion or invalid page number
   useEffect(() => {
@@ -179,9 +192,10 @@ export function RoomsContent({ initialData }: { initialData: RoomsResponse }) {
       createColumns(
         handleDeleteClick,
         handleInlineStatusChange,
-        handleViewDetail
+        handleViewDetail,
+        { branchNameById }
       ),
-    [handleDeleteClick, handleInlineStatusChange, handleViewDetail]
+    [handleDeleteClick, handleInlineStatusChange, handleViewDetail, branchNameById]
   );
 
   return (
@@ -219,6 +233,7 @@ export function RoomsContent({ initialData }: { initialData: RoomsResponse }) {
           onSearchChange={setLocalSearch}
           initialColumnVisibility={{
             [ROOMS_COLUMNS.AMENITIES.accessorKey]: false,
+            [ROOMS_COLUMNS.BRANCH.accessorKey]: false,
           }}
         ></DataTable>
       </div>
@@ -234,6 +249,7 @@ export function RoomsContent({ initialData }: { initialData: RoomsResponse }) {
 
       {selectedRoom && (
         <RoomDetailDialog
+          key={selectedRoom.id}
           room={selectedRoom}
           open={isDetailDialogOpen}
           onOpenChange={(open) => {

@@ -36,6 +36,17 @@ import type {
   PaymentMethod,
 } from "@/lib/types";
 import { getAvailableRoomsAction } from "@/actions/rooms";
+import { useAuth } from "@/contexts/auth-context";
+import { useBranch } from "@/contexts/branch-context";
+import { BranchFormField } from "@/components/branch-form-field";
+import {
+  buildBranchNameById,
+  canViewAllBranches,
+  getBranchCodeById,
+  getDefaultFormBranchId,
+  resolveBranchDisplay,
+} from "@/lib/branch";
+import { CustomerSearchOption } from "@/components/customers/customer-search-option";
 import { searchCustomersAction, createCustomerAction } from "@/actions/customers";
 import { validateVoucherForBooking } from "@/actions/vouchers";
 import { useDebounce } from "@/hooks/use-debounce";
@@ -90,7 +101,28 @@ export function CreateMultiBookingDialog({
   onOpenChange: (open: boolean) => void;
   onCreate: (input: MultiBookingInput) => Promise<void>;
 }) {
+  const { branches, filterBranchId, effectiveBranchId } = useBranch();
+  const { profile } = useAuth();
+  const [formBranchId, setFormBranchId] = useState(() =>
+    getDefaultFormBranchId({
+      profile: null,
+      filterBranchId: null,
+      effectiveBranchId: null,
+    })
+  );
   const { settings } = useSettings();
+
+  useEffect(() => {
+    if (open) {
+      setFormBranchId(
+        getDefaultFormBranchId({
+          profile,
+          filterBranchId,
+          effectiveBranchId,
+        })
+      );
+    }
+  }, [open, profile, filterBranchId, effectiveBranchId]);
   const [customerSearch, setCustomerSearch] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
     null
@@ -138,24 +170,82 @@ export function CreateMultiBookingDialog({
     [checkInISO, checkOutISO]
   );
 
-  // Danh sách phòng trống theo khoảng ngày (RPC get_available_rooms - dùng booking_rooms)
+  const canSelectBookingBranch = Boolean(
+    profile && canViewAllBranches(profile.role)
+  );
+
+  const staffLockedBranchId = useMemo(() => {
+    if (!profile || canViewAllBranches(profile.role)) return null;
+    return profile.branch_id ?? null;
+  }, [profile]);
+
+  const branchIdForBooking = staffLockedBranchId ?? formBranchId;
+
+  const branchNameById = useMemo(
+    () => buildBranchNameById(branches),
+    [branches]
+  );
+
+  const branchLabelForRooms = useMemo(() => {
+    if (!branchIdForBooking) return null;
+    return resolveBranchDisplay(branchIdForBooking, branches).name;
+  }, [branchIdForBooking, branches]);
+
+  const availableRoomsForBranch = useMemo(() => {
+    if (!branchIdForBooking) return [];
+    return availableRooms.filter((r) => r.branch_id === branchIdForBooking);
+  }, [availableRooms, branchIdForBooking]);
+
+  const roomGroupsByBranch = useMemo(() => {
+    const groups = new Map<string, Room[]>();
+    for (const room of availableRoomsForBranch) {
+      const key = room.branch_id || branchIdForBooking;
+      const list = groups.get(key) ?? [];
+      list.push(room);
+      groups.set(key, list);
+    }
+    return Array.from(groups.entries()).map(([branchId, rooms]) => ({
+      branchId,
+      branchName:
+        branchNameById[branchId] ??
+        resolveBranchDisplay(branchId, branches).name,
+      rooms,
+    }));
+  }, [
+    availableRoomsForBranch,
+    branchIdForBooking,
+    branchNameById,
+    branches,
+  ]);
+
   useEffect(() => {
-    if (!checkInISO || !checkOutISO || nights <= 0) {
+    if (staffLockedBranchId && formBranchId !== staffLockedBranchId) {
+      setFormBranchId(staffLockedBranchId);
+    }
+  }, [staffLockedBranchId, formBranchId]);
+
+  // Danh sách phòng trống theo chi nhánh + khoảng ngày (RPC get_available_rooms)
+  useEffect(() => {
+    if (!branchIdForBooking || !checkInISO || !checkOutISO || nights <= 0) {
       setAvailableRooms([]);
       setSelectedRoomIds(new Set());
       return;
     }
     setIsLoadingRooms(true);
-    getAvailableRoomsAction(checkInISO, checkOutISO).then((result) => {
-      setIsLoadingRooms(false);
-      if (result.ok) {
-        setAvailableRooms(result.data);
-        setSelectedRoomIds(new Set());
-      } else {
-        setAvailableRooms([]);
+    getAvailableRoomsAction(checkInISO, checkOutISO, branchIdForBooking).then(
+      (result) => {
+        setIsLoadingRooms(false);
+        if (result.ok) {
+          setAvailableRooms(
+            result.data.filter((r) => r.branch_id === branchIdForBooking)
+          );
+          setSelectedRoomIds(new Set());
+        } else {
+          setAvailableRooms([]);
+        }
       }
-    });
-  }, [checkInISO, checkOutISO, nights]);
+    );
+  }, [checkInISO, checkOutISO, nights, branchIdForBooking]);
 
   useEffect(() => {
     const trimmed = debouncedSearch.trim();
@@ -167,11 +257,18 @@ export function CreateMultiBookingDialog({
       return;
     }
     lastSearchRef.current = trimmed;
-    searchCustomersAction(trimmed, 10).then((result) => {
+    searchCustomersAction(trimmed, 10, branchIdForBooking).then((result) => {
       if (result.ok) setSearchCustomers(result.data);
       else setSearchCustomers([]);
     });
-  }, [debouncedSearch]);
+  }, [debouncedSearch, branchIdForBooking]);
+
+  const handleBranchChange = (branchId: string) => {
+    setFormBranchId(branchId);
+    setSelectedRoomIds(new Set());
+    setAvailableRooms([]);
+    lastSearchRef.current = "";
+  };
 
   const selectedRoomsWithAmounts = useMemo((): SelectedRoom[] => {
     const weekdayRates = normalizeWeekdayRates(
@@ -180,7 +277,7 @@ export function CreateMultiBookingDialog({
     const holidayPeriods = normalizeHolidayPeriods(
       settings?.pricing_holiday_periods
     );
-    return availableRooms
+    return availableRoomsForBranch
       .filter((r) => selectedRoomIds.has(r.id))
       .map((r) => {
         if (!checkInDate || !checkOutDate || nights <= 0) {
@@ -200,7 +297,7 @@ export function CreateMultiBookingDialog({
         };
       });
   }, [
-    availableRooms,
+    availableRoomsForBranch,
     selectedRoomIds,
     nights,
     checkInDate,
@@ -293,8 +390,20 @@ export function CreateMultiBookingDialog({
     e.preventDefault();
     setError(null);
 
+    if (!branchIdForBooking) {
+      setError("Vui lòng chọn chi nhánh");
+      return;
+    }
     if (!selectedCustomer) {
       setError("Vui lòng chọn khách hàng");
+      return;
+    }
+    const roomBranchMismatch = selectedRoomsWithAmounts.some(
+      (item) =>
+        item.room.branch_id && item.room.branch_id !== branchIdForBooking
+    );
+    if (roomBranchMismatch) {
+      setError("Một hoặc nhiều phòng không thuộc chi nhánh đang chọn");
       return;
     }
     if (selectedRoomsWithAmounts.length === 0) {
@@ -338,6 +447,7 @@ export function CreateMultiBookingDialog({
       advance_payment: advance,
       final_amount: voucherState ? undefined : finalAmountValue,
       voucher_code: voucherState ? voucherState.code : null,
+      branch_code: getBranchCodeById(branchIdForBooking, branches),
     };
 
     setIsSubmitting(true);
@@ -381,6 +491,12 @@ export function CreateMultiBookingDialog({
           <div className="grid min-h-0 flex-1 grid-cols-1 gap-0 lg:grid-cols-12">
             {/* Cột trái: khách, ngày, danh sách phòng */}
             <div className="flex min-h-0 min-w-0 flex-col gap-4 overflow-y-auto border-b p-6 lg:col-span-7 lg:border-b-0 lg:border-r">
+              <BranchFormField
+                value={formBranchId}
+                onChange={handleBranchChange}
+                mode={canSelectBookingBranch ? "select" : "readonly"}
+                lockedBranchId={staffLockedBranchId}
+              />
               <div className="space-y-2 relative shrink-0">
                 <Label>Khách hàng *</Label>
                 <div className="relative">
@@ -411,10 +527,14 @@ export function CreateMultiBookingDialog({
                   <p className="text-xs text-muted-foreground">
                     Đã chọn: {selectedCustomer.full_name}
                     {selectedCustomer.phone && ` - ${selectedCustomer.phone}`}
+                    {selectedCustomer.branch_id &&
+                    selectedCustomer.branch_id !== branchIdForBooking
+                      ? ` (CN gốc: ${resolveBranchDisplay(selectedCustomer.branch_id, branches).name})`
+                      : null}
                   </p>
                 )}
                 {displaySearchResults.length > 0 && !selectedCustomer && (
-                  <div className="absolute z-50 mt-1 max-h-48 w-full overflow-auto rounded-md border bg-popover shadow-xl">
+                  <div className="absolute z-50 mt-1 max-h-72 w-full overflow-auto rounded-md border bg-popover shadow-xl">
                     {displaySearchResults.map((c) => (
                       <button
                         key={c.id}
@@ -422,11 +542,11 @@ export function CreateMultiBookingDialog({
                         onClick={() => handleCustomerSelect(c)}
                         className="w-full px-4 py-3 text-left hover:bg-accent"
                       >
-                        <div className="font-medium">{c.full_name}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {c.phone && `${c.phone} • `}
-                          {c.email}
-                        </div>
+                        <CustomerSearchOption
+                          customer={c}
+                          branchNameById={branchNameById}
+                          bookingBranchId={branchIdForBooking}
+                        />
                       </button>
                     ))}
                   </div>
@@ -526,9 +646,15 @@ export function CreateMultiBookingDialog({
               <div className="flex min-h-0 flex-1 flex-col space-y-2">
                 <Label>Chọn phòng trống *</Label>
                 <p className="text-xs text-muted-foreground">
-                  Danh sách phòng trống theo khoảng ngày check-in / check-out đã chọn.
+                  {branchLabelForRooms
+                    ? `Chỉ hiển thị phòng trống tại chi nhánh ${branchLabelForRooms} trong khoảng ngày đã chọn.`
+                    : "Vui lòng chọn chi nhánh trước khi xem phòng trống."}
                 </p>
-                {!checkInISO || !checkOutISO || nights <= 0 ? (
+                {!branchIdForBooking ? (
+                  <p className="text-sm text-muted-foreground">
+                    Vui lòng chọn chi nhánh trước
+                  </p>
+                ) : !checkInISO || !checkOutISO || nights <= 0 ? (
                   <p className="text-sm text-muted-foreground">
                     Vui lòng chọn ngày check-in và check-out trước
                   </p>
@@ -537,15 +663,23 @@ export function CreateMultiBookingDialog({
                     <Loader2 className="size-5 animate-spin" />
                     <span>Đang tải danh sách phòng trống...</span>
                   </div>
-                ) : availableRooms.length === 0 ? (
+                ) : availableRoomsForBranch.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
-                    Không có phòng trống trong khoảng thời gian này
+                    Không có phòng trống tại chi nhánh này trong khoảng thời gian
+                    đã chọn
                   </p>
                 ) : (
                   <div className="flex min-h-0 flex-1 flex-col space-y-2 overflow-hidden">
                     <ScrollArea className="h-[min(42vh,420px)] min-h-[240px] rounded-md border">
-                      <div className="space-y-2 p-3">
-                        {availableRooms.map((room) => (
+                      <div className="space-y-4 p-3">
+                        {roomGroupsByBranch.map((group) => (
+                          <div key={group.branchId} className="space-y-2">
+                            {roomGroupsByBranch.length > 1 ? (
+                              <p className="text-xs font-medium text-muted-foreground">
+                                {group.branchName}
+                              </p>
+                            ) : null}
+                            {group.rooms.map((room) => (
                           <div
                             key={room.id}
                             className="flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
@@ -596,6 +730,8 @@ export function CreateMultiBookingDialog({
                                 <IconEye className="size-4" />
                               </Button>
                             </div>
+                          </div>
+                            ))}
                           </div>
                         ))}
                       </div>
@@ -739,6 +875,7 @@ export function CreateMultiBookingDialog({
                           const result = await validateVoucherForBooking({
                             code,
                             totalAmount,
+                            branchId: branchIdForBooking,
                           });
                           if (!result.ok) {
                             setError(result.message);
@@ -836,6 +973,7 @@ export function CreateMultiBookingDialog({
         <CreateCustomerDialog
           open={isCreateCustomerDialogOpen}
           onOpenChange={setIsCreateCustomerDialogOpen}
+          defaultBranchId={branchIdForBooking}
           onCreate={async (input) => {
             const result = await createCustomerAction(input);
             if (result.ok) {
@@ -848,6 +986,7 @@ export function CreateMultiBookingDialog({
 
       {selectedRoomForDetail && (
         <RoomDetailDialog
+          key={selectedRoomForDetail.id}
           room={selectedRoomForDetail}
           open={isRoomDetailOpen}
           onOpenChange={(open) => {

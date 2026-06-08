@@ -9,6 +9,7 @@ import {
 } from "@/lib/constants";
 import { ReportSummary } from "../types";
 import { parseBookingRevenueAmount } from "@/lib/reports/booking-revenue";
+import { getReportBranchIdFromRequest } from "@/lib/reports/branch-filter";
 import {
   countInventoryRoomsForOccupancy,
   summarizeRoomUsageInPeriod,
@@ -51,8 +52,56 @@ export async function GET(req: NextRequest) {
 
     const fromISO = fromDate.toISOString();
     const toISO = toDate.toISOString();
+    const branchId = await getReportBranchIdFromRequest(searchParams);
 
     const supabase = await createClient();
+
+    let bookingsQuery = supabase
+      .from("bookings")
+      .select("final_amount, total_amount, status")
+      .is("deleted_at", null)
+      .in("status", [...REPORT_METRICS_BOOKING_STATUSES])
+      .gte("check_in", fromISO)
+      .lte("check_in", toISO);
+    if (branchId) bookingsQuery = bookingsQuery.eq("branch_id", branchId);
+
+    let paymentsQuery = supabase
+      .from("payments")
+      .select("amount")
+      .eq("payment_status", PAYMENT_STATUS.PAID)
+      .eq("reporting_status", REPORTING_STATUS.INCLUDED)
+      .not("paid_at", "is", null)
+      .gte("paid_at", fromISO)
+      .lte("paid_at", toISO);
+    if (branchId) paymentsQuery = paymentsQuery.eq("branch_id", branchId);
+
+    let roomsQuery = supabase
+      .from("rooms")
+      .select("id, status")
+      .neq("status", ROOM_STATUS.MAINTENANCE)
+      .is("deleted_at", null);
+    if (branchId) roomsQuery = roomsQuery.eq("branch_id", branchId);
+
+    let occupancyQuery = supabase
+      .from("bookings")
+      .select(
+        "id, room_id, check_in, check_out, actual_check_out, status, booking_rooms(room_id)"
+      )
+      .is("deleted_at", null)
+      .in("status", [...REPORT_METRICS_BOOKING_STATUSES])
+      .lt("check_in", toISO)
+      .gt("check_out", fromISO);
+    if (branchId) occupancyQuery = occupancyQuery.eq("branch_id", branchId);
+
+    let refundsQuery = supabase
+      .from("refund_requests")
+      .select("amount, bookings!inner(branch_id)")
+      .eq("status", REFUND_REQUEST_STATUS.REFUNDED)
+      .gte("updated_at", fromISO)
+      .lte("updated_at", toISO);
+    if (branchId) {
+      refundsQuery = refundsQuery.eq("bookings.branch_id", branchId);
+    }
 
     const [
       { data: currentBookings, error: bookingsError },
@@ -61,45 +110,11 @@ export async function GET(req: NextRequest) {
       { data: totalRooms, error: roomsError },
       { data: currentBookingsForOccupancy, error: occupancyError },
     ] = await Promise.all([
-      // (1) Revenue / booking count — event basis: check_in in window
-      supabase
-        .from("bookings")
-        .select("final_amount, total_amount, status")
-        .is("deleted_at", null)
-        .in("status", [...REPORT_METRICS_BOOKING_STATUSES])
-        .gte("check_in", fromISO)
-        .lte("check_in", toISO),
-      // (1b) Gross cash collected — payments marked paid with paid_at in window
-      supabase
-        .from("payments")
-        .select("amount")
-        .eq("payment_status", PAYMENT_STATUS.PAID)
-        .eq("reporting_status", REPORTING_STATUS.INCLUDED)
-        .not("paid_at", "is", null)
-        .gte("paid_at", fromISO)
-        .lte("paid_at", toISO),
-      // (2) Refunds — transaction basis: updated_at in window (cashflow / ops)
-      supabase
-        .from("refund_requests")
-        .select("amount")
-        .eq("status", REFUND_REQUEST_STATUS.REFUNDED)
-        .gte("updated_at", fromISO)
-        .lte("updated_at", toISO),
-      supabase
-        .from("rooms")
-        .select("id, status")
-        .neq("status", ROOM_STATUS.MAINTENANCE)
-        .is("deleted_at", null),
-      // (3) Occupancy — chỉ confirmed / checked_in / checked_out (không pending); overlap kỳ
-      supabase
-        .from("bookings")
-        .select(
-          "id, room_id, check_in, check_out, actual_check_out, status, booking_rooms(room_id)"
-        )
-        .is("deleted_at", null)
-        .in("status", [...REPORT_METRICS_BOOKING_STATUSES])
-        .lt("check_in", toISO)
-        .gt("check_out", fromISO),
+      bookingsQuery,
+      paymentsQuery,
+      refundsQuery,
+      roomsQuery,
+      occupancyQuery,
     ]);
 
     if (
