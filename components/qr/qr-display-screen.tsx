@@ -3,12 +3,17 @@
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import {
-  BANK_ACCOUNT,
   DEFAULT_BRANCH_CODE,
   PUBLIC_ASSETS,
   SETTINGS_ID,
 } from "@/lib/constants";
+import {
+  BANK_SETTINGS_MISSING_MESSAGE,
+  resolveBankInfoFromSettings,
+  type BankInfoForQr,
+} from "@/lib/bank-info";
 import { formatCurrency, formatDateOnly } from "@/lib/functions";
+import { buildSepayQrImageUrl } from "@/lib/payment-qr";
 import { createClient } from "@/lib/supabase/client";
 
 function playPaymentSuccessSound() {
@@ -17,7 +22,7 @@ function playPaymentSuccessSound() {
     const audio = new Audio(PUBLIC_ASSETS.PAYMENT_SOUND_APPLE);
     audio.currentTime = 0;
     audio.volume = 1;
-    void audio.play().catch(() => {});
+    void audio.play().catch(() => { });
   } catch {
     // ignore
   }
@@ -42,20 +47,10 @@ type BranchInfo = {
   name: string;
 };
 
-type BankInfo = {
-  acc: string;
-  bank: string;
-  accountName: string;
-};
-
 export function QRDisplayScreen({ branchCode }: { branchCode: string }) {
   const normalizedCode = branchCode.trim().toLowerCase();
   const [branch, setBranch] = useState<BranchInfo | null>(null);
-  const [bank, setBank] = useState<BankInfo>({
-    acc: BANK_ACCOUNT.ACC,
-    bank: BANK_ACCOUNT.BANK,
-    accountName: BANK_ACCOUNT.ACCOUNT_NAME,
-  });
+  const [bank, setBank] = useState<BankInfoForQr | null>(null);
   const [displayData, setDisplayData] = useState<QRDisplayData | null>(null);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -79,7 +74,7 @@ export function QRDisplayScreen({ branchCode }: { branchCode: string }) {
       if (branchError || !branchRow) {
         setLoadError(
           branchError?.message ??
-            `Không tìm thấy chi nhánh "${normalizedCode}". Kiểm tra URL (ví dụ: /qr/main).`
+          `Không tìm thấy chi nhánh "${normalizedCode}". Kiểm tra URL (ví dụ: /qr/main).`
         );
         return;
       }
@@ -89,17 +84,18 @@ export function QRDisplayScreen({ branchCode }: { branchCode: string }) {
 
       const { data: settingsRow } = await supabase
         .from("settings")
-        .select("bank_account_number, bank_name, bank_account_owner")
+        .select(
+          "bank_account_number, bank_name, bank_bin, bank_account_owner"
+        )
         .eq("id", SETTINGS_ID)
         .maybeSingle();
 
-      if (settingsRow?.bank_account_number && settingsRow?.bank_name) {
-        setBank({
-          acc: settingsRow.bank_account_number,
-          bank: settingsRow.bank_name,
-          accountName: settingsRow.bank_account_owner ?? BANK_ACCOUNT.ACCOUNT_NAME,
-        });
+      const bankInfo = resolveBankInfoFromSettings(settingsRow ?? undefined);
+      if (!bankInfo) {
+        setLoadError(BANK_SETTINGS_MISSING_MESSAGE);
+        return;
       }
+      setBank(bankInfo);
 
       const { data: qrRow } = await supabase
         .from("qr_display_state")
@@ -283,7 +279,7 @@ export function QRDisplayScreen({ branchCode }: { branchCode: string }) {
             Cảm ơn quý khách. Đang quay về màn hình chờ...
           </p>
         </div>
-      ) : displayData ? (
+      ) : displayData && bank ? (
         <div className="flex w-full max-w-lg flex-col items-center gap-8">
           <div className="w-full rounded-2xl bg-white p-8 shadow-2xl">
             <div className="mb-6 text-center">
@@ -299,11 +295,16 @@ export function QRDisplayScreen({ branchCode }: { branchCode: string }) {
             </div>
 
             <div className="mb-6 flex justify-center">
-              <img
-                src={`https://qr.sepay.vn/img?acc=${bank.acc}&bank=${bank.bank}&amount=${
-                  displayData.final_amount ?? displayData.total_amount
-                }&des=${encodeURIComponent(displayData.booking_code)}&template=compact`}
+              <Image
+                src={buildSepayQrImageUrl({
+                  acc: bank.acc,
+                  bank: bank.bank,
+                  amount: displayData.final_amount ?? displayData.total_amount,
+                  description: displayData.booking_code,
+                })}
                 alt="QR Code thanh toán"
+                width={320}
+                height={320}
                 className="h-80 w-80 rounded-lg shadow-md"
               />
             </div>
@@ -347,7 +348,7 @@ export function QRDisplayScreen({ branchCode }: { branchCode: string }) {
 
             <div className="mt-6 rounded-lg border border-[#9bc78e]/30 bg-[#9bc78e]/10 p-4">
               <p className="text-center text-sm text-gray-700">
-                <span className="font-semibold">Ngân hàng:</span> {bank.bank}
+                <span className="font-semibold">Ngân hàng:</span> {bank!.bankLabel}
               </p>
               <p className="text-center text-sm text-gray-700">
                 <span className="font-semibold">Số tài khoản:</span> {bank.acc}

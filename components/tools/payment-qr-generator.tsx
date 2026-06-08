@@ -8,7 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { BANK_ACCOUNT } from "@/lib/constants";
+import {
+  BANK_SETTINGS_MISSING_MESSAGE,
+  resolveBankInfoFromSettings,
+} from "@/lib/bank-info";
 import {
   formatCurrency,
   formatNumberWithSeparators,
@@ -16,6 +19,8 @@ import {
 } from "@/lib/functions";
 import { buildSepayQrImageUrl } from "@/lib/payment-qr";
 import { useSettings } from "@/hooks/use-settings";
+import { DASHBOARD_URLS } from "@/lib/constants";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 function SummaryRow({
@@ -38,37 +43,29 @@ function SummaryRow({
 }
 
 export function PaymentQrGenerator() {
-  const { settings } = useSettings();
+  const { settings, isLoading: isSettingsLoading } = useSettings();
   const [amountInput, setAmountInput] = useState("");
   const [description, setDescription] = useState("");
 
   const bankInfo = useMemo(
-    () => ({
-      acc: settings?.bank_account_number?.trim() || BANK_ACCOUNT.ACC,
-      bank:
-        settings?.bank_bin?.trim() ||
-        settings?.bank_name?.trim() ||
-        BANK_ACCOUNT.BANK,
-      bankLabel: settings?.bank_name?.trim() || BANK_ACCOUNT.BANK,
-      accountName:
-        settings?.bank_account_owner?.trim() || BANK_ACCOUNT.ACCOUNT_NAME,
-    }),
+    () => resolveBankInfoFromSettings(settings),
     [settings]
   );
 
   const amount = parseFormattedNumber(amountInput || "0");
   const trimmedDescription = description.trim();
-  const canShowQr = amount > 0 && trimmedDescription.length > 0;
+  const canShowQr =
+    bankInfo != null && amount > 0 && trimmedDescription.length > 0;
 
   const qrImageUrl = useMemo(() => {
-    if (!canShowQr) return null;
+    if (!canShowQr || !bankInfo) return null;
     return buildSepayQrImageUrl({
       acc: bankInfo.acc,
       bank: bankInfo.bank,
       amount,
       description: trimmedDescription,
     });
-  }, [amount, bankInfo.acc, bankInfo.bank, canShowQr, trimmedDescription]);
+  }, [amount, bankInfo, canShowQr, trimmedDescription]);
 
   const handleCopyDescription = async () => {
     if (!trimmedDescription) return;
@@ -121,7 +118,19 @@ export function PaymentQrGenerator() {
             </div>
           </div>
 
-          {canShowQr ? (
+          {isSettingsLoading ? (
+            <p className="text-sm text-muted-foreground">Đang tải cài đặt ngân hàng...</p>
+          ) : !bankInfo ? (
+            <p className="text-sm text-amber-700 dark:text-amber-300 leading-relaxed">
+              {BANK_SETTINGS_MISSING_MESSAGE}{" "}
+              <Link
+                href={DASHBOARD_URLS.SETTINGS}
+                className="font-medium underline underline-offset-2"
+              >
+                Mở Cài đặt
+              </Link>
+            </p>
+          ) : canShowQr ? (
             <div className="rounded-xl bg-muted/50 px-4 py-1">
               <SummaryRow label="Ngân hàng" value={bankInfo.bankLabel} />
               <SummaryRow
@@ -155,11 +164,11 @@ export function PaymentQrGenerator() {
                 </div>
               </div>
             </div>
-          ) : (
+          ) : bankInfo ? (
             <p className="text-sm text-muted-foreground leading-relaxed">
               Điền số tiền và nội dung để xem mã QR và thông tin chuyển khoản.
             </p>
-          )}
+          ) : null}
         </section>
 
         <section className="lg:col-span-3 flex flex-col items-center justify-center p-6 md:p-10 bg-muted/20 min-h-[320px] lg:min-h-[440px]">
@@ -172,7 +181,13 @@ export function PaymentQrGenerator() {
             </h2>
           </div>
 
-          {qrImageUrl ? (
+          {isSettingsLoading ? (
+            <p className="text-sm text-muted-foreground">Đang tải...</p>
+          ) : !bankInfo ? (
+            <p className="text-sm text-center text-muted-foreground max-w-xs leading-relaxed">
+              Cần cấu hình thông tin ngân hàng trong Cài đặt trước khi tạo mã QR.
+            </p>
+          ) : qrImageUrl ? (
             <div className="flex flex-col items-center gap-5 w-full max-w-sm">
               <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
                 <Image
@@ -181,7 +196,6 @@ export function PaymentQrGenerator() {
                   width={256}
                   height={256}
                   className="size-64"
-                  unoptimized
                 />
               </div>
               <div className="text-center space-y-1">
