@@ -13,8 +13,7 @@ export default function PaymentQrToolPage() {
             Tạo mã QR thanh toán
           </h1>
           <p className="text-muted-foreground text-sm leading-relaxed">
-            Tạo mã chuyển khoản nhanh cho khách — chỉ dành quản trị viên và quản
-            lý.
+            Tạo mã chuyển khoản nhanh cho khách.
           </p>
         </div>
       </div>

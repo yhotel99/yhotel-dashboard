@@ -22,7 +22,7 @@ import { usePermissions } from "@/contexts/permissions-context";
 
 export function SiteHeader() {
   const router = useRouter();
-  const { profile, canViewAllBranches } = useAuth();
+  const { profile } = useAuth();
   const { hasViewPermission } = usePermissions();
   const [open, setOpen] = useState(false);
 
@@ -112,17 +112,15 @@ export function SiteHeader() {
               );
             })}
           </CommandGroup>
-          {canViewAllBranches ? (
-            <CommandGroup heading="Công cụ">
-              <CommandItem
-                value="Tạo mã QR thanh toán"
-                onSelect={() => handleSelect(DASHBOARD_URLS.PAYMENT_QR)}
-              >
-                <QrCode className="size-4" />
-                <span>Tạo mã QR thanh toán</span>
-              </CommandItem>
-            </CommandGroup>
-          ) : null}
+          <CommandGroup heading="Công cụ">
+            <CommandItem
+              value="Tạo mã QR thanh toán"
+              onSelect={() => handleSelect(DASHBOARD_URLS.PAYMENT_QR)}
+            >
+              <QrCode className="size-4" />
+              <span>Tạo mã QR thanh toán</span>
+            </CommandItem>
+          </CommandGroup>
         </CommandList>
       </CommandDialog>
     </>
