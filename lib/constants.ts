@@ -607,14 +607,12 @@ export const DASHBOARD_URLS = {
   USERS: "/dashboard/users",
   BLOGS: "/dashboard/blogs",
   SETTINGS: "/dashboard/settings",
-  /** Công cụ tạo QR thanh toán (admin/manager, không có trong sidebar) */
+  /** Công cụ tạo QR thanh toán (không có trong sidebar) */
   PAYMENT_QR: "/dashboard/tools/payment-qr",
 } as const;
 
 /** Đường dẫn chỉ admin và manager được truy cập (không dùng permission DB). */
-export const ADMIN_MANAGER_ONLY_PATHS = [
-  DASHBOARD_URLS.PAYMENT_QR,
-] as const;
+export const ADMIN_MANAGER_ONLY_PATHS = [] as const;
 
 
 export const CUSTOMER_TYPE = {

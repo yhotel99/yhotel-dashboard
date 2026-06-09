@@ -10,7 +10,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useAuth } from "@/contexts/auth-context";
 import { useBranch } from "@/contexts/branch-context";
 import { DASHBOARD_URLS } from "@/lib/constants";
 
@@ -37,12 +36,11 @@ function PaymentQrButton() {
 }
 
 export function HeaderToolbar() {
-  const { canViewAllBranches } = useAuth();
   const { canSelectBranch } = useBranch();
 
   return (
     <div className="inline-flex items-center gap-2">
-      {canViewAllBranches ? <PaymentQrButton /> : null}
+      <PaymentQrButton />
       {canSelectBranch ? (
         <BranchSelector />
       ) : (
