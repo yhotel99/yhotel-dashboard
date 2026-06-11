@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useMemo, useState } from "react";
+import { useVndAmountInput } from "@/hooks/use-vnd-amount-input";
 import { Copy, QrCode } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -12,11 +13,7 @@ import {
   BANK_SETTINGS_MISSING_MESSAGE,
   resolveBankInfoFromSettings,
 } from "@/lib/bank-info";
-import {
-  formatCurrency,
-  formatNumberWithSeparators,
-  parseFormattedNumber,
-} from "@/lib/functions";
+import { formatCurrency } from "@/lib/functions";
 import { buildSepayQrImageUrl } from "@/lib/payment-qr";
 import { useSettings } from "@/hooks/use-settings";
 import { DASHBOARD_URLS } from "@/lib/constants";
@@ -44,7 +41,7 @@ function SummaryRow({
 
 export function PaymentQrGenerator() {
   const { settings, isLoading: isSettingsLoading } = useSettings();
-  const [amountInput, setAmountInput] = useState("");
+  const { amount, inputProps: amountInputProps } = useVndAmountInput();
   const [description, setDescription] = useState("");
 
   const bankInfo = useMemo(
@@ -52,7 +49,6 @@ export function PaymentQrGenerator() {
     [settings]
   );
 
-  const amount = parseFormattedNumber(amountInput || "0");
   const trimmedDescription = description.trim();
   const canShowQr =
     bankInfo != null && amount > 0 && trimmedDescription.length > 0;
@@ -95,12 +91,8 @@ export function PaymentQrGenerator() {
               <Label htmlFor="payment-qr-amount">Số tiền (VND)</Label>
               <Input
                 id="payment-qr-amount"
-                inputMode="numeric"
                 placeholder="1.500.000"
-                value={amountInput}
-                onChange={(e) =>
-                  setAmountInput(formatNumberWithSeparators(e.target.value))
-                }
+                {...amountInputProps}
                 className="h-11 text-base"
               />
             </div>

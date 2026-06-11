@@ -520,10 +520,10 @@ export function formatNumberWithSeparators(value: number | string): string {
  */
 export function parseFormattedNumber(value: string): number {
   if (!value) return 0;
-  // Remove all dots (thousand separators)
-  const cleaned = value.replace(/\./g, "");
-  const parsed = parseFloat(cleaned);
-  return isNaN(parsed) ? 0 : parsed;
+  const cleaned = value.replace(/\D/g, "");
+  if (cleaned === "") return 0;
+  const parsed = parseInt(cleaned, 10);
+  return Number.isNaN(parsed) ? 0 : parsed;
 }
 
 /**
