@@ -536,6 +536,7 @@ export function BookingDetailDialog({
                             width={192}
                             height={192}
                             className="size-48"
+                            unoptimized
                           />
                         </div>
                         <p className="text-xs text-center text-muted-foreground max-w-[200px]">

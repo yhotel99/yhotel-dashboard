@@ -27,7 +27,7 @@ export function resolveBankInfoFromSettings(
   const bankBin = settings.bank_bin?.trim();
   const bankName = settings.bank_name?.trim();
   const accountName = settings.bank_account_owner?.trim();
-  const bank = bankBin || bankName;
+  const bank = bankName || bankBin;
 
   if (!acc || !bank || !accountName) return null;
 

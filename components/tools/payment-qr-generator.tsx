@@ -14,7 +14,7 @@ import {
   resolveBankInfoFromSettings,
 } from "@/lib/bank-info";
 import { formatCurrency } from "@/lib/functions";
-import { buildSepayQrImageUrl } from "@/lib/payment-qr";
+import { buildSepayQrImageUrl, normalizePaymentDescription } from "@/lib/payment-qr";
 import { useSettings } from "@/hooks/use-settings";
 import { DASHBOARD_URLS } from "@/lib/constants";
 import Link from "next/link";
@@ -50,8 +50,12 @@ export function PaymentQrGenerator() {
   );
 
   const trimmedDescription = description.trim();
+  const paymentDescription = useMemo(
+    () => normalizePaymentDescription(description),
+    [description]
+  );
   const canShowQr =
-    bankInfo != null && amount > 0 && trimmedDescription.length > 0;
+    bankInfo != null && amount > 0 && paymentDescription.length > 0;
 
   const qrImageUrl = useMemo(() => {
     if (!canShowQr || !bankInfo) return null;
@@ -59,14 +63,14 @@ export function PaymentQrGenerator() {
       acc: bankInfo.acc,
       bank: bankInfo.bank,
       amount,
-      description: trimmedDescription,
+      description: paymentDescription,
     });
-  }, [amount, bankInfo, canShowQr, trimmedDescription]);
+  }, [amount, bankInfo, canShowQr, paymentDescription]);
 
   const handleCopyDescription = async () => {
-    if (!trimmedDescription) return;
+    if (!paymentDescription) return;
     try {
-      await navigator.clipboard.writeText(trimmedDescription);
+      await navigator.clipboard.writeText(paymentDescription);
       toast.success("Đã sao chép nội dung chuyển khoản");
     } catch {
       toast.error("Không thể sao chép");
@@ -141,7 +145,7 @@ export function PaymentQrGenerator() {
                 </span>
                 <div className="flex items-start gap-1 min-w-0">
                   <span className="text-sm font-mono font-medium text-right break-all">
-                    {trimmedDescription}
+                    {paymentDescription}
                   </span>
                   <Button
                     type="button"
@@ -188,6 +192,7 @@ export function PaymentQrGenerator() {
                   width={256}
                   height={256}
                   className="size-64"
+                  unoptimized
                 />
               </div>
               <div className="text-center space-y-1">
