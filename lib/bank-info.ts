@@ -1,43 +1,85 @@
-import type { Settings } from "@/lib/types";
+import {
+  findSepayBank,
+  resolveSepayBankParam,
+  sepayBanksConflict,
+} from "@/lib/sepay-banks";
 
-export type BankSettingsSlice = Pick<
-  Settings,
-  "bank_account_number" | "bank_name" | "bank_bin" | "bank_account_owner"
->;
+export type BankAccountFields = {
+  bank_account_number: string | null;
+  bank_name: string | null;
+  bank_code: string | null;
+  bank_account_owner: string | null;
+};
 
 export type BankInfoForQr = {
   acc: string;
-  /** Mã BIN / ngân hàng dùng cho SePay API */
+  /** Mã ngân hàng SePay (code, VD: TPB, MB) */
   bank: string;
   /** Tên ngân hàng hiển thị */
   bankLabel: string;
   accountName: string;
+  codeMismatch?: boolean;
 };
 
 /**
- * Lấy thông tin TK ngân hàng từ settings (singleton).
- * Trả về null nếu thiếu bất kỳ trường bắt buộc — không dùng fallback cứng.
+ * Resolve bank fields for SePay QR.
+ * SePay `bank` param dùng code ngân hàng (TPB, MB...) theo tài liệu SePay.
  */
-export function resolveBankInfoFromSettings(
-  settings: BankSettingsSlice | null | undefined
+export function resolveBankInfo(
+  fields: BankAccountFields | null | undefined
 ): BankInfoForQr | null {
-  if (!settings) return null;
+  if (!fields) return null;
 
-  const acc = settings.bank_account_number?.trim();
-  const bankBin = settings.bank_bin?.trim();
-  const bankName = settings.bank_name?.trim();
-  const accountName = settings.bank_account_owner?.trim();
-  const bank = bankName || bankBin;
+  const acc = fields.bank_account_number?.trim();
+  const bankName = fields.bank_name?.trim();
+  const bankCode = fields.bank_code?.trim();
+  const accountName = fields.bank_account_owner?.trim();
+  const bank = resolveSepayBankParam(bankName, bankCode);
 
   if (!acc || !bank || !accountName) return null;
+
+  const matched = findSepayBank(bankName, bankCode);
+  const bankLabel = bankName || matched?.short_name || bank;
 
   return {
     acc,
     bank,
-    bankLabel: bankName || bankBin || bank,
+    bankLabel,
     accountName,
+    codeMismatch: sepayBanksConflict(bankName, bankCode),
   };
 }
 
-export const BANK_SETTINGS_MISSING_MESSAGE =
-  "Chưa cấu hình đủ thông tin ngân hàng trong Cài đặt (số TK, ngân hàng/BIN, chủ tài khoản).";
+export function bankMissingMessage(branchName?: string): string {
+  if (branchName) {
+    return `Chưa cấu hình đủ thông tin ngân hàng cho chi nhánh "${branchName}" (số TK, mã ngân hàng, chủ tài khoản).`;
+  }
+  return "Chưa cấu hình đủ thông tin ngân hàng (số TK, mã ngân hàng, chủ tài khoản).";
+}
+
+export function bankCodeMismatchMessage(
+  bankName?: string | null,
+  bankCode?: string | null
+): string | null {
+  if (!sepayBanksConflict(bankName, bankCode)) return null;
+  const fromCode = bankCode?.trim()
+    ? findSepayBank(null, bankCode)
+    : null;
+  if (fromCode && bankName) {
+    return `Mã ngân hàng (${bankCode}) là ${fromCode.short_name} nhưng tên hiển thị là "${bankName}". QR dùng mã ${fromCode.code} — hãy chọn lại ngân hàng cho khớp.`;
+  }
+  return "Mã ngân hàng không khớp tên. Vui lòng chọn lại từ danh sách.";
+}
+
+/** @deprecated Use resolveBankInfo */
+export function resolveBankInfoFromSettings(
+  settings: BankAccountFields | null | undefined
+): BankInfoForQr | null {
+  return resolveBankInfo(settings);
+}
+
+/** @deprecated Use bankMissingMessage */
+export const BANK_SETTINGS_MISSING_MESSAGE = bankMissingMessage();
+
+/** @deprecated Use bankCodeMismatchMessage */
+export const bankBinMismatchMessage = bankCodeMismatchMessage;

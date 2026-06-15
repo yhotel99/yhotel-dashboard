@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo } from "react";
-import Image from "next/image";
 import {
   Dialog,
   DialogContent,
@@ -34,13 +33,15 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
 import { PAYMENT_TYPE } from "@/lib/constants";
-import { resolveBankInfoFromSettings } from "@/lib/bank-info";
 import { buildSepayQrImageUrl } from "@/lib/payment-qr";
+import { PaymentQrImage } from "@/components/payment-qr-image";
 import { PaymentStatusBadge } from "@/components/payments/status";
 import type { Room } from "@/lib/types";
 import { getBookingRoomDetailsAction } from "@/actions/bookings";
 import { getRoomsByIds } from "@/actions/rooms";
 import { useSettings } from "@/hooks/use-settings";
+import { useBranchBankAccounts } from "@/hooks/use-branch-bank-accounts";
+import { DEFAULT_BRANCH_ID } from "@/lib/constants";
 import {
   calculateTotalWithWeekdayRates,
   normalizeHolidayPeriods,
@@ -113,6 +114,7 @@ export function BookingDetailDialog({
   const advancePayment = getLatestPaymentByType(PAYMENT_TYPE.ADVANCE_PAYMENT);
   const roomChargePayment = getLatestPaymentByType(PAYMENT_TYPE.ROOM_CHARGE);
   const { settings } = useSettings();
+  const { getBankInfo } = useBranchBankAccounts();
   const { branches } = useBranch();
 
   const branchDisplay = useMemo(() => {
@@ -168,10 +170,10 @@ export function BookingDetailDialog({
     }).breakdown;
   }, [booking, roomsData, settings?.pricing_weekday_rates, settings?.pricing_holiday_periods]);
 
-  const bankInfo = useMemo(
-    () => resolveBankInfoFromSettings(settings),
-    [settings]
-  );
+  const bankInfo = useMemo(() => {
+    if (!booking) return null;
+    return getBankInfo(booking.branch_id ?? DEFAULT_BRANCH_ID);
+  }, [booking, getBankInfo]);
 
   const bookingQrImageUrl = useMemo(() => {
     if (!bankInfo || !booking) return null;
@@ -530,9 +532,8 @@ export function BookingDetailDialog({
                       {/* QR Code */}
                       <div className="flex flex-col items-center gap-3">
                         <div className="bg-white p-3 rounded-lg shadow-md">
-                          <Image
+                          <PaymentQrImage
                             src={bookingQrImageUrl}
-                            alt="QR Code thanh toán"
                             width={192}
                             height={192}
                             className="size-48"

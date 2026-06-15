@@ -4,10 +4,19 @@ import {
   getCurrentUserBranchScope,
   resolveBranchFilterId,
 } from "@/lib/branch.server";
+import { REFUND_REQUEST_STATUS } from "@/lib/constants";
 import type {
   RefundRequestWithRelations,
   RefundRequestsResponse,
 } from "@/lib/types";
+
+export type RefundReportRow = {
+  id: string;
+  amount: number;
+  updated_at: string;
+  branch_id: string | null;
+  customer_name: string;
+};
 
 /**
  * List: chỉ lấy dữ liệu cần cho bảng (id, khách hàng, số tiền, trạng thái, ngày tạo, người yêu cầu).
@@ -39,11 +48,12 @@ export async function getRefundRequestsListWithPagination({
       `
         id,
         booking_id,
+        branch_id,
         amount,
         status,
         created_at,
         request_by,
-        bookings:booking_id!inner (
+        bookings:booking_id (
           branch_id,
           customers:customer_id ( full_name )
         ),
@@ -53,7 +63,7 @@ export async function getRefundRequestsListWithPagination({
     );
 
     if (branchId) {
-      query = query.eq("bookings.branch_id", branchId);
+      query = query.eq("branch_id", branchId);
     }
 
     if (search && search.trim() !== "") {
@@ -103,6 +113,7 @@ export async function getRefundRequestById(
         *,
         bookings:booking_id (
           id,
+          branch_id,
           customers:customer_id ( full_name, phone ),
           rooms:room_id ( name )
         ),
@@ -143,4 +154,62 @@ export async function getRefundRequestById(
     console.error("Error fetching refund request detail:", err);
     return null;
   }
+}
+
+/** Refunded rows in a date range for báo cáo (filter by updated_at + branch). */
+export async function getRefundsForReport({
+  fromDate,
+  toDate,
+  branchId: requestedBranchId,
+  limit = 10,
+}: {
+  fromDate: string;
+  toDate: string;
+  branchId?: string | null;
+  limit?: number;
+}): Promise<RefundReportRow[]> {
+  const supabase = await createClient();
+  const { scope } = await getCurrentUserBranchScope();
+  const branchId = resolveBranchFilterId(scope, requestedBranchId);
+
+  let query = supabase
+    .from("refund_requests")
+    .select(
+      `
+        id,
+        amount,
+        updated_at,
+        branch_id,
+        bookings:booking_id (
+          customers:customer_id ( full_name )
+        )
+      `
+    )
+    .eq("status", REFUND_REQUEST_STATUS.REFUNDED)
+    .gte("updated_at", fromDate)
+    .lte("updated_at", toDate)
+    .order("updated_at", { ascending: false })
+    .limit(limit);
+
+  if (branchId) {
+    query = query.eq("branch_id", branchId);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []).map((row) => {
+    const booking = row.bookings as {
+      customers?: { full_name?: string } | null;
+    } | null;
+    return {
+      id: row.id as string,
+      amount: row.amount as number,
+      updated_at: row.updated_at as string,
+      branch_id: (row.branch_id as string | null) ?? null,
+      customer_name: booking?.customers?.full_name ?? "—",
+    };
+  });
 }

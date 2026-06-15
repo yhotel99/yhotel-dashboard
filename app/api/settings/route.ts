@@ -53,22 +53,6 @@ const settingsInputSchema = z.object({
     .record(z.string(), z.string().url())
     .nullable()
     .optional(),
-  bank_account_number: z
-    .union([z.string(), z.literal(""), z.null()])
-    .optional()
-    .transform((val) => (val === "" ? null : val)),
-  bank_name: z
-    .union([z.string(), z.literal(""), z.null()])
-    .optional()
-    .transform((val) => (val === "" ? null : val)),
-  bank_bin: z
-    .union([z.string(), z.literal(""), z.null()])
-    .optional()
-    .transform((val) => (val === "" ? null : val)),
-  bank_account_owner: z
-    .union([z.string(), z.literal(""), z.null()])
-    .optional()
-    .transform((val) => (val === "" ? null : val)),
 });
 
 export async function GET() {

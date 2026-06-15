@@ -15,10 +15,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { toast } from "sonner";
+import { getBranchTableLabel } from "@/lib/branch";
 
 // Column definitions constants
 export const REFUND_COLUMNS = {
   REQUEST_ID: { accessorKey: "Mã yêu cầu", header: "Mã yêu cầu" },
+  BRANCH: { accessorKey: "Chi nhánh", header: "Chi nhánh" },
   CUSTOMER_NAME: { accessorKey: "Khách hàng", header: "Khách hàng" },
   AMOUNT: { accessorKey: "Số tiền", header: "Số tiền" },
   STATUS: { accessorKey: "Trạng thái", header: "Trạng thái" },
@@ -32,8 +34,12 @@ export function createRefundRequestColumns(
     id: string,
     status: RefundRequestStatus
   ) => Promise<RefundRequest>,
-  onViewDetail: (refundRequest: RefundRequestWithRelations) => void
+  onViewDetail: (refundRequest: RefundRequestWithRelations) => void,
+  options?: {
+    branchNameById?: Readonly<Record<string, string>>;
+  }
 ): ColumnDef<RefundRequestWithRelations>[] {
+  const branchNameById = options?.branchNameById;
   return [
     {
       accessorKey: REFUND_COLUMNS.REQUEST_ID.accessorKey,
@@ -71,6 +77,30 @@ export function createRefundRequestColumns(
       },
       size: 140,
       minSize: 100,
+    },
+    {
+      accessorKey: REFUND_COLUMNS.BRANCH.accessorKey,
+      header: REFUND_COLUMNS.BRANCH.header,
+      cell: ({ row }) => {
+        const branchId =
+          row.original.branch_id ?? row.original.bookings?.branch_id;
+        const label = getBranchTableLabel(branchId, branchNameById ?? {});
+        return (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="max-w-[140px] truncate block font-medium">
+                {label}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{label}</p>
+            </TooltipContent>
+          </Tooltip>
+        );
+      },
+      size: 120,
+      minSize: 100,
+      maxSize: 160,
     },
     {
       accessorKey: REFUND_COLUMNS.CUSTOMER_NAME.accessorKey,

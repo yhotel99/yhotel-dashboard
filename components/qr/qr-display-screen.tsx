@@ -1,19 +1,16 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { DEFAULT_BRANCH_CODE, PUBLIC_ASSETS } from "@/lib/constants";
 import {
-  DEFAULT_BRANCH_CODE,
-  PUBLIC_ASSETS,
-  SETTINGS_ID,
-} from "@/lib/constants";
-import {
-  BANK_SETTINGS_MISSING_MESSAGE,
-  resolveBankInfoFromSettings,
+  bankMissingMessage,
+  resolveBankInfo,
   type BankInfoForQr,
 } from "@/lib/bank-info";
 import { formatCurrency, formatDateOnly } from "@/lib/functions";
 import { buildSepayQrImageUrl } from "@/lib/payment-qr";
+import { PaymentQrImage } from "@/components/payment-qr-image";
 import { createClient } from "@/lib/supabase/client";
 
 function playPaymentSuccessSound() {
@@ -47,6 +44,17 @@ type BranchInfo = {
   name: string;
 };
 
+type PublicQrInitResponse = {
+  branch: BranchInfo;
+  bank: {
+    bank_account_number: string | null;
+    bank_name: string | null;
+    bank_code: string | null;
+    bank_account_owner: string | null;
+  };
+  display: QRDisplayData | null;
+};
+
 export function QRDisplayScreen({ branchCode }: { branchCode: string }) {
   const normalizedCode = branchCode.trim().toLowerCase();
   const [branch, setBranch] = useState<BranchInfo | null>(null);
@@ -57,89 +65,95 @@ export function QRDisplayScreen({ branchCode }: { branchCode: string }) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const playedSuccessSoundRef = useRef(false);
 
+  const applyBankForBranch = useCallback(
+    (branchInfo: BranchInfo, bankFields: PublicQrInitResponse["bank"]) => {
+      const bankInfo = resolveBankInfo(bankFields);
+      if (!bankInfo) {
+        setLoadError(bankMissingMessage(branchInfo.name));
+        setBank(null);
+        return false;
+      }
+      setBank(bankInfo);
+      return true;
+    },
+    []
+  );
+
   useEffect(() => {
     queueMicrotask(() => setMounted(true));
     const supabase = createClient();
     let removeChannel: (() => void) | undefined;
+    let cancelled = false;
 
     async function init() {
-      const { data: branchRow, error: branchError } = await supabase
-        .from("branches")
-        .select("id, code, name")
-        .eq("code", normalizedCode)
-        .is("deleted_at", null)
-        .eq("is_active", true)
-        .maybeSingle();
-
-      if (branchError || !branchRow) {
-        setLoadError(
-          branchError?.message ??
-          `Không tìm thấy chi nhánh "${normalizedCode}". Kiểm tra URL (ví dụ: /qr/main).`
-        );
-        return;
-      }
-
-      setBranch(branchRow as BranchInfo);
-      setLoadError(null);
-
-      const { data: settingsRow } = await supabase
-        .from("settings")
-        .select(
-          "bank_account_number, bank_name, bank_bin, bank_account_owner"
-        )
-        .eq("id", SETTINGS_ID)
-        .maybeSingle();
-
-      const bankInfo = resolveBankInfoFromSettings(settingsRow ?? undefined);
-      if (!bankInfo) {
-        setLoadError(BANK_SETTINGS_MISSING_MESSAGE);
-        return;
-      }
-      setBank(bankInfo);
-
-      const { data: qrRow } = await supabase
-        .from("qr_display_state")
-        .select("*")
-        .eq("branch_id", branchRow.id)
-        .maybeSingle();
-
-      if (qrRow) {
-        setDisplayData(qrRow as QRDisplayData);
-      }
-
-      const channel = supabase
-        .channel(`qr_display_${branchRow.id}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "*",
-            schema: "public",
-            table: "qr_display_state",
-            filter: `branch_id=eq.${branchRow.id}`,
-          },
-          (payload) => {
-            if (
-              payload.eventType === "INSERT" ||
-              payload.eventType === "UPDATE"
-            ) {
-              setDisplayData(payload.new as QRDisplayData);
-              setPaymentSuccess(false);
-            }
+      try {
+        const res = await fetch(`/api/public/qr-display/${normalizedCode}`);
+        if (!res.ok) {
+          const body = (await res.json().catch(() => ({}))) as {
+            error?: string;
+          };
+          if (!cancelled) {
+            setLoadError(
+              body.error ??
+                `Không tìm thấy chi nhánh "${normalizedCode}". Kiểm tra URL (ví dụ: /qr/main).`
+            );
           }
-        )
-        .subscribe();
+          return;
+        }
 
-      removeChannel = () => {
-        supabase.removeChannel(channel);
-      };
+        const payload = (await res.json()) as PublicQrInitResponse;
+        if (cancelled) return;
+
+        setBranch(payload.branch);
+        setLoadError(null);
+
+        if (!applyBankForBranch(payload.branch, payload.bank)) {
+          return;
+        }
+
+        if (payload.display) {
+          setDisplayData(payload.display);
+        }
+
+        const channel = supabase
+          .channel(`qr_display_${payload.branch.id}`)
+          .on(
+            "postgres_changes",
+            {
+              event: "*",
+              schema: "public",
+              table: "qr_display_state",
+              filter: `branch_id=eq.${payload.branch.id}`,
+            },
+            (changePayload) => {
+              if (
+                changePayload.eventType === "INSERT" ||
+                changePayload.eventType === "UPDATE"
+              ) {
+                setDisplayData(changePayload.new as QRDisplayData);
+                setPaymentSuccess(false);
+              }
+            }
+          )
+          .subscribe();
+
+        removeChannel = () => {
+          supabase.removeChannel(channel);
+        };
+      } catch {
+        if (!cancelled) {
+          setLoadError("Không thể tải dữ liệu màn hình QR. Vui lòng thử lại.");
+        }
+      }
     }
 
     void init();
 
     return () => {
+      cancelled = true;
       removeChannel?.();
     };
-  }, [normalizedCode]);
+  }, [applyBankForBranch, normalizedCode]);
 
   useEffect(() => {
     if (!displayData?.booking_id) return;
@@ -295,14 +309,13 @@ export function QRDisplayScreen({ branchCode }: { branchCode: string }) {
             </div>
 
             <div className="mb-6 flex justify-center">
-              <Image
+              <PaymentQrImage
                 src={buildSepayQrImageUrl({
                   acc: bank.acc,
                   bank: bank.bank,
                   amount: displayData.final_amount ?? displayData.total_amount,
                   description: displayData.booking_code,
                 })}
-                alt="QR Code thanh toán"
                 width={320}
                 height={320}
                 className="h-80 w-80 rounded-lg shadow-md"
@@ -349,7 +362,7 @@ export function QRDisplayScreen({ branchCode }: { branchCode: string }) {
 
             <div className="mt-6 rounded-lg border border-[#9bc78e]/30 bg-[#9bc78e]/10 p-4">
               <p className="text-center text-sm text-gray-700">
-                <span className="font-semibold">Ngân hàng:</span> {bank!.bankLabel}
+                <span className="font-semibold">Ngân hàng:</span> {bank.bankLabel}
               </p>
               <p className="text-center text-sm text-gray-700">
                 <span className="font-semibold">Số tài khoản:</span> {bank.acc}

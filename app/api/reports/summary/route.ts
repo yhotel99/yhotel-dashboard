@@ -95,12 +95,12 @@ export async function GET(req: NextRequest) {
 
     let refundsQuery = supabase
       .from("refund_requests")
-      .select("amount, bookings!inner(branch_id)")
+      .select("amount")
       .eq("status", REFUND_REQUEST_STATUS.REFUNDED)
       .gte("updated_at", fromISO)
       .lte("updated_at", toISO);
     if (branchId) {
-      refundsQuery = refundsQuery.eq("bookings.branch_id", branchId);
+      refundsQuery = refundsQuery.eq("branch_id", branchId);
     }
 
     const [
