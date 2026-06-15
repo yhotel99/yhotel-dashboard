@@ -40,15 +40,14 @@ export async function resolveAuditBranchId(params: {
       return data?.branch_id ?? null;
     }
     case "refund": {
-      let bookingId = params.bookingId;
-      if (!bookingId) {
-        const { data: refund } = await supabase
-          .from("refund_requests")
-          .select("booking_id")
-          .eq("id", params.entityId)
-          .maybeSingle();
-        bookingId = refund?.booking_id ?? undefined;
-      }
+      const { data: refund } = await supabase
+        .from("refund_requests")
+        .select("branch_id, booking_id")
+        .eq("id", params.entityId)
+        .maybeSingle();
+      if (refund?.branch_id) return refund.branch_id;
+
+      const bookingId = params.bookingId ?? refund?.booking_id;
       if (!bookingId) return null;
       const { data: booking } = await supabase
         .from("bookings")

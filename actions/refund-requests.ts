@@ -126,6 +126,8 @@ export async function createRefundRequestAction(
       throw new Error("Không thể xác thực người dùng");
     }
 
+    await assertCanAccessBooking(input.booking_id);
+
     // Validate refund amount
     const { totalPaid, totalRefunded, available } =
       await getAvailableRefundAmount(input.booking_id);
@@ -173,7 +175,10 @@ export async function createRefundRequestAction(
 export async function getRefundRequestDetailAction(
   id: string
 ): Promise<RefundRequestWithRelations | null> {
-  return getRefundRequestById(id);
+  const refund = await getRefundRequestById(id);
+  if (!refund) return null;
+  await assertCanAccessBooking(refund.booking_id);
+  return refund;
 }
 
 /**

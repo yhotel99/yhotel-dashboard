@@ -208,6 +208,18 @@ type PaymentsResponse = {
   };
 };
 
+type RefundReportRow = {
+  id: string;
+  amount: number;
+  updated_at: string;
+  branch_id: string | null;
+  customer_name: string;
+};
+
+type RefundsReportResponse = {
+  data: RefundReportRow[];
+};
+
 function appendBranchId(url: string, branchId: string | null): string {
   if (!branchId) return url;
   const sep = url.includes("?") ? "&" : "?";
@@ -215,7 +227,11 @@ function appendBranchId(url: string, branchId: string | null): string {
 }
 
 export function SystemReports() {
-  const { scope, selectedBranchId } = useBranch();
+  const { scope, selectedBranchId, branches } = useBranch();
+  const branchNameById = useMemo(
+    () => Object.fromEntries(branches.map((b) => [b.id, b.name])),
+    [branches]
+  );
   const branchIdForFetch =
     scope.mode === "single" ? scope.branchId : selectedBranchId;
 
@@ -317,6 +333,11 @@ export function SystemReports() {
       appendBranchId("/api/payments?page=1&limit=10", branchIdForFetch),
       fetcher
     );
+  const refundsReportUrl = `/api/reports/refunds?fromDate=${encodeURIComponent(
+    fromISO
+  )}&toDate=${encodeURIComponent(toISO)}&limit=10${branchQ}`;
+  const { data: recentRefundsData, isLoading: isLoadingRecentRefunds } =
+    useSWR<RefundsReportResponse>(refundsReportUrl, fetcher);
 
   // Derived state with safe defaults - ensure arrays are always arrays
   const summaryStats = {
@@ -537,6 +558,27 @@ export function SystemReports() {
       ];
       sections.push(
         Papa.unparse([["=== GIAO DỊCH GẦN ĐÂY ==="], ...paymentsData], papaConfig)
+      );
+    }
+
+    // Recent Refunds
+    if (recentRefundsData?.data && recentRefundsData.data.length > 0) {
+      const refundsData = [
+        ["Khách hàng", "Chi nhánh", "Số tiền", "Ngày hoàn"],
+        ...recentRefundsData.data.map((refund) => {
+          const branchLabel = refund.branch_id
+            ? branchNameById[refund.branch_id] ?? "—"
+            : "—";
+          return [
+            refund.customer_name,
+            branchLabel,
+            formatCurrency(refund.amount),
+            format(new Date(refund.updated_at), "dd/MM/yyyy"),
+          ];
+        }),
+      ];
+      sections.push(
+        Papa.unparse([["=== HOÀN TIỀN TRONG KỲ ==="], ...refundsData], papaConfig)
       );
     }
 
@@ -1604,6 +1646,75 @@ export function SystemReports() {
                               year: "numeric",
                             }
                           )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Recent Refunds */}
+      <Card className="border-red-500/20 bg-linear-to-br from-red-500/5 via-card to-card">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-2xl">Hoàn tiền trong kỳ</CardTitle>
+              <CardDescription className="text-base mt-1">
+                10 yêu cầu đã hoàn tiền theo ngày cập nhật trong khoảng thời gian
+              </CardDescription>
+            </div>
+            <Button asChild variant="outline">
+              <Link href="/dashboard/refund-requests">Xem tất cả</Link>
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isLoadingRecentRefunds ? (
+            <div className="h-[200px] flex items-center justify-center">
+              <p className="text-muted-foreground">Đang tải dữ liệu...</p>
+            </div>
+          ) : !recentRefundsData?.data ||
+            recentRefundsData.data.length === 0 ? (
+            <div className="h-[200px] flex items-center justify-center">
+              <p className="text-muted-foreground">Không có hoàn tiền trong kỳ</p>
+            </div>
+          ) : (
+            <div className="rounded-md border border-red-500/20">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Khách hàng</TableHead>
+                    <TableHead>Chi nhánh</TableHead>
+                    <TableHead>Số tiền</TableHead>
+                    <TableHead>Ngày hoàn</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {recentRefundsData.data.map((refund) => (
+                    <TableRow key={refund.id}>
+                      <TableCell className="font-medium">
+                        {refund.customer_name}
+                      </TableCell>
+                      <TableCell>
+                        {refund.branch_id
+                          ? branchNameById[refund.branch_id] ?? "—"
+                          : "—"}
+                      </TableCell>
+                      <TableCell className="font-semibold text-red-600">
+                        {formatCurrency(refund.amount)}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {new Date(refund.updated_at).toLocaleDateString(
+                          "vi-VN",
+                          {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                          }
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}

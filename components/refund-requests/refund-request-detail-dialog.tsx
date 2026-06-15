@@ -7,6 +7,7 @@ import {
   IconNotes,
   IconInfoCircle,
   IconListDetails,
+  IconBuilding,
 } from "@tabler/icons-react";
 import {
   Dialog,
@@ -27,6 +28,9 @@ import {
 } from "@/lib/constants";
 import { getRefundRequestDetailAction } from "@/actions/refund-requests";
 import { Loader2 } from "lucide-react";
+import { useMemo } from "react";
+import { useBranch } from "@/contexts/branch-context";
+import { resolveBranchDisplay } from "@/lib/branch";
 
 interface RefundRequestDetailDialogProps {
   open: boolean;
@@ -53,6 +57,19 @@ export function RefundRequestDetailDialog({
     useState<RefundRequestWithRelations | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { branches } = useBranch();
+  const branchDisplay = useMemo(
+    () =>
+      resolveBranchDisplay(
+        refundRequest?.branch_id ?? refundRequest?.bookings?.branch_id,
+        branches
+      ),
+    [
+      refundRequest?.branch_id,
+      refundRequest?.bookings?.branch_id,
+      branches,
+    ]
+  );
 
   useEffect(() => {
     if (!open || !refundRequestId) return;
@@ -139,6 +156,17 @@ export function RefundRequestDetailDialog({
                 Thông tin đặt phòng
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                    <IconBuilding className="size-3.5" />
+                    Chi nhánh
+                  </label>
+                  <p className="text-base font-medium">{branchDisplay.name}</p>
+                  <p className="text-xs font-mono text-muted-foreground">
+                    {branchDisplay.code}
+                  </p>
+                </div>
+
                 <div className="space-y-1">
                   <label className="text-sm font-medium text-muted-foreground">
                     Khách hàng

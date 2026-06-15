@@ -23,7 +23,11 @@ export function RefundRequestsContent({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { filterBranchId } = useBranch();
+  const { filterBranchId, branches } = useBranch();
+  const branchNameById = useMemo(
+    () => Object.fromEntries(branches.map((b) => [b.id, b.name])),
+    [branches]
+  );
   const [localSearch, setLocalSearch] = useState("");
   const [selectedRefundRequestId, setSelectedRefundRequestId] = useState<
     string | null
@@ -141,9 +145,10 @@ export function RefundRequestsContent({
       createRefundRequestColumns(
         () => refetch(),
         handleUpdateRefundRequestStatus,
-        handleViewDetail
+        handleViewDetail,
+        { branchNameById }
       ),
-    [refetch, handleUpdateRefundRequestStatus, handleViewDetail]
+    [refetch, handleUpdateRefundRequestStatus, handleViewDetail, branchNameById]
   );
 
   return (

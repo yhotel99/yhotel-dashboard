@@ -596,6 +596,7 @@ export type RefundRequestStatus =
 export type RefundRequest = {
   id: string;
   booking_id: string;
+  branch_id?: string | null;
   payment_id: string | null;
   customer_id: string | null;
   request_by: string;
@@ -644,6 +645,7 @@ export type PreviewItem = {
 export type RefundRequestWithRelations = RefundRequest & {
   bookings?: {
     id: string;
+    branch_id?: string | null;
     customers?: {
       full_name: string;
       phone: string | null;

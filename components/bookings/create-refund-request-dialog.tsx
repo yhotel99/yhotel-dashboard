@@ -29,6 +29,9 @@ import type { BookingRecord, PaymentWithBooking, RefundRequest } from "@/lib/typ
 import { PAYMENT_STATUS, REFUND_REQUEST_STATUS } from "@/lib/constants";
 import { formatVND } from "@/lib/functions";
 import { toast } from "sonner";
+import { useBranch } from "@/contexts/branch-context";
+import { resolveBranchDisplay } from "@/lib/branch";
+import { Building2 } from "lucide-react";
 
 const createRefundRequestSchema = (maxAmount: number) =>
   z.object({
@@ -69,6 +72,11 @@ export function CreateRefundRequestDialog({
   const [paymentsError, setPaymentsError] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [hasFetchedData, setHasFetchedData] = React.useState(false);
+  const { branches } = useBranch();
+  const branchDisplay = React.useMemo(
+    () => resolveBranchDisplay(booking.branch_id, branches),
+    [booking.branch_id, branches]
+  );
 
   // Fetch payments and refund requests when dialog opens
   React.useEffect(() => {
@@ -213,6 +221,14 @@ export function CreateRefundRequestDialog({
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div className="flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2 text-sm">
+              <Building2 className="size-4 shrink-0 text-muted-foreground" />
+              <span className="text-muted-foreground">Chi nhánh:</span>
+              <span className="font-medium">{branchDisplay.name}</span>
+              <span className="font-mono text-xs text-muted-foreground">
+                ({branchDisplay.code})
+              </span>
+            </div>
             {isLoadingPayments ? (
               <div className="text-sm text-muted-foreground">
                 Đang tải thông tin thanh toán...

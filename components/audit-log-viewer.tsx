@@ -1,16 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale/vi';
 import { Button } from '@/components/ui/button';
-import { IconChevronLeft, IconChevronRight } from '@tabler/icons-react';
+import { IconChevronLeft, IconChevronRight, IconBuilding } from '@tabler/icons-react';
+import { useBranch } from '@/contexts/branch-context';
+import { getBranchTableLabel } from '@/lib/branch';
 
 interface AuditLog {
   id: string;
   action: string;
   entity_type: string;
   entity_id: string;
+  branch_id?: string | null;
   user_email: string;
   changes?: {
     before?: Record<string, unknown>;
@@ -58,6 +61,11 @@ const actionColors: Record<string, string> = {
 };
 
 export function AuditLogViewer({ entityType, entityId, branchId = null, limit = 20 }: AuditLogViewerProps) {
+  const { branches } = useBranch();
+  const branchNameById = useMemo(
+    () => Object.fromEntries(branches.map((b) => [b.id, b.name])),
+    [branches]
+  );
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -138,14 +146,22 @@ export function AuditLogViewer({ entityType, entityId, branchId = null, limit = 
   return (
     <div className="space-y-4">
       <div className="space-y-4">
-        {logs.map((log) => (
+        {logs.map((log) => {
+          const branchLabel = getBranchTableLabel(log.branch_id, branchNameById);
+          return (
           <div key={log.id} className="border rounded-lg p-4 hover:bg-gray-50">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
                   <span className={`px-2 py-1 rounded text-xs font-medium ${actionColors[log.action] || 'bg-gray-100 text-gray-800'}`}>
                     {actionLabels[log.action] || log.action}
                   </span>
+                  {log.branch_id ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-muted text-muted-foreground">
+                      <IconBuilding className="size-3" />
+                      {branchLabel}
+                    </span>
+                  ) : null}
                   <span className="text-sm text-gray-500">
                     {formatDistanceToNow(new Date(log.created_at), { 
                       addSuffix: true,
@@ -203,7 +219,8 @@ export function AuditLogViewer({ entityType, entityId, branchId = null, limit = 
               </div>
             </div>
           </div>
-        ))}
+        );
+        })}
       </div>
 
       {/* Pagination */}
