@@ -232,7 +232,6 @@ export function PaymentQrGenerator() {
                   width={256}
                   height={256}
                   className="size-64"
-                  unoptimized
                 />
               </div>
               <div className="text-center space-y-1">
