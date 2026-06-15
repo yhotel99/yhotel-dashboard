@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo } from "react";
-import Image from "next/image";
 import {
   Dialog,
   DialogContent,
@@ -35,6 +34,7 @@ import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
 import { PAYMENT_TYPE } from "@/lib/constants";
 import { buildSepayQrImageUrl } from "@/lib/payment-qr";
+import { PaymentQrImage } from "@/components/payment-qr-image";
 import { PaymentStatusBadge } from "@/components/payments/status";
 import type { Room } from "@/lib/types";
 import { getBookingRoomDetailsAction } from "@/actions/bookings";
@@ -532,9 +532,8 @@ export function BookingDetailDialog({
                       {/* QR Code */}
                       <div className="flex flex-col items-center gap-3">
                         <div className="bg-white p-3 rounded-lg shadow-md">
-                          <Image
+                          <PaymentQrImage
                             src={bookingQrImageUrl}
-                            alt="QR Code thanh toán"
                             width={192}
                             height={192}
                             className="size-48"

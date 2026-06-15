@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useMemo, useState } from "react";
 import { useVndAmountInput } from "@/hooks/use-vnd-amount-input";
 import { Copy, QrCode } from "lucide-react";
@@ -19,6 +18,7 @@ import {
 import { bankMissingMessage } from "@/lib/bank-info";
 import { formatCurrency } from "@/lib/functions";
 import { buildSepayQrImageUrl } from "@/lib/payment-qr";
+import { PaymentQrImage } from "@/components/payment-qr-image";
 import { useBranchBankAccounts } from "@/hooks/use-branch-bank-accounts";
 import { useBranch } from "@/contexts/branch-context";
 import { DASHBOARD_URLS } from "@/lib/constants";
@@ -224,9 +224,8 @@ export function PaymentQrGenerator() {
           ) : qrImageUrl ? (
             <div className="flex flex-col items-center gap-5 w-full max-w-sm">
               <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-black/5">
-                <Image
+                <PaymentQrImage
                   src={qrImageUrl}
-                  alt="Mã QR thanh toán"
                   width={256}
                   height={256}
                   className="size-64"

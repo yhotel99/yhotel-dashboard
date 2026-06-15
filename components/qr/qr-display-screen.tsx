@@ -10,6 +10,7 @@ import {
 } from "@/lib/bank-info";
 import { formatCurrency, formatDateOnly } from "@/lib/functions";
 import { buildSepayQrImageUrl } from "@/lib/payment-qr";
+import { PaymentQrImage } from "@/components/payment-qr-image";
 import { createClient } from "@/lib/supabase/client";
 
 function playPaymentSuccessSound() {
@@ -308,14 +309,13 @@ export function QRDisplayScreen({ branchCode }: { branchCode: string }) {
             </div>
 
             <div className="mb-6 flex justify-center">
-              <Image
+              <PaymentQrImage
                 src={buildSepayQrImageUrl({
                   acc: bank.acc,
                   bank: bank.bank,
                   amount: displayData.final_amount ?? displayData.total_amount,
                   description: displayData.booking_code,
                 })}
-                alt="QR Code thanh toán"
                 width={320}
                 height={320}
                 className="h-80 w-80 rounded-lg shadow-md"
