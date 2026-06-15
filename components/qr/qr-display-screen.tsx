@@ -319,6 +319,7 @@ export function QRDisplayScreen({ branchCode }: { branchCode: string }) {
                 width={320}
                 height={320}
                 className="h-80 w-80 rounded-lg shadow-md"
+                unoptimized
               />
             </div>
 
