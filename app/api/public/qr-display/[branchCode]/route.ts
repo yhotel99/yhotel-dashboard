@@ -43,7 +43,7 @@ export async function GET(_request: Request, context: RouteContext) {
       admin
         .from("branch_bank_accounts")
         .select(
-          "bank_account_number, bank_name, bank_bin, bank_account_owner"
+          "bank_account_number, bank_name, bank_code, bank_account_owner"
         )
         .eq("branch_id", branchRow.id)
         .maybeSingle(),
@@ -60,7 +60,7 @@ export async function GET(_request: Request, context: RouteContext) {
         bank: bankRow ?? {
           bank_account_number: null,
           bank_name: null,
-          bank_bin: null,
+          bank_code: null,
           bank_account_owner: null,
         },
         display: displayRow ?? null,

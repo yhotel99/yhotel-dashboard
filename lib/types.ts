@@ -64,7 +64,7 @@ export type BranchBankAccount = {
   branch_name: string;
   bank_account_number: string | null;
   bank_name: string | null;
-  bank_bin: string | null;
+  bank_code: string | null;
   bank_account_owner: string | null;
   updated_at: string | null;
 };
@@ -72,7 +72,7 @@ export type BranchBankAccount = {
 export type BranchBankAccountInput = {
   bank_account_number?: string | null;
   bank_name?: string | null;
-  bank_bin?: string | null;
+  bank_code?: string | null;
   bank_account_owner?: string | null;
 };
 

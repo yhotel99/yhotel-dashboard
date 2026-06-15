@@ -1,6 +1,29 @@
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
+import { findSepayBank } from "@/lib/sepay-banks";
 import type { BranchBankAccount, BranchBankAccountInput } from "@/lib/types";
+
+function normalizeBankInput(
+  input: BranchBankAccountInput
+): BranchBankAccountInput {
+  const bankName = input.bank_name?.trim() || null;
+  const bankCode = input.bank_code?.trim().toUpperCase() || null;
+
+  const matched = findSepayBank(bankName, bankCode);
+  if (matched) {
+    return {
+      ...input,
+      bank_name: matched.short_name,
+      bank_code: matched.code,
+    };
+  }
+
+  return {
+    ...input,
+    bank_name: bankName,
+    bank_code: bankCode,
+  };
+}
 
 type BranchWithBankRow = {
   id: string;
@@ -10,14 +33,14 @@ type BranchWithBankRow = {
     | {
         bank_account_number: string | null;
         bank_name: string | null;
-        bank_bin: string | null;
+        bank_code: string | null;
         bank_account_owner: string | null;
         updated_at: string | null;
       }
     | {
         bank_account_number: string | null;
         bank_name: string | null;
-        bank_bin: string | null;
+        bank_code: string | null;
         bank_account_owner: string | null;
         updated_at: string | null;
       }[]
@@ -35,7 +58,7 @@ function mapBranchRow(row: BranchWithBankRow): BranchBankAccount {
     branch_name: row.name,
     bank_account_number: bank?.bank_account_number ?? null,
     bank_name: bank?.bank_name ?? null,
-    bank_bin: bank?.bank_bin ?? null,
+    bank_code: bank?.bank_code ?? null,
     bank_account_owner: bank?.bank_account_owner ?? null,
     updated_at: bank?.updated_at ?? null,
   };
@@ -56,7 +79,7 @@ export async function listBranchBankAccounts(): Promise<BranchBankAccount[]> {
       branch_bank_accounts (
         bank_account_number,
         bank_name,
-        bank_bin,
+        bank_code,
         bank_account_owner,
         updated_at
       )
@@ -88,7 +111,7 @@ export async function getBranchBankAccount(
       branch_bank_accounts (
         bank_account_number,
         bank_name,
-        bank_bin,
+        bank_code,
         bank_account_owner,
         updated_at
       )
@@ -112,12 +135,13 @@ export async function upsertBranchBankAccount(
   input: BranchBankAccountInput
 ): Promise<BranchBankAccount> {
   const supabase = await createClient();
+  const normalized = normalizeBankInput(input);
   const payload = {
     branch_id: branchId,
-    bank_account_number: input.bank_account_number ?? null,
-    bank_name: input.bank_name ?? null,
-    bank_bin: input.bank_bin ?? null,
-    bank_account_owner: input.bank_account_owner ?? null,
+    bank_account_number: normalized.bank_account_number ?? null,
+    bank_name: normalized.bank_name ?? null,
+    bank_code: normalized.bank_code ?? null,
+    bank_account_owner: normalized.bank_account_owner ?? null,
     updated_at: new Date().toISOString(),
   };
 
@@ -141,7 +165,7 @@ export type PublicQrDisplayPayload = {
   bank: {
     bank_account_number: string | null;
     bank_name: string | null;
-    bank_bin: string | null;
+    bank_code: string | null;
     bank_account_owner: string | null;
   };
   display: {

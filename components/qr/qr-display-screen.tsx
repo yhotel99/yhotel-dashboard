@@ -49,7 +49,7 @@ type PublicQrInitResponse = {
   bank: {
     bank_account_number: string | null;
     bank_name: string | null;
-    bank_bin: string | null;
+    bank_code: string | null;
     bank_account_owner: string | null;
   };
   display: QRDisplayData | null;
