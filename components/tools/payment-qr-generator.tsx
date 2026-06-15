@@ -116,7 +116,7 @@ export function PaymentQrGenerator() {
                 onValueChange={setBranchId}
                 disabled={branches.length === 0}
               >
-                <SelectTrigger id="payment-qr-branch" className="h-11">
+                <SelectTrigger id="payment-qr-branch" className="h-11 w-full">
                   <SelectValue placeholder="Chọn chi nhánh" />
                 </SelectTrigger>
                 <SelectContent>
