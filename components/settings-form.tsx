@@ -7,7 +7,7 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { updateSettingsAction } from "@/actions/settings";
-import type { Settings } from "@/lib/types";
+import type { BranchBankAccount, Settings } from "@/lib/types";
 import {
   getSuggestedVnHolidayPeriods,
   getSupportedPresetYears,
@@ -41,6 +41,7 @@ import { IconPlus, IconTrash } from "@tabler/icons-react";
 import { DEFAULT_WEEKDAY_RATES, normalizeHolidayPeriods } from "@/lib/pricing";
 import type { WeekdayRates } from "@/lib/types";
 import { Banknote, CalendarRange, CreditCard, Globe, Settings as SettingsIcon } from "lucide-react";
+import { BranchBankAccountsTab } from "@/components/branch-bank-accounts-tab";
 
 function ymdToday(): string {
   const d = new Date();
@@ -171,18 +172,6 @@ const settingsSchema = z.object({
     .nullable()
     .optional(),
   pricing_holiday_periods: z.array(holidayPeriodRowSchema),
-  bank_account_number: z
-    .union([z.string(), z.literal(""), z.null()])
-    .transform((val) => (val === "" ? null : val)),
-  bank_name: z
-    .union([z.string(), z.literal(""), z.null()])
-    .transform((val) => (val === "" ? null : val)),
-  bank_bin: z
-    .union([z.string(), z.literal(""), z.null()])
-    .transform((val) => (val === "" ? null : val)),
-  bank_account_owner: z
-    .union([z.string(), z.literal(""), z.null()])
-    .transform((val) => (val === "" ? null : val)),
 }).superRefine((data, ctx) => {
   data.pricing_holiday_periods.forEach((row, i) => {
     if (row.start_date > row.end_date) {
@@ -199,9 +188,15 @@ type SettingsFormValues = z.infer<typeof settingsSchema>;
 
 interface SettingsFormProps {
   initialData: Settings | null;
+  branchBankAccounts?: BranchBankAccount[];
+  canEditBank?: boolean;
 }
 
-export function SettingsForm({ initialData }: SettingsFormProps) {
+export function SettingsForm({
+  initialData,
+  branchBankAccounts = [],
+  canEditBank = false,
+}: SettingsFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState<
@@ -235,10 +230,6 @@ export function SettingsForm({ initialData }: SettingsFormProps) {
       contact_address: initialData?.contact_address || null,
       working_hours: initialData?.working_hours || null,
       social_media_links: initialData?.social_media_links || {},
-      bank_account_number: initialData?.bank_account_number || null,
-      bank_name: initialData?.bank_name || null,
-      bank_bin: initialData?.bank_bin || null,
-      bank_account_owner: initialData?.bank_account_owner || null,
       pricing_holiday_periods: normalizeHolidayPeriods(
         initialData?.pricing_holiday_periods
       ),
@@ -268,10 +259,6 @@ export function SettingsForm({ initialData }: SettingsFormProps) {
         contact_address: initialData.contact_address || null,
         working_hours: initialData.working_hours || null,
         social_media_links: initialData.social_media_links || {},
-        bank_account_number: initialData.bank_account_number || null,
-        bank_name: initialData.bank_name || null,
-        bank_bin: initialData.bank_bin || null,
-        bank_account_owner: initialData.bank_account_owner || null,
         pricing_holiday_periods: normalizeHolidayPeriods(
           initialData.pricing_holiday_periods
         ),
@@ -347,10 +334,6 @@ export function SettingsForm({ initialData }: SettingsFormProps) {
         contact_address: data.contact_address || null,
         working_hours: data.working_hours || null,
         social_media_links: cleanedSocialLinks,
-        bank_account_number: data.bank_account_number || null,
-        bank_name: data.bank_name || null,
-        bank_bin: data.bank_bin || null,
-        bank_account_owner: data.bank_account_owner || null,
         pricing_holiday_periods: data.pricing_holiday_periods ?? [],
       };
 
@@ -1086,79 +1069,10 @@ export function SettingsForm({ initialData }: SettingsFormProps) {
               </TabsContent>
 
               <TabsContent value="bank" className="space-y-4 mt-6">
-                <div className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="bank_account_number"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Số tài khoản</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="VD: 22102003"
-                            {...field}
-                            value={field.value || ""}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="bank_name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Tên ngân hàng</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="VD: ACB"
-                            {...field}
-                            value={field.value || ""}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="bank_bin"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Mã BIN ngân hàng</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="VD: 970416"
-                            {...field}
-                            value={field.value || ""}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Mã BIN của ngân hàng (VD: ACB = 970416)
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="bank_account_owner"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Chủ tài khoản</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="VD: TRAN QUANG KHAI"
-                            {...field}
-                            value={field.value || ""}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                <BranchBankAccountsTab
+                  accounts={branchBankAccounts}
+                  canEditBank={canEditBank}
+                />
               </TabsContent>
             </Tabs>
 

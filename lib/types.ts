@@ -58,6 +58,24 @@ export type BranchInput = {
   is_active?: boolean;
 };
 
+export type BranchBankAccount = {
+  branch_id: string;
+  branch_code: string;
+  branch_name: string;
+  bank_account_number: string | null;
+  bank_name: string | null;
+  bank_bin: string | null;
+  bank_account_owner: string | null;
+  updated_at: string | null;
+};
+
+export type BranchBankAccountInput = {
+  bank_account_number?: string | null;
+  bank_name?: string | null;
+  bank_bin?: string | null;
+  bank_account_owner?: string | null;
+};
+
 export type BranchScope =
   | { mode: "all"; branchId: null }
   | { mode: "single"; branchId: string };
@@ -844,10 +862,6 @@ export type Settings = {
   contact_address: string | null;
   working_hours: string | null;
   social_media_links: Record<string, string> | null;
-  bank_account_number: string | null;
-  bank_name: string | null;
-  bank_bin: string | null;
-  bank_account_owner: string | null;
   /**
    * Weekday-based price increase rates (percent) applied on top of room base price.
    * Index: 0=Sun ... 6=Sat (JS Date.getDay()).
@@ -872,10 +886,6 @@ export type SettingsInput = {
   contact_address?: string | null;
   working_hours?: string | null;
   social_media_links?: Record<string, string> | null;
-  bank_account_number?: string | null;
-  bank_name?: string | null;
-  bank_bin?: string | null;
-  bank_account_owner?: string | null;
   pricing_weekday_rates?: number[] | null;
   pricing_holiday_periods?: PricingHolidayPeriod[] | null;
 };

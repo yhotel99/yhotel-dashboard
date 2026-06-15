@@ -10,12 +10,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  BANK_SETTINGS_MISSING_MESSAGE,
-  resolveBankInfoFromSettings,
-} from "@/lib/bank-info";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { bankMissingMessage } from "@/lib/bank-info";
 import { formatCurrency } from "@/lib/functions";
 import { buildSepayQrImageUrl } from "@/lib/payment-qr";
-import { useSettings } from "@/hooks/use-settings";
+import { useBranchBankAccounts } from "@/hooks/use-branch-bank-accounts";
+import { useBranch } from "@/contexts/branch-context";
 import { DASHBOARD_URLS } from "@/lib/constants";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -40,13 +45,26 @@ function SummaryRow({
 }
 
 export function PaymentQrGenerator() {
-  const { settings, isLoading: isSettingsLoading } = useSettings();
+  const { branches, filterBranchId, selectedBranchId } = useBranch();
+  const { getBankInfo, getBranchBankAccount, isLoading: isBankLoading } =
+    useBranchBankAccounts();
   const { amount, inputProps: amountInputProps } = useVndAmountInput();
   const [description, setDescription] = useState("");
+  const [branchId, setBranchId] = useState<string>(
+    () => filterBranchId ?? selectedBranchId ?? branches[0]?.id ?? ""
+  );
+
+  const activeBranchId =
+    branchId || filterBranchId || selectedBranchId || branches[0]?.id;
+
+  const branchAccount = useMemo(
+    () => (activeBranchId ? getBranchBankAccount(activeBranchId) : undefined),
+    [activeBranchId, getBranchBankAccount]
+  );
 
   const bankInfo = useMemo(
-    () => resolveBankInfoFromSettings(settings),
-    [settings]
+    () => (activeBranchId ? getBankInfo(activeBranchId) : null),
+    [activeBranchId, getBankInfo]
   );
 
   const trimmedDescription = description.trim();
@@ -73,6 +91,10 @@ export function PaymentQrGenerator() {
     }
   };
 
+  const missingMessage = branchAccount
+    ? bankMissingMessage(branchAccount.branch_name)
+    : bankMissingMessage();
+
   return (
     <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
       <div className="grid lg:grid-cols-5">
@@ -87,6 +109,26 @@ export function PaymentQrGenerator() {
           </div>
 
           <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="payment-qr-branch">Chi nhánh</Label>
+              <Select
+                value={activeBranchId}
+                onValueChange={setBranchId}
+                disabled={branches.length === 0}
+              >
+                <SelectTrigger id="payment-qr-branch" className="h-11">
+                  <SelectValue placeholder="Chọn chi nhánh" />
+                </SelectTrigger>
+                <SelectContent>
+                  {branches.map((branch) => (
+                    <SelectItem key={branch.id} value={branch.id}>
+                      {branch.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="payment-qr-amount">Số tiền (VND)</Label>
               <Input
@@ -110,11 +152,11 @@ export function PaymentQrGenerator() {
             </div>
           </div>
 
-          {isSettingsLoading ? (
+          {isBankLoading ? (
             <p className="text-sm text-muted-foreground">Đang tải cài đặt ngân hàng...</p>
           ) : !bankInfo ? (
             <p className="text-sm text-amber-700 dark:text-amber-300 leading-relaxed">
-              {BANK_SETTINGS_MISSING_MESSAGE}{" "}
+              {missingMessage}{" "}
               <Link
                 href={DASHBOARD_URLS.SETTINGS}
                 className="font-medium underline underline-offset-2"
@@ -173,11 +215,11 @@ export function PaymentQrGenerator() {
             </h2>
           </div>
 
-          {isSettingsLoading ? (
+          {isBankLoading ? (
             <p className="text-sm text-muted-foreground">Đang tải...</p>
           ) : !bankInfo ? (
             <p className="text-sm text-center text-muted-foreground max-w-xs leading-relaxed">
-              Cần cấu hình thông tin ngân hàng trong Cài đặt trước khi tạo mã QR.
+              Cần cấu hình thông tin ngân hàng cho chi nhánh trong Cài đặt trước khi tạo mã QR.
             </p>
           ) : qrImageUrl ? (
             <div className="flex flex-col items-center gap-5 w-full max-w-sm">
