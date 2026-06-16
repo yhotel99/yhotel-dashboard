@@ -46,6 +46,8 @@ import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
 import {
   BarChart,
   Bar,
+  Line,
+  LineChart,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -57,6 +59,7 @@ import {
 
 import { formatCurrency } from "@/lib/functions";
 import { paymentMethodLabels } from "@/lib/constants";
+import { parseLocalDateOnly } from "@/lib/reports/occupancy-room-nights";
 
 import { Download } from "lucide-react";
 import useSWR from "swr";
@@ -185,6 +188,11 @@ type DailyOccupancyResponse = {
   occupancy: number;
 }[];
 
+type DailyReceivedResponse = {
+  date: string;
+  amount: number;
+}[];
+
 type UserKpiRow = {
   userId: string | null;
   fullName: string | null;
@@ -275,6 +283,9 @@ export function SystemReports() {
   const usersKpiUrl = `/api/reports/users?fromDate=${encodeURIComponent(
     fromISO
   )}&toDate=${encodeURIComponent(toISO)}${branchQ}`;
+  const dailyReceivedUrl = `/api/reports/daily-received?fromDate=${encodeURIComponent(
+    fromISO
+  )}&toDate=${encodeURIComponent(toISO)}${branchQ}`;
 
   // Use SWR for all data fetching
   const {
@@ -328,6 +339,10 @@ export function SystemReports() {
     data: usersKpiData,
     isLoading: isLoadingUsersKpi,
   } = useSWR<UserKpiRow>(usersKpiUrl, fetcher);
+  const {
+    data: dailyReceivedData,
+    isLoading: isLoadingDailyReceived,
+  } = useSWR<DailyReceivedResponse>(dailyReceivedUrl, fetcher);
   const { data: recentPaymentsData, isLoading: isLoadingRecentPayments } =
     useSWR<PaymentsResponse>(
       appendBranchId("/api/payments?page=1&limit=10", branchIdForFetch),
@@ -389,6 +404,7 @@ export function SystemReports() {
     Array.isArray(dailyOccupancyData) && !dailyOccupancyError
       ? dailyOccupancyData
       : [];
+  const dailyReceived = Array.isArray(dailyReceivedData) ? dailyReceivedData : [];
 
   // Calculate total rooms for percentage
   const totalRooms = roomStatuses.reduce(
@@ -998,6 +1014,112 @@ export function SystemReports() {
                           className="hover:opacity-100 transition-opacity"
                         />
                       </BarChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
+                );
+              })()
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-primary/20 bg-linear-to-br from-primary/5 via-card to-card">
+          <CardHeader>
+            <CardTitle className="text-2xl">Tiền nhận theo ngày</CardTitle>
+            <CardDescription className="text-base mt-1">
+              Phân bổ payment PAID theo từng ngày từ check-in đến check-out (bao gồm ngày check-out)
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="px-2 sm:px-6">
+            {isLoadingDailyReceived ? (
+              <div className="h-[300px] flex items-center justify-center">
+                <p className="text-muted-foreground">Đang tải dữ liệu...</p>
+              </div>
+            ) : dailyReceived.length === 0 ? (
+              <div className="h-[300px] flex items-center justify-center">
+                <p className="text-muted-foreground">Không có dữ liệu</p>
+              </div>
+            ) : (
+              (() => {
+                const chartData = dailyReceived.map((item) => ({
+                  date: item.date,
+                  label: format(parseLocalDateOnly(item.date), "dd/MM"),
+                  amount: Number(item.amount) || 0,
+                }));
+                const maxValue = Math.max(...chartData.map((d) => d.amount), 0);
+                const niceMax = maxValue > 0 ? maxValue * 1.1 : 1000000;
+
+                return (
+                  <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart
+                        data={chartData}
+                        margin={{ top: 10, right: 10, bottom: 10, left: 10 }}
+                      >
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          stroke="hsl(var(--border))"
+                          vertical={true}
+                          horizontal={true}
+                        />
+                        <XAxis
+                          dataKey="label"
+                          tickLine={false}
+                          axisLine={false}
+                          tickMargin={12}
+                          className="text-xs font-medium"
+                          tick={{ fill: "hsl(var(--muted-foreground))" }}
+                          minTickGap={20}
+                        />
+                        <YAxis
+                          tickLine={false}
+                          axisLine={false}
+                          tickMargin={12}
+                          className="text-xs font-medium"
+                          tick={{ fill: "hsl(var(--muted-foreground))" }}
+                          domain={[0, niceMax]}
+                          tickFormatter={(value) => {
+                            if (value >= 1000000) return `${(value / 1000000).toFixed(1)}Tr`;
+                            if (value >= 1000) return `${(value / 1000).toFixed(0)}K`;
+                            return value.toString();
+                          }}
+                        />
+                        <ChartTooltip
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              const row = payload[0].payload as {
+                                date: string;
+                                label: string;
+                                amount: number;
+                              };
+                              return (
+                                <div className="rounded-lg border border-primary/20 bg-background p-3 shadow-lg">
+                                  <p className="text-sm font-semibold text-primary">
+                                    Ngày {row.label}
+                                  </p>
+                                  <div className="mt-2 flex items-center justify-between gap-4">
+                                    <span className="text-xs text-muted-foreground">
+                                      Tiền nhận
+                                    </span>
+                                    <span className="text-sm font-bold text-primary">
+                                      {formatCurrency(row.amount)}
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="amount"
+                          stroke="#06b6d4"
+                          strokeWidth={2}
+                          dot={false}
+                          activeDot={{ r: 3, fill: "#06b6d4" }}
+                          connectNulls
+                        />
+                      </LineChart>
                     </ResponsiveContainer>
                   </ChartContainer>
                 );
