@@ -1,5 +1,10 @@
 
 import { createClient } from "@/lib/supabase/server";
+import { buildRegistrationFormData } from "@/lib/booking-registration/build-registration-form-data";
+import type {
+  RegistrationBookingRoomRaw,
+  RegistrationFormData,
+} from "@/lib/booking-registration/types";
 import type {
   BookingRecord,
   BookingInput,
@@ -8,6 +13,7 @@ import type {
   UpdateBookingInput,
   TransferBookingInput,
   PaginationMeta,
+  Payment,
 } from "@/lib/types";
 import {
   BOOKING_STATUS,
@@ -17,9 +23,14 @@ import {
   REPORTING_STATUS,
 } from "@/lib/constants";
 import {
+  assertCanAccessBooking,
   getCurrentUserBranchScope,
   resolveBranchFilterId,
 } from "@/lib/branch.server";
+import { getBranchBankAccountCached } from "@/services/bank-accounts";
+import { getBranchById } from "@/services/branches";
+import { getPaymentsByBookingId } from "@/services/payments";
+import { getSettings } from "@/services/settings";
 
 /**
  * Search bookings with pagination
@@ -1251,4 +1262,116 @@ export async function getBookingsListWithPagination({
     console.error("Error fetching bookings list:", err);
     throw new Error(errorMessage);
   }
+}
+
+/**
+ * Fetch booking registration form data for preview/PDF export.
+ */
+export async function getBookingRegistrationData(
+  bookingId: string
+): Promise<RegistrationFormData | null> {
+  const id = bookingId.trim();
+  if (!id) return null;
+
+  await assertCanAccessBooking(id);
+
+  const supabase = await createClient();
+  const { data: booking, error: bookingError } = await supabase
+    .from("bookings")
+    .select(
+      `
+      id,
+      booking_code,
+      branch_id,
+      check_in,
+      check_out,
+      number_of_nights,
+      total_guests,
+      notes,
+      total_amount,
+      final_amount,
+      created_at,
+      customers:customer_id (
+        full_name,
+        email,
+        phone,
+        nationality,
+        id_card,
+        date_of_birth
+      )
+    `
+    )
+    .eq("id", id)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (bookingError || !booking) {
+    return null;
+  }
+
+  const { data: bookingRoomsRaw, error: roomsError } = await supabase
+    .from("booking_rooms")
+    .select(
+      `
+      room_id,
+      amount,
+      number_of_nights,
+      rooms:room_id (
+        id,
+        name
+      )
+    `
+    )
+    .eq("booking_id", id);
+
+  if (roomsError) {
+    throw new Error(roomsError.message);
+  }
+
+  const [payments, settings, branch, bankAccount] = await Promise.all([
+    getPaymentsByBookingId(id),
+    getSettings(),
+    booking.branch_id
+      ? getBranchById(booking.branch_id)
+      : Promise.resolve(null),
+    booking.branch_id
+      ? getBranchBankAccountCached(booking.branch_id)
+      : Promise.resolve(null),
+  ]);
+
+  const bookingRooms = (bookingRoomsRaw ?? []).map((row) => {
+    const rooms = Array.isArray(row.rooms) ? row.rooms[0] : row.rooms;
+    return {
+      room_id: row.room_id as string,
+      amount: row.amount != null ? Number(row.amount) : null,
+      number_of_nights: Number(row.number_of_nights) || 1,
+      rooms: rooms as RegistrationBookingRoomRaw["rooms"],
+    };
+  }) satisfies RegistrationBookingRoomRaw[];
+
+  const customerRaw = booking.customers;
+  const customer = Array.isArray(customerRaw) ? customerRaw[0] : customerRaw;
+
+  return buildRegistrationFormData({
+    booking: {
+      id: booking.id as string,
+      booking_code: booking.booking_code as string,
+      branch_id: (booking.branch_id as string | null) ?? null,
+      check_in: booking.check_in as string,
+      check_out: booking.check_out as string,
+      number_of_nights: Number(booking.number_of_nights) || 1,
+      total_guests: Number(booking.total_guests) || 1,
+      notes: (booking.notes as string | null) ?? null,
+      total_amount: Number(booking.total_amount) || 0,
+      final_amount:
+        booking.final_amount != null ? Number(booking.final_amount) : null,
+      created_at: booking.created_at as string,
+      customers: customer ?? null,
+    },
+    bookingRooms,
+    payments: payments as Payment[],
+    settings,
+    branch,
+    bankAccount,
+  });
 }

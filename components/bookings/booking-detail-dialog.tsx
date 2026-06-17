@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -42,6 +42,9 @@ import { getRoomsByIds } from "@/actions/rooms";
 import { useSettings } from "@/hooks/use-settings";
 import { useBranchBankAccounts } from "@/hooks/use-branch-bank-accounts";
 import { DEFAULT_BRANCH_ID } from "@/lib/constants";
+import { Button } from "@/components/ui/button";
+import { IconFileTypePdf } from "@tabler/icons-react";
+import { BookingRegistrationDialog } from "@/components/bookings/registration/booking-registration-dialog";
 import {
   calculateTotalWithWeekdayRates,
   normalizeHolidayPeriods,
@@ -59,6 +62,7 @@ export function BookingDetailDialog({
   onOpenChange,
   booking,
 }: BookingDetailDialogProps) {
+  const [openRegistration, setOpenRegistration] = useState(false);
   const bookingId = booking?.id ?? null;
   const paymentsUrl =
     open && bookingId
@@ -203,8 +207,18 @@ export function BookingDetailDialog({
             </Badge>
             <StatusBadge status={booking.status} />
           </DialogTitle>
-          <DialogDescription>
-            Thông tin chi tiết về booking
+          <DialogDescription className="flex flex-wrap items-center justify-between gap-2">
+            <span>Thông tin chi tiết về booking</span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="no-print"
+              onClick={() => setOpenRegistration(true)}
+            >
+              <IconFileTypePdf className="mr-2 size-4" />
+              Xem giấy đăng ký
+            </Button>
           </DialogDescription>
         </DialogHeader>
 
@@ -714,6 +728,15 @@ export function BookingDetailDialog({
           )}
         </ScrollArea>
       </DialogContent>
+
+      {booking && (
+        <BookingRegistrationDialog
+          open={openRegistration}
+          onOpenChange={setOpenRegistration}
+          bookingId={booking.id}
+          bookingCode={booking.booking_code}
+        />
+      )}
     </Dialog>
   );
 }

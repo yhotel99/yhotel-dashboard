@@ -16,10 +16,11 @@ import type {
   BookingRoomDetail,
   ConfirmBookingEmailOptions,
 } from "@/lib/types";
+import type { RegistrationFormData } from "@/lib/booking-registration/types";
 import { BOOKING_STATUS, PAYMENT_METHOD } from "@/lib/constants";
 import { mapBookingError, formatDateTimePretty } from "@/lib/functions";
 import { logBookingCreate, logBookingUpdate, logBookingCancel } from "@/lib/audit-helpers";
-import { getBookingRoomDetails } from "@/services/bookings";
+import { getBookingRoomDetails, getBookingRegistrationData } from "@/services/bookings";
 import { getSettings } from "@/services/settings";
 import { getResendClient, getResendFromAddress } from "@/lib/email/resend";
 import { renderCancelBookingHTML } from "@/lib/email/templates/cancel-booking";
@@ -89,6 +90,24 @@ export async function getBookingRoomDetailsAction(
       ok: false,
       message: "Không thể lấy thông tin phòng của booking",
     };
+  }
+}
+
+/** Server action: dữ liệu giấy đăng ký đặt phòng (preview). */
+export async function getBookingRegistrationFormAction(
+  bookingId: string
+): Promise<Result<RegistrationFormData>> {
+  try {
+    const data = await getBookingRegistrationData(bookingId);
+    if (!data) {
+      return { ok: false, message: "Không tìm thấy booking" };
+    }
+    return { ok: true, data };
+  } catch (err) {
+    console.error("Error fetching registration form:", err);
+    const message =
+      err instanceof Error ? err.message : "Không thể tải giấy đăng ký";
+    return { ok: false, message };
   }
 }
 
