@@ -8,6 +8,12 @@ type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
+/** @react-pdf cần Node.js runtime, không chạy trên Edge */
+export const runtime = "nodejs";
+
+/** PDF render có thể chậm ở cold start trên Vercel */
+export const maxDuration = 30;
+
 export async function GET(_req: NextRequest, context: RouteContext) {
   try {
     const { id } = await context.params;

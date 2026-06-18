@@ -1,0 +1,8 @@
+{
+  "functions": {
+    "app/api/bookings/[id]/registration-form/route.js": {
+      "maxDuration": 30,
+      "memory": 1024
+    }
+  }
+}
