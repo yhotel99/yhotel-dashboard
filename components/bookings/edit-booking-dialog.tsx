@@ -15,14 +15,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import type { BookingRecord, UpdateBookingInput } from "@/lib/types";
 import { useRooms } from "@/hooks/use-rooms";
+import { useVndAmountInput } from "@/hooks/use-vnd-amount-input";
 import {
   formatCurrency,
   formatDateOnly,
   getCheckInDateISO,
   getCheckOutDateISO,
   formatDateForInput,
-  formatNumberWithSeparators,
-  parseFormattedNumber,
   calculateNightsValue,
   translateBookingError,
 } from "@/lib/functions";
@@ -37,7 +36,6 @@ type EditBookingFormState = {
   total_guests: string;
   total_amount: string;
   advance_payment: string;
-  final_amount: string;
   notes: string;
 };
 
@@ -79,7 +77,6 @@ export function EditBookingDialog({
         total_guests: "1",
         total_amount: "0",
         advance_payment: "0",
-        final_amount: "",
         notes: "",
       };
     }
@@ -90,9 +87,6 @@ export function EditBookingDialog({
       total_guests: booking.total_guests.toString(),
       total_amount: booking.total_amount.toString(),
       advance_payment: booking.advance_payment.toString(),
-      final_amount: formatNumberWithSeparators(
-        String(booking.final_amount ?? booking.total_amount)
-      ),
       notes: booking.notes || "",
     };
   };
@@ -100,6 +94,11 @@ export function EditBookingDialog({
   const [formValues, setFormValues] = useState<EditBookingFormState>(
     getInitialFormValues()
   );
+  const {
+    amount: finalAmountValue,
+    setDigits: setFinalAmountDigits,
+    inputProps: finalAmountInputProps,
+  } = useVndAmountInput();
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -107,20 +106,17 @@ export function EditBookingDialog({
   useEffect(() => {
     if (open && booking) {
       setFormValues(getInitialFormValues());
+      setFinalAmountDigits(
+        String(booking.final_amount ?? booking.total_amount)
+      );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, booking?.id]);
+  }, [open, booking?.id, setFinalAmountDigits]);
 
   const handleInputChange =
     (field: keyof EditBookingFormState) =>
       (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        const { value } = event.target;
-        if (field === "final_amount") {
-          const formatted = formatNumberWithSeparators(value);
-          setFormValues((prev) => ({ ...prev, [field]: formatted }));
-        } else {
-          setFormValues((prev) => ({ ...prev, [field]: value }));
-        }
+        setFormValues((prev) => ({ ...prev, [field]: event.target.value }));
       };
 
   const resetForm = () => {
@@ -132,11 +128,11 @@ export function EditBookingDialog({
         total_guests: booking.total_guests.toString(),
         total_amount: booking.total_amount.toString(),
         advance_payment: booking.advance_payment.toString(),
-        final_amount: formatNumberWithSeparators(
-          String(booking.final_amount ?? booking.total_amount)
-        ),
         notes: booking.notes || "",
       });
+      setFinalAmountDigits(
+        String(booking.final_amount ?? booking.total_amount)
+      );
     }
     setError(null);
     setIsSubmitting(false);
@@ -181,9 +177,9 @@ export function EditBookingDialog({
     }
 
     // Nếu booking đang chờ xác nhận, cho phép chỉnh final_amount
-    let finalAmountValue: number | null = null;
+    let finalAmountForUpdate: number | null = null;
     if (booking.status === "pending") {
-      finalAmountValue = parseFormattedNumber(formValues.final_amount || "0");
+      finalAmountForUpdate = finalAmountValue;
       if (!Number.isFinite(finalAmountValue) || finalAmountValue <= 0) {
         setError("Số tiền thanh toán cuối cùng phải là số lớn hơn 0.");
         return;
@@ -197,8 +193,8 @@ export function EditBookingDialog({
     const payload: UpdateBookingInput = {
       total_guests: totalGuests,
       notes: formValues.notes.trim() || null,
-      ...(booking.status === "pending" && finalAmountValue !== null
-        ? { final_amount: finalAmountValue }
+      ...(booking.status === "pending" && finalAmountForUpdate !== null
+        ? { final_amount: finalAmountForUpdate }
         : {}),
     };
 
@@ -318,10 +314,7 @@ export function EditBookingDialog({
               </Label>
               <Input
                 id="final_amount"
-                type="text"
-                inputMode="numeric"
-                value={formValues.final_amount}
-                onChange={handleInputChange("final_amount")}
+                {...finalAmountInputProps}
                 disabled={booking.status !== BOOKING_STATUS.PENDING}
               />
               <p className="text-xs text-muted-foreground">

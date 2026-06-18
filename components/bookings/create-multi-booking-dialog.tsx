@@ -50,6 +50,7 @@ import { CustomerSearchOption } from "@/components/customers/customer-search-opt
 import { searchCustomersAction, createCustomerAction } from "@/actions/customers";
 import { validateVoucherForBooking } from "@/actions/vouchers";
 import { useDebounce } from "@/hooks/use-debounce";
+import { useVndAmountInput } from "@/hooks/use-vnd-amount-input";
 import { CreateCustomerDialog } from "@/components/customers/create-customer-dialog";
 import { RoomDetailDialog } from "@/components/rooms/room-detail-dialog";
 import type { Customer, Room } from "@/lib/types";
@@ -64,8 +65,6 @@ import {
   getCheckOutDateISO,
   calculateNightsValue,
   translateBookingError,
-  formatNumberWithSeparators,
-  parseFormattedNumber,
   formatDisplayDate,
 } from "@/lib/functions";
 import {
@@ -133,8 +132,16 @@ export function CreateMultiBookingDialog({
   const [checkInDate, setCheckInDate] = useState("");
   const [checkOutDate, setCheckOutDate] = useState("");
   const [totalGuests, setTotalGuests] = useState("1");
-  const [advancePayment, setAdvancePayment] = useState("0");
-  const [finalAmount, setFinalAmount] = useState("");
+  const {
+    amount: finalAmountValue,
+    setDigits: setFinalAmountDigits,
+    inputProps: finalAmountInputProps,
+  } = useVndAmountInput();
+  const {
+    amount: advanceAmountValue,
+    setDigits: setAdvancePaymentDigits,
+    inputProps: advancePaymentInputProps,
+  } = useVndAmountInput({ initialDigits: "0" });
   const [isFinalAmountDirty, setIsFinalAmountDirty] = useState(false);
   const [voucherCode, setVoucherCode] = useState("");
   const [voucherState, setVoucherState] = useState<{
@@ -314,12 +321,12 @@ export function CreateMultiBookingDialog({
   useEffect(() => {
     if (!isFinalAmountDirty) {
       if (totalAmount > 0) {
-        setFinalAmount(formatNumberWithSeparators(String(totalAmount)));
+        setFinalAmountDigits(String(totalAmount));
       } else {
-        setFinalAmount("");
+        setFinalAmountDigits("");
       }
     }
-  }, [totalAmount, isFinalAmountDirty]);
+  }, [totalAmount, isFinalAmountDirty, setFinalAmountDigits]);
 
   // Clear applied voucher when total changes
   useEffect(() => {
@@ -328,8 +335,8 @@ export function CreateMultiBookingDialog({
       setIsApplyingVoucher(false);
       setVoucherCode("");
       setIsFinalAmountDirty(false);
-      if (totalAmount > 0) setFinalAmount(formatNumberWithSeparators(String(totalAmount)));
-      else setFinalAmount("");
+      if (totalAmount > 0) setFinalAmountDigits(String(totalAmount));
+      else setFinalAmountDigits("");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [totalAmount, checkInDate, checkOutDate, selectedRoomIds.size]);
@@ -349,8 +356,8 @@ export function CreateMultiBookingDialog({
     setCheckInDate("");
     setCheckOutDate("");
     setTotalGuests("1");
-    setAdvancePayment("0");
-    setFinalAmount("");
+    setAdvancePaymentDigits("0");
+    setFinalAmountDigits("");
     setIsFinalAmountDirty(false);
     setVoucherCode("");
     setVoucherState(null);
@@ -419,15 +426,15 @@ export function CreateMultiBookingDialog({
       setError("Số khách phải từ 1 trở lên");
       return;
     }
-    const finalAmountValue = voucherState
+    const resolvedFinalAmount = voucherState
       ? voucherState.finalAmount
-      : parseFormattedNumber(finalAmount || "0");
-    if (finalAmountValue <= 0) {
+      : finalAmountValue;
+    if (resolvedFinalAmount <= 0) {
       setError("Số tiền thanh toán cuối cùng phải lớn hơn 0");
       return;
     }
-    const advance = parseFormattedNumber(advancePayment || "0");
-    if (advance < 0 || advance > finalAmountValue) {
+    const advance = advanceAmountValue;
+    if (advance < 0 || advance > resolvedFinalAmount) {
       setError("Tiền cọc không hợp lệ (không được lớn hơn số tiền thanh toán cuối cùng)");
       return;
     }
@@ -445,7 +452,7 @@ export function CreateMultiBookingDialog({
       notes: notes.trim() || null,
       payment_method: paymentMethod as PaymentMethod,
       advance_payment: advance,
-      final_amount: voucherState ? undefined : finalAmountValue,
+      final_amount: voucherState ? undefined : resolvedFinalAmount,
       voucher_code: voucherState ? voucherState.code : null,
       branch_code: getBranchCodeById(branchIdForBooking, branches),
     };
@@ -809,12 +816,10 @@ export function CreateMultiBookingDialog({
               <div className="space-y-2 shrink-0">
                 <Label>Số tiền thanh toán cuối cùng (VNĐ)</Label>
                 <Input
-                  type="text"
-                  inputMode="numeric"
-                  value={finalAmount}
-                  onChange={(e) => {
+                  {...finalAmountInputProps}
+                  onChange={(event) => {
                     setIsFinalAmountDirty(true);
-                    setFinalAmount(formatNumberWithSeparators(e.target.value));
+                    finalAmountInputProps.onChange(event);
                   }}
                   placeholder="Mặc định bằng tổng cộng phía trên"
                   readOnly={!!voucherState}
@@ -847,9 +852,8 @@ export function CreateMultiBookingDialog({
                         setVoucherState(null);
                         setVoucherCode("");
                         setIsFinalAmountDirty(false);
-                        if (totalAmount > 0)
-                          setFinalAmount(formatNumberWithSeparators(String(totalAmount)));
-                        else setFinalAmount("");
+                        if (totalAmount > 0) setFinalAmountDigits(String(totalAmount));
+                        else setFinalAmountDigits("");
                       }}
                       disabled={isApplyingVoucher}
                     >
@@ -888,14 +892,9 @@ export function CreateMultiBookingDialog({
                           });
                           setVoucherCode(result.data.voucher.code);
                           setIsFinalAmountDirty(false);
-                          setFinalAmount(
-                            formatNumberWithSeparators(String(result.data.finalAmount))
-                          );
-                          const adv = parseFormattedNumber(advancePayment || "0");
-                          if (adv > result.data.finalAmount) {
-                            setAdvancePayment(
-                              formatNumberWithSeparators(String(result.data.finalAmount))
-                            );
+                          setFinalAmountDigits(String(result.data.finalAmount));
+                          if (advanceAmountValue > result.data.finalAmount) {
+                            setAdvancePaymentDigits(String(result.data.finalAmount));
                           }
                         } finally {
                           setIsApplyingVoucher(false);
@@ -911,20 +910,10 @@ export function CreateMultiBookingDialog({
 
               <div className="space-y-2 shrink-0">
                 <Label>Tiền cọc (VNĐ)</Label>
-                <Input
-                  type="text"
-                  inputMode="numeric"
-                  value={advancePayment}
-                  onChange={(e) =>
-                    setAdvancePayment(formatNumberWithSeparators(e.target.value))
-                  }
-                  placeholder="VD: 1.000.000"
-                />
+                <Input {...advancePaymentInputProps} placeholder="VD: 1.000.000" />
                 <p className="text-xs text-muted-foreground">
                   Tối đa:{" "}
-                  {formatCurrency(
-                    parseFormattedNumber(finalAmount || "0") || totalAmount
-                  )}
+                  {formatCurrency(finalAmountValue || totalAmount)}
                 </p>
               </div>
 

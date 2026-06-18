@@ -1,6 +1,14 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Vercel serverless không tự copy public/ vào function — phải khai báo rõ
+  // để @react-pdf/renderer đọc được font và logo khi render PDF.
+  outputFileTracingIncludes: {
+    "/api/bookings/[id]/registration-form": [
+      "./public/fonts/**/*",
+      "./public/logn.png",
+    ],
+  },
   images: {
     // Ít breakpoint hơn mặc định → ít biến thể width được generate (tiết kiệm transformation).
     deviceSizes: [640, 828, 1080],

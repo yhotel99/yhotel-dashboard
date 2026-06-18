@@ -10,6 +10,8 @@ import {
   IconReceiptRefund,
   IconX,
   IconQrcode,
+  IconEye,
+  IconFileTypePdf,
 } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
@@ -44,8 +46,8 @@ import { MarkAdvancePaymentDialog } from "./mark-advance-payment-dialog";
 import { CreateRefundRequestDialog } from "./create-refund-request-dialog";
 import { BookingDetailDialog } from "./booking-detail-dialog";
 import { BOOKING_STATUS } from "@/lib/constants";
-import { IconEye } from "@tabler/icons-react";
 import { updateQRDisplayAction } from "@/actions/qr-display";
+import { BookingRegistrationDialog } from "./registration/booking-registration-dialog";
 
 // Context to update booking status from action cells
 export const UpdateBookingStatusContext = React.createContext<
@@ -142,6 +144,7 @@ export function BookingActionsCell({
   const [openMarkAdvancePayment, setOpenMarkAdvancePayment] = useState(false);
   const [openRefundRequest, setOpenRefundRequest] = useState(false);
   const [openDetail, setOpenDetail] = useState(false);
+  const [openRegistration, setOpenRegistration] = useState(false);
   const [advancePaymentStatus, setAdvancePaymentStatus] = useState<{
     hasAdvancePayment: boolean;
     isPaid: boolean;
@@ -244,6 +247,10 @@ export function BookingActionsCell({
           <DropdownMenuItem onClick={() => setOpenDetail(true)}>
             <IconEye className="mr-2 size-4" />
             Xem chi tiết
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setOpenRegistration(true)}>
+            <IconFileTypePdf className="mr-2 size-4" />
+            Giấy đăng ký / In PDF
           </DropdownMenuItem>
           <DropdownMenuItem onClick={handleShowQR}>
             <IconQrcode className="mr-2 size-4" />
@@ -351,6 +358,15 @@ export function BookingActionsCell({
           open={openDetail}
           onOpenChange={setOpenDetail}
           booking={booking}
+        />
+      )}
+
+      {openRegistration && (
+        <BookingRegistrationDialog
+          open={openRegistration}
+          onOpenChange={setOpenRegistration}
+          bookingId={booking.id}
+          bookingCode={booking.booking_code}
         />
       )}
     </>
