@@ -23,10 +23,23 @@ export function registerPdfFonts(): void {
       {
         src: resolveFontPath("NotoSans-Regular.woff"),
         fontWeight: 400,
+        fontStyle: "normal",
       },
       {
         src: resolveFontPath("NotoSans-Bold.woff"),
         fontWeight: 700,
+        fontStyle: "normal",
+      },
+      // Fallback: chưa có file Italic riêng, dùng Regular/Bold để tránh crash trên Vercel
+      {
+        src: resolveFontPath("NotoSans-Regular.woff"),
+        fontWeight: 400,
+        fontStyle: "italic",
+      },
+      {
+        src: resolveFontPath("NotoSans-Bold.woff"),
+        fontWeight: 700,
+        fontStyle: "italic",
       },
     ],
   });
