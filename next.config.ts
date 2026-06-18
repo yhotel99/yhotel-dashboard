@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/api/bookings/[id]/registration-form": [
       "./public/fonts/**/*",
-      "./app/favicon.ico",
+      "./public/logn.png",
     ],
   },
   images: {

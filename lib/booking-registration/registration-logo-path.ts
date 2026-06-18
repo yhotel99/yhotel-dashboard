@@ -1,11 +1,11 @@
 import path from "node:path";
 
-/** Server-side path for PDF rendering (app/favicon.ico is PNG data). */
+/** Server-side path for PDF rendering */
 export const REGISTRATION_LOGO_PATH = path.join(
   process.cwd(),
-  "app",
-  "favicon.ico"
+  "public",
+  "logn.png"
 );
 
-/** Client/preview URL served by Next.js from app/favicon.ico */
-export const REGISTRATION_LOGO_SRC = "/favicon.ico";
+/** Client/preview URL served from public/logn.png */
+export const REGISTRATION_LOGO_SRC = "/logn.png";
