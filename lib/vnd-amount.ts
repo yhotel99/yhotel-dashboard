@@ -35,14 +35,12 @@ export function parseVndDigits(digits: string): number {
 }
 
 /**
- * Display value for a VND amount input.
- * Shows raw digits while focused; formatted with thousand separators when blurred.
+ * Display value for a VND amount input (always formatted with thousand separators).
  */
 export function formatVndAmountDisplay(
   digits: string,
-  isFocused: boolean,
   formatFn: (value: string) => string
 ): string {
   if (digits === "") return "";
-  return isFocused ? digits : formatFn(digits);
+  return formatFn(digits);
 }

@@ -45,17 +45,16 @@ import { useSettings } from "@/hooks/use-settings";
 import { searchCustomersAction, createCustomerAction } from "@/actions/customers";
 import { validateVoucherForBooking } from "@/actions/vouchers";
 import { useDebounce } from "@/hooks/use-debounce";
+import { useVndAmountInput } from "@/hooks/use-vnd-amount-input";
 import { CreateCustomerDialog } from "@/components/customers/create-customer-dialog";
 import type { Customer, Room } from "@/lib/types";
-import { PAYMENT_METHOD, PAYMENT_TYPE, paymentMethodLabels } from "@/lib/constants";
+import { PAYMENT_METHOD, paymentMethodLabels } from "@/lib/constants";
 import {
   formatCurrency,
   getCheckInDateISO,
   getCheckOutDateISO,
   calculateNightsValue,
   translateBookingError,
-  formatNumberWithSeparators,
-  parseFormattedNumber,
   formatDisplayDate,
 } from "@/lib/functions";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -79,9 +78,7 @@ type CreateBookingFormState = {
   check_out_date: string;
   total_guests: string;
   total_amount: string;
-  final_amount: string;
   voucher_code: string;
-  advance_payment: string;
   payment_method: string;
   notes: string;
 };
@@ -93,9 +90,7 @@ const initialCreateBookingState: CreateBookingFormState = {
   check_out_date: "",
   total_guests: "1",
   total_amount: "0",
-  final_amount: "",
   voucher_code: "",
-  advance_payment: "0",
   payment_method: PAYMENT_METHOD.PAY_AT_HOTEL,
   notes: "",
 };
@@ -109,12 +104,16 @@ function validateBookingForm({
   selectedRoom,
   nights,
   formBranchId,
+  finalAmount,
+  advancePayment,
 }: {
   formValues: CreateBookingFormState;
   selectedCustomer: Customer | null;
   selectedRoom: Room | null;
   nights: number;
   formBranchId: string;
+  finalAmount: number;
+  advancePayment: number;
 }): string | null {
   if (!formBranchId) {
     return "Vui lòng chọn chi nhánh trước khi tạo booking.";
@@ -161,19 +160,16 @@ function validateBookingForm({
     return "💰 Tổng tiền phải lớn hơn 0. Vui lòng kiểm tra giá phòng.";
   }
 
-  const finalAmount = parseFormattedNumber(formValues.final_amount || "0");
-  if (!Number.isFinite(finalAmount) || finalAmount <= 0) {
+  const finalAmountResolved = finalAmount;
+  if (!Number.isFinite(finalAmountResolved) || finalAmountResolved <= 0) {
     return "💰 Số tiền thanh toán cuối cùng phải lớn hơn 0.";
   }
 
-  const advancePayment = parseFormattedNumber(
-    formValues.advance_payment || "0"
-  );
   if (!Number.isFinite(advancePayment) || advancePayment < 0) {
     return "💰 Tiền cọc phải là số không âm.";
   }
 
-  if (advancePayment > finalAmount) {
+  if (advancePayment > finalAmountResolved) {
     return "💰 Tiền cọc không được vượt quá số tiền thanh toán cuối cùng.";
   }
 
@@ -194,6 +190,16 @@ export function CreateBookingDialog({
   const [formValues, setFormValues] = useState<CreateBookingFormState>(
     initialCreateBookingState
   );
+  const {
+    amount: finalAmountValue,
+    setDigits: setFinalAmountDigits,
+    inputProps: finalAmountInputProps,
+  } = useVndAmountInput();
+  const {
+    amount: advanceAmountValue,
+    setDigits: setAdvancePaymentDigits,
+    inputProps: advancePaymentInputProps,
+  } = useVndAmountInput({ initialDigits: "0" });
   const [voucherState, setVoucherState] = useState<{
     code: string;
     discount: number;
@@ -396,27 +402,25 @@ export function CreateBookingDialog({
   useEffect(() => {
     if (voucherState) {
       setVoucherState(null);
-      setFormValues((prev) => ({ ...prev, final_amount: "" }));
+      setFinalAmountDigits("");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [calculatedTotalAmount, formValues.check_in_date, formValues.check_out_date, formValues.room_id]);
 
-  // Format advance_payment when total_amount changes (to update max value display)
   useEffect(() => {
-    if (formValues.advance_payment) {
-      const currentValue = parseFormattedNumber(formValues.advance_payment);
-      const maxValue = Number(formValues.total_amount || 0);
-
-      // If current value exceeds new max, cap it
-      if (currentValue > maxValue) {
-        setFormValues((prev) => ({
-          ...prev,
-          advance_payment: formatNumberWithSeparators(maxValue),
-        }));
-      }
+    const maxValue =
+      voucherState?.finalAmount ??
+      (finalAmountValue || Number(formValues.total_amount || 0));
+    if (advanceAmountValue > maxValue) {
+      setAdvancePaymentDigits(String(maxValue));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formValues.total_amount]);
+  }, [
+    formValues.total_amount,
+    voucherState,
+    finalAmountValue,
+    advanceAmountValue,
+    setAdvancePaymentDigits,
+  ]);
 
   // Calculate search results based on debounced search
   const displaySearchResults = useMemo(() => {
@@ -433,13 +437,7 @@ export function CreateBookingDialog({
     (field: keyof CreateBookingFormState) =>
       (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { value } = event.target;
-        // Format advance_payment with thousand separators
-        if (field === PAYMENT_TYPE.ADVANCE_PAYMENT) {
-          const formatted = formatNumberWithSeparators(value);
-          setFormValues((prev) => ({ ...prev, [field]: formatted }));
-        } else {
-          setFormValues((prev) => ({ ...prev, [field]: value }));
-        }
+        setFormValues((prev) => ({ ...prev, [field]: value }));
       };
 
   const clearVoucher = useCallback(() => {
@@ -447,12 +445,14 @@ export function CreateBookingDialog({
     setFormValues((prev) => ({
       ...prev,
       voucher_code: "",
-      final_amount: "",
     }));
-  }, []);
+    setFinalAmountDigits("");
+  }, [setFinalAmountDigits]);
 
   const resetForm = useCallback(() => {
     setFormValues(initialCreateBookingState);
+    setFinalAmountDigits("");
+    setAdvancePaymentDigits("0");
     setError(null);
     setIsSubmitting(false);
     setCustomerSearch("");
@@ -460,7 +460,7 @@ export function CreateBookingDialog({
     lastSearchRef.current = "";
     setVoucherState(null);
     setIsApplyingVoucher(false);
-  }, []);
+  }, [setAdvancePaymentDigits, setFinalAmountDigits]);
 
   const handleCustomerSelect = (customer: Customer) => {
     setSelectedCustomer(customer);
@@ -538,6 +538,8 @@ export function CreateBookingDialog({
         selectedRoom: submitSelectedRoom,
         nights: number_of_nights,
         formBranchId,
+        finalAmount: voucherState?.finalAmount ?? finalAmountValue,
+        advancePayment: advanceAmountValue,
       });
 
       if (validationError) {
@@ -548,10 +550,7 @@ export function CreateBookingDialog({
       // At this point, we know submitSelectedRoom is not null (validation passed)
       const totalGuests = Number(formValues.total_guests);
       const totalAmount = Number(formValues.total_amount || 0);
-      const finalAmount = parseFormattedNumber(formValues.final_amount || "0");
-      const advancePayment = parseFormattedNumber(
-        formValues.advance_payment || "0"
-      );
+      const resolvedFinalAmount = voucherState?.finalAmount ?? finalAmountValue;
 
       const payload: BookingInput = {
         customer_id: formValues.customer_id,
@@ -562,8 +561,8 @@ export function CreateBookingDialog({
         total_guests: totalGuests,
         notes: formValues.notes.trim() || null,
         total_amount: totalAmount,
-        advance_payment: advancePayment,
-        final_amount: voucherState ? undefined : finalAmount,
+        advance_payment: advanceAmountValue,
+        final_amount: voucherState ? undefined : resolvedFinalAmount,
         voucher_code: voucherState ? voucherState.code : null,
         payment_method: formValues.payment_method as PaymentMethod,
         branch_code: getBranchCodeById(formBranchId, branches),
@@ -829,10 +828,7 @@ export function CreateBookingDialog({
               <Label htmlFor="final_amount">Số tiền thanh toán cuối cùng (VNĐ)</Label>
               <Input
                 id="final_amount"
-                type="text"
-                inputMode="numeric"
-                value={formValues.final_amount}
-                onChange={handleInputChange("final_amount")}
+                {...finalAmountInputProps}
                 placeholder="Mặc định bằng tổng tiền phía trên, có thể chỉnh khi giảm giá/phụ thu"
                 readOnly={!!voucherState}
                 className={voucherState ? "bg-muted" : undefined}
@@ -901,13 +897,11 @@ export function CreateBookingDialog({
                         setFormValues((prev) => ({
                           ...prev,
                           voucher_code: result.data.voucher.code,
-                          final_amount: formatNumberWithSeparators(result.data.finalAmount),
-                          advance_payment:
-                            parseFormattedNumber(prev.advance_payment || "0") >
-                            result.data.finalAmount
-                              ? formatNumberWithSeparators(result.data.finalAmount)
-                              : prev.advance_payment,
                         }));
+                        setFinalAmountDigits(String(result.data.finalAmount));
+                        if (advanceAmountValue > result.data.finalAmount) {
+                          setAdvancePaymentDigits(String(result.data.finalAmount));
+                        }
                       } finally {
                         setIsApplyingVoucher(false);
                       }
@@ -927,14 +921,15 @@ export function CreateBookingDialog({
               <Label htmlFor="advance_payment">Tiền cọc (VNĐ)</Label>
               <Input
                 id="advance_payment"
-                type="text"
-                inputMode="numeric"
-                value={formValues.advance_payment}
-                onChange={handleInputChange("advance_payment")}
+                {...advancePaymentInputProps}
                 placeholder="Nhập số tiền cọc (VD: 1.000.000)"
               />
               <p className="text-xs text-muted-foreground">
-                Tối đa: {formatCurrency(Number(formValues.total_amount || 0))}
+                Tối đa:{" "}
+                {formatCurrency(
+                  voucherState?.finalAmount ??
+                    (finalAmountValue || Number(formValues.total_amount || 0))
+                )}
               </p>
             </div>
 

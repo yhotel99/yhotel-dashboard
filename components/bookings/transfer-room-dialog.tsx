@@ -22,6 +22,7 @@ import { Label } from "@/components/ui/label";
 import type { BookingRecord, TransferBookingInput } from "@/lib/types";
 import { useRooms } from "@/hooks/use-rooms";
 import { useSettings } from "@/hooks/use-settings";
+import { useVndAmountInput } from "@/hooks/use-vnd-amount-input";
 import { checkAdvancePaymentStatusAction } from "@/actions/payments";
 import {
   formatCurrency,
@@ -30,8 +31,6 @@ import {
   formatDateForInput,
   calculateNightsValue,
   translateBookingError,
-  formatNumberWithSeparators,
-  parseFormattedNumber,
 } from "@/lib/functions";
 import { BOOKING_STATUS } from "@/lib/constants";
 import { BranchDetailSection } from "@/components/branch-form-field";
@@ -53,7 +52,6 @@ type TransferRoomFormState = {
   room_id: string;
   check_in_date: string;
   check_out_date: string;
-  advance_payment: string;
 };
 
 export function TransferRoomDialog({
@@ -71,8 +69,12 @@ export function TransferRoomDialog({
     room_id: "",
     check_in_date: "",
     check_out_date: "",
-    advance_payment: "0",
   });
+  const {
+    amount: advanceAmountValue,
+    setDigits: setAdvancePaymentDigits,
+    inputProps: advancePaymentInputProps,
+  } = useVndAmountInput({ initialDigits: "0" });
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { rooms } = useRooms({
@@ -125,10 +127,10 @@ export function TransferRoomDialog({
         room_id: booking.room_id || "",
         check_in_date: formatDateForInput(booking.check_in),
         check_out_date: formatDateForInput(booking.check_out),
-        advance_payment: booking.advance_payment.toString(),
       });
+      setAdvancePaymentDigits(String(booking.advance_payment));
     }
-  }, [open, booking]);
+  }, [open, booking, setAdvancePaymentDigits]);
 
   // Cùng ngày: check-in 00:00, check-out 12:00
   const checkInISO = getCheckInDateISO(
@@ -170,34 +172,26 @@ export function TransferRoomDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formValues.room_id, formValues.check_in_date, formValues.check_out_date]);
 
-  // Format advance_payment when total amount changes (to update max value display)
   useEffect(() => {
-    if (formValues.advance_payment) {
-      const currentValue = parseFormattedNumber(formValues.advance_payment);
-      const maxValue = calculatedTotalAmount || (booking?.final_amount ?? booking?.total_amount) || 0;
-
-      // If current value exceeds new max, cap it
-      if (currentValue > maxValue) {
-        setFormValues((prev) => ({
-          ...prev,
-          advance_payment: formatNumberWithSeparators(maxValue),
-        }));
-      }
+    const maxValue =
+      calculatedTotalAmount ||
+      (booking?.final_amount ?? booking?.total_amount) ||
+      0;
+    if (advanceAmountValue > maxValue) {
+      setAdvancePaymentDigits(String(maxValue));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [calculatedTotalAmount, booking?.final_amount, booking?.total_amount]);
+  }, [
+    calculatedTotalAmount,
+    booking?.final_amount,
+    booking?.total_amount,
+    advanceAmountValue,
+    setAdvancePaymentDigits,
+  ]);
 
   const handleInputChange =
     (field: keyof TransferRoomFormState) =>
     (event: ChangeEvent<HTMLInputElement>) => {
-      const { value } = event.target;
-      // Format advance_payment with thousand separators
-      if (field === "advance_payment") {
-        const formatted = formatNumberWithSeparators(value);
-        setFormValues((prev) => ({ ...prev, [field]: formatted }));
-      } else {
-        setFormValues((prev) => ({ ...prev, [field]: value }));
-      }
+      setFormValues((prev) => ({ ...prev, [field]: event.target.value }));
     };
 
   const resetForm = () => {
@@ -206,8 +200,8 @@ export function TransferRoomDialog({
         room_id: booking.room_id || "",
         check_in_date: formatDateForInput(booking.check_in),
         check_out_date: formatDateForInput(booking.check_out),
-        advance_payment: booking.advance_payment.toString(),
       });
+      setAdvancePaymentDigits(String(booking.advance_payment));
     }
     setError(null);
     setIsSubmitting(false);
@@ -300,21 +294,17 @@ export function TransferRoomDialog({
     // Validate advance_payment only if it hasn't been paid
     let advancePayment = booking.advance_payment; // Default to current value
     if (!advancePaymentIsPaid) {
-      // Only validate and update if not paid
-      const parsedAdvancePayment = parseFormattedNumber(
-        formValues.advance_payment || "0"
-      );
-      if (!Number.isFinite(parsedAdvancePayment) || parsedAdvancePayment < 0) {
+      if (!Number.isFinite(advanceAmountValue) || advanceAmountValue < 0) {
         setError("Tiền cọc phải là số không âm.");
         return;
       }
 
-      if (parsedAdvancePayment > totalAmount) {
+      if (advanceAmountValue > totalAmount) {
         setError("Tiền cọc không được vượt quá tổng tiền.");
         return;
       }
 
-      advancePayment = parsedAdvancePayment;
+      advancePayment = advanceAmountValue;
     }
 
     const payload: TransferBookingInput = {
@@ -516,9 +506,7 @@ export function TransferRoomDialog({
                 <div className="space-y-2">
                   <div className="rounded-md border bg-muted px-3 py-2">
                     <p className="text-sm font-medium">
-                      {formatCurrency(
-                        parseFormattedNumber(formValues.advance_payment || "0")
-                      )}
+                      {formatCurrency(booking.advance_payment)}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       Đã đánh dấu đặt cọc - Không thể chỉnh sửa
@@ -529,10 +517,7 @@ export function TransferRoomDialog({
                 <>
                   <Input
                     id="advance_payment"
-                    type="text"
-                    inputMode="numeric"
-                    value={formValues.advance_payment}
-                    onChange={handleInputChange("advance_payment")}
+                    {...advancePaymentInputProps}
                     placeholder="Nhập số tiền cọc (VD: 1.000.000)"
                     disabled={isCheckingAdvancePayment}
                   />
