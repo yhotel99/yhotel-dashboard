@@ -24,6 +24,7 @@ import {
   IconCar,
   IconMapPin,
   IconClock24,
+  IconCalendarWeek,
   IconTeapot,
 } from "@tabler/icons-react";
 import { 
@@ -342,6 +343,7 @@ export const SIDEBAR_URLS = {
   USERS: "/dashboard/users",
   BLOGS: "/dashboard/blogs",
   VOUCHERS: "/dashboard/vouchers",
+  SHIFTS: "/dashboard/shifts",
 } as const;
 
 export const CUSTOMER_ERROR_PATTERNS = {
@@ -471,6 +473,7 @@ export const PATH_TO_RESOURCE: Record<string, string> = {
   [SIDEBAR_URLS.USERS]: "users",
   [SIDEBAR_URLS.BLOGS]: "blogs",
   [SIDEBAR_URLS.VOUCHERS]: "vouchers",
+  [SIDEBAR_URLS.SHIFTS]: "dashboard",
 };
 
 export const allNavItems = [
@@ -565,6 +568,12 @@ export const allNavItems = [
     icon: User2,
     resource: "users",
   },
+  {
+    title: "Lịch Ca HR",
+    url: SIDEBAR_URLS.SHIFTS,
+    icon: IconCalendarWeek,
+    resource: "dashboard",
+  },
 ];
 
 
@@ -607,6 +616,7 @@ export const DASHBOARD_URLS = {
   USERS: "/dashboard/users",
   BLOGS: "/dashboard/blogs",
   SETTINGS: "/dashboard/settings",
+  SHIFTS: "/dashboard/shifts",
   /** Công cụ tạo QR thanh toán (không có trong sidebar) */
   PAYMENT_QR: "/dashboard/tools/payment-qr",
 } as const;

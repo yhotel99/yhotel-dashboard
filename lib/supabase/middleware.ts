@@ -42,9 +42,8 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Protected routes: all /dashboard/* routes require authentication
-  // If user is not logged in and trying to access /dashboard/*, redirect to login
-  if (!user && pathname.startsWith("/dashboard")) {
+  // Protected routes: all /dashboard/* and /admin/* require authentication
+  if (!user && (pathname.startsWith("/dashboard") || pathname.startsWith("/admin"))) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);

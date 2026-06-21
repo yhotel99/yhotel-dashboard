@@ -25,6 +25,7 @@ const PATH_TO_RESOURCE: Record<string, string> = {
   [DASHBOARD_URLS.USERS]: "users",
   [DASHBOARD_URLS.BLOGS]: "blogs",
   [DASHBOARD_URLS.SETTINGS]: "settings",
+  [DASHBOARD_URLS.SHIFTS]: "dashboard",
 };
 
 // Get resource name from pathname
