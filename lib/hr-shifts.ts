@@ -1,11 +1,18 @@
 import { getHrSupabase, isHrSupabaseConfigured } from "@/lib/hr-supabase";
 import {
+  filterByBranchUserIds,
+  filterStaffForAdmin,
+  getAdminBranchId,
+  isAdminUser,
+} from "@/lib/hr-branch-access";
+import {
   type HrBranch,
   type HrDepartment,
   type HrHoliday,
   type HrShiftData,
   type HrUser,
   type ShiftRegistration,
+  ContractType,
   EmployeeStatus,
   RequestStatus,
   ShiftTime,
@@ -14,7 +21,7 @@ import {
 } from "@/types/hr-shifts";
 import { GRID_EMPLOYEE_ROLES } from "@/lib/hr-shift-utils";
 
-function mapShift(row: Record<string, unknown>): ShiftRegistration {
+export function mapShift(row: Record<string, unknown>): ShiftRegistration {
   return {
     id: String(row.id),
     userId: String(row.user_id),
@@ -31,7 +38,7 @@ function mapShift(row: Record<string, unknown>): ShiftRegistration {
   };
 }
 
-function mapUser(row: Record<string, unknown>): HrUser {
+export function mapUser(row: Record<string, unknown>): HrUser {
   return {
     id: String(row.id),
     name: String(row.name),
@@ -40,10 +47,12 @@ function mapUser(row: Record<string, unknown>): HrUser {
     department: String(row.department ?? ""),
     branchId: (row.branch_id as string) || undefined,
     status: (row.status as EmployeeStatus) || undefined,
+    contractType: (row.contract_type as ContractType) || undefined,
+    startDate: row.start_date ? Number(row.start_date) : undefined,
   };
 }
 
-function mapBranch(row: Record<string, unknown>): HrBranch {
+export function mapBranch(row: Record<string, unknown>): HrBranch {
   return {
     id: String(row.id),
     name: String(row.name),
@@ -52,7 +61,7 @@ function mapBranch(row: Record<string, unknown>): HrBranch {
   };
 }
 
-function mapDepartment(row: Record<string, unknown>): HrDepartment {
+export function mapDepartment(row: Record<string, unknown>): HrDepartment {
   return {
     id: String(row.id),
     name: String(row.name),
@@ -61,7 +70,7 @@ function mapDepartment(row: Record<string, unknown>): HrDepartment {
   };
 }
 
-function mapHoliday(row: Record<string, unknown>): HrHoliday {
+export function mapHoliday(row: Record<string, unknown>): HrHoliday {
   return {
     id: String(row.id),
     name: String(row.name),
@@ -76,7 +85,41 @@ export type HrShiftFetchResult =
   | { ok: true; data: HrShiftData }
   | { ok: false; error: "not_configured" | "fetch_failed"; message: string };
 
-export async function fetchHrShiftData(): Promise<HrShiftFetchResult> {
+async function getConfigValueServer(
+  key: string,
+  defaultValue: string
+): Promise<string> {
+  const supabase = getHrSupabase();
+  const { data } = await supabase
+    .from("system_configs")
+    .select("value")
+    .eq("key", key)
+    .maybeSingle();
+  return data?.value ?? defaultValue;
+}
+
+export async function fetchHrAdminByEmail(
+  email: string
+): Promise<HrUser | null> {
+  if (!isHrSupabaseConfigured()) return null;
+  try {
+    const supabase = getHrSupabase();
+    const { data, error } = await supabase
+      .from("users")
+      .select("*")
+      .eq("email", email)
+      .maybeSingle();
+    if (error || !data) return null;
+    const user = mapUser(data);
+    return isAdminUser(user.role) ? user : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchHrShiftData(
+  hrAdmin?: HrUser | null
+): Promise<HrShiftFetchResult> {
   if (!isHrSupabaseConfigured()) {
     return {
       ok: false,
@@ -89,7 +132,7 @@ export async function fetchHrShiftData(): Promise<HrShiftFetchResult> {
   try {
     const supabase = getHrSupabase();
 
-    const [shiftsRes, usersRes, branchesRes, deptsRes, holidaysRes] =
+    const [shiftsRes, usersRes, branchesRes, deptsRes, holidaysRes, regRaw, annualRaw] =
       await Promise.all([
         supabase
           .from("shift_registrations")
@@ -103,6 +146,8 @@ export async function fetchHrShiftData(): Promise<HrShiftFetchResult> {
         supabase.from("branches").select("*").eq("is_active", true),
         supabase.from("departments").select("*").eq("is_active", true),
         supabase.from("holidays").select("*").order("date"),
+        getConfigValueServer("employee_shift_registration_enabled", "true"),
+        getConfigValueServer("annual_leave_days_per_year", "12"),
       ]);
 
     const firstError =
@@ -120,14 +165,36 @@ export async function fetchHrShiftData(): Promise<HrShiftFetchResult> {
       };
     }
 
+    const allUsers = (usersRes.data ?? []).map(mapUser);
+    const regOn = !["false", "0", "no", "off"].includes(
+      regRaw.trim().toLowerCase()
+    );
+
+    let shifts = (shiftsRes.data ?? []).map(mapShift);
+    let users = allUsers;
+    let branches = (branchesRes.data ?? []).map(mapBranch);
+
+    if (hrAdmin) {
+      const scopedEmployees = filterStaffForAdmin(allUsers, hrAdmin);
+      const allowedIds = new Set(scopedEmployees.map((e) => e.id));
+      shifts = filterByBranchUserIds(shifts, allowedIds);
+      users = scopedEmployees;
+      const branchId = getAdminBranchId(hrAdmin);
+      if (branchId) {
+        branches = branches.filter((b) => b.id === branchId);
+      }
+    }
+
     return {
       ok: true,
       data: {
-        shifts: (shiftsRes.data ?? []).map(mapShift),
-        users: (usersRes.data ?? []).map(mapUser),
-        branches: (branchesRes.data ?? []).map(mapBranch),
+        shifts,
+        users,
+        branches,
         departments: (deptsRes.data ?? []).map(mapDepartment),
         holidays: (holidaysRes.data ?? []).map(mapHoliday),
+        employeeShiftRegEnabled: regOn,
+        annualLeaveDaysPerYear: parseFloat(annualRaw) || 12,
       },
     };
   } catch (err) {

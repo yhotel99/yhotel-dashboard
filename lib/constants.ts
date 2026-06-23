@@ -484,6 +484,12 @@ export const allNavItems = [
     resource: "dashboard",
   },
   {
+    title: "Quản lý ca",
+    url: SIDEBAR_URLS.SHIFTS,
+    icon: IconCalendarWeek,
+    resource: "dashboard",
+  },
+  {
     title: "Hiệu Suất & Báo Cáo",
     url: SIDEBAR_URLS.ANALYTICS,
     icon: IconChartBar,
@@ -567,12 +573,6 @@ export const allNavItems = [
     url: SIDEBAR_URLS.USERS,
     icon: User2,
     resource: "users",
-  },
-  {
-    title: "Lịch Ca HR",
-    url: SIDEBAR_URLS.SHIFTS,
-    icon: IconCalendarWeek,
-    resource: "dashboard",
   },
 ];
 

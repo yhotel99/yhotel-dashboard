@@ -10,6 +10,56 @@ export const DAY_LABELS = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"] as const;
 
 export const GRID_EMPLOYEE_ROLES = new Set(["EMPLOYEE", "MANAGER", "HR"]);
 
+export const MAX_CUSTOM_SHIFTS_PER_DAY = 2;
+export const DEFAULT_IN = "09:00";
+export const DEFAULT_OUT = "18:00";
+
+export const TIME_OPTIONS: string[] = (() => {
+  const opts: string[] = [];
+  for (let h = 5; h <= 23; h++) {
+    opts.push(`${String(h).padStart(2, "0")}:00`);
+    if (h < 23) opts.push(`${String(h).padStart(2, "0")}:30`);
+  }
+  return opts;
+})();
+
+export function hasOffOnDate(
+  shifts: ShiftRegistration[],
+  date: Date | string
+): boolean {
+  return getShiftsOnDate(shifts, date).some((s) => s.shift === ShiftTime.OFF);
+}
+
+export function countCustomShiftsOnDate(
+  shifts: ShiftRegistration[],
+  date: Date | string
+): number {
+  return getShiftsOnDate(shifts, date).filter((s) => s.shift === ShiftTime.CUSTOM)
+    .length;
+}
+
+export function canAddCustomShiftOnDate(
+  shifts: ShiftRegistration[],
+  date: Date | string
+): boolean {
+  if (hasOffOnDate(shifts, date)) return false;
+  return countCustomShiftsOnDate(shifts, date) < MAX_CUSTOM_SHIFTS_PER_DAY;
+}
+
+const DAY_NAMES = [
+  "Chủ nhật",
+  "Thứ 2",
+  "Thứ 3",
+  "Thứ 4",
+  "Thứ 5",
+  "Thứ 6",
+  "Thứ 7",
+];
+
+export function formatDateLabel(d: Date): string {
+  return `${DAY_NAMES[d.getDay()]}, ${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
+}
+
 export const toYmdFromDate = (date: Date): string => {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");

@@ -30,6 +30,13 @@ export enum HrUserRole {
   BRANCH_ADMIN = "BRANCH_ADMIN",
 }
 
+export enum ContractType {
+  TRIAL = "TRIAL",
+  OFFICIAL = "OFFICIAL",
+  TEMPORARY = "TEMPORARY",
+  PART_TIME = "PART_TIME",
+}
+
 export const OFF_TYPE_LABELS: Record<OffType, string> = {
   [OffType.OFF_DK]: "OFF DK - Định kỳ",
   [OffType.OFF_PN]: "OFF PN - Phép năm",
@@ -67,6 +74,16 @@ export interface HrUser {
   branchId?: string;
   status?: EmployeeStatus;
   role: HrUserRole | string;
+  contractType?: ContractType;
+  startDate?: number;
+}
+
+export interface AnnualLeaveSummary {
+  year: number;
+  entitlementDays: number;
+  usedDays: number;
+  pendingDays: number;
+  remainingDays: number;
 }
 
 export interface HrBranch {
@@ -98,6 +115,8 @@ export interface HrShiftData {
   branches: HrBranch[];
   departments: HrDepartment[];
   holidays: HrHoliday[];
+  employeeShiftRegEnabled: boolean;
+  annualLeaveDaysPerYear: number;
 }
 
 export interface ShiftCellDetail {
@@ -106,3 +125,9 @@ export interface ShiftCellDetail {
   shifts: ShiftRegistration[];
   holiday?: HrHoliday;
 }
+
+export type CellEditMode = "view" | "edit" | "add";
+
+export type RejectTarget =
+  | { type: "single"; id: string }
+  | { type: "bulk"; userId: string };
