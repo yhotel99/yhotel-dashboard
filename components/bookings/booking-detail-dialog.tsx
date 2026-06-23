@@ -194,7 +194,7 @@ export function BookingDetailDialog({
   if (!booking) return null;
 
   const finalAmount = booking.final_amount ?? booking.total_amount;
-  const amountDifference = booking.total_amount - finalAmount;
+  const amountDifference = finalAmount - booking.total_amount;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -490,13 +490,13 @@ export function BookingDetailDialog({
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">
-                    Chênh lệch (gốc − cuối)
+                    Chênh lệch (cuối − gốc)
                   </p>
                   <p
                     className={`font-medium ${amountDifference > 0
-                        ? "text-orange-600"
+                        ? "text-red-600"
                         : amountDifference < 0
-                          ? "text-red-600"
+                          ? "text-orange-600"
                           : ""
                       }`}
                   >
