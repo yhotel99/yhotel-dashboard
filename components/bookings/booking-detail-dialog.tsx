@@ -16,14 +16,13 @@ import type {
   PaymentWithBooking,
   PaymentsResponse,
 } from "@/lib/types";
-import { formatCurrency, formatDateOnly } from "@/lib/functions";
+import { formatCurrency, formatDate, formatDateOnly } from "@/lib/functions";
 import { StatusBadge } from "@/components/bookings/status";
 import {
   CalendarIcon,
   UserIcon,
   MapPinIcon,
   DollarSignIcon,
-  ClockIcon,
   PhoneIcon,
   Building2,
 } from "lucide-react";
@@ -421,45 +420,26 @@ export function BookingDetailDialog({
                   <p className="text-sm text-muted-foreground">Số khách</p>
                   <p className="font-medium">{booking.total_guests} người</p>
                 </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Check-in thực tế</p>
+                  <p className="font-medium">
+                    {booking.actual_check_in
+                      ? formatDate(booking.actual_check_in)
+                      : "—"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Check-out thực tế</p>
+                  <p className="font-medium">
+                    {booking.actual_check_out
+                      ? formatDate(booking.actual_check_out)
+                      : "—"}
+                  </p>
+                </div>
               </div>
             </div>
 
             <Separator />
-
-            {/* Actual Check-in/Out (if available) */}
-            {(booking.actual_check_in || booking.actual_check_out) && (
-              <>
-                <div className="space-y-3">
-                  <h3 className="text-lg font-semibold flex items-center gap-2">
-                    <ClockIcon className="size-5" />
-                    Thời gian thực tế
-                  </h3>
-                  <div className="grid grid-cols-2 gap-4 pl-7">
-                    {booking.actual_check_in && (
-                      <div>
-                        <p className="text-sm text-muted-foreground">
-                          Check-in thực tế
-                        </p>
-                        <p className="font-medium">
-                          {formatDateOnly(booking.actual_check_in)}
-                        </p>
-                      </div>
-                    )}
-                    {booking.actual_check_out && (
-                      <div>
-                        <p className="text-sm text-muted-foreground">
-                          Check-out thực tế
-                        </p>
-                        <p className="font-medium">
-                          {formatDateOnly(booking.actual_check_out)}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <Separator />
-              </>
-            )}
 
             {/* Payment Information */}
             <div className="space-y-3">
