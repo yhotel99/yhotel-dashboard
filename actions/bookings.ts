@@ -452,7 +452,23 @@ export async function updateBookingStatusAction(
   bookingId: string,
   status: BookingStatus
 ): Promise<ResultVoid> {
-  const result = await updateBookingStatusInternal(bookingId, status);
+  const additionalData: {
+    actual_check_in?: string;
+    actual_check_out?: string;
+  } = {};
+
+  if (status === BOOKING_STATUS.CHECKED_IN) {
+    additionalData.actual_check_in = new Date().toISOString();
+  }
+  if (status === BOOKING_STATUS.CHECKED_OUT) {
+    additionalData.actual_check_out = new Date().toISOString();
+  }
+
+  const result = await updateBookingStatusInternal(
+    bookingId,
+    status,
+    Object.keys(additionalData).length > 0 ? additionalData : undefined
+  );
   
   if (!result.ok) {
     return result;
