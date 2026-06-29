@@ -8,7 +8,23 @@ import type {
   PaymentLogWithBooking,
   PaymentLogsResponse,
 } from "@/lib/types";
-import { enrichRowsWithBookingRoomItems } from "@/services/enrich-booking-rooms";
+
+type PaymentLogSearchRow = {
+  id: string;
+  booking_id: string | null;
+  booking_code: string | null;
+  transaction_id: string | null;
+  amount: number | string | null;
+  content: string | null;
+  bank_code: string | null;
+  status: string | null;
+  raw_payload: Record<string, unknown> | null;
+  processed_at: string;
+  created_at: string;
+  reason: string | null;
+  bookings: PaymentLogWithBooking["bookings"] | null;
+  total_count: number | string;
+};
 
 /**
  * Get payment logs list with pagination
@@ -29,7 +45,6 @@ export async function getPaymentLogsListWithPagination({
   branchId?: string | null;
 }): Promise<PaymentLogsResponse> {
   try {
-    // Validate pagination parameters
     if (page < 1 || limit < 1) {
       throw new Error("Page and limit must be greater than 0");
     }
@@ -37,68 +52,47 @@ export async function getPaymentLogsListWithPagination({
     const supabase = await createClient();
     const { scope } = await getCurrentUserBranchScope();
     const branchId = resolveBranchFilterId(scope, requestedBranchId);
+    const trimmedSearch = search?.trim() || null;
 
-    // Calculate offset
-    const from = (page - 1) * limit;
-    const to = from + limit - 1;
-
-    const bookingsSelect = branchId
-      ? `bookings:booking_id!inner (
-          branch_id,
-          customers:customer_id (
-            full_name,
-            phone
-          ),
-          rooms:room_id (
-            name
-          )
-        )`
-      : `bookings:booking_id (
-          branch_id,
-          customers:customer_id (
-            full_name,
-            phone
-          ),
-          rooms:room_id (
-            name
-          )
-        )`;
-
-    let query = supabase
-      .from("payment_logs")
-      .select(`*, ${bookingsSelect}`, { count: "exact" });
-
-    if (branchId) {
-      query = query.eq("bookings.branch_id", branchId);
-    }
-
-    // Apply search filter if provided
-    if (search && search.trim() !== "") {
-      const trimmedSearch = search.trim();
-      query = query.or(
-        `booking_code.ilike.%${trimmedSearch}%,transaction_id.ilike.%${trimmedSearch}%,content.ilike.%${trimmedSearch}%`
-      );
-    }
-
-    // Fetch data with pagination
-    const { data, error, count } = await query
-      .order("created_at", { ascending: false })
-      .range(from, to);
+    const { data, error } = await supabase.rpc("search_payment_logs", {
+      p_search: trimmedSearch,
+      p_page: page,
+      p_limit: limit,
+      p_branch_id: branchId,
+    });
 
     if (error) {
       throw new Error(error.message);
     }
 
-    const paymentLogsData = (data || []) as PaymentLogWithBooking[];
-    const enriched = await enrichRowsWithBookingRoomItems(
-      supabase,
-      paymentLogsData
-    );
-    const total = count || 0;
+    const searchRows = (data || []) as PaymentLogSearchRow[];
+    const total =
+      searchRows.length > 0 ? Number(searchRows[0].total_count || 0) : 0;
+
+    const paymentLogsData: PaymentLogWithBooking[] = searchRows.map((row) => ({
+      id: row.id,
+      booking_id: row.booking_id,
+      booking_code: row.booking_code,
+      transaction_id: row.transaction_id,
+      amount:
+        row.amount == null
+          ? null
+          : typeof row.amount === "string"
+            ? parseFloat(row.amount)
+            : row.amount,
+      content: row.content,
+      bank_code: row.bank_code,
+      status: row.status,
+      raw_payload: row.raw_payload,
+      processed_at: row.processed_at,
+      created_at: row.created_at,
+      bookings: row.bookings ?? null,
+    }));
+
     const totalPages = Math.ceil(total / limit);
 
     return {
-      data: enriched,
+      data: paymentLogsData,
       pagination: {
         total,
         page,
@@ -115,4 +109,3 @@ export async function getPaymentLogsListWithPagination({
     throw new Error(errorMessage);
   }
 }
-
