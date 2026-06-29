@@ -33,11 +33,17 @@ export function LoginForm({
 
   async function handleSubmit(formData: FormData) {
     setError(null);
-    const result = await loginAction(formData);
-    if (result?.error) {
-      setError(result.error);
-      toast.error(result.error);
-      // Form automatically keeps values - no need to do anything
+    try {
+      const result = await loginAction(formData);
+      if (result?.error) {
+        setError(result.error);
+        toast.error(result.error);
+      }
+    } catch {
+      const message =
+        "Không thể kết nối máy chủ. Vui lòng kiểm tra kết nối mạng và thử lại.";
+      setError(message);
+      toast.error(message);
     }
   }
 

@@ -23,6 +23,12 @@ export async function loginAction(formData: FormData) {
 
     if (error) {
       console.error("Login error:", error);
+      if (error.message === "Failed to fetch" || error.message.includes("fetch")) {
+        return {
+          error:
+            "Không thể kết nối máy chủ. Vui lòng kiểm tra kết nối mạng và thử lại.",
+        };
+      }
       return { error: "Sai email hoặc mật khẩu" };
     }
 
@@ -65,8 +71,21 @@ export async function loginAction(formData: FormData) {
       throw error; // Re-throw redirect to let Next.js handle it
     }
     
-    // Only log actual errors
     console.error("Unexpected login error:", error);
+
+    const isNetworkError =
+      error instanceof TypeError &&
+      (error.message === "Failed to fetch" ||
+        error.message.includes("fetch") ||
+        error.message.includes("network"));
+
+    if (isNetworkError) {
+      return {
+        error:
+          "Không thể kết nối máy chủ. Vui lòng kiểm tra kết nối mạng và thử lại.",
+      };
+    }
+
     return { error: "Đã xảy ra lỗi khi đăng nhập. Vui lòng thử lại." };
   }
 }
