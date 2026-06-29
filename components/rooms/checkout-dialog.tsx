@@ -16,9 +16,8 @@ import type { BookingRecord } from "@/lib/types";
 import { EditBookingDialog } from "@/components/bookings/edit-booking-dialog";
 import {
   updateBooking as updateBookingAction,
-  updateBookingStatusAction,
+  checkOutBookingAction,
 } from "@/actions/bookings";
-import { BOOKING_STATUS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { getBookingByIdForCheckoutAction } from "@/actions/bookings";
 import {
@@ -53,9 +52,11 @@ export function CheckoutDialog({
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const [isNotesDialogOpen, setIsNotesDialogOpen] = useState(false);
 
-  // Wrapper function for checkout
   const checkedOutBooking = async (id: string) => {
-    await updateBookingStatusAction(id, BOOKING_STATUS.CHECKED_OUT);
+    const result = await checkOutBookingAction(id);
+    if (!result.ok) {
+      throw new Error(result.message ?? "Không thể check out booking");
+    }
   };
 
   const fetchBookingDetails = async () => {
