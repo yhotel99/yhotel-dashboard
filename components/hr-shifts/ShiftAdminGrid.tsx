@@ -32,7 +32,7 @@ import {
 } from "@/lib/hr-shift-utils";
 
 const GRID_BORDER = "border-r border-b border-border";
-const GRID_DAY_END = "border-r-2 border-r-border/90";
+const GRID_DAY_END = "border-r-2 border-r-muted-foreground/30";
 
 function gridHeadClass(extra?: string) {
   return `${GRID_BORDER} ${extra ?? ""}`.trim();
@@ -40,6 +40,27 @@ function gridHeadClass(extra?: string) {
 
 function gridCellClass(extra?: string, dayEnd = false) {
   return `${GRID_BORDER}${dayEnd ? ` ${GRID_DAY_END}` : ""} ${extra ?? ""}`.trim();
+}
+
+function isTodayDate(date: Date): boolean {
+  return toYmdFromDate(date) === toYmdFromDate(new Date());
+}
+
+/** Alternating row tint for the sticky employee column. */
+function getEmployeeRowBg(rowIndex: number, isSelected = false): string {
+  if (isSelected) return "bg-sky-50 dark:bg-sky-950/40";
+  return rowIndex % 2 === 0
+    ? "bg-zinc-200/70 dark:bg-zinc-800/50"
+    : "bg-background";
+}
+
+const EMPLOYEE_COL_BG = "bg-zinc-200/70 dark:bg-zinc-800/50";
+const EMPLOYEE_COL_BORDER = "border-r-2 border-r-muted-foreground/30";
+const HEADER_BG = "bg-muted/50";
+
+/** Body day cells: same row stripe as employee column. */
+function getDayCellBg(rowIndex: number, isSelected = false): string {
+  return getEmployeeRowBg(rowIndex, isSelected);
 }
 
 interface ShiftAdminGridProps {
@@ -119,27 +140,26 @@ export function ShiftAdminGrid({
           <TableRow className="bg-muted/50 hover:bg-muted/50">
             <TableHead
               className={gridHeadClass(
-                "min-w-[120px] max-w-[120px] w-[120px] sticky left-0 z-10 bg-muted/50 border-l whitespace-normal"
+                `min-w-[120px] max-w-[120px] w-[120px] sticky left-0 z-10 ${EMPLOYEE_COL_BG} ${EMPLOYEE_COL_BORDER} border-l whitespace-normal`
               )}
             >
               Nhân viên
             </TableHead>
-            {weekDates.map((d, i) => {
+            {weekDates.map((d, dayIndex) => {
               const holiday = getHolidayForDate(holidays, d);
               return (
                 <TableHead
                   key={toYmdFromDate(d)}
                   colSpan={2}
                   className={gridHeadClass(
-                    `text-center min-w-[104px] ${GRID_DAY_END} ${
-                      holiday ? "bg-amber-50 text-amber-900" : ""
-                    }`
+                    `text-center min-w-[104px] ${GRID_DAY_END} ${HEADER_BG}`
                   )}
                 >
                   <div className="flex flex-col items-center gap-0.5">
                     <span className="text-xs font-semibold">
-                      {DAY_LABELS[i]} {d.getDate()}/{d.getMonth() + 1}
+                      {DAY_LABELS[dayIndex]} {d.getDate()}/{d.getMonth() + 1}
                       {holiday ? " 🎉" : ""}
+                      {isTodayDate(d) ? " · Hôm nay" : ""}
                     </span>
                     {holiday ? (
                       <span
@@ -154,22 +174,24 @@ export function ShiftAdminGrid({
               );
             })}
           </TableRow>
-          <TableRow className="bg-muted/30 hover:bg-muted/30">
+          <TableRow className="bg-muted/50 hover:bg-muted/50">
             <TableHead
               className={gridHeadClass(
-                "sticky left-0 z-10 bg-muted/30 border-l min-w-[120px] max-w-[120px] w-[120px]"
+                `sticky left-0 z-10 ${EMPLOYEE_COL_BG} ${EMPLOYEE_COL_BORDER} border-l min-w-[120px] max-w-[120px] w-[120px]`
               )}
             />
-            {weekDates.map((_, i) => (
-              <Fragment key={i}>
+            {weekDates.map((date, dayIndex) => (
+              <Fragment key={dayIndex}>
                 <TableHead
-                  className={gridHeadClass("text-center text-[10px] font-medium px-0")}
+                  className={gridHeadClass(
+                    `text-center text-[10px] font-medium px-0 ${HEADER_BG}`
+                  )}
                 >
                   Vào
                 </TableHead>
                 <TableHead
                   className={gridHeadClass(
-                    `text-center text-[10px] font-medium px-0 ${GRID_DAY_END}`
+                    `text-center text-[10px] font-medium px-0 ${GRID_DAY_END} ${HEADER_BG}`
                   )}
                 >
                   Ra
@@ -189,22 +211,21 @@ export function ShiftAdminGrid({
               </TableCell>
             </TableRow>
           ) : (
-            employees.map((emp) => {
+            employees.map((emp, rowIndex) => {
               const isSelected = selectedUserId === emp.id;
+              const employeeBg = getEmployeeRowBg(rowIndex, isSelected);
 
               return (
                 <TableRow
                   key={emp.id}
-                  className={`cursor-pointer border-b ${isSelected ? "bg-sky-50 hover:bg-sky-50" : "hover:bg-muted/30"}`}
+                  className={`cursor-pointer border-b ${isSelected ? "hover:bg-sky-50" : "hover:bg-muted/30"}`}
                   onClick={() =>
                     onSelectUser(isSelected ? null : emp.id)
                   }
                 >
                   <TableCell
                     className={gridCellClass(
-                      `font-medium sticky left-0 z-10 align-top border-l whitespace-normal min-w-[120px] max-w-[120px] w-[120px] ${
-                        isSelected ? "bg-sky-50" : "bg-background"
-                      }`
+                      `font-medium sticky left-0 z-10 align-top border-l whitespace-normal min-w-[120px] max-w-[120px] w-[120px] ${EMPLOYEE_COL_BORDER} ${employeeBg}`
                     )}
                   >
                     <span className="text-sm block leading-snug line-clamp-2 break-words">
@@ -215,6 +236,7 @@ export function ShiftAdminGrid({
                     </span>
                   </TableCell>
                   {weekDates.map((date) => {
+                    const dayBg = getDayCellBg(rowIndex, isSelected);
                     const regs = getShiftsFor(emp.id, date);
                     const cellProps = (cellShifts: ShiftRegistration[]) => ({
                       onClick: (e: React.MouseEvent) =>
@@ -227,7 +249,7 @@ export function ShiftAdminGrid({
                           <TableCell
                             {...cellProps(regs)}
                             className={gridCellClass(
-                              "p-1 text-center text-xs text-muted-foreground cursor-pointer hover:bg-muted/50"
+                              `p-1 text-center text-xs text-muted-foreground cursor-pointer hover:bg-muted/50 ${dayBg}`
                             )}
                           >
                             —
@@ -235,7 +257,7 @@ export function ShiftAdminGrid({
                           <TableCell
                             {...cellProps(regs)}
                             className={gridCellClass(
-                              "p-1 text-center text-xs text-muted-foreground cursor-pointer hover:bg-muted/50",
+                              `p-1 text-center text-xs text-muted-foreground cursor-pointer hover:bg-muted/50 ${dayBg}`,
                               true
                             )}
                           >
@@ -327,7 +349,7 @@ export function ShiftAdminGrid({
                         <TableCell
                           {...cellProps(regs)}
                           className={gridCellClass(
-                            "p-1 text-center text-xs relative align-top cursor-pointer hover:bg-muted/50"
+                            `p-1 text-center text-xs relative align-top cursor-pointer hover:bg-muted/50 ${dayBg}`
                           )}
                         >
                           <span
@@ -371,7 +393,7 @@ export function ShiftAdminGrid({
                         <TableCell
                           {...cellProps(regs)}
                           className={gridCellClass(
-                            "p-1 text-center text-xs align-top font-medium cursor-pointer hover:bg-muted/50",
+                            `p-1 text-center text-xs align-top font-medium cursor-pointer hover:bg-muted/50 ${dayBg}`,
                             true
                           )}
                         >
