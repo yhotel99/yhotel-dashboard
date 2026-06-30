@@ -290,23 +290,40 @@ export function BookingsContent({
     initialData.pagination.total > 0 ? initialData.pagination.total : null
   );
 
-  React.useEffect(() => {
-    setCachedTotal(null);
-  }, [
-    branchIdForFetch,
-    search,
-    statusForFetch,
-    creatorIdForFetch,
-    dateField,
-    dateFrom,
-    dateTo,
-  ]);
+  const totalFilterKey = React.useMemo(
+    () =>
+      [
+        branchIdForFetch,
+        search,
+        statusForFetch,
+        creatorIdForFetch,
+        dateField,
+        dateFrom,
+        dateTo,
+      ].join("\0"),
+    [
+      branchIdForFetch,
+      search,
+      statusForFetch,
+      creatorIdForFetch,
+      dateField,
+      dateFrom,
+      dateTo,
+    ]
+  );
+  const [prevTotalFilterKey, setPrevTotalFilterKey] =
+    React.useState(totalFilterKey);
 
-  React.useEffect(() => {
-    if (pagination.total > 0) {
-      setCachedTotal(pagination.total);
+  if (totalFilterKey !== prevTotalFilterKey) {
+    setPrevTotalFilterKey(totalFilterKey);
+    if (cachedTotal !== null) {
+      setCachedTotal(null);
     }
-  }, [pagination.total]);
+  }
+
+  if (pagination.total > 0 && cachedTotal !== pagination.total) {
+    setCachedTotal(pagination.total);
+  }
 
   const tablePagination = React.useMemo(() => {
     const total = cachedTotal ?? pagination.total;

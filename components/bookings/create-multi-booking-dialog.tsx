@@ -110,18 +110,8 @@ export function CreateMultiBookingDialog({
     })
   );
   const { settings } = useSettings();
+  const [prevOpen, setPrevOpen] = useState(open);
 
-  useEffect(() => {
-    if (open) {
-      setFormBranchId(
-        getDefaultFormBranchId({
-          profile,
-          filterBranchId,
-          effectiveBranchId,
-        })
-      );
-    }
-  }, [open, profile, filterBranchId, effectiveBranchId]);
   const [customerSearch, setCustomerSearch] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
     null
@@ -368,11 +358,22 @@ export function CreateMultiBookingDialog({
     setSelectedRoomIds(new Set());
     setError(null);
     lastSearchRef.current = "";
-  }, []);
+  }, [setAdvancePaymentDigits, setFinalAmountDigits]);
 
-  useEffect(() => {
-    if (!open) resetForm();
-  }, [open, resetForm]);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+    if (open) {
+      setFormBranchId(
+        getDefaultFormBranchId({
+          profile,
+          filterBranchId,
+          effectiveBranchId,
+        })
+      );
+    } else {
+      resetForm();
+    }
+  }
 
   const handleCustomerSelect = (customer: Customer) => {
     setSelectedCustomer(customer);

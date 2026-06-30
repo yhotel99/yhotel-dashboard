@@ -231,18 +231,7 @@ export function CreateBookingDialog({
       effectiveBranchId: null,
     })
   );
-
-  useEffect(() => {
-    if (open) {
-      setFormBranchId(
-        getDefaultFormBranchId({
-          profile,
-          filterBranchId,
-          effectiveBranchId,
-        })
-      );
-    }
-  }, [open, profile, filterBranchId, effectiveBranchId]);
+  const [prevOpen, setPrevOpen] = useState(open);
 
   const { rooms, mutate: refetch } = useRooms({
     page: 1,
@@ -462,6 +451,27 @@ export function CreateBookingDialog({
     setIsApplyingVoucher(false);
   }, [setAdvancePaymentDigits, setFinalAmountDigits]);
 
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+    if (open) {
+      setFormBranchId(
+        getDefaultFormBranchId({
+          profile,
+          filterBranchId,
+          effectiveBranchId,
+        })
+      );
+      if (defaultRoomId) {
+        setFormValues((prev) => ({
+          ...prev,
+          room_id: defaultRoomId,
+        }));
+      }
+    } else {
+      resetForm();
+    }
+  }
+
   const handleCustomerSelect = (customer: Customer) => {
     setSelectedCustomer(customer);
     setFormValues((prev) => ({ ...prev, customer_id: customer.id }));
@@ -476,24 +486,7 @@ export function CreateBookingDialog({
     setIsCreateCustomerDialogOpen(false);
   };
 
-  // Reset form when dialog closes, set default room_id when dialog opens
-  const prevOpenRef = useRef(open);
-  useEffect(() => {
-    if (!open && prevOpenRef.current) {
-      // Dialog just closed, reset form
-      resetForm();
-    } else if (open && !prevOpenRef.current && defaultRoomId) {
-      // Dialog just opened, set default room_id
-      setFormValues((prev) => ({
-        ...prev,
-        room_id: defaultRoomId,
-      }));
-    }
-    prevOpenRef.current = open;
-  }, [open, defaultRoomId, resetForm]);
-
   const handleDialogOpenChange = (nextOpen: boolean) => {
-    // Form will be reset in useEffect when open becomes false
     onOpenChange(nextOpen);
   };
 

@@ -35,13 +35,26 @@ export function BookingRegistrationDialog({
   const [isDownloading, setIsDownloading] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
+  const fetchKey = open && bookingId ? bookingId : null;
+  const [activeFetchKey, setActiveFetchKey] = useState<string | null>(null);
+
+  if (fetchKey !== activeFetchKey) {
+    setActiveFetchKey(fetchKey);
+    if (fetchKey) {
+      setIsLoading(true);
+      setError(null);
+      setData(null);
+    } else {
+      setIsLoading(false);
+      setError(null);
+      setData(null);
+    }
+  }
+
   useEffect(() => {
-    if (!open || !bookingId) return;
+    if (!fetchKey) return;
 
     let cancelled = false;
-    setIsLoading(true);
-    setError(null);
-    setData(null);
 
     void getBookingRegistrationFormAction(bookingId).then((result) => {
       if (cancelled) return;
@@ -56,7 +69,7 @@ export function BookingRegistrationDialog({
     return () => {
       cancelled = true;
     };
-  }, [open, bookingId]);
+  }, [fetchKey, bookingId]);
 
   const handleDownloadPdf = useCallback(async () => {
     try {

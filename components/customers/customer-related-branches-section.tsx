@@ -13,13 +13,15 @@ export function CustomerRelatedBranchesSection({
 }: {
   customer: Customer;
 }) {
+  const canSearch = Boolean(customer.email || customer.phone);
   const [related, setRelated] = useState<RelatedCustomerRow[]>([]);
 
+  if (!canSearch && related.length > 0) {
+    setRelated([]);
+  }
+
   useEffect(() => {
-    if (!customer.email && !customer.phone) {
-      setRelated([]);
-      return;
-    }
+    if (!canSearch) return;
 
     findRelatedCustomersAction({
       email: customer.email,
@@ -31,7 +33,7 @@ export function CustomerRelatedBranchesSection({
         setRelated(result.data);
       }
     });
-  }, [customer.id, customer.email, customer.phone, customer.branch_id]);
+  }, [canSearch, customer.id, customer.email, customer.phone, customer.branch_id]);
 
   if (related.length === 0) return null;
 

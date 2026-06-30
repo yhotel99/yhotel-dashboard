@@ -234,6 +234,15 @@ function appendBranchId(url: string, branchId: string | null): string {
   return `${url}${sep}branchId=${encodeURIComponent(branchId)}`;
 }
 
+/** Mặc định: ngày 1 tháng này → hết ngày hôm nay (không kéo tới cuối tháng). */
+function getMonthToDateRange() {
+  const now = new Date();
+  return {
+    from: startOfMonth(now),
+    to: endOfDay(now),
+  };
+}
+
 export function SystemReports() {
   const { scope, selectedBranchId, branches } = useBranch();
   const branchNameById = useMemo(
@@ -243,21 +252,11 @@ export function SystemReports() {
   const branchIdForFetch =
     scope.mode === "single" ? scope.branchId : selectedBranchId;
 
-  const branchQ = useMemo(
-    () => (branchIdForFetch ? `&branchId=${encodeURIComponent(branchIdForFetch)}` : ""),
-    [branchIdForFetch]
-  );
+  const branchQ = branchIdForFetch
+    ? `&branchId=${encodeURIComponent(branchIdForFetch)}`
+    : "";
 
-  /** Mặc định: ngày 1 tháng này → hết ngày hôm nay (không kéo tới cuối tháng). */
-  const getMonthToDateRange = () => {
-    const now = new Date();
-    return {
-      from: startOfMonth(now),
-      to: endOfDay(now),
-    };
-  };
-
-  const [dateRange, setDateRange] = useState(getMonthToDateRange());
+  const [dateRange, setDateRange] = useState(getMonthToDateRange);
   const [reportType, setReportType] = useState("revenue");
   const [monthRange, setMonthRange] = useState("6_months");
   // Build URLs for SWR
@@ -381,7 +380,7 @@ export function SystemReports() {
   const countryStatsForChart = (() => {
     if (countryStats.length <= 6) return countryStats;
 
-    const sorted = [...countryStats].sort((a, b) => b.count - a.count);
+    const sorted = countryStats.toSorted((a, b) => b.count - a.count);
     const topCountries = sorted.slice(0, 5);
     const otherCount = sorted
       .slice(5)

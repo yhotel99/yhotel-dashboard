@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale/vi';
 import { Button } from '@/components/ui/button';
@@ -77,16 +77,11 @@ export function AuditLogViewer({ entityType, entityId, branchId = null, limit = 
     totalPages: 0,
   });
 
-  useEffect(() => {
-    fetchLogs(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entityType, entityId, branchId]);
-
-  const fetchLogs = async (page: number) => {
+  const fetchLogs = useCallback(async (page: number) => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const params = new URLSearchParams();
       if (entityType) params.append('entityType', entityType);
       if (entityId) params.append('entityId', entityId);
@@ -95,13 +90,13 @@ export function AuditLogViewer({ entityType, entityId, branchId = null, limit = 
       params.append('limit', limit.toString());
 
       const response = await fetch(`/api/audit-logs?${params}`);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data = await response.json();
-      
+
       if (data.success) {
         setLogs(data.data || []);
         if (data.pagination) {
@@ -116,7 +111,11 @@ export function AuditLogViewer({ entityType, entityId, branchId = null, limit = 
     } finally {
       setLoading(false);
     }
-  };
+  }, [entityType, entityId, branchId, limit]);
+
+  useEffect(() => {
+    void fetchLogs(1);
+  }, [fetchLogs]);
 
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= pagination.totalPages) {

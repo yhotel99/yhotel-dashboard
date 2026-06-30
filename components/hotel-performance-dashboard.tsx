@@ -246,16 +246,15 @@ function InfoTip({ content }: { content: string }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span
-          role="button"
-          tabIndex={0}
+        <button
+          type="button"
           className="inline-flex cursor-help rounded-full text-muted-foreground hover:text-foreground"
           aria-label="Giải thích"
           onClick={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
         >
           <IconInfoCircle className="size-3.5 shrink-0" />
-        </span>
+        </button>
       </TooltipTrigger>
       <TooltipContent className="max-w-xs text-left text-xs leading-snug">
         {content}
@@ -905,12 +904,19 @@ export function HotelPerformanceDashboard() {
                   highlight: false,
                 },
               ].map((kpi) => (
-                <button
+                <div
                   key={kpi.key}
-                  type="button"
+                  role="button"
+                  tabIndex={0}
                   onClick={() => setDrill(kpi.key)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setDrill(kpi.key);
+                    }
+                  }}
                   className={cn(
-                    "group relative flex flex-col gap-3 rounded-2xl border p-4 text-left shadow-sm transition hover:shadow-md",
+                    "group relative flex cursor-pointer flex-col gap-3 rounded-2xl border p-4 text-left shadow-sm transition hover:shadow-md focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[color:var(--hp-accent)]/50",
                     kpi.highlight &&
                       "border-[color:var(--hp-accent)] bg-linear-to-br from-cyan-500/[0.07] to-card ring-1 ring-[color:var(--hp-accent)]/20"
                   )}
@@ -934,7 +940,7 @@ export function HotelPerformanceDashboard() {
                       ? `${kpi.value.toFixed(1)}%`
                       : formatCurrency(kpi.value)}
                   </div>
-                </button>
+                </div>
               ))}
             </div>
             <p className="text-[11px] text-muted-foreground">

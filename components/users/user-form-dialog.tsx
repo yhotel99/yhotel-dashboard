@@ -30,6 +30,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { Branch, Profile } from "@/lib/types";
+
+const EMPTY_BRANCHES: Branch[] = [];
 import { DEFAULT_BRANCH_ID, USER_ROLE } from "@/lib/constants";
 
 /** Select value when admin/manager has no fixed branch (views all branches). */
@@ -78,7 +80,7 @@ interface UserFormDialogProps {
 
 export function UserFormDialog({
   profile,
-  branches = [],
+  branches = EMPTY_BRANCHES,
   open,
   onOpenChange,
   onCreate,

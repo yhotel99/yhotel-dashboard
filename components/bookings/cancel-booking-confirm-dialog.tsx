@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -31,19 +31,21 @@ export function CancelBookingConfirmDialog({
 }: CancelBookingConfirmDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [sendCancellationEmail, setSendCancellationEmail] = useState(true);
+  const [prevOpen, setPrevOpen] = useState(open);
 
-  useEffect(() => {
+  if (open !== prevOpen) {
+    setPrevOpen(open);
     if (open) {
       setSendCancellationEmail(true);
     }
-  }, [open]);
+  }
 
   const handleConfirm = async () => {
     try {
       setIsLoading(true);
       await onConfirm({ sendCancellationEmail });
       onOpenChange(false);
-    } catch (error) {
+    } catch {
       // Error is handled by parent component (toast)
       // Keep dialog open so user can retry or cancel
     } finally {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -59,8 +59,10 @@ export function CheckAvailableRoomsDialog({
   const [isLoading, setIsLoading] = useState(false);
   const [availableRooms, setAvailableRooms] = useState<Room[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
+  const [prevOpen, setPrevOpen] = useState(open);
 
-  useEffect(() => {
+  if (open !== prevOpen) {
+    setPrevOpen(open);
     if (open) {
       setFormBranchId(
         getDefaultFormBranchId({
@@ -70,7 +72,7 @@ export function CheckAvailableRoomsDialog({
         })
       );
     }
-  }, [open, profile, filterBranchId, effectiveBranchId]);
+  }
 
   const handleSearch = async () => {
     if (!checkInDate || !checkOutDate) {

@@ -215,9 +215,9 @@ export function ShiftsContent({ initialData, hrAdmin }: ShiftsContentProps) {
     if (pendingInWeek.length === 0) return;
     setActionLoadingId(`bulk-${userId}`);
     try {
-      for (const r of pendingInWeek) {
-        await updateShiftStatus(r.id, status);
-      }
+      await Promise.all(
+        pendingInWeek.map((r) => updateShiftStatus(r.id, status))
+      );
       await loadData();
       toast.success(`Đã chấp thuận ${pendingInWeek.length} đăng ký.`);
     } catch {
@@ -255,9 +255,11 @@ export function ShiftsContent({ initialData, hrAdmin }: ShiftsContentProps) {
       );
       setActionLoadingId(`bulk-${rejectTarget.userId}`);
       try {
-        for (const r of pendingInWeek) {
-          await updateShiftStatus(r.id, RequestStatus.REJECTED, reason);
-        }
+        await Promise.all(
+          pendingInWeek.map((r) =>
+            updateShiftStatus(r.id, RequestStatus.REJECTED, reason)
+          )
+        );
         await loadData();
         toast.success(`Đã từ chối ${pendingInWeek.length} đăng ký.`);
       } catch {

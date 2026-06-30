@@ -95,7 +95,7 @@ export function QRDisplayScreen({ branchCode }: { branchCode: string }) {
           if (!cancelled) {
             setLoadError(
               body.error ??
-                `Không tìm thấy chi nhánh "${normalizedCode}". Kiểm tra URL (ví dụ: /qr/main).`
+              `Không tìm thấy chi nhánh "${normalizedCode}". Kiểm tra URL (ví dụ: /qr/main).`
             );
           }
           return;
@@ -389,6 +389,7 @@ export function QRDisplayScreen({ branchCode }: { branchCode: string }) {
               src={PUBLIC_ASSETS.LOGO}
               alt="Y HOTEL"
               fill
+              sizes="(max-width: 640px) 32rem, 36rem"
               className="object-contain"
               priority
             />

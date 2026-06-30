@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -32,9 +33,11 @@ type BranchContextType = {
 
 const BranchContext = createContext<BranchContextType | undefined>(undefined);
 
+const EMPTY_BRANCHES: Branch[] = [];
+
 export function BranchProvider({
   children,
-  initialBranches = [],
+  initialBranches = EMPTY_BRANCHES,
 }: {
   children: ReactNode;
   initialBranches?: Branch[];
@@ -47,19 +50,18 @@ export function BranchProvider({
 
   const canSelectBranch = profile ? canViewAllBranches(profile.role) : false;
 
-  const setSelectedBranchId = useCallback(
-    (id: string | null) => {
-      setSelectedBranchIdState(id);
-      if (typeof window !== "undefined") {
-        if (id) {
-          window.localStorage.setItem(BRANCH_STORAGE_KEY, id);
-        } else {
-          window.localStorage.removeItem(BRANCH_STORAGE_KEY);
-        }
-      }
-    },
-    []
-  );
+  const setSelectedBranchId = useCallback((id: string | null) => {
+    setSelectedBranchIdState(id);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (selectedBranchId) {
+      window.localStorage.setItem(BRANCH_STORAGE_KEY, selectedBranchId);
+    } else {
+      window.localStorage.removeItem(BRANCH_STORAGE_KEY);
+    }
+  }, [selectedBranchId]);
 
   const activeSelectedBranchId = useMemo(() => {
     if (!canSelectBranch || !selectedBranchId) return selectedBranchId;
@@ -70,7 +72,7 @@ export function BranchProvider({
   }, [canSelectBranch, selectedBranchId, branches]);
 
   if (activeSelectedBranchId !== selectedBranchId) {
-    setSelectedBranchId(activeSelectedBranchId);
+    setSelectedBranchIdState(activeSelectedBranchId);
   }
 
   const scope: BranchScope = useMemo(() => {
@@ -96,19 +98,31 @@ export function BranchProvider({
     return activeSelectedBranchId ?? DEFAULT_BRANCH_ID;
   }, [scope, activeSelectedBranchId]);
 
+  const contextValue = useMemo(
+    () => ({
+      branches,
+      scope,
+      selectedBranchId: activeSelectedBranchId,
+      setSelectedBranchId,
+      effectiveBranchId,
+      filterBranchId,
+      canSelectBranch,
+      setBranches,
+    }),
+    [
+      branches,
+      scope,
+      activeSelectedBranchId,
+      setSelectedBranchId,
+      effectiveBranchId,
+      filterBranchId,
+      canSelectBranch,
+      setBranches,
+    ]
+  );
+
   return (
-    <BranchContext.Provider
-      value={{
-        branches,
-        scope,
-        selectedBranchId: activeSelectedBranchId,
-        setSelectedBranchId,
-        effectiveBranchId,
-        filterBranchId,
-        canSelectBranch,
-        setBranches,
-      }}
-    >
+    <BranchContext.Provider value={contextValue}>
       {children}
     </BranchContext.Provider>
   );

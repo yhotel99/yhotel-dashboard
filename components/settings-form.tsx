@@ -84,11 +84,13 @@ function DateDmyInput({
   value?: string | null;
   onChange: (next: string) => void;
 }) {
-  const [draft, setDraft] = useState<string>(formatYmdToDmy(value));
+  const [draft, setDraft] = useState(() => formatYmdToDmy(value));
+  const [prevValue, setPrevValue] = useState(value);
 
-  useEffect(() => {
+  if (value !== prevValue) {
+    setPrevValue(value);
     setDraft(formatYmdToDmy(value));
-  }, [value]);
+  }
 
   return (
     <Input
@@ -186,6 +188,8 @@ const settingsSchema = z.object({
 
 type SettingsFormValues = z.infer<typeof settingsSchema>;
 
+const EMPTY_BRANCH_BANK_ACCOUNTS: BranchBankAccount[] = [];
+
 interface SettingsFormProps {
   initialData: Settings | null;
   branchBankAccounts?: BranchBankAccount[];
@@ -194,7 +198,7 @@ interface SettingsFormProps {
 
 export function SettingsForm({
   initialData,
-  branchBankAccounts = [],
+  branchBankAccounts = EMPTY_BRANCH_BANK_ACCOUNTS,
   canEditBank = false,
 }: SettingsFormProps) {
   const router = useRouter();
