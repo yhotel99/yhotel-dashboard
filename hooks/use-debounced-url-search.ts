@@ -35,10 +35,12 @@ export function useDebouncedUrlSearch(
   const debouncedSearch = useDebounce(localSearch, delay);
 
   useEffect(() => {
-    if (debouncedSearch !== urlSearch) {
+    // Only commit once debounce caught up with the input — avoids stale debounced
+    // values overwriting URL after browser back/forward.
+    if (debouncedSearch !== urlSearch && debouncedSearch === localSearch) {
       onCommit(debouncedSearch);
     }
-  }, [debouncedSearch, urlSearch, onCommit]);
+  }, [debouncedSearch, urlSearch, localSearch, onCommit]);
 
   return { localSearch, setLocalSearch };
 }

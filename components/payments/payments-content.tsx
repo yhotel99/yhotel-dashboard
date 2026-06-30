@@ -334,7 +334,7 @@ export function PaymentsContent({
                   <div className="w-full">
                     <DateRangePicker
                       key={`${dateFrom}-${dateTo}`}
-                      initialDateFrom={dateFrom || new Date()}
+                      initialDateFrom={dateFrom || undefined}
                       initialDateTo={dateTo || dateFrom || undefined}
                       showCompare={false}
                       fullWidth

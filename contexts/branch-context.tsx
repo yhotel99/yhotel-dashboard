@@ -47,19 +47,6 @@ export function BranchProvider({
 
   const canSelectBranch = profile ? canViewAllBranches(profile.role) : false;
 
-  const scope: BranchScope = useMemo(() => {
-    if (!profile) return { mode: "all", branchId: null };
-    if (canSelectBranch) {
-      return selectedBranchId
-        ? { mode: "single", branchId: selectedBranchId }
-        : { mode: "all", branchId: null };
-    }
-    if (profile.branch_id) {
-      return { mode: "single", branchId: profile.branch_id };
-    }
-    return { mode: "all", branchId: null };
-  }, [profile, canSelectBranch, selectedBranchId]);
-
   const setSelectedBranchId = useCallback(
     (id: string | null) => {
       setSelectedBranchIdState(id);
@@ -74,22 +61,47 @@ export function BranchProvider({
     []
   );
 
+  const activeSelectedBranchId = useMemo(() => {
+    if (!canSelectBranch || !selectedBranchId) return selectedBranchId;
+    if (branches.length === 0) return selectedBranchId;
+    return branches.some((b) => b.id === selectedBranchId)
+      ? selectedBranchId
+      : null;
+  }, [canSelectBranch, selectedBranchId, branches]);
+
+  if (activeSelectedBranchId !== selectedBranchId) {
+    setSelectedBranchId(activeSelectedBranchId);
+  }
+
+  const scope: BranchScope = useMemo(() => {
+    if (!profile) return { mode: "all", branchId: null };
+    if (canSelectBranch) {
+      return activeSelectedBranchId
+        ? { mode: "single", branchId: activeSelectedBranchId }
+        : { mode: "all", branchId: null };
+    }
+    if (profile.branch_id) {
+      return { mode: "single", branchId: profile.branch_id };
+    }
+    return { mode: "all", branchId: null };
+  }, [profile, canSelectBranch, activeSelectedBranchId]);
+
   const filterBranchId = useMemo(() => {
     if (scope.mode === "single") return scope.branchId;
-    return selectedBranchId;
-  }, [scope, selectedBranchId]);
+    return activeSelectedBranchId;
+  }, [scope, activeSelectedBranchId]);
 
   const effectiveBranchId = useMemo(() => {
     if (scope.mode === "single") return scope.branchId;
-    return selectedBranchId ?? DEFAULT_BRANCH_ID;
-  }, [scope, selectedBranchId]);
+    return activeSelectedBranchId ?? DEFAULT_BRANCH_ID;
+  }, [scope, activeSelectedBranchId]);
 
   return (
     <BranchContext.Provider
       value={{
         branches,
         scope,
-        selectedBranchId,
+        selectedBranchId: activeSelectedBranchId,
         setSelectedBranchId,
         effectiveBranchId,
         filterBranchId,

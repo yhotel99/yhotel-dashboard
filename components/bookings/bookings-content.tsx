@@ -291,6 +291,18 @@ export function BookingsContent({
   );
 
   React.useEffect(() => {
+    setCachedTotal(null);
+  }, [
+    branchIdForFetch,
+    search,
+    statusForFetch,
+    creatorIdForFetch,
+    dateField,
+    dateFrom,
+    dateTo,
+  ]);
+
+  React.useEffect(() => {
     if (pagination.total > 0) {
       setCachedTotal(pagination.total);
     }
@@ -730,7 +742,7 @@ export function BookingsContent({
                       </Select>
                       <DateRangePicker
                         key={`${dateFrom}-${dateTo}`}
-                        initialDateFrom={dateFrom || new Date()}
+                        initialDateFrom={dateFrom || undefined}
                         initialDateTo={dateTo || dateFrom || undefined}
                         showCompare={false}
                         locale="vi-VN"
