@@ -1,33 +1,24 @@
 "use client";
 
 import { useCallback } from "react";
-import useSWR, { SWRConfiguration } from "swr";
+import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
-import type {  PaginationMeta, RefundRequestsResponse } from "@/lib/types";
+import type { PaginationMeta, RefundRequestsResponse } from "@/lib/types";
+import { listSwrConfig } from "@/lib/list-swr";
 
-
-/**
- * Hook for fetching refund requests with SWR
- * @param page - Page number
- * @param limit - Items per page
- * @param search - Search term
- */
-export function useRefundRequests(
-{
-  page = 1,
-  limit = 10,
-  search = "",
-  branchId = null,
-  fallbackData,
-}: {
+export type RefundRequestsSwrParams = {
   page?: number;
   limit?: number;
   search?: string;
   branchId?: string | null;
-  fallbackData?: RefundRequestsResponse;
-}
-) {
-  // Build query parameters
+};
+
+export function buildRefundRequestsSwrKey({
+  page = 1,
+  limit = 10,
+  search = "",
+  branchId = null,
+}: RefundRequestsSwrParams): string {
   const params = new URLSearchParams({
     page: page.toString(),
     limit: limit.toString(),
@@ -38,19 +29,30 @@ export function useRefundRequests(
   if (branchId) {
     params.append("branchId", branchId);
   }
+  return `/api/refund-requests?${params.toString()}`;
+}
 
-  const config: SWRConfiguration<RefundRequestsResponse> = {
-  }
-  if(fallbackData) {
-    config.revalidateOnMount = false;
-    config.fallbackData = fallbackData;
-  }
+/**
+ * Hook for fetching refund requests with SWR
+ */
+export function useRefundRequests({
+  page = 1,
+  limit = 10,
+  search = "",
+  branchId = null,
+  fallbackData,
+  initialSwrKey = null,
+}: RefundRequestsSwrParams & {
+  fallbackData?: RefundRequestsResponse;
+  initialSwrKey?: string | null;
+}) {
+  const swrKey = buildRefundRequestsSwrKey({ page, limit, search, branchId });
 
-  // Use SWR to fetch refund requests
   const { data, error, isLoading, mutate, isValidating } =
     useSWR<RefundRequestsResponse>(
-      `/api/refund-requests?${params.toString()}`,
-      fetcher, config
+      swrKey,
+      fetcher,
+      listSwrConfig(swrKey, initialSwrKey, fallbackData)
     );
 
   const refundRequests = data?.data || [];
@@ -61,7 +63,6 @@ export function useRefundRequests(
     totalPages: 0,
   };
 
-  // Refetch refund requests
   const refetch = useCallback(async () => {
     await mutate();
   }, [mutate]);
@@ -76,6 +77,6 @@ export function useRefundRequests(
       : null,
     pagination,
     refetch,
-    mutate, // dùng để refresh sau khi CRUD
+    mutate,
   };
 }

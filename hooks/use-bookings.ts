@@ -1,34 +1,11 @@
 "use client";
 
-import useSWR, { SWRConfiguration } from "swr";
+import useSWR from "swr";
 import type { BookingsResponse } from "@/lib/types";
 import { fetcher } from "@/lib/fetcher";
+import { listSwrConfig } from "@/lib/list-swr";
 
-
-/**
- * Hook for fetching bookings with SWR
- * @param search - Search term
- * @param page - Page number
- * @param limit - Items per page
- * @param customerId - Optional customer ID to filter bookings
- * @param status - Optional booking status (public.booking_status)
- * @param cursorCreatedAt / cursorId - Keyset cursor (cả hai mới có hiệu lực)
- */
-export function useBookings({
-  search = "",
-  page = 1,
-  limit = 10,
-  customerId = null,
-  creatorId = null,
-  dateField = null,
-  dateFrom = null,
-  dateTo = null,
-  status = "",
-  cursorCreatedAt = "",
-  cursorId = "",
-  branchId = null,
-  fallbackData,
-}: {
+export type BookingsSwrParams = {
   search?: string;
   page?: number;
   limit?: number;
@@ -41,12 +18,24 @@ export function useBookings({
   cursorCreatedAt?: string;
   cursorId?: string;
   branchId?: string | null;
-  fallbackData?: BookingsResponse;
-}) {
+  includeTotal?: boolean;
+};
 
-  const config: SWRConfiguration<BookingsResponse> = {
-  }
-  // Build query parameters
+export function buildBookingsSwrKey({
+  search = "",
+  page = 1,
+  limit = 10,
+  customerId = null,
+  creatorId = null,
+  dateField = null,
+  dateFrom = null,
+  dateTo = null,
+  status = "",
+  cursorCreatedAt = "",
+  cursorId = "",
+  branchId = null,
+  includeTotal = true,
+}: BookingsSwrParams): string {
   const params = new URLSearchParams({
     page: page.toString(),
     limit: limit.toString(),
@@ -79,15 +68,57 @@ export function useBookings({
   if (branchId) {
     params.append("branchId", branchId);
   }
-
-  if(fallbackData) {
-    config.revalidateOnMount = false;
-    config.fallbackData = fallbackData;
+  if (!includeTotal) {
+    params.append("includeTotal", "false");
   }
+  return `/api/bookings?${params.toString()}`;
+}
+
+/**
+ * Hook for fetching bookings with SWR
+ */
+export function useBookings({
+  search = "",
+  page = 1,
+  limit = 10,
+  customerId = null,
+  creatorId = null,
+  dateField = null,
+  dateFrom = null,
+  dateTo = null,
+  status = "",
+  cursorCreatedAt = "",
+  cursorId = "",
+  branchId = null,
+  includeTotal = true,
+  fallbackData,
+  initialSwrKey = null,
+}: BookingsSwrParams & {
+  fallbackData?: BookingsResponse;
+  initialSwrKey?: string | null;
+}) {
+  const swrKey = buildBookingsSwrKey({
+    search,
+    page,
+    limit,
+    customerId,
+    creatorId,
+    dateField,
+    dateFrom,
+    dateTo,
+    status,
+    cursorCreatedAt,
+    cursorId,
+    branchId,
+    includeTotal,
+  });
 
   const { data, error, isLoading, mutate, isValidating } =
-    useSWR<BookingsResponse>(`/api/bookings?${params.toString()}`, fetcher, config);
-
+    useSWR<BookingsResponse>(
+      swrKey,
+      fetcher,
+      listSwrConfig(swrKey, initialSwrKey, fallbackData)
+    );
 
   return {
     bookings: data?.data || [],
@@ -104,6 +135,6 @@ export function useBookings({
         ? error.message
         : "Không thể tải danh sách booking"
       : null,
-    mutate, // dùng để refresh sau khi CRUD
+    mutate,
   };
 }

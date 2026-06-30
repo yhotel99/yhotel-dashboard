@@ -1,12 +1,13 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useShallowSearchParams } from "@/hooks/use-shallow-search-params";
 import { IconPlus } from "@tabler/icons-react";
-import { useMemo, useEffect, useCallback, useState } from "react";
+import { useMemo, useEffect, useCallback, useState, useRef } from "react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
-import { useRooms } from "@/hooks/use-rooms";
+import { buildRoomsSwrKey, useRooms } from "@/hooks/use-rooms";
 import {
   updateRoomStatus as updateRoomStatusAction,
   deleteRoom as deleteRoomAction,
@@ -20,7 +21,8 @@ import { useBranch } from "@/contexts/branch-context";
 
 export function RoomsContent({ initialData }: { initialData: RoomsResponse }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const { searchParams, pushSearchParams } = useShallowSearchParams();
+  const initialSwrKeyRef = useRef<string | null>(null);
   const { filterBranchId, branches } = useBranch();
   const branchNameById = useMemo(
     () => Object.fromEntries(branches.map((b) => [b.id, b.name])),
@@ -47,27 +49,27 @@ export function RoomsContent({ initialData }: { initialData: RoomsResponse }) {
   // Update URL search params when pagination changes
   const updateSearchParams = useCallback(
     (newPage: number, newLimit: number, newSearch?: string) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (newPage > 1) {
-        params.set("page", newPage.toString());
-      } else {
-        params.delete("page");
-      }
-      if (newLimit !== 10) {
-        params.set("limit", newLimit.toString());
-      } else {
-        params.delete("limit");
-      }
-      if (newSearch !== undefined) {
-        if (newSearch.trim() !== "") {
-          params.set("search", newSearch.trim());
+      pushSearchParams((params) => {
+        if (newPage > 1) {
+          params.set("page", newPage.toString());
         } else {
-          params.delete("search");
+          params.delete("page");
         }
-      }
-      router.push(`/dashboard/rooms?${params.toString()}`);
+        if (newLimit !== 10) {
+          params.set("limit", newLimit.toString());
+        } else {
+          params.delete("limit");
+        }
+        if (newSearch !== undefined) {
+          if (newSearch.trim() !== "") {
+            params.set("search", newSearch.trim());
+          } else {
+            params.delete("search");
+          }
+        }
+      });
     },
-    [searchParams, router]
+    [pushSearchParams]
   );
 
   // Local search state for immediate UI updates
@@ -84,12 +86,22 @@ export function RoomsContent({ initialData }: { initialData: RoomsResponse }) {
     }
   }, [debouncedSearch, search, limit, updateSearchParams]);
 
+  if (initialSwrKeyRef.current === null) {
+    initialSwrKeyRef.current = buildRoomsSwrKey({
+      search,
+      page,
+      limit,
+      branchId: filterBranchId,
+    });
+  }
+
   const { rooms, isLoading, pagination, mutate } = useRooms({
     search,
     page,
     limit,
     branchId: filterBranchId,
     fallbackData: initialData,
+    initialSwrKey: initialSwrKeyRef.current,
   });
 
   // Delete room dialog state

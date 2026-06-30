@@ -2,11 +2,11 @@
 
 import * as React from "react";
 import { IconPlus } from "@tabler/icons-react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useShallowSearchParams } from "@/hooks/use-shallow-search-params";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
 import { toast } from "sonner";
-import { useProfiles } from "@/hooks/use-profiles";
+import { buildProfilesSwrKey, useProfiles } from "@/hooks/use-profiles";
 import { createProfileAction, updateProfileAction } from "@/actions/profiles";
 import type { Profile, ProfilesResponse } from "@/lib/types";
 import { createColumns } from "@/components/users/columns";
@@ -32,8 +32,8 @@ export function UsersContent({
 }: {
   initialData: ProfilesResponse;
 }) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const { searchParams, pushSearchParams } = useShallowSearchParams();
+  const initialSwrKeyRef = React.useRef<string | null>(null);
   const [localSearch, setLocalSearch] = React.useState("");
   const [openUserDialog, setOpenUserDialog] = React.useState(false);
   const [editingProfile, setEditingProfile] = React.useState<
@@ -60,25 +60,25 @@ export function UsersContent({
   // Update search params
   const updateSearchParams = React.useCallback(
     (newPage: number, newLimit: number, newSearch: string) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (newPage > 1) {
-        params.set("page", newPage.toString());
-      } else {
-        params.delete("page");
-      }
-      if (newLimit !== 10) {
-        params.set("limit", newLimit.toString());
-      } else {
-        params.delete("limit");
-      }
-      if (newSearch) {
-        params.set("search", newSearch);
-      } else {
-        params.delete("search");
-      }
-      router.push(`?${params.toString()}`);
+      pushSearchParams((params) => {
+        if (newPage > 1) {
+          params.set("page", newPage.toString());
+        } else {
+          params.delete("page");
+        }
+        if (newLimit !== 10) {
+          params.set("limit", newLimit.toString());
+        } else {
+          params.delete("limit");
+        }
+        if (newSearch) {
+          params.set("search", newSearch);
+        } else {
+          params.delete("search");
+        }
+      });
     },
-    [router, searchParams]
+    [pushSearchParams]
   );
 
   // Debounce search
@@ -98,12 +98,22 @@ export function UsersContent({
     [branches]
   );
 
+  if (initialSwrKeyRef.current === null) {
+    initialSwrKeyRef.current = buildProfilesSwrKey({
+      page,
+      limit,
+      search,
+      branchId: filterBranchId,
+    });
+  }
+
   const { profiles, isLoading, pagination, refetch, mutate } = useProfiles({
     page,
     limit,
     search,
     branchId: filterBranchId,
     fallbackData: initialData,
+    initialSwrKey: initialSwrKeyRef.current,
   });
 
   // Wrapper functions to call server actions and refresh data

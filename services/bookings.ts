@@ -1165,6 +1165,7 @@ export async function getBookingsListWithPagination({
   cursorCreatedAt,
   cursorId,
   branchId,
+  includeTotal = true,
 }: {
   search?: string | null;
   page?: number;
@@ -1178,6 +1179,7 @@ export async function getBookingsListWithPagination({
   cursorCreatedAt?: string | null;
   cursorId?: string | null;
   branchId?: string | null;
+  includeTotal?: boolean;
 }): Promise<{
   data: BookingRecord[];
   pagination: PaginationMeta;
@@ -1208,6 +1210,8 @@ export async function getBookingsListWithPagination({
     const { scope } = await getCurrentUserBranchScope();
     const p_branch_id = resolveBranchFilterId(scope, branchId);
 
+    // Omit p_include_total until migration 20260630120000_list_bookings_json_v2.sql is applied.
+    // PostgREST requires an exact overload match; the v2 param breaks older RPC signatures.
     const { data, error } = await supabase.rpc("list_bookings_json", {
       p_search: trimmedSearch,
       p_page: page,
@@ -1233,8 +1237,6 @@ export async function getBookingsListWithPagination({
       next_cursor?: { created_at?: string; id?: string } | null;
     } | null;
     const bookings = (payload?.items ?? []) as BookingRecord[];
-    const total = Number(payload?.total ?? 0);
-    const totalPages = Math.ceil(total / limit);
     const nc = payload?.next_cursor;
     const nextCursor =
       nc &&
@@ -1243,6 +1245,14 @@ export async function getBookingsListWithPagination({
       nc.created_at != null
         ? { created_at: String(nc.created_at), id: String(nc.id) }
         : null;
+    const total =
+      payload?.total != null ? Number(payload.total) : 0;
+    const totalPages =
+      payload?.total != null && Number(payload.total) > 0
+        ? Math.ceil(Number(payload.total) / limit)
+        : nextCursor
+          ? page + 1
+          : page;
 
     return {
       data: bookings,

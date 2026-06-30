@@ -1,14 +1,14 @@
 "use client";
 
-import { useMemo, useEffect, useState, useCallback } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useMemo, useEffect, useState, useCallback, useRef } from "react";
+import { useShallowSearchParams } from "@/hooks/use-shallow-search-params";
 import { DataTable } from "@/components/data-table";
 import type {
   RefundRequestStatus,
   RefundRequestWithRelations,
   RefundRequestsResponse,
 } from "@/lib/types";
-import { useRefundRequests } from "@/hooks/use-refund-requests";
+import { buildRefundRequestsSwrKey, useRefundRequests } from "@/hooks/use-refund-requests";
 import { updateRefundRequestStatusAction } from "@/actions/refund-requests";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useBranch } from "@/contexts/branch-context";
@@ -21,8 +21,8 @@ export function RefundRequestsContent({
 }: {
   initialData: RefundRequestsResponse;
 }) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const { searchParams, pushSearchParams } = useShallowSearchParams();
+  const initialSwrKeyRef = useRef<string | null>(null);
   const { filterBranchId, branches } = useBranch();
   const branchNameById = useMemo(
     () => Object.fromEntries(branches.map((b) => [b.id, b.name])),
@@ -54,25 +54,25 @@ export function RefundRequestsContent({
   // Update search params
   const updateSearchParams = useCallback(
     (newPage: number, newLimit: number, newSearch: string) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (newPage > 1) {
-        params.set("page", newPage.toString());
-      } else {
-        params.delete("page");
-      }
-      if (newLimit !== 10) {
-        params.set("limit", newLimit.toString());
-      } else {
-        params.delete("limit");
-      }
-      if (newSearch) {
-        params.set("search", newSearch);
-      } else {
-        params.delete("search");
-      }
-      router.push(`/dashboard/refund-requests?${params.toString()}`);
+      pushSearchParams((params) => {
+        if (newPage > 1) {
+          params.set("page", newPage.toString());
+        } else {
+          params.delete("page");
+        }
+        if (newLimit !== 10) {
+          params.set("limit", newLimit.toString());
+        } else {
+          params.delete("limit");
+        }
+        if (newSearch) {
+          params.set("search", newSearch);
+        } else {
+          params.delete("search");
+        }
+      });
     },
-    [router, searchParams]
+    [pushSearchParams]
   );
 
   // Debounce search
@@ -84,6 +84,15 @@ export function RefundRequestsContent({
     }
   }, [debouncedSearch, search, limit, updateSearchParams]);
 
+  if (initialSwrKeyRef.current === null) {
+    initialSwrKeyRef.current = buildRefundRequestsSwrKey({
+      page,
+      limit,
+      search,
+      branchId: filterBranchId,
+    });
+  }
+
   // Use SWR hook for refund requests
   const { refundRequests, isLoading, pagination, refetch, mutate } =
     useRefundRequests({
@@ -92,6 +101,7 @@ export function RefundRequestsContent({
       search,
       branchId: filterBranchId,
       fallbackData: initialData,
+      initialSwrKey: initialSwrKeyRef.current,
     });
 
   // Wrapper function to update refund request status

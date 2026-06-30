@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import { IconPlus } from "@tabler/icons-react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useShallowSearchParams } from "@/hooks/use-shallow-search-params";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
 import { useDebounce } from "@/hooks/use-debounce";
@@ -12,13 +13,13 @@ import { EditCustomerDialog } from "@/components/customers/edit-customer-dialog"
 import { DeleteCustomerDialog } from "@/components/customers/delete-customer-dialog";
 import { CustomerDetailDialog } from "@/components/customers/customer-detail-dialog";
 import { toast } from "sonner";
-import { useCustomers } from "@/hooks/use-customers";
+import { buildCustomersSwrKey, useCustomers } from "@/hooks/use-customers";
 import {
   createCustomerAction,
   updateCustomerAction,
   deleteCustomerAction,
 } from "@/actions/customers";
-import { type Customer, CustomersResponse } from "@/lib/types";
+import { type Customer, type CustomersResponse } from "@/lib/types";
 import { useBranch } from "@/contexts/branch-context";
 
 export function CustomersContent({
@@ -27,7 +28,8 @@ export function CustomersContent({
   initialData: CustomersResponse;
 }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const { searchParams, pushSearchParams } = useShallowSearchParams();
+  const initialSwrKeyRef = React.useRef<string | null>(null);
   const { filterBranchId, branches } = useBranch();
   const branchNameById = React.useMemo(
     () => Object.fromEntries(branches.map((b) => [b.id, b.name])),
@@ -67,25 +69,25 @@ export function CustomersContent({
   // Update search params
   const updateSearchParams = React.useCallback(
     (newPage: number, newLimit: number, newSearch: string) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (newPage > 1) {
-        params.set("page", newPage.toString());
-      } else {
-        params.delete("page");
-      }
-      if (newLimit !== 10) {
-        params.set("limit", newLimit.toString());
-      } else {
-        params.delete("limit");
-      }
-      if (newSearch) {
-        params.set("search", newSearch);
-      } else {
-        params.delete("search");
-      }
-      router.push(`/dashboard/customers?${params.toString()}`);
+      pushSearchParams((params) => {
+        if (newPage > 1) {
+          params.set("page", newPage.toString());
+        } else {
+          params.delete("page");
+        }
+        if (newLimit !== 10) {
+          params.set("limit", newLimit.toString());
+        } else {
+          params.delete("limit");
+        }
+        if (newSearch) {
+          params.set("search", newSearch);
+        } else {
+          params.delete("search");
+        }
+      });
     },
-    [router, searchParams]
+    [pushSearchParams]
   );
 
   // Debounce search
@@ -97,12 +99,22 @@ export function CustomersContent({
     }
   }, [debouncedSearch, search, limit, updateSearchParams]);
 
+  if (initialSwrKeyRef.current === null) {
+    initialSwrKeyRef.current = buildCustomersSwrKey({
+      search,
+      page,
+      limit,
+      branchId: filterBranchId,
+    });
+  }
+
   const { customers, isLoading, pagination, mutate } = useCustomers({
     search,
     page,
     limit,
     branchId: filterBranchId,
     fallbackData: initialData,
+    initialSwrKey: initialSwrKeyRef.current,
   });
 
   const handleEditCustomer = (customer: Customer) => {

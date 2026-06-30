@@ -1,22 +1,22 @@
 "use client";
 
-import { useMemo, useEffect, useState, useCallback } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useMemo, useEffect, useState, useCallback, useRef } from "react";
+import { useShallowSearchParams } from "@/hooks/use-shallow-search-params";
 import { DataTable } from "@/components/data-table";
-import { usePaymentLogs } from "@/hooks/use-payment-logs";
-import type { PaymentLogsResponse } from "@/lib/types";
+import { buildPaymentLogsSwrKey, usePaymentLogs } from "@/hooks/use-payment-logs";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useBranch } from "@/contexts/branch-context";
 import { createPaymentLogColumns, PAYMENT_LOG_COLUMNS } from "./columns";
 import { useRoomNumberLookup } from "@/hooks/use-room-number-lookup";
+import type { PaymentLogsResponse } from "@/lib/types";
 
 export function PaymentLogsContent({
   initialData,
 }: {
   initialData: PaymentLogsResponse;
 }) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const { searchParams, pushSearchParams } = useShallowSearchParams();
+  const initialSwrKeyRef = useRef<string | null>(null);
   const { filterBranchId } = useBranch();
   const [localSearch, setLocalSearch] = useState("");
 
@@ -40,25 +40,25 @@ export function PaymentLogsContent({
   // Update search params
   const updateSearchParams = useCallback(
     (newPage: number, newLimit: number, newSearch: string) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (newPage > 1) {
-        params.set("page", newPage.toString());
-      } else {
-        params.delete("page");
-      }
-      if (newLimit !== 10) {
-        params.set("limit", newLimit.toString());
-      } else {
-        params.delete("limit");
-      }
-      if (newSearch) {
-        params.set("search", newSearch);
-      } else {
-        params.delete("search");
-      }
-      router.push(`/dashboard/payment-logs?${params.toString()}`);
+      pushSearchParams((params) => {
+        if (newPage > 1) {
+          params.set("page", newPage.toString());
+        } else {
+          params.delete("page");
+        }
+        if (newLimit !== 10) {
+          params.set("limit", newLimit.toString());
+        } else {
+          params.delete("limit");
+        }
+        if (newSearch) {
+          params.set("search", newSearch);
+        } else {
+          params.delete("search");
+        }
+      });
     },
-    [router, searchParams]
+    [pushSearchParams]
   );
 
   // Debounce search
@@ -70,12 +70,22 @@ export function PaymentLogsContent({
     }
   }, [debouncedSearch, search, limit, updateSearchParams]);
 
+  if (initialSwrKeyRef.current === null) {
+    initialSwrKeyRef.current = buildPaymentLogsSwrKey({
+      search,
+      page,
+      limit,
+      branchId: filterBranchId,
+    });
+  }
+
   const { paymentLogs, isLoading, pagination, mutate } = usePaymentLogs({
     search,
     page,
     limit,
     branchId: filterBranchId,
     fallbackData: initialData,
+    initialSwrKey: initialSwrKeyRef.current,
   });
 
   const { data: roomNumberById } = useRoomNumberLookup();

@@ -1,29 +1,23 @@
 "use client";
 
-import useSWR, { SWRConfiguration } from "swr";
+import useSWR from "swr";
 import type { PaymentLogsResponse } from "@/lib/types";
 import { fetcher } from "@/lib/fetcher";
+import { listSwrConfig } from "@/lib/list-swr";
 
-/**
- * Hook for fetching payment logs with SWR
- * @param search - Search term
- * @param page - Page number
- * @param limit - Items per page
- */
-export function usePaymentLogs({
-  search = "",
-  page = 1,
-  limit = 10,
-  branchId = null,
-  fallbackData,
-}: {
+export type PaymentLogsSwrParams = {
   search?: string;
   page?: number;
   limit?: number;
   branchId?: string | null;
-  fallbackData?: PaymentLogsResponse;
-}) {
-  // Build query parameters
+};
+
+export function buildPaymentLogsSwrKey({
+  search = "",
+  page = 1,
+  limit = 10,
+  branchId = null,
+}: PaymentLogsSwrParams): string {
   const params = new URLSearchParams({
     page: page.toString(),
     limit: limit.toString(),
@@ -34,18 +28,30 @@ export function usePaymentLogs({
   if (branchId) {
     params.append("branchId", branchId);
   }
+  return `/api/payment-logs?${params.toString()}`;
+}
 
-  const config: SWRConfiguration<PaymentLogsResponse> = {};
-  if (fallbackData) {
-    config.revalidateOnMount = false;
-    config.fallbackData = fallbackData;
-  }
+/**
+ * Hook for fetching payment logs with SWR
+ */
+export function usePaymentLogs({
+  search = "",
+  page = 1,
+  limit = 10,
+  branchId = null,
+  fallbackData,
+  initialSwrKey = null,
+}: PaymentLogsSwrParams & {
+  fallbackData?: PaymentLogsResponse;
+  initialSwrKey?: string | null;
+}) {
+  const swrKey = buildPaymentLogsSwrKey({ search, page, limit, branchId });
 
   const { data, error, isLoading, mutate, isValidating } =
     useSWR<PaymentLogsResponse>(
-      `/api/payment-logs?${params.toString()}`,
+      swrKey,
       fetcher,
-      config
+      listSwrConfig(swrKey, initialSwrKey, fallbackData)
     );
 
   return {
@@ -62,7 +68,6 @@ export function usePaymentLogs({
         ? error.message
         : "Không thể tải danh sách lịch sử thanh toán"
       : null,
-    mutate, // dùng để refresh sau khi CRUD
+    mutate,
   };
 }
-

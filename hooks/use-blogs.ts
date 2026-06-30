@@ -1,33 +1,21 @@
 "use client";
 
-import useSWR, { SWRConfiguration } from "swr";
+import useSWR from "swr";
 import type { BlogsResponse } from "@/lib/types";
 import { fetcher } from "@/lib/fetcher";
+import { listSwrConfig } from "@/lib/list-swr";
 
-
-
-/**
- * Hook for fetching blogs with SWR
- * @param search - Search term
- * @param page - Page number
- * @param limit - Items per page
- * @param fallbackData - Fallback data
- */
-export function useBlogs({
-  search = "",
-  page = 1,
-  limit = 10,
-  fallbackData,
-}: {
+export type BlogsSwrParams = {
   search?: string;
   page?: number;
   limit?: number;
-  fallbackData?: BlogsResponse;
-}) {
+};
 
-  const config: SWRConfiguration<BlogsResponse> = {
-  }
-  // Build query parameters
+export function buildBlogsSwrKey({
+  search = "",
+  page = 1,
+  limit = 10,
+}: BlogsSwrParams): string {
   const params = new URLSearchParams({
     page: page.toString(),
     limit: limit.toString(),
@@ -35,18 +23,30 @@ export function useBlogs({
   if (search && search.trim() !== "") {
     params.append("search", search.trim());
   }
+  return `/api/blogs?${params.toString()}`;
+}
 
-  if(fallbackData) {
-    config.revalidateOnMount = false;
-    config.fallbackData = fallbackData;
-  }
+/**
+ * Hook for fetching blogs with SWR
+ */
+export function useBlogs({
+  search = "",
+  page = 1,
+  limit = 10,
+  fallbackData,
+  initialSwrKey = null,
+}: BlogsSwrParams & {
+  fallbackData?: BlogsResponse;
+  initialSwrKey?: string | null;
+}) {
+  const swrKey = buildBlogsSwrKey({ search, page, limit });
 
   const { data, error, isLoading, mutate, isValidating } =
-    useSWR<BlogsResponse>(`/api/blogs?${params.toString()}`, fetcher, config);
-
-  
-
-    
+    useSWR<BlogsResponse>(
+      swrKey,
+      fetcher,
+      listSwrConfig(swrKey, initialSwrKey, fallbackData)
+    );
 
   return {
     blogs: data?.data || [],
@@ -62,6 +62,6 @@ export function useBlogs({
         ? error.message
         : "Không thể tải danh sách blog"
       : null,
-    mutate, // dùng để refresh sau khi CRUD
+    mutate,
   };
 }

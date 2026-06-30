@@ -1,22 +1,23 @@
 "use client";
 
-import useSWR, { type SWRConfiguration } from "swr";
+import useSWR from "swr";
 import type { VouchersResponse } from "@/lib/types";
 import { fetcher } from "@/lib/fetcher";
+import { listSwrConfig } from "@/lib/list-swr";
 
-export function useVouchers({
-  search = "",
-  page = 1,
-  limit = 10,
-  branchId = null,
-  fallbackData,
-}: {
+export type VouchersSwrParams = {
   search?: string;
   page?: number;
   limit?: number;
   branchId?: string | null;
-  fallbackData?: VouchersResponse;
-}) {
+};
+
+export function buildVouchersSwrKey({
+  search = "",
+  page = 1,
+  limit = 10,
+  branchId = null,
+}: VouchersSwrParams): string {
   const params = new URLSearchParams({
     page: page.toString(),
     limit: limit.toString(),
@@ -27,15 +28,28 @@ export function useVouchers({
   if (branchId) {
     params.append("branchId", branchId);
   }
+  return `/api/vouchers?${params.toString()}`;
+}
 
-  const config: SWRConfiguration<VouchersResponse> = {};
-  if (fallbackData) {
-    config.revalidateOnMount = false;
-    config.fallbackData = fallbackData;
-  }
+export function useVouchers({
+  search = "",
+  page = 1,
+  limit = 10,
+  branchId = null,
+  fallbackData,
+  initialSwrKey = null,
+}: VouchersSwrParams & {
+  fallbackData?: VouchersResponse;
+  initialSwrKey?: string | null;
+}) {
+  const swrKey = buildVouchersSwrKey({ search, page, limit, branchId });
 
   const { data, error, isLoading, mutate, isValidating } =
-    useSWR<VouchersResponse>(`/api/vouchers?${params.toString()}`, fetcher, config);
+    useSWR<VouchersResponse>(
+      swrKey,
+      fetcher,
+      listSwrConfig(swrKey, initialSwrKey, fallbackData)
+    );
 
   return {
     vouchers: data?.data || [],
@@ -54,4 +68,3 @@ export function useVouchers({
     mutate,
   };
 }
-

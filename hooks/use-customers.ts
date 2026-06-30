@@ -1,33 +1,23 @@
 "use client";
 
-import useSWR, { SWRConfiguration } from "swr";
+import useSWR from "swr";
 import type { CustomersResponse } from "@/lib/types";
 import { fetcher } from "@/lib/fetcher";
+import { listSwrConfig } from "@/lib/list-swr";
 
-
-
-/**
- * Hook for fetching customers with SWR
- * @param search - Search term
- * @param page - Page number
- * @param limit - Items per page
- * @param fallbackData - Fallback data
- */
-export function useCustomers({
-  search = "",
-  page = 1,
-  limit = 10,
-  branchId = null,
-  fallbackData,
-}: {
+export type CustomersSwrParams = {
   search?: string;
   page?: number;
   limit?: number;
   branchId?: string | null;
-  fallbackData?: CustomersResponse;
-}) {
-  const config: SWRConfiguration<CustomersResponse> = {}
-  // Build query parameters
+};
+
+export function buildCustomersSwrKey({
+  search = "",
+  page = 1,
+  limit = 10,
+  branchId = null,
+}: CustomersSwrParams): string {
   const params = new URLSearchParams({
     page: page.toString(),
     limit: limit.toString(),
@@ -38,14 +28,27 @@ export function useCustomers({
   if (branchId) {
     params.append("branchId", branchId);
   }
+  return `/api/customers?${params.toString()}`;
+}
 
-  if(fallbackData) {
-    config.revalidateOnMount = false;
-    config.fallbackData = fallbackData;
-  }
+export function useCustomers({
+  search = "",
+  page = 1,
+  limit = 10,
+  branchId = null,
+  fallbackData,
+  initialSwrKey = null,
+}: CustomersSwrParams & {
+  fallbackData?: CustomersResponse;
+  initialSwrKey?: string | null;
+}) {
+  const swrKey = buildCustomersSwrKey({ search, page, limit, branchId });
 
-  const { data, error, isLoading, mutate, isValidating } =
-    useSWR<CustomersResponse>(`/api/customers?${params.toString()}`, fetcher, config);
+  const { data, error, isLoading, mutate, isValidating } = useSWR<CustomersResponse>(
+    swrKey,
+    fetcher,
+    listSwrConfig(swrKey, initialSwrKey, fallbackData)
+  );
 
   return {
     customers: data?.data || [],
@@ -61,6 +64,6 @@ export function useCustomers({
         ? error.message
         : "Không thể tải danh sách khách hàng"
       : null,
-    mutate, // dùng để refresh sau khi CRUD
+    mutate,
   };
 }

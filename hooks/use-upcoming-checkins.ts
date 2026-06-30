@@ -1,47 +1,54 @@
 "use client";
 
-import useSWR, { SWRConfiguration } from "swr";
+import useSWR from "swr";
 import type { BookingsResponse } from "@/lib/types";
 import { fetcher } from "@/lib/fetcher";
+import { listSwrConfig } from "@/lib/list-swr";
+
+export type UpcomingCheckinsSwrParams = {
+  search?: string;
+  branchId?: string | null;
+  limit?: number;
+};
+
+export function buildUpcomingCheckinsSwrKey({
+  search = "",
+  branchId = null,
+  limit = 100,
+}: UpcomingCheckinsSwrParams): string {
+  const params = new URLSearchParams({
+    limit: limit.toString(),
+  });
+  if (search && search.trim() !== "") {
+    params.append("search", search.trim());
+  }
+  if (branchId) {
+    params.append("branchId", branchId);
+  }
+  return `/api/upcoming-checkins?${params.toString()}`;
+}
 
 /**
  * Hook for fetching upcoming check-ins with SWR
- * @param search - Search term
- * @param fallbackData - Initial data from server
  */
 export function useUpcomingCheckins({
   search = "",
   branchId = null,
   fallbackData,
+  initialSwrKey = null,
 }: {
   search?: string;
   branchId?: string | null;
   fallbackData?: BookingsResponse;
+  initialSwrKey?: string | null;
 }) {
-  const config: SWRConfiguration<BookingsResponse> = {
-    refreshInterval: 30000, // Refresh every 30 seconds
-  };
-
-  // Build query parameters
-  const params = new URLSearchParams({
-    limit: "100", // Get more items for kanban view
-  });
-  
-  if (search && search.trim() !== "") {
-    params.append("search", search.trim());
-  }
-
-  if (branchId) {
-    params.append("branchId", branchId);
-  }
-
-  if (fallbackData) {
-    config.revalidateOnMount = false;
-    config.fallbackData = fallbackData;
-  }
+  const swrKey = buildUpcomingCheckinsSwrKey({ search, branchId });
 
   const { data, error, isLoading, mutate, isValidating } =
-    useSWR<BookingsResponse>(`/api/upcoming-checkins?${params.toString()}`, fetcher, config);
+    useSWR<BookingsResponse>(swrKey, fetcher, {
+      ...listSwrConfig(swrKey, initialSwrKey, fallbackData),
+      refreshInterval: 30000,
+    });
 
   return {
     bookings: data?.data || [],

@@ -1,31 +1,23 @@
 "use client";
 
-import useSWR, { SWRConfiguration } from "swr";
+import useSWR from "swr";
 import type { RoomsResponse } from "@/lib/types";
 import { fetcher } from "@/lib/fetcher";
+import { listSwrConfig } from "@/lib/list-swr";
 
-
-
-/**
- * Hook for fetching rooms with SWR
- * @param search - Search term
- * @param page - Page number
- * @param limit - Items per page
- */
-export function useRooms({
-  search = "",
-  page = 1,
-  limit = 10,
-  branchId = null,
-  fallbackData,
-}: {
+export type RoomsSwrParams = {
   search?: string;
   page?: number;
   limit?: number;
   branchId?: string | null;
-  fallbackData?: RoomsResponse;
-}) {
-  // Build query parameters
+};
+
+export function buildRoomsSwrKey({
+  search = "",
+  page = 1,
+  limit = 10,
+  branchId = null,
+}: RoomsSwrParams): string {
   const params = new URLSearchParams({
     page: page.toString(),
     limit: limit.toString(),
@@ -36,16 +28,33 @@ export function useRooms({
   if (branchId) {
     params.append("branchId", branchId);
   }
+  return `/api/rooms?${params.toString()}`;
+}
 
-  const config: SWRConfiguration<RoomsResponse> = {};
-  // Chỉ dùng fallback SSR khi không lọc chi nhánh — tránh hiển thị phòng CN khác
-  if (fallbackData && !branchId) {
-    config.revalidateOnMount = false;
-    config.fallbackData = fallbackData;
-  }
+/**
+ * Hook for fetching rooms with SWR
+ */
+export function useRooms({
+  search = "",
+  page = 1,
+  limit = 10,
+  branchId = null,
+  fallbackData,
+  initialSwrKey = null,
+}: RoomsSwrParams & {
+  fallbackData?: RoomsResponse;
+  initialSwrKey?: string | null;
+}) {
+  const swrKey = buildRoomsSwrKey({ search, page, limit, branchId });
 
-  const { data, error, isLoading, mutate, isValidating } =
-    useSWR<RoomsResponse>(`/api/rooms?${params.toString()}`, fetcher, config);
+  const { data, error, isLoading, mutate, isValidating } = useSWR<RoomsResponse>(
+    swrKey,
+    fetcher,
+    // Chỉ dùng fallback SSR khi không lọc chi nhánh — tránh hiển thị phòng CN khác
+    !branchId
+      ? listSwrConfig(swrKey, initialSwrKey, fallbackData)
+      : {}
+  );
 
   return {
     rooms: data?.data || [],
@@ -61,6 +70,6 @@ export function useRooms({
         ? error.message
         : "Không thể tải danh sách phòng"
       : null,
-    mutate, // dùng để refresh sau khi CRUD
+    mutate,
   };
 }
