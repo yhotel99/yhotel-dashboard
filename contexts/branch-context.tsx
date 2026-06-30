@@ -4,7 +4,6 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -13,8 +12,10 @@ import type { Branch, BranchScope } from "@/lib/types";
 import { useAuth } from "@/contexts/auth-context";
 import { canViewAllBranches } from "@/lib/branch";
 import { DEFAULT_BRANCH_ID } from "@/lib/constants";
-
-const STORAGE_KEY = "yhotel_selected_branch_id";
+import {
+  BRANCH_STORAGE_KEY,
+  readStoredBranchId,
+} from "@/lib/branch-storage";
 
 type BranchContextType = {
   branches: Branch[];
@@ -41,7 +42,7 @@ export function BranchProvider({
   const { profile } = useAuth();
   const [branches, setBranches] = useState<Branch[]>(initialBranches);
   const [selectedBranchId, setSelectedBranchIdState] = useState<string | null>(
-    null
+    readStoredBranchId
   );
 
   const canSelectBranch = profile ? canViewAllBranches(profile.role) : false;
@@ -59,25 +60,14 @@ export function BranchProvider({
     return { mode: "all", branchId: null };
   }, [profile, canSelectBranch, selectedBranchId]);
 
-  useEffect(() => {
-    if (!canSelectBranch) return;
-    const stored =
-      typeof window !== "undefined"
-        ? window.localStorage.getItem(STORAGE_KEY)
-        : null;
-    if (stored) {
-      setSelectedBranchIdState(stored);
-    }
-  }, [canSelectBranch]);
-
   const setSelectedBranchId = useCallback(
     (id: string | null) => {
       setSelectedBranchIdState(id);
       if (typeof window !== "undefined") {
         if (id) {
-          window.localStorage.setItem(STORAGE_KEY, id);
+          window.localStorage.setItem(BRANCH_STORAGE_KEY, id);
         } else {
-          window.localStorage.removeItem(STORAGE_KEY);
+          window.localStorage.removeItem(BRANCH_STORAGE_KEY);
         }
       }
     },

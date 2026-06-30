@@ -1210,8 +1210,6 @@ export async function getBookingsListWithPagination({
     const { scope } = await getCurrentUserBranchScope();
     const p_branch_id = resolveBranchFilterId(scope, branchId);
 
-    // Omit p_include_total until migration 20260630120000_list_bookings_json_v2.sql is applied.
-    // PostgREST requires an exact overload match; the v2 param breaks older RPC signatures.
     const { data, error } = await supabase.rpc("list_bookings_json", {
       p_search: trimmedSearch,
       p_page: page,
@@ -1225,6 +1223,7 @@ export async function getBookingsListWithPagination({
       p_cursor_created_at: useKeyset ? trimmedCursorAt : null,
       p_cursor_id: useKeyset ? trimmedCursorId : null,
       p_branch_id,
+      p_include_total: includeTotal,
     });
 
     if (error) {

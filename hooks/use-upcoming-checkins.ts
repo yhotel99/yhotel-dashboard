@@ -46,7 +46,7 @@ export function useUpcomingCheckins({
 
   const { data, error, isLoading, mutate, isValidating } =
     useSWR<BookingsResponse>(swrKey, fetcher, {
-      ...listSwrConfig(swrKey, initialSwrKey, fallbackData),
+      ...listSwrConfig(swrKey, initialSwrKey, fallbackData, branchId),
       refreshInterval: 30000,
     });
 

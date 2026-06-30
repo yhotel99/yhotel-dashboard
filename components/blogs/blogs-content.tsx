@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useShallowSearchParams } from "@/hooks/use-shallow-search-params";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
-import { useDebounce } from "@/hooks/use-debounce";
+import { useDebouncedUrlSearch } from "@/hooks/use-debounced-url-search";
 import { BLOG_COLUMNS, createColumns } from "@/components/blogs/columns";
 import { DeleteBlogDialog } from "@/components/blogs/delete-blog-dialog";
 import { toast } from "sonner";
@@ -21,7 +21,6 @@ import type { Blog, BlogsResponse } from "@/lib/types";
 export function BlogsContent({ initialData }: { initialData: BlogsResponse }) {
   const router = useRouter();
   const { searchParams, pushSearchParams } = useShallowSearchParams();
-  const [localSearch, setLocalSearch] = React.useState("");
   const [openDeleteDialog, setOpenDeleteDialog] = React.useState(false);
   const [blogToDelete, setBlogToDelete] = React.useState<Blog | null>(null);
 
@@ -66,14 +65,16 @@ export function BlogsContent({ initialData }: { initialData: BlogsResponse }) {
     [pushSearchParams]
   );
 
-  // Debounce search
-  const debouncedSearch = useDebounce(localSearch, 300);
-
-  React.useEffect(() => {
-    if (debouncedSearch !== search) {
-      updateSearchParams(1, limit, debouncedSearch);
-    }
-  }, [debouncedSearch, search, limit, updateSearchParams]);
+  const onSearchCommit = React.useCallback(
+    (value: string) => {
+      updateSearchParams(1, limit, value);
+    },
+    [limit, updateSearchParams]
+  );
+  const { localSearch, setLocalSearch } = useDebouncedUrlSearch(
+    search,
+    onSearchCommit
+  );
 
   const initialSwrKey = useInitialSwrKey(() =>
     buildBlogsSwrKey({ search, page, limit })

@@ -11,7 +11,7 @@ import type {
 import { useInitialSwrKey } from "@/hooks/use-initial-swr-key";
 import { buildRefundRequestsSwrKey, useRefundRequests } from "@/hooks/use-refund-requests";
 import { updateRefundRequestStatusAction } from "@/actions/refund-requests";
-import { useDebounce } from "@/hooks/use-debounce";
+import { useDebouncedUrlSearch } from "@/hooks/use-debounced-url-search";
 import { useBranch } from "@/contexts/branch-context";
 import { RefundRequestDetailDialog } from "./refund-request-detail-dialog";
 import { createRefundRequestColumns } from "./columns";
@@ -28,7 +28,6 @@ export function RefundRequestsContent({
     () => Object.fromEntries(branches.map((b) => [b.id, b.name])),
     [branches]
   );
-  const [localSearch, setLocalSearch] = useState("");
   const [selectedRefundRequestId, setSelectedRefundRequestId] = useState<
     string | null
   >(null);
@@ -75,14 +74,16 @@ export function RefundRequestsContent({
     [pushSearchParams]
   );
 
-  // Debounce search
-  const debouncedSearch = useDebounce(localSearch, 300);
-
-  useEffect(() => {
-    if (debouncedSearch !== search) {
-      updateSearchParams(1, limit, debouncedSearch);
-    }
-  }, [debouncedSearch, search, limit, updateSearchParams]);
+  const onSearchCommit = useCallback(
+    (value: string) => {
+      updateSearchParams(1, limit, value);
+    },
+    [limit, updateSearchParams]
+  );
+  const { localSearch, setLocalSearch } = useDebouncedUrlSearch(
+    search,
+    onSearchCommit
+  );
 
   const initialSwrKey = useInitialSwrKey(() =>
     buildRefundRequestsSwrKey({

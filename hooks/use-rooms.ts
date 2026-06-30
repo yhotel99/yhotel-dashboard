@@ -50,10 +50,7 @@ export function useRooms({
   const { data, error, isLoading, mutate, isValidating } = useSWR<RoomsResponse>(
     swrKey,
     fetcher,
-    // Chỉ dùng fallback SSR khi không lọc chi nhánh — tránh hiển thị phòng CN khác
-    !branchId
-      ? listSwrConfig(swrKey, initialSwrKey, fallbackData)
-      : {}
+    listSwrConfig(swrKey, initialSwrKey, fallbackData, branchId)
   );
 
   return {

@@ -48,7 +48,7 @@ export function useVouchers({
     useSWR<VouchersResponse>(
       swrKey,
       fetcher,
-      listSwrConfig(swrKey, initialSwrKey, fallbackData)
+      listSwrConfig(swrKey, initialSwrKey, fallbackData, branchId)
     );
 
   return {

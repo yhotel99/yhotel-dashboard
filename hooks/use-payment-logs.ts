@@ -51,7 +51,7 @@ export function usePaymentLogs({
     useSWR<PaymentLogsResponse>(
       swrKey,
       fetcher,
-      listSwrConfig(swrKey, initialSwrKey, fallbackData)
+      listSwrConfig(swrKey, initialSwrKey, fallbackData, branchId)
     );
 
   return {

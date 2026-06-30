@@ -52,7 +52,7 @@ export function useRefundRequests({
     useSWR<RefundRequestsResponse>(
       swrKey,
       fetcher,
-      listSwrConfig(swrKey, initialSwrKey, fallbackData)
+      listSwrConfig(swrKey, initialSwrKey, fallbackData, branchId)
     );
 
   const refundRequests = data?.data || [];

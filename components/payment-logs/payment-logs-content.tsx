@@ -5,7 +5,7 @@ import { useShallowSearchParams } from "@/hooks/use-shallow-search-params";
 import { useInitialSwrKey } from "@/hooks/use-initial-swr-key";
 import { DataTable } from "@/components/data-table";
 import { buildPaymentLogsSwrKey, usePaymentLogs } from "@/hooks/use-payment-logs";
-import { useDebounce } from "@/hooks/use-debounce";
+import { useDebouncedUrlSearch } from "@/hooks/use-debounced-url-search";
 import { useBranch } from "@/contexts/branch-context";
 import { createPaymentLogColumns, PAYMENT_LOG_COLUMNS } from "./columns";
 import { useRoomNumberLookup } from "@/hooks/use-room-number-lookup";
@@ -18,7 +18,6 @@ export function PaymentLogsContent({
 }) {
   const { searchParams, pushSearchParams } = useShallowSearchParams();
   const { filterBranchId } = useBranch();
-  const [localSearch, setLocalSearch] = useState("");
 
   // Get pagination and search from URL params
   const page = useMemo(() => {
@@ -61,14 +60,16 @@ export function PaymentLogsContent({
     [pushSearchParams]
   );
 
-  // Debounce search
-  const debouncedSearch = useDebounce(localSearch, 300);
-
-  useEffect(() => {
-    if (debouncedSearch !== search) {
-      updateSearchParams(1, limit, debouncedSearch);
-    }
-  }, [debouncedSearch, search, limit, updateSearchParams]);
+  const onSearchCommit = useCallback(
+    (value: string) => {
+      updateSearchParams(1, limit, value);
+    },
+    [limit, updateSearchParams]
+  );
+  const { localSearch, setLocalSearch } = useDebouncedUrlSearch(
+    search,
+    onSearchCommit
+  );
 
   const initialSwrKey = useInitialSwrKey(() =>
     buildPaymentLogsSwrKey({

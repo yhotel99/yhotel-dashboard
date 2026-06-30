@@ -22,6 +22,7 @@ export default async function BookingsPage({ searchParams }: PageProps) {
     ? String(params.cursorCreatedAt)
     : null;
   const cursorId = params.cursorId ? String(params.cursorId) : null;
+  const useKeyset = Boolean(cursorCreatedAt && cursorId);
 
   const initialData = await getBookingsListWithPagination({
     page,
@@ -34,6 +35,7 @@ export default async function BookingsPage({ searchParams }: PageProps) {
     status,
     cursorCreatedAt,
     cursorId,
+    includeTotal: !useKeyset,
   });
 
   return (

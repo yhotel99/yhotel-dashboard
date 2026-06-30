@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useShallowSearchParams } from "@/hooks/use-shallow-search-params";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
-import { useDebounce } from "@/hooks/use-debounce";
+import { useDebouncedUrlSearch } from "@/hooks/use-debounced-url-search";
 import { createColumns, CUSTOMER_COLUMNS } from "@/components/customers/columns";
 import { CreateCustomerDialog } from "@/components/customers/create-customer-dialog";
 import { EditCustomerDialog } from "@/components/customers/edit-customer-dialog";
@@ -35,7 +35,6 @@ export function CustomersContent({
     () => Object.fromEntries(branches.map((b) => [b.id, b.name])),
     [branches]
   );
-  const [localSearch, setLocalSearch] = React.useState("");
   const [openCreateDialog, setOpenCreateDialog] = React.useState(false);
   const [openEditDialog, setOpenEditDialog] = React.useState(false);
   const [editingCustomer, setEditingCustomer] = React.useState<Customer | null>(
@@ -90,14 +89,16 @@ export function CustomersContent({
     [pushSearchParams]
   );
 
-  // Debounce search
-  const debouncedSearch = useDebounce(localSearch, 300);
-
-  React.useEffect(() => {
-    if (debouncedSearch !== search) {
-      updateSearchParams(1, limit, debouncedSearch);
-    }
-  }, [debouncedSearch, search, limit, updateSearchParams]);
+  const onSearchCommit = React.useCallback(
+    (value: string) => {
+      updateSearchParams(1, limit, value);
+    },
+    [limit, updateSearchParams]
+  );
+  const { localSearch, setLocalSearch } = useDebouncedUrlSearch(
+    search,
+    onSearchCommit
+  );
 
   const initialSwrKey = useInitialSwrKey(() =>
     buildCustomersSwrKey({

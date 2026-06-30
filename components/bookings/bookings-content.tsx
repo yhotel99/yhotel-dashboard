@@ -47,7 +47,7 @@ import type {
   BookingsResponse,
   ConfirmBookingEmailOptions,
 } from "@/lib/types";
-import { useDebounce } from "@/hooks/use-debounce";
+import { useDebouncedUrlSearch } from "@/hooks/use-debounced-url-search";
 import { createColumns, COLUMNS } from "@/components/bookings/columns";
 import { CreateBookingDialog } from "@/components/bookings/create-booking-dialog";
 import { CreateMultiBookingDialog } from "@/components/bookings/create-multi-booking-dialog";
@@ -90,9 +90,6 @@ export function BookingsContent({
   );
   const branchIdForFetch =
     scope.mode === "single" ? scope.branchId : selectedBranchId;
-  const [localSearch, setLocalSearch] = React.useState(
-    () => searchParams.get("search") || ""
-  );
   const [isCheckAvailableRoomsDialogOpen, setIsCheckAvailableRoomsDialogOpen] =
     React.useState(false);
 
@@ -141,9 +138,6 @@ export function BookingsContent({
     () => searchParams.get("cursorId") || "",
     [searchParams]
   );
-
-  // Debounce search
-  const debouncedSearch = useDebounce(localSearch, 300);
 
   // Update search params
   const updateSearchParams = React.useCallback(
@@ -210,33 +204,34 @@ export function BookingsContent({
     [pushSearchParams, status, creatorId, dateField, dateFrom, dateTo]
   );
 
-  React.useEffect(() => {
-    if (debouncedSearch !== search) {
+  const onSearchCommit = React.useCallback(
+    (value: string) => {
       updateSearchParams(
         1,
         limit,
-        debouncedSearch,
+        value,
         status,
         creatorId,
         dateField,
         dateFrom,
         dateTo,
-        {
-          resetCursor: true,
-        }
+        { resetCursor: true }
       );
-    }
-  }, [
-    creatorId,
-    dateField,
-    dateFrom,
-    dateTo,
-    debouncedSearch,
-    limit,
+    },
+    [
+      creatorId,
+      dateField,
+      dateFrom,
+      dateTo,
+      limit,
+      status,
+      updateSearchParams,
+    ]
+  );
+  const { localSearch, setLocalSearch } = useDebouncedUrlSearch(
     search,
-    status,
-    updateSearchParams,
-  ]);
+    onSearchCommit
+  );
 
   const statusFilterValue = React.useMemo(() => {
     const s = status.trim();

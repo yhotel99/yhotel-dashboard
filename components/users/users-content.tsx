@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
 import { toast } from "sonner";
 import { useInitialSwrKey } from "@/hooks/use-initial-swr-key";
+import { useDebouncedUrlSearch } from "@/hooks/use-debounced-url-search";
 import { buildProfilesSwrKey, useProfiles } from "@/hooks/use-profiles";
 import { createProfileAction, updateProfileAction } from "@/actions/profiles";
 import type { Profile, ProfilesResponse } from "@/lib/types";
@@ -34,7 +35,6 @@ export function UsersContent({
   initialData: ProfilesResponse;
 }) {
   const { searchParams, pushSearchParams } = useShallowSearchParams();
-  const [localSearch, setLocalSearch] = React.useState("");
   const [openUserDialog, setOpenUserDialog] = React.useState(false);
   const [editingProfile, setEditingProfile] = React.useState<
     Profile | undefined
@@ -81,16 +81,17 @@ export function UsersContent({
     [pushSearchParams]
   );
 
-  // Debounce search
-  React.useEffect(() => {
-    const timer = setTimeout(() => {
-      if (localSearch !== search) {
-        updateSearchParams(1, limit, localSearch);
-      }
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [localSearch, limit, search, updateSearchParams]);
+  const onSearchCommit = React.useCallback(
+    (value: string) => {
+      updateSearchParams(1, limit, value);
+    },
+    [limit, updateSearchParams]
+  );
+  const { localSearch, setLocalSearch } = useDebouncedUrlSearch(
+    search,
+    onSearchCommit,
+    500
+  );
 
   const { branches, filterBranchId } = useBranch();
   const branchNameById = React.useMemo(

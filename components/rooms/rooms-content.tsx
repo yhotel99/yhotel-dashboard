@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useShallowSearchParams } from "@/hooks/use-shallow-search-params";
 import { IconPlus } from "@tabler/icons-react";
 import { useMemo, useEffect, useCallback, useState } from "react";
-import { useDebounce } from "@/hooks/use-debounce";
+import { useDebouncedUrlSearch } from "@/hooks/use-debounced-url-search";
 import { useInitialSwrKey } from "@/hooks/use-initial-swr-key";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
@@ -72,19 +72,17 @@ export function RoomsContent({ initialData }: { initialData: RoomsResponse }) {
     [pushSearchParams]
   );
 
-  // Local search state for immediate UI updates
-  const [localSearch, setLocalSearch] = useState(search);
-
-  // Debounce search value - update URL after user stops typing
-  const debouncedSearch = useDebounce(localSearch, 300);
-
-
-  // Update URL when debounced search changes
-  useEffect(() => {
-    if (debouncedSearch !== search) {
-      updateSearchParams(1, limit, debouncedSearch);
-    }
-  }, [debouncedSearch, search, limit, updateSearchParams]);
+  // Local search synced with URL (back/forward) and debounced before push
+  const onSearchCommit = useCallback(
+    (value: string) => {
+      updateSearchParams(1, limit, value);
+    },
+    [limit, updateSearchParams]
+  );
+  const { localSearch, setLocalSearch } = useDebouncedUrlSearch(
+    search,
+    onSearchCommit
+  );
 
   const initialSwrKey = useInitialSwrKey(() =>
     buildRoomsSwrKey({

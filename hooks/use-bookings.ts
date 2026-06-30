@@ -117,7 +117,7 @@ export function useBookings({
     useSWR<BookingsResponse>(
       swrKey,
       fetcher,
-      listSwrConfig(swrKey, initialSwrKey, fallbackData)
+      listSwrConfig(swrKey, initialSwrKey, fallbackData, branchId)
     );
 
   return {

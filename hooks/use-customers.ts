@@ -47,7 +47,7 @@ export function useCustomers({
   const { data, error, isLoading, mutate, isValidating } = useSWR<CustomersResponse>(
     swrKey,
     fetcher,
-    listSwrConfig(swrKey, initialSwrKey, fallbackData)
+    listSwrConfig(swrKey, initialSwrKey, fallbackData, branchId)
   );
 
   return {

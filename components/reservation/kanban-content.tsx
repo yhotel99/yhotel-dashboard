@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useShallowSearchParams } from "@/hooks/use-shallow-search-params";
 import { useInitialSwrKey } from "@/hooks/use-initial-swr-key";
-import { useDebounce } from "@/hooks/use-debounce";
+import { useDebouncedUrlSearch } from "@/hooks/use-debounced-url-search";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { IconSearch, IconRefresh, IconCalendar, IconInnerShadowTop, IconEye } from "@tabler/icons-react";
@@ -245,8 +245,6 @@ export function KanbanContent({ initialData }: KanbanContentProps) {
   const { searchParams, pushSearchParams } = useShallowSearchParams();
   const { filterBranchId } = useBranch();
   const search = useMemo(() => searchParams.get("search") || "", [searchParams]);
-  const [localSearch, setLocalSearch] = useState(search);
-  const debouncedSearch = useDebounce(localSearch, 300);
 
   const updateSearch = useCallback(
     (newSearch: string) => {
@@ -261,11 +259,10 @@ export function KanbanContent({ initialData }: KanbanContentProps) {
     [pushSearchParams]
   );
 
-  useEffect(() => {
-    if (debouncedSearch !== search) {
-      updateSearch(debouncedSearch);
-    }
-  }, [debouncedSearch, search, updateSearch]);
+  const { localSearch, setLocalSearch } = useDebouncedUrlSearch(
+    search,
+    updateSearch
+  );
 
   const [selectedBooking, setSelectedBooking] = useState<BookingRecord | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);

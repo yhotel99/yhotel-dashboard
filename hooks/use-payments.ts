@@ -98,7 +98,7 @@ export function usePayments({
     useSWR<PaymentsResponse>(
       swrKey,
       fetcher,
-      listSwrConfig(swrKey, initialSwrKey, fallbackData)
+      listSwrConfig(swrKey, initialSwrKey, fallbackData, branchId)
     );
 
   return {

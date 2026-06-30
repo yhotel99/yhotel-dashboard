@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { IconPlus } from "@tabler/icons-react";
 
 import type { Voucher, VoucherInput, VouchersResponse } from "@/lib/types";
-import { useDebounce } from "@/hooks/use-debounce";
+import { useDebouncedUrlSearch } from "@/hooks/use-debounced-url-search";
 import { buildVouchersSwrKey, useVouchers } from "@/hooks/use-vouchers";
 import {
   createVoucher,
@@ -64,14 +64,16 @@ export function VouchersContent({ initialData }: { initialData: VouchersResponse
     [pushSearchParams]
   );
 
-  const [localSearch, setLocalSearch] = useState(search);
-  const debouncedSearch = useDebounce(localSearch, 300);
-
-  useEffect(() => {
-    if (debouncedSearch !== search) {
-      updateSearchParams(1, limit, debouncedSearch);
-    }
-  }, [debouncedSearch, search, limit, updateSearchParams]);
+  const onSearchCommit = useCallback(
+    (value: string) => {
+      updateSearchParams(1, limit, value);
+    },
+    [limit, updateSearchParams]
+  );
+  const { localSearch, setLocalSearch } = useDebouncedUrlSearch(
+    search,
+    onSearchCommit
+  );
 
   const initialSwrKey = useInitialSwrKey(() =>
     buildVouchersSwrKey({
