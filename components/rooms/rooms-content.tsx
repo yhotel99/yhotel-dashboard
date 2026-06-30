@@ -3,8 +3,9 @@
 import { useRouter } from "next/navigation";
 import { useShallowSearchParams } from "@/hooks/use-shallow-search-params";
 import { IconPlus } from "@tabler/icons-react";
-import { useMemo, useEffect, useCallback, useState, useRef } from "react";
+import { useMemo, useEffect, useCallback, useState } from "react";
 import { useDebounce } from "@/hooks/use-debounce";
+import { useInitialSwrKey } from "@/hooks/use-initial-swr-key";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
 import { buildRoomsSwrKey, useRooms } from "@/hooks/use-rooms";
@@ -22,7 +23,6 @@ import { useBranch } from "@/contexts/branch-context";
 export function RoomsContent({ initialData }: { initialData: RoomsResponse }) {
   const router = useRouter();
   const { searchParams, pushSearchParams } = useShallowSearchParams();
-  const initialSwrKeyRef = useRef<string | null>(null);
   const { filterBranchId, branches } = useBranch();
   const branchNameById = useMemo(
     () => Object.fromEntries(branches.map((b) => [b.id, b.name])),
@@ -86,14 +86,14 @@ export function RoomsContent({ initialData }: { initialData: RoomsResponse }) {
     }
   }, [debouncedSearch, search, limit, updateSearchParams]);
 
-  if (initialSwrKeyRef.current === null) {
-    initialSwrKeyRef.current = buildRoomsSwrKey({
+  const initialSwrKey = useInitialSwrKey(() =>
+    buildRoomsSwrKey({
       search,
       page,
       limit,
       branchId: filterBranchId,
-    });
-  }
+    })
+  );
 
   const { rooms, isLoading, pagination, mutate } = useRooms({
     search,
@@ -101,7 +101,7 @@ export function RoomsContent({ initialData }: { initialData: RoomsResponse }) {
     limit,
     branchId: filterBranchId,
     fallbackData: initialData,
-    initialSwrKey: initialSwrKeyRef.current,
+    initialSwrKey,
   });
 
   // Delete room dialog state
@@ -110,11 +110,11 @@ export function RoomsContent({ initialData }: { initialData: RoomsResponse }) {
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
 
-  // Đóng chi tiết khi đổi chi nhánh để không giữ phòng của CN cũ
-  useEffect(() => {
-    setIsDetailDialogOpen(false);
-    setSelectedRoom(null);
-  }, [filterBranchId]);
+  const detailRoom =
+    selectedRoom &&
+    (filterBranchId == null || selectedRoom.branch_id === filterBranchId)
+      ? selectedRoom
+      : null;
 
   // Handle empty page after deletion or invalid page number
   useEffect(() => {
@@ -239,6 +239,7 @@ export function RoomsContent({ initialData }: { initialData: RoomsResponse }) {
           }}
           isLoading={isLoading}
           serverPagination={pagination}
+          paginationVariant="sequential"
           onPageChange={(newPage) => updateSearchParams(newPage, limit, search)}
           onLimitChange={(newLimit) => updateSearchParams(1, newLimit, search)}
           serverSearch={localSearch}
@@ -259,10 +260,10 @@ export function RoomsContent({ initialData }: { initialData: RoomsResponse }) {
         />
       )}
 
-      {selectedRoom && (
+      {detailRoom ? (
         <RoomDetailDialog
-          key={selectedRoom.id}
-          room={selectedRoom}
+          key={detailRoom.id}
+          room={detailRoom}
           open={isDetailDialogOpen}
           onOpenChange={(open) => {
             setIsDetailDialogOpen(open);
@@ -271,7 +272,7 @@ export function RoomsContent({ initialData }: { initialData: RoomsResponse }) {
             }
           }}
         />
-      )}
+      ) : null}
     </div>
   );
 }

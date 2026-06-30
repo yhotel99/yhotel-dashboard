@@ -6,6 +6,7 @@ import { useShallowSearchParams } from "@/hooks/use-shallow-search-params";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
 import { toast } from "sonner";
+import { useInitialSwrKey } from "@/hooks/use-initial-swr-key";
 import { buildProfilesSwrKey, useProfiles } from "@/hooks/use-profiles";
 import { createProfileAction, updateProfileAction } from "@/actions/profiles";
 import type { Profile, ProfilesResponse } from "@/lib/types";
@@ -33,7 +34,6 @@ export function UsersContent({
   initialData: ProfilesResponse;
 }) {
   const { searchParams, pushSearchParams } = useShallowSearchParams();
-  const initialSwrKeyRef = React.useRef<string | null>(null);
   const [localSearch, setLocalSearch] = React.useState("");
   const [openUserDialog, setOpenUserDialog] = React.useState(false);
   const [editingProfile, setEditingProfile] = React.useState<
@@ -98,14 +98,14 @@ export function UsersContent({
     [branches]
   );
 
-  if (initialSwrKeyRef.current === null) {
-    initialSwrKeyRef.current = buildProfilesSwrKey({
+  const initialSwrKey = useInitialSwrKey(() =>
+    buildProfilesSwrKey({
       page,
       limit,
       search,
       branchId: filterBranchId,
-    });
-  }
+    })
+  );
 
   const { profiles, isLoading, pagination, refetch, mutate } = useProfiles({
     page,
@@ -113,7 +113,7 @@ export function UsersContent({
     search,
     branchId: filterBranchId,
     fallbackData: initialData,
-    initialSwrKey: initialSwrKeyRef.current,
+    initialSwrKey,
   });
 
   // Wrapper functions to call server actions and refresh data
@@ -245,6 +245,7 @@ export function UsersContent({
           fetchData={() => refetch()}
           isLoading={isLoading}
           serverPagination={pagination}
+          paginationVariant="sequential"
           onPageChange={(newPage) => updateSearchParams(newPage, limit, search)}
           onLimitChange={(newLimit) => updateSearchParams(1, newLimit, search)}
           serverSearch={localSearch}

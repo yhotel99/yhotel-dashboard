@@ -19,6 +19,7 @@ import {
 import { DataTable } from "@/components/data-table";
 import { useShallowSearchParams } from "@/hooks/use-shallow-search-params";
 import { buildBookingsSwrKey, useBookings } from "@/hooks/use-bookings";
+import { useInitialSwrKey } from "@/hooks/use-initial-swr-key";
 import { useBranch } from "@/contexts/branch-context";
 import {
   createBooking as createBookingAction,
@@ -89,7 +90,6 @@ export function BookingsContent({
   );
   const branchIdForFetch =
     scope.mode === "single" ? scope.branchId : selectedBranchId;
-  const initialSwrKeyRef = React.useRef<string | null>(null);
   const [localSearch, setLocalSearch] = React.useState(
     () => searchParams.get("search") || ""
   );
@@ -257,8 +257,8 @@ export function BookingsContent({
 
   const useKeysetCursor = Boolean(cursorCreatedAt && cursorId);
 
-  if (initialSwrKeyRef.current === null) {
-    initialSwrKeyRef.current = buildBookingsSwrKey({
+  const initialSwrKey = useInitialSwrKey(() =>
+    buildBookingsSwrKey({
       search,
       page,
       limit,
@@ -271,8 +271,8 @@ export function BookingsContent({
       cursorId,
       branchId: branchIdForFetch,
       includeTotal: !useKeysetCursor,
-    });
-  }
+    })
+  );
 
   const { bookings, isLoading, pagination, mutate } = useBookings({
     search,
@@ -288,8 +288,33 @@ export function BookingsContent({
     branchId: branchIdForFetch,
     includeTotal: !useKeysetCursor,
     fallbackData: initialData,
-    initialSwrKey: initialSwrKeyRef.current,
+    initialSwrKey,
   });
+
+  const [cachedTotal, setCachedTotal] = React.useState<number | null>(
+    initialData.pagination.total > 0 ? initialData.pagination.total : null
+  );
+
+  React.useEffect(() => {
+    if (pagination.total > 0) {
+      setCachedTotal(pagination.total);
+    }
+  }, [pagination.total]);
+
+  const tablePagination = React.useMemo(() => {
+    const total = cachedTotal ?? pagination.total;
+    const totalPages =
+      total > 0 ? Math.ceil(total / pagination.limit) : pagination.page;
+    const hasNextPage =
+      Boolean(pagination.nextCursor) ||
+      (total > 0 && pagination.page < totalPages);
+    return {
+      ...pagination,
+      total,
+      totalPages,
+      hasNextPage,
+    };
+  }, [cachedTotal, pagination]);
 
   const handleStatusFilterChange = React.useCallback(
     (value: string) => {
@@ -830,9 +855,10 @@ export function BookingsContent({
             await mutate();
           }}
           isLoading={isLoading}
-          serverPagination={pagination}
+          paginationVariant="sequential"
+          serverPagination={tablePagination}
           onPageChange={(newPage) => {
-            if (newPage > page && pagination.nextCursor) {
+            if (newPage === page + 1 && pagination.nextCursor) {
               pushSearchParams((params) => {
                 if (newPage > 1) {
                   params.set("page", newPage.toString());

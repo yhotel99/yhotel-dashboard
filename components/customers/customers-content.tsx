@@ -13,6 +13,7 @@ import { EditCustomerDialog } from "@/components/customers/edit-customer-dialog"
 import { DeleteCustomerDialog } from "@/components/customers/delete-customer-dialog";
 import { CustomerDetailDialog } from "@/components/customers/customer-detail-dialog";
 import { toast } from "sonner";
+import { useInitialSwrKey } from "@/hooks/use-initial-swr-key";
 import { buildCustomersSwrKey, useCustomers } from "@/hooks/use-customers";
 import {
   createCustomerAction,
@@ -29,7 +30,6 @@ export function CustomersContent({
 }) {
   const router = useRouter();
   const { searchParams, pushSearchParams } = useShallowSearchParams();
-  const initialSwrKeyRef = React.useRef<string | null>(null);
   const { filterBranchId, branches } = useBranch();
   const branchNameById = React.useMemo(
     () => Object.fromEntries(branches.map((b) => [b.id, b.name])),
@@ -99,14 +99,14 @@ export function CustomersContent({
     }
   }, [debouncedSearch, search, limit, updateSearchParams]);
 
-  if (initialSwrKeyRef.current === null) {
-    initialSwrKeyRef.current = buildCustomersSwrKey({
+  const initialSwrKey = useInitialSwrKey(() =>
+    buildCustomersSwrKey({
       search,
       page,
       limit,
       branchId: filterBranchId,
-    });
-  }
+    })
+  );
 
   const { customers, isLoading, pagination, mutate } = useCustomers({
     search,
@@ -114,7 +114,7 @@ export function CustomersContent({
     limit,
     branchId: filterBranchId,
     fallbackData: initialData,
-    initialSwrKey: initialSwrKeyRef.current,
+    initialSwrKey,
   });
 
   const handleEditCustomer = (customer: Customer) => {
@@ -227,6 +227,7 @@ export function CustomersContent({
           }}
           isLoading={isLoading}
           serverPagination={pagination}
+          paginationVariant="sequential"
           onPageChange={(newPage) => updateSearchParams(newPage, limit, search)}
           onLimitChange={(newLimit) => updateSearchParams(1, newLimit, search)}
           serverSearch={localSearch}

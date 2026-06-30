@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useEffect, useState, useCallback, useRef } from "react";
+import { useMemo, useEffect, useState, useCallback } from "react";
 import { useShallowSearchParams } from "@/hooks/use-shallow-search-params";
+import { useInitialSwrKey } from "@/hooks/use-initial-swr-key";
 import { DataTable } from "@/components/data-table";
 import { buildPaymentLogsSwrKey, usePaymentLogs } from "@/hooks/use-payment-logs";
 import { useDebounce } from "@/hooks/use-debounce";
@@ -16,7 +17,6 @@ export function PaymentLogsContent({
   initialData: PaymentLogsResponse;
 }) {
   const { searchParams, pushSearchParams } = useShallowSearchParams();
-  const initialSwrKeyRef = useRef<string | null>(null);
   const { filterBranchId } = useBranch();
   const [localSearch, setLocalSearch] = useState("");
 
@@ -70,14 +70,14 @@ export function PaymentLogsContent({
     }
   }, [debouncedSearch, search, limit, updateSearchParams]);
 
-  if (initialSwrKeyRef.current === null) {
-    initialSwrKeyRef.current = buildPaymentLogsSwrKey({
+  const initialSwrKey = useInitialSwrKey(() =>
+    buildPaymentLogsSwrKey({
       search,
       page,
       limit,
       branchId: filterBranchId,
-    });
-  }
+    })
+  );
 
   const { paymentLogs, isLoading, pagination, mutate } = usePaymentLogs({
     search,
@@ -85,7 +85,7 @@ export function PaymentLogsContent({
     limit,
     branchId: filterBranchId,
     fallbackData: initialData,
-    initialSwrKey: initialSwrKeyRef.current,
+    initialSwrKey,
   });
 
   const { data: roomNumberById } = useRoomNumberLookup();
@@ -147,6 +147,7 @@ export function PaymentLogsContent({
           }}
           isLoading={isLoading}
           serverPagination={pagination}
+          paginationVariant="sequential"
           onPageChange={(newPage) => updateSearchParams(newPage, limit, search)}
           onLimitChange={(newLimit) => updateSearchParams(1, newLimit, search)}
           serverSearch={localSearch}

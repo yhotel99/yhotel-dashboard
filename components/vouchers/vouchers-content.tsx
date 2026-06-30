@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useShallowSearchParams } from "@/hooks/use-shallow-search-params";
+import { useInitialSwrKey } from "@/hooks/use-initial-swr-key";
 import { toast } from "sonner";
 import { IconPlus } from "@tabler/icons-react";
 
@@ -25,7 +26,6 @@ import { useBranch } from "@/contexts/branch-context";
 
 export function VouchersContent({ initialData }: { initialData: VouchersResponse }) {
   const { searchParams, pushSearchParams } = useShallowSearchParams();
-  const initialSwrKeyRef = useRef<string | null>(null);
   const { hasPermission } = usePermissions();
   const canCreate = hasPermission("create:vouchers");
   const canUpdate = hasPermission("update:vouchers");
@@ -73,14 +73,14 @@ export function VouchersContent({ initialData }: { initialData: VouchersResponse
     }
   }, [debouncedSearch, search, limit, updateSearchParams]);
 
-  if (initialSwrKeyRef.current === null) {
-    initialSwrKeyRef.current = buildVouchersSwrKey({
+  const initialSwrKey = useInitialSwrKey(() =>
+    buildVouchersSwrKey({
       search,
       page,
       limit,
       branchId: filterBranchId,
-    });
-  }
+    })
+  );
 
   const { vouchers, pagination, isLoading, mutate } = useVouchers({
     search,
@@ -88,7 +88,7 @@ export function VouchersContent({ initialData }: { initialData: VouchersResponse
     limit,
     branchId: filterBranchId,
     fallbackData: initialData,
-    initialSwrKey: initialSwrKeyRef.current,
+    initialSwrKey,
   });
 
   // dialogs
@@ -265,6 +265,7 @@ export function VouchersContent({ initialData }: { initialData: VouchersResponse
           }}
           isLoading={isLoading}
           serverPagination={pagination}
+          paginationVariant="sequential"
           onPageChange={(newPage) => updateSearchParams(newPage, limit, search)}
           onLimitChange={(newLimit) => updateSearchParams(1, newLimit, search)}
           serverSearch={localSearch}

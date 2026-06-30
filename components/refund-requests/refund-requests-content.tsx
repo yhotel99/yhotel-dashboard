@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useEffect, useState, useCallback, useRef } from "react";
+import { useMemo, useEffect, useState, useCallback } from "react";
 import { useShallowSearchParams } from "@/hooks/use-shallow-search-params";
 import { DataTable } from "@/components/data-table";
 import type {
@@ -8,6 +8,7 @@ import type {
   RefundRequestWithRelations,
   RefundRequestsResponse,
 } from "@/lib/types";
+import { useInitialSwrKey } from "@/hooks/use-initial-swr-key";
 import { buildRefundRequestsSwrKey, useRefundRequests } from "@/hooks/use-refund-requests";
 import { updateRefundRequestStatusAction } from "@/actions/refund-requests";
 import { useDebounce } from "@/hooks/use-debounce";
@@ -22,7 +23,6 @@ export function RefundRequestsContent({
   initialData: RefundRequestsResponse;
 }) {
   const { searchParams, pushSearchParams } = useShallowSearchParams();
-  const initialSwrKeyRef = useRef<string | null>(null);
   const { filterBranchId, branches } = useBranch();
   const branchNameById = useMemo(
     () => Object.fromEntries(branches.map((b) => [b.id, b.name])),
@@ -84,14 +84,14 @@ export function RefundRequestsContent({
     }
   }, [debouncedSearch, search, limit, updateSearchParams]);
 
-  if (initialSwrKeyRef.current === null) {
-    initialSwrKeyRef.current = buildRefundRequestsSwrKey({
+  const initialSwrKey = useInitialSwrKey(() =>
+    buildRefundRequestsSwrKey({
       page,
       limit,
       search,
       branchId: filterBranchId,
-    });
-  }
+    })
+  );
 
   // Use SWR hook for refund requests
   const { refundRequests, isLoading, pagination, refetch, mutate } =
@@ -101,7 +101,7 @@ export function RefundRequestsContent({
       search,
       branchId: filterBranchId,
       fallbackData: initialData,
-      initialSwrKey: initialSwrKeyRef.current,
+      initialSwrKey,
     });
 
   // Wrapper function to update refund request status
@@ -184,6 +184,7 @@ export function RefundRequestsContent({
           fetchData={() => refetch()}
           isLoading={isLoading}
           serverPagination={pagination}
+          paginationVariant="sequential"
           onPageChange={(newPage) => updateSearchParams(newPage, limit, search)}
           onLimitChange={(newLimit) => updateSearchParams(1, newLimit, search)}
           serverSearch={localSearch}

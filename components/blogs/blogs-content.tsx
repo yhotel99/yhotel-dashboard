@@ -10,6 +10,7 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { BLOG_COLUMNS, createColumns } from "@/components/blogs/columns";
 import { DeleteBlogDialog } from "@/components/blogs/delete-blog-dialog";
 import { toast } from "sonner";
+import { useInitialSwrKey } from "@/hooks/use-initial-swr-key";
 import { buildBlogsSwrKey, useBlogs } from "@/hooks/use-blogs";
 import {
   updateBlogStatus as updateBlogStatusAction,
@@ -20,7 +21,6 @@ import type { Blog, BlogsResponse } from "@/lib/types";
 export function BlogsContent({ initialData }: { initialData: BlogsResponse }) {
   const router = useRouter();
   const { searchParams, pushSearchParams } = useShallowSearchParams();
-  const initialSwrKeyRef = React.useRef<string | null>(null);
   const [localSearch, setLocalSearch] = React.useState("");
   const [openDeleteDialog, setOpenDeleteDialog] = React.useState(false);
   const [blogToDelete, setBlogToDelete] = React.useState<Blog | null>(null);
@@ -75,16 +75,16 @@ export function BlogsContent({ initialData }: { initialData: BlogsResponse }) {
     }
   }, [debouncedSearch, search, limit, updateSearchParams]);
 
-  if (initialSwrKeyRef.current === null) {
-    initialSwrKeyRef.current = buildBlogsSwrKey({ search, page, limit });
-  }
+  const initialSwrKey = useInitialSwrKey(() =>
+    buildBlogsSwrKey({ search, page, limit })
+  );
 
   const { blogs, isLoading, pagination, mutate } = useBlogs({
     search,
     page,
     limit,
     fallbackData: initialData,
-    initialSwrKey: initialSwrKeyRef.current,
+    initialSwrKey,
   });
 
 
@@ -186,6 +186,7 @@ export function BlogsContent({ initialData }: { initialData: BlogsResponse }) {
           }}
           isLoading={isLoading}
           serverPagination={pagination}
+          paginationVariant="sequential"
           onPageChange={(newPage) => updateSearchParams(newPage, limit, search)}
           onLimitChange={(newLimit) => updateSearchParams(1, newLimit, search)}
           serverSearch={localSearch}

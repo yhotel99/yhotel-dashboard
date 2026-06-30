@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo, useRef, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useShallowSearchParams } from "@/hooks/use-shallow-search-params";
+import { useInitialSwrKey } from "@/hooks/use-initial-swr-key";
 import { useDebounce } from "@/hooks/use-debounce";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -242,7 +243,6 @@ interface KanbanContentProps {
 
 export function KanbanContent({ initialData }: KanbanContentProps) {
   const { searchParams, pushSearchParams } = useShallowSearchParams();
-  const initialSwrKeyRef = useRef<string | null>(null);
   const { filterBranchId } = useBranch();
   const search = useMemo(() => searchParams.get("search") || "", [searchParams]);
   const [localSearch, setLocalSearch] = useState(search);
@@ -271,18 +271,18 @@ export function KanbanContent({ initialData }: KanbanContentProps) {
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [isAvailableRoomsDialogOpen, setIsAvailableRoomsDialogOpen] = useState(false);
 
-  if (initialSwrKeyRef.current === null) {
-    initialSwrKeyRef.current = buildUpcomingCheckinsSwrKey({
+  const initialSwrKey = useInitialSwrKey(() =>
+    buildUpcomingCheckinsSwrKey({
       search,
       branchId: filterBranchId,
-    });
-  }
+    })
+  );
 
   const { bookings, isLoading, error, refetch } = useUpcomingCheckins({
     search,
     branchId: filterBranchId,
     fallbackData: initialData,
-    initialSwrKey: initialSwrKeyRef.current,
+    initialSwrKey,
   });
 
   const { availableRooms, isLoading: isAvailableRoomsLoading, refetch: refetchAvailableRooms } = useAvailableRooms(filterBranchId);
