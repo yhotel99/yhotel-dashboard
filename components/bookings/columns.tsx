@@ -9,7 +9,6 @@ import {
 import type {
   BookingRecord,
   BookingStatus,
-  TransferBookingInput,
   ConfirmBookingEmailOptions,
 } from "@/lib/types";
 import { BookingActionsCell } from "@/components/bookings/actions-cell";
@@ -43,7 +42,6 @@ export function createColumns(
   updateStatus: (id: string, status: BookingStatus) => Promise<void>,
   handlers?: {
     onEdit?: (booking: BookingRecord) => void;
-    onTransfer?: (id: string, input: TransferBookingInput) => Promise<void>;
     onMarkAdvancePayment?: (bookingId: string) => Promise<void>;
     onCancelBooking?: (
       id: string,
@@ -259,12 +257,6 @@ export function createColumns(
 
         const actionHandlers = {
           onEdit: handlers?.onEdit || (() => { }),
-          onTransfer:
-            handlers?.onTransfer ||
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            (async (_id: string, _input: TransferBookingInput) => {
-              // Fallback: do nothing
-            }),
           onMarkAdvancePayment:
             handlers?.onMarkAdvancePayment ||
             // eslint-disable-next-line @typescript-eslint/no-unused-vars

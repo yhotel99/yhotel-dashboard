@@ -437,17 +437,6 @@ export type UpdateBookingInput = {
   final_amount?: number | null;
 };
 
-// Transfer booking input (for changing room, dates, and payments)
-export type TransferBookingInput = {
-  room_id?: string | null;
-  check_in?: string;
-  check_out?: string;
-  number_of_nights?: number;
-  total_amount?: number;
-  final_amount?: number | null;
-  advance_payment?: number;
-};
-
 // Multi-room booking input (nhiều phòng, thanh toán 1 lần)
 export type MultiBookingInput = {
   customer_id: string;

@@ -6,7 +6,6 @@ import type {
   BookingInput,
   MultiBookingInput,
   UpdateBookingInput,
-  TransferBookingInput,
   BookingStatus,
   BookingRecord,
   Result,
@@ -671,17 +670,6 @@ export async function cancelBookingAction(
 
   return { ok: true };
 }
-
-/**
- * Transfer booking (update room, check-in, check-out, advance_payment and handle payments)
- */
-export async function transferBookingAction(
-  bookingId: string,
-  input: TransferBookingInput
-) {
-  console.log("transferBookingAction", bookingId, input);
-}
-
 
 /**
  * Xác nhận booking (RPC) và gửi email xác nhận qua Resend — logic trước đây ở edge function send-confirm-booking.

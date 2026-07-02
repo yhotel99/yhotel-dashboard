@@ -29,7 +29,6 @@ import {
   confirmBookingEmailAction,
   cancelBookingAction,
   type CancelBookingActionOptions,
-  transferBookingAction,
   checkInBookingAction,
   checkOutBookingAction,
 } from "@/actions/bookings";
@@ -43,7 +42,6 @@ import type {
   MultiBookingInput,
   BookingRecord,
   UpdateBookingInput,
-  TransferBookingInput,
   BookingsResponse,
   ConfirmBookingEmailOptions,
 } from "@/lib/types";
@@ -551,22 +549,6 @@ export function BookingsContent({
     setIsEditDialogOpen(true);
   }, []);
 
-  const handleTransfer = React.useCallback(
-    async (id: string, input: TransferBookingInput) => {
-      try {
-        await transferBookingAction(id, input);
-        toast.success("Đã chuyển phòng thành công");
-        await mutate();
-      } catch (error) {
-        console.error(error);
-        toast.error("Không thể chuyển phòng", {
-          position: "top-center",
-        });
-      }
-    },
-    [mutate]
-  );
-
   const handleCancelBooking = React.useCallback(
     async (id: string, options?: CancelBookingActionOptions) => {
       try {
@@ -669,7 +651,6 @@ export function BookingsContent({
         handleUpdateStatus,
         {
           onEdit: handleEdit,
-          onTransfer: handleTransfer,
           onMarkAdvancePayment: handleMarkAdvancePayment,
           onCancelBooking: handleCancelBooking,
           checkAdvancePaymentStatus: checkAdvancePaymentStatusAction,
@@ -687,7 +668,6 @@ export function BookingsContent({
     [
       handleUpdateStatus,
       handleEdit,
-      handleTransfer,
       handleMarkAdvancePayment,
       handleCancelBooking,
       pendingBooking,

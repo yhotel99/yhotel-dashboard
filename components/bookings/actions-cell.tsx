@@ -33,7 +33,6 @@ import { StatusBadge } from "@/components/bookings/status";
 import type {
   BookingStatus,
   BookingRecord,
-  TransferBookingInput,
   ConfirmBookingEmailOptions,
 } from "@/lib/types";
 import {
@@ -41,7 +40,6 @@ import {
   type CancelBookingConfirmOptions,
 } from "./cancel-booking-confirm-dialog";
 import { ChangeBookingStatusDialog } from "./change-booking-status-dialog";
-import { TransferRoomDialog } from "./transfer-room-dialog";
 import { MarkAdvancePaymentDialog } from "./mark-advance-payment-dialog";
 import { CreateRefundRequestDialog } from "./create-refund-request-dialog";
 import { BookingDetailDialog } from "./booking-detail-dialog";
@@ -100,7 +98,6 @@ export function StatusSelect({
 export function BookingActionsCell({
   booking,
   onEdit,
-  onTransfer,
   onMarkAdvancePayment,
   onCancelBooking,
   checkAdvancePaymentStatus,
@@ -114,7 +111,6 @@ export function BookingActionsCell({
   booking: BookingRecord;
   customerId: string | null;
   onEdit: (booking: BookingRecord) => void;
-  onTransfer: (id: string, input: TransferBookingInput) => Promise<void>;
   onMarkAdvancePayment: (bookingId: string) => Promise<void>;
   onCancelBooking?: (
     id: string,
@@ -140,7 +136,6 @@ export function BookingActionsCell({
 }) {
   const [openCancel, setOpenCancel] = useState(false);
   const [openChangeStatus, setOpenChangeStatus] = useState(false);
-  const [openTransfer, setOpenTransfer] = useState(false);
   const [openMarkAdvancePayment, setOpenMarkAdvancePayment] = useState(false);
   const [openRefundRequest, setOpenRefundRequest] = useState(false);
   const [openDetail, setOpenDetail] = useState(false);
@@ -324,15 +319,6 @@ export function BookingActionsCell({
           checkedInBooking={checkedInBooking}
           checkedOutBooking={checkedOutBooking}
           cancelledBooking={cancelledBooking}
-        />
-      )}
-
-      {openTransfer && (
-        <TransferRoomDialog
-          open={openTransfer}
-          onOpenChange={setOpenTransfer}
-          booking={booking}
-          onTransfer={onTransfer}
         />
       )}
 
