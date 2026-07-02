@@ -231,7 +231,7 @@ export function CreateBookingDialog({
       effectiveBranchId: null,
     })
   );
-  const [prevOpen, setPrevOpen] = useState(open);
+  const prevOpenRef = useRef(open);
 
   const { rooms, mutate: refetch } = useRooms({
     page: 1,
@@ -242,13 +242,12 @@ export function CreateBookingDialog({
   const { settings } = useSettings();
   const debouncedSearch = useDebounce(customerSearch, 300);
 
-  // Fetch rooms when dialog opens
+  // Fetch rooms when dialog opens or branch changes
   useEffect(() => {
-    if (open) {
+    if (open && formBranchId) {
       refetch();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, formBranchId, refetch]);
 
   // Search customers using server action (no stats, only basic info)
   // Optimized to avoid unnecessary API calls
@@ -286,13 +285,6 @@ export function CreateBookingDialog({
     lastSearchRef.current = "";
   };
 
-  useEffect(() => {
-    if (open && formBranchId) {
-      refetch();
-    }
-  }, [open, formBranchId, refetch]);
-
-  // Cùng ngày: check-in 00:00, check-out 12:00 (1 đêm). Nhiều ngày: 14:00 / 12:00
   const checkInISO = useMemo(
     () =>
       getCheckInDateISO(
@@ -359,11 +351,13 @@ export function CreateBookingDialog({
     return false;
   }, [selectedRoom, formValues.total_guests]);
 
-  // Auto-update total amount when room or dates change
+  const pricingRevisionKey = `${calculatedTotalAmount}|${formValues.room_id}|${formValues.check_in_date}|${formValues.check_out_date}`;
+  const prevPricingRevisionRef = useRef(pricingRevisionKey);
+
+  // Auto-update total amount; clear stale voucher; cap advance when pricing changes
   useEffect(() => {
     if (calculatedTotalAmount > 0) {
       setFormValues((prev) => {
-        // Only update if the value actually changed to prevent infinite loops
         const currentTotal = Number(prev.total_amount || 0);
         if (Math.abs(currentTotal - calculatedTotalAmount) > 0.01) {
           return {
@@ -374,7 +368,6 @@ export function CreateBookingDialog({
         return prev;
       });
     } else if (calculatedTotalAmount === 0 && formValues.room_id) {
-      // Reset to 0 if no room selected or invalid dates
       setFormValues((prev) => {
         if (prev.total_amount !== "0") {
           return {
@@ -385,30 +378,38 @@ export function CreateBookingDialog({
         return prev;
       });
     }
-  }, [calculatedTotalAmount, formValues.room_id]);
 
-  // If total changes while voucher applied, clear voucher to avoid stale discount
-  useEffect(() => {
-    if (voucherState) {
-      setVoucherState(null);
-      setFinalAmountDigits("");
+    const pricingChanged = prevPricingRevisionRef.current !== pricingRevisionKey;
+    if (pricingChanged) {
+      prevPricingRevisionRef.current = pricingRevisionKey;
+      if (voucherState) {
+        setVoucherState(null);
+        setFinalAmountDigits("");
+      }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [calculatedTotalAmount, formValues.check_in_date, formValues.check_out_date, formValues.room_id]);
 
-  useEffect(() => {
     const maxValue =
-      voucherState?.finalAmount ??
-      (finalAmountValue || Number(formValues.total_amount || 0));
+      (!pricingChanged && voucherState?.finalAmount != null
+        ? voucherState.finalAmount
+        : undefined) ??
+      (finalAmountValue ||
+        calculatedTotalAmount ||
+        Number(formValues.total_amount || 0));
     if (advanceAmountValue > maxValue) {
       setAdvancePaymentDigits(String(maxValue));
     }
   }, [
+    pricingRevisionKey,
+    calculatedTotalAmount,
+    formValues.room_id,
+    formValues.check_in_date,
+    formValues.check_out_date,
     formValues.total_amount,
     voucherState,
     finalAmountValue,
     advanceAmountValue,
     setAdvancePaymentDigits,
+    setFinalAmountDigits,
   ]);
 
   // Calculate search results based on debounced search
@@ -451,8 +452,8 @@ export function CreateBookingDialog({
     setIsApplyingVoucher(false);
   }, [setAdvancePaymentDigits, setFinalAmountDigits]);
 
-  if (open !== prevOpen) {
-    setPrevOpen(open);
+  if (open !== prevOpenRef.current) {
+    prevOpenRef.current = open;
     if (open) {
       setFormBranchId(
         getDefaultFormBranchId({

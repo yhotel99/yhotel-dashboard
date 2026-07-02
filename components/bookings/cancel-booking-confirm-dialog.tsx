@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -31,10 +31,10 @@ export function CancelBookingConfirmDialog({
 }: CancelBookingConfirmDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [sendCancellationEmail, setSendCancellationEmail] = useState(true);
-  const [prevOpen, setPrevOpen] = useState(open);
+  const prevOpenRef = useRef(open);
 
-  if (open !== prevOpen) {
-    setPrevOpen(open);
+  if (open !== prevOpenRef.current) {
+    prevOpenRef.current = open;
     if (open) {
       setSendCancellationEmail(true);
     }

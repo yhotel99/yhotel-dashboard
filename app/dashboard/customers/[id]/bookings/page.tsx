@@ -1,271 +1,67 @@
-"use client";
+import { Suspense } from "react";
+import { CustomerBookingsContent } from "@/components/customers/customer-bookings-content";
+import { getBookingsListWithPagination } from "@/services/bookings";
+import { resolveListBranchId } from "@/lib/branch.server";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { IconArrowLeft } from "@tabler/icons-react";
-import { ColumnDef } from "@tanstack/react-table";
-import { Button } from "@/components/ui/button";
-import { DataTable } from "@/components/data-table";
-import { useBookings } from "@/hooks/use-bookings";
-import { useDebounce } from "@/hooks/use-debounce";
-import { useBranch } from "@/contexts/branch-context";
-import { buildBranchNameById } from "@/lib/branch";
-import { StatusBadge } from "@/components/bookings/status";
-import { formatCurrency, formatDateOnly } from "@/lib/functions";
-import { BookingRecord } from "@/lib/types";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+type CustomerBookingsPageProps = {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+};
 
-// Column definitions constants
-const CUSTOMER_BOOKING_COLUMNS = {
-  BOOKING_CODE: { accessorKey: "Mã booking", header: "Mã booking" },
-  ROOM: { accessorKey: "Phòng", header: "Phòng" },
-  BRANCH: { accessorKey: "Chi nhánh", header: "Chi nhánh" },
-  CHECK_IN: { accessorKey: "Ngày check-in", header: "Check-in" },
-  CHECK_OUT: { accessorKey: "Ngày check-out", header: "Check-out" },
-  NUMBER_OF_NIGHTS: { accessorKey: "Số đêm", header: "Số đêm" },
-  TOTAL_AMOUNT: { accessorKey: "Tổng tiền", header: "Tổng tiền" },
-  ADVANCE_PAYMENT: { accessorKey: "Tiền đặt cọc", header: "Tiền cọc" },
-  STATUS: { accessorKey: "Trạng thái", header: "Trạng thái" },
-} as const;
+export default async function CustomerBookingsPage({
+  params,
+  searchParams,
+}: CustomerBookingsPageProps) {
+  const [{ id: customerId }, query] = await Promise.all([
+    params,
+    searchParams,
+  ]);
 
-const createColumns = (
-  branchNameById: Readonly<Record<string, string>>
-): ColumnDef<BookingRecord>[] => [
-  {
-    accessorKey: CUSTOMER_BOOKING_COLUMNS.BOOKING_CODE.accessorKey,
-    header: CUSTOMER_BOOKING_COLUMNS.BOOKING_CODE.header,
-    cell: ({ row }) => {
-      const bookingCode =
-        row.original.booking_code || row.original.id.slice(0, 8).toUpperCase();
-      return (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="max-w-[140px] truncate font-semibold text-primary cursor-default">
-              {bookingCode}
-            </div>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>{bookingCode}</p>
-          </TooltipContent>
-        </Tooltip>
-      );
-    },
-  },
-  {
-    accessorKey: CUSTOMER_BOOKING_COLUMNS.ROOM.accessorKey,
-    header: CUSTOMER_BOOKING_COLUMNS.ROOM.header,
-    cell: ({ row }) => {
-      const roomName = row.original.rooms?.name ?? "-";
-      return (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="max-w-[200px] truncate font-medium">
-              {roomName}
-            </div>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>{roomName}</p>
-          </TooltipContent>
-        </Tooltip>
-      );
-    },
-  },
-  {
-    accessorKey: CUSTOMER_BOOKING_COLUMNS.BRANCH.accessorKey,
-    header: CUSTOMER_BOOKING_COLUMNS.BRANCH.header,
-    cell: ({ row }) => {
-      const branchId = row.original.branch_id;
-      const label =
-        branchId && branchNameById[branchId]
-          ? branchNameById[branchId]
-          : "—";
-      return (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="max-w-[140px] truncate font-medium">{label}</div>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>{label}</p>
-          </TooltipContent>
-        </Tooltip>
-      );
-    },
-  },
-  {
-    accessorKey: CUSTOMER_BOOKING_COLUMNS.CHECK_IN.accessorKey,
-    header: CUSTOMER_BOOKING_COLUMNS.CHECK_IN.header,
-    cell: ({ row }) => formatDateOnly(row.original.check_in),
-  },
-  {
-    accessorKey: CUSTOMER_BOOKING_COLUMNS.CHECK_OUT.accessorKey,
-    header: CUSTOMER_BOOKING_COLUMNS.CHECK_OUT.header,
-    cell: ({ row }) => formatDateOnly(row.original.check_out),
-  },
-  {
-    accessorKey: CUSTOMER_BOOKING_COLUMNS.NUMBER_OF_NIGHTS.accessorKey,
-    header: CUSTOMER_BOOKING_COLUMNS.NUMBER_OF_NIGHTS.header,
-    cell: ({ row }) => `${row.original.number_of_nights} đêm`,
-  },
-  {
-    accessorKey: CUSTOMER_BOOKING_COLUMNS.TOTAL_AMOUNT.accessorKey,
-    header: CUSTOMER_BOOKING_COLUMNS.TOTAL_AMOUNT.header,
-    cell: ({ row }) =>
-      formatCurrency(row.original.final_amount ?? row.original.total_amount),
-  },
-  {
-    accessorKey: CUSTOMER_BOOKING_COLUMNS.ADVANCE_PAYMENT.accessorKey,
-    header: CUSTOMER_BOOKING_COLUMNS.ADVANCE_PAYMENT.header,
-    cell: ({ row }) => formatCurrency(row.original.advance_payment || 0),
-  },
-  {
-    accessorKey: CUSTOMER_BOOKING_COLUMNS.STATUS.accessorKey,
-    header: CUSTOMER_BOOKING_COLUMNS.STATUS.header,
-    cell: ({ row }) => <StatusBadge status={row.original.status} />,
-  },
-];
+  const page = query.page ? Number(query.page) : 1;
+  const limit = query.limit ? Number(query.limit) : 10;
+  const search = query.search ? String(query.search) : "";
+  const requestedBranchId = query.branchId ? String(query.branchId) : null;
+  const branchId = await resolveListBranchId(requestedBranchId);
 
-export default function CustomerBookingsPage() {
-  const params = useParams();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const customerId = params.id as string;
-  const { scope, selectedBranchId, branches } = useBranch();
-  const branchIdForFetch =
-    scope.mode === "single" ? scope.branchId : selectedBranchId;
-
-  const [localSearch, setLocalSearch] = useState("");
-
-  // Get pagination and search from URL params
-  const page = useMemo(() => {
-    const pageParam = searchParams.get("page");
-    const pageNum = pageParam ? parseInt(pageParam, 10) : 1;
-    return pageNum > 0 ? pageNum : 1;
-  }, [searchParams]);
-
-  const limit = useMemo(() => {
-    const limitParam = searchParams.get("limit");
-    const limitNum = limitParam ? parseInt(limitParam, 10) : 10;
-    return limitNum > 0 ? limitNum : 10;
-  }, [searchParams]);
-
-  const search = useMemo(() => {
-    return searchParams.get("search") || "";
-  }, [searchParams]);
-
-  // Update search params
-  const updateSearchParams = useCallback(
-    (newPage: number, newLimit: number, newSearch: string) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (newPage > 1) {
-        params.set("page", newPage.toString());
-      } else {
-        params.delete("page");
-      }
-      if (newLimit !== 10) {
-        params.set("limit", newLimit.toString());
-      } else {
-        params.delete("limit");
-      }
-      if (newSearch) {
-        params.set("search", newSearch);
-      } else {
-        params.delete("search");
-      }
-      router.push(
-        `/dashboard/customers/${customerId}/bookings?${params.toString()}`
-      );
-    },
-    [router, searchParams, customerId]
-  );
-
-  // Debounce search
-  const debouncedSearch = useDebounce(localSearch, 300);
-
-  useEffect(() => {
-    if (debouncedSearch !== search) {
-      updateSearchParams(1, limit, debouncedSearch);
-    }
-  }, [debouncedSearch, search, limit, updateSearchParams]);
-
-  const { bookings, isLoading, pagination, mutate } = useBookings({
+  const initialData = await getBookingsListWithPagination({
     page,
     limit,
     search,
-    customerId: customerId || null,
-    branchId: branchIdForFetch,
+    customerId,
+    branchId,
   });
 
-  const customerInfo = useMemo(() => {
-    if (bookings.length > 0 && bookings[0].customers) {
-      return {
-        name: bookings[0].customers.full_name,
-        phone: bookings[0].customers.phone || "",
-      };
-    }
-    return {
-      name: "Khách hàng",
-      phone: "",
-    };
-  }, [bookings]);
-
-  const branchNameById = useMemo(
-    () => buildBranchNameById(branches),
-    [branches]
-  );
-
-  const columns = useMemo(
-    () => createColumns(branchNameById),
-    [branchNameById]
-  );
-
   return (
-    <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-      <div className="flex items-center gap-4 px-4 lg:px-6">
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => router.push(`/dashboard/customers`)}
-          className="h-10 w-10 cursor-pointer"
-        >
-          <IconArrowLeft className="size-4" />
-          <span className="sr-only">Quay lại</span>
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold">
-            Booking của {customerInfo.name}
-          </h1>
-          {customerInfo.phone ? (
-            <p className="text-muted-foreground text-sm">
-              SĐT: {customerInfo.phone}
-            </p>
-          ) : null}
+    <Suspense
+      fallback={
+        <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+          <div className="flex items-center gap-4 px-4 lg:px-6">
+            <div className="size-10 rounded-md bg-muted animate-pulse" />
+            <div className="space-y-2">
+              <div className="h-8 w-48 bg-muted rounded animate-pulse" />
+              <div className="h-4 w-32 bg-muted rounded animate-pulse" />
+            </div>
+          </div>
+          <div className="px-4 lg:px-6">
+            <div className="space-y-4">
+              <div className="h-10 bg-muted rounded animate-pulse" />
+              <div className="space-y-2">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="h-16 bg-muted rounded animate-pulse"
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-
-      <div className="px-4 lg:px-6">
-        <DataTable
-          columns={columns}
-          data={bookings}
-          searchKey="id"
-          searchPlaceholder="Tìm theo mã booking hoặc số phòng..."
-          emptyMessage="Khách hàng chưa có booking."
-          entityName="booking"
-          getRowId={(row) => row.id}
-          fetchData={async () => {
-            await mutate();
-          }}
-          isLoading={isLoading}
-          serverPagination={pagination}
-          onPageChange={(newPage) => updateSearchParams(newPage, limit, search)}
-          onLimitChange={(newLimit) => updateSearchParams(1, newLimit, search)}
-          serverSearch={localSearch}
-          onSearchChange={setLocalSearch}
-        />
-      </div>
-    </div>
+      }
+    >
+      <CustomerBookingsContent
+        customerId={customerId}
+        initialData={initialData}
+      />
+    </Suspense>
   );
 }

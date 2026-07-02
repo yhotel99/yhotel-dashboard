@@ -6,6 +6,8 @@ import { mutate } from "swr";
 import { updateBranchBankAccountAction } from "@/actions/bank-accounts";
 import { bankCodeMismatchMessage } from "@/lib/bank-info";
 import { SEPAY_BANKS } from "@/lib/sepay-banks";
+
+const SUPPORTED_SEPAY_BANKS = SEPAY_BANKS.filter((b) => b.supported);
 import type { BranchBankAccount, BranchBankAccountInput } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -191,13 +193,11 @@ export function BranchBankAccountsTab({
                           <SelectValue placeholder="Chọn ngân hàng" />
                         </SelectTrigger>
                         <SelectContent>
-                          {SEPAY_BANKS.filter((b) => b.supported).map(
-                            (bank) => (
-                              <SelectItem key={bank.code} value={bank.code}>
-                                {bank.short_name} ({bank.code})
-                              </SelectItem>
-                            )
-                          )}
+                          {SUPPORTED_SEPAY_BANKS.map((bank) => (
+                            <SelectItem key={bank.code} value={bank.code}>
+                              {bank.short_name} ({bank.code})
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     ) : (

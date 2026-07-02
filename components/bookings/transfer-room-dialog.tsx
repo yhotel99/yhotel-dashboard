@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, type ChangeEvent, type FormEvent } from "react";
+import { useState, useEffect, useRef, type ChangeEvent, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -120,9 +120,12 @@ export function TransferRoomDialog({
     checkStatus();
   }, [open, booking]);
 
-  // Load booking data when dialog opens
-  useEffect(() => {
-    if (open && booking) {
+  const loadKey = open && booking ? booking.id : null;
+  const prevLoadKeyRef = useRef<string | null>(loadKey);
+
+  if (loadKey !== prevLoadKeyRef.current) {
+    prevLoadKeyRef.current = loadKey;
+    if (loadKey && booking) {
       setFormValues({
         room_id: booking.room_id || "",
         check_in_date: formatDateForInput(booking.check_in),
@@ -130,7 +133,7 @@ export function TransferRoomDialog({
       });
       setAdvancePaymentDigits(String(booking.advance_payment));
     }
-  }, [open, booking, setAdvancePaymentDigits]);
+  }
 
   // Cùng ngày: check-in 00:00, check-out 12:00
   const checkInISO = getCheckInDateISO(
@@ -163,15 +166,7 @@ export function TransferRoomDialog({
         }).total
       : 0;
 
-  // Auto-update total amount when room or dates change
-  useEffect(() => {
-    if (calculatedTotalAmount > 0) {
-      // Keep the calculated total amount for display, but don't update form
-      // as we'll use it in the payload
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formValues.room_id, formValues.check_in_date, formValues.check_out_date]);
-
+  // Auto-update total amount when room or dates change — calculatedTotalAmount is derived at submit time
   useEffect(() => {
     const maxValue =
       calculatedTotalAmount ||

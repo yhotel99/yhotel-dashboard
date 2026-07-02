@@ -311,11 +311,10 @@ export function BookingsContent({
       dateTo,
     ]
   );
-  const [prevTotalFilterKey, setPrevTotalFilterKey] =
-    React.useState(totalFilterKey);
+  const prevTotalFilterKeyRef = React.useRef(totalFilterKey);
 
-  if (totalFilterKey !== prevTotalFilterKey) {
-    setPrevTotalFilterKey(totalFilterKey);
+  if (totalFilterKey !== prevTotalFilterKeyRef.current) {
+    prevTotalFilterKeyRef.current = totalFilterKey;
     if (cachedTotal !== null) {
       setCachedTotal(null);
     }

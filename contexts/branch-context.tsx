@@ -2,8 +2,8 @@
 
 import {
   createContext,
+  use,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useState,
@@ -14,8 +14,8 @@ import { useAuth } from "@/contexts/auth-context";
 import { canViewAllBranches } from "@/lib/branch";
 import { DEFAULT_BRANCH_ID } from "@/lib/constants";
 import {
-  BRANCH_STORAGE_KEY,
   readStoredBranchId,
+  writeStoredBranchId,
 } from "@/lib/branch-storage";
 
 type BranchContextType = {
@@ -55,12 +55,7 @@ export function BranchProvider({
   }, []);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (selectedBranchId) {
-      window.localStorage.setItem(BRANCH_STORAGE_KEY, selectedBranchId);
-    } else {
-      window.localStorage.removeItem(BRANCH_STORAGE_KEY);
-    }
+    writeStoredBranchId(selectedBranchId);
   }, [selectedBranchId]);
 
   const activeSelectedBranchId = useMemo(() => {
@@ -129,7 +124,7 @@ export function BranchProvider({
 }
 
 export function useBranch() {
-  const ctx = useContext(BranchContext);
+  const ctx = use(BranchContext);
   if (!ctx) {
     throw new Error("useBranch must be used inside BranchProvider");
   }

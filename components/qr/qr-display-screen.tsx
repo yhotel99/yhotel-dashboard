@@ -1,12 +1,12 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useReducer, useRef, useState, useMemo } from "react";
+import useSWR from "swr";
 import { DEFAULT_BRANCH_CODE, PUBLIC_ASSETS } from "@/lib/constants";
 import {
   bankMissingMessage,
   resolveBankInfo,
-  type BankInfoForQr,
 } from "@/lib/bank-info";
 import { formatCurrency, formatDateOnly } from "@/lib/functions";
 import { buildSepayQrImageUrl } from "@/lib/payment-qr";
@@ -55,105 +55,150 @@ type PublicQrInitResponse = {
   display: QRDisplayData | null;
 };
 
+type QrRealtimeState = {
+  realtimeDisplay: QRDisplayData | null;
+  hideDisplay: boolean;
+  paymentSuccess: boolean;
+};
+
+type QrRealtimeAction =
+  | { type: "realtime_update"; payload: QRDisplayData }
+  | { type: "payment_confirmed" }
+  | { type: "dismiss" }
+  | { type: "branch_changed" };
+
+function qrRealtimeReducer(
+  state: QrRealtimeState,
+  action: QrRealtimeAction
+): QrRealtimeState {
+  switch (action.type) {
+    case "realtime_update":
+      return {
+        realtimeDisplay: action.payload,
+        hideDisplay: false,
+        paymentSuccess: false,
+      };
+    case "payment_confirmed":
+      return { ...state, paymentSuccess: true };
+    case "dismiss":
+      return {
+        realtimeDisplay: null,
+        hideDisplay: true,
+        paymentSuccess: false,
+      };
+    case "branch_changed":
+      return {
+        realtimeDisplay: null,
+        hideDisplay: false,
+        paymentSuccess: false,
+      };
+    default:
+      return state;
+  }
+}
+
+const initialQrRealtimeState: QrRealtimeState = {
+  realtimeDisplay: null,
+  hideDisplay: false,
+  paymentSuccess: false,
+};
+
 export function QRDisplayScreen({ branchCode }: { branchCode: string }) {
   const normalizedCode = branchCode.trim().toLowerCase();
-  const [branch, setBranch] = useState<BranchInfo | null>(null);
-  const [bank, setBank] = useState<BankInfoForQr | null>(null);
-  const [displayData, setDisplayData] = useState<QRDisplayData | null>(null);
-  const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const swrKey = normalizedCode
+    ? `/api/public/qr-display/${normalizedCode}`
+    : null;
+
+  const { data: initPayload, error: initError } = useSWR<PublicQrInitResponse>(
+    swrKey,
+    async (url: string) => {
+      const res = await fetch(url);
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as {
+          error?: string;
+        };
+        throw new Error(
+          body.error ??
+            `Không tìm thấy chi nhánh "${normalizedCode}". Kiểm tra URL (ví dụ: /qr/main).`
+        );
+      }
+      return res.json() as Promise<PublicQrInitResponse>;
+    }
+  );
+
+  const branch = initPayload?.branch ?? null;
+  const bank = useMemo(() => {
+    if (!initPayload) return null;
+    return resolveBankInfo(initPayload.bank);
+  }, [initPayload]);
+
+  const bankError = useMemo(() => {
+    if (!initPayload?.branch || bank) return null;
+    return bankMissingMessage(initPayload.branch.name);
+  }, [initPayload, bank]);
+
+  const [qrState, dispatchQr] = useReducer(
+    qrRealtimeReducer,
+    initialQrRealtimeState
+  );
+  const { realtimeDisplay, hideDisplay, paymentSuccess } = qrState;
+  const branchId = initPayload?.branch?.id ?? null;
+  const prevBranchIdRef = useRef<string | null>(branchId);
+  if (branchId !== prevBranchIdRef.current) {
+    prevBranchIdRef.current = branchId;
+    dispatchQr({ type: "branch_changed" });
+  }
+
+  const displayData = hideDisplay
+    ? null
+    : realtimeDisplay ?? initPayload?.display ?? null;
   const [mounted, setMounted] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const playedSuccessSoundRef = useRef(false);
 
-  const applyBankForBranch = useCallback(
-    (branchInfo: BranchInfo, bankFields: PublicQrInitResponse["bank"]) => {
-      const bankInfo = resolveBankInfo(bankFields);
-      if (!bankInfo) {
-        setLoadError(bankMissingMessage(branchInfo.name));
-        setBank(null);
-        return false;
-      }
-      setBank(bankInfo);
-      return true;
-    },
-    []
-  );
+  const loadError =
+    initError instanceof Error
+      ? initError.message
+      : initError
+        ? "Không thể tải dữ liệu màn hình QR. Vui lòng thử lại."
+        : bankError;
 
   useEffect(() => {
     queueMicrotask(() => setMounted(true));
+  }, []);
+
+  useEffect(() => {
+    const subscribedBranchId = initPayload?.branch?.id;
+    if (!subscribedBranchId) return;
+
     const supabase = createClient();
-    let removeChannel: (() => void) | undefined;
-    let cancelled = false;
-
-    async function init() {
-      try {
-        const res = await fetch(`/api/public/qr-display/${normalizedCode}`);
-        if (!res.ok) {
-          const body = (await res.json().catch(() => ({}))) as {
-            error?: string;
-          };
-          if (!cancelled) {
-            setLoadError(
-              body.error ??
-              `Không tìm thấy chi nhánh "${normalizedCode}". Kiểm tra URL (ví dụ: /qr/main).`
-            );
+    const channel = supabase
+      .channel(`qr_display_${subscribedBranchId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "qr_display_state",
+          filter: `branch_id=eq.${subscribedBranchId}`,
+        },
+        (changePayload) => {
+          if (
+            changePayload.eventType === "INSERT" ||
+            changePayload.eventType === "UPDATE"
+          ) {
+            dispatchQr({
+              type: "realtime_update",
+              payload: changePayload.new as QRDisplayData,
+            });
           }
-          return;
         }
-
-        const payload = (await res.json()) as PublicQrInitResponse;
-        if (cancelled) return;
-
-        setBranch(payload.branch);
-        setLoadError(null);
-
-        if (!applyBankForBranch(payload.branch, payload.bank)) {
-          return;
-        }
-
-        if (payload.display) {
-          setDisplayData(payload.display);
-        }
-
-        const channel = supabase
-          .channel(`qr_display_${payload.branch.id}`)
-          .on(
-            "postgres_changes",
-            {
-              event: "*",
-              schema: "public",
-              table: "qr_display_state",
-              filter: `branch_id=eq.${payload.branch.id}`,
-            },
-            (changePayload) => {
-              if (
-                changePayload.eventType === "INSERT" ||
-                changePayload.eventType === "UPDATE"
-              ) {
-                setDisplayData(changePayload.new as QRDisplayData);
-                setPaymentSuccess(false);
-              }
-            }
-          )
-          .subscribe();
-
-        removeChannel = () => {
-          supabase.removeChannel(channel);
-        };
-      } catch {
-        if (!cancelled) {
-          setLoadError("Không thể tải dữ liệu màn hình QR. Vui lòng thử lại.");
-        }
-      }
-    }
-
-    void init();
+      )
+      .subscribe();
 
     return () => {
-      cancelled = true;
-      removeChannel?.();
+      supabase.removeChannel(channel);
     };
-  }, [applyBankForBranch, normalizedCode]);
+  }, [initPayload?.branch?.id]);
 
   useEffect(() => {
     if (!displayData?.booking_id) return;
@@ -171,7 +216,7 @@ export function QRDisplayScreen({ branchCode }: { branchCode: string }) {
         (payload) => {
           const next = payload.new as { status?: string };
           if (next?.status === "confirmed") {
-            setPaymentSuccess(true);
+            dispatchQr({ type: "payment_confirmed" });
           }
         }
       )
@@ -185,8 +230,7 @@ export function QRDisplayScreen({ branchCode }: { branchCode: string }) {
   useEffect(() => {
     if (!displayData) return;
     const timeoutId = setTimeout(() => {
-      setDisplayData(null);
-      setPaymentSuccess(false);
+      dispatchQr({ type: "dismiss" });
     }, 5 * 60 * 1000);
     return () => clearTimeout(timeoutId);
   }, [displayData]);
@@ -205,8 +249,7 @@ export function QRDisplayScreen({ branchCode }: { branchCode: string }) {
   useEffect(() => {
     if (!paymentSuccess) return;
     const timeoutId = setTimeout(() => {
-      setDisplayData(null);
-      setPaymentSuccess(false);
+      dispatchQr({ type: "dismiss" });
     }, 4000);
     return () => clearTimeout(timeoutId);
   }, [paymentSuccess]);
@@ -394,17 +437,30 @@ export function QRDisplayScreen({ branchCode }: { branchCode: string }) {
               priority
             />
           </div>
+          <style
+            dangerouslySetInnerHTML={{
+              __html: `
+            @keyframes qr-waiting-dot {
+              0%, 100% { transform: translateY(0); opacity: 0.45; }
+              50% { transform: translateY(-8px); opacity: 1; }
+            }
+            .qr-waiting-dot {
+              animation: qr-waiting-dot 1.1s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+            }
+          `,
+            }}
+          />
           <div className="flex justify-center gap-2">
             <div
-              className="w-3 h-3 rounded-full animate-bounce bg-[#9bc78e]"
+              className="qr-waiting-dot w-3 h-3 rounded-full bg-[#9bc78e]"
               style={{ animationDelay: "0ms" }}
             />
             <div
-              className="w-3 h-3 rounded-full animate-bounce bg-[#9bc78e]"
+              className="qr-waiting-dot w-3 h-3 rounded-full bg-[#9bc78e]"
               style={{ animationDelay: "150ms" }}
             />
             <div
-              className="w-3 h-3 rounded-full animate-bounce bg-[#9bc78e]"
+              className="qr-waiting-dot w-3 h-3 rounded-full bg-[#9bc78e]"
               style={{ animationDelay: "300ms" }}
             />
           </div>

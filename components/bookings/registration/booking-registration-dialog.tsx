@@ -36,10 +36,10 @@ export function BookingRegistrationDialog({
   const printRef = useRef<HTMLDivElement>(null);
 
   const fetchKey = open && bookingId ? bookingId : null;
-  const [activeFetchKey, setActiveFetchKey] = useState<string | null>(null);
+  const prevFetchKeyRef = useRef<string | null>(fetchKey);
 
-  if (fetchKey !== activeFetchKey) {
-    setActiveFetchKey(fetchKey);
+  if (fetchKey !== prevFetchKeyRef.current) {
+    prevFetchKeyRef.current = fetchKey;
     if (fetchKey) {
       setIsLoading(true);
       setError(null);

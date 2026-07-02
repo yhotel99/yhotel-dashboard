@@ -3,7 +3,7 @@
 import { useForm, useFieldArray, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { updateSettingsAction } from "@/actions/settings";
@@ -50,6 +50,13 @@ function ymdToday(): string {
   return `${d.getFullYear()}-${mm}-${dd}`;
 }
 
+function newHolidayId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `holiday_${Date.now()}`;
+}
+
 function formatYmdToDmy(ymd?: string | null): string {
   if (!ymd || !/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return "";
   const [yyyy, mm, dd] = ymd.split("-");
@@ -85,10 +92,10 @@ function DateDmyInput({
   onChange: (next: string) => void;
 }) {
   const [draft, setDraft] = useState(() => formatYmdToDmy(value));
-  const [prevValue, setPrevValue] = useState(value);
+  const prevValueRef = useRef(value);
 
-  if (value !== prevValue) {
-    setPrevValue(value);
+  if (value !== prevValueRef.current) {
+    prevValueRef.current = value;
     setDraft(formatYmdToDmy(value));
   }
 
@@ -765,11 +772,7 @@ export function SettingsForm({
                           onClick={() => {
                             const day = ymdToday();
                             append({
-                              id:
-                                typeof crypto !== "undefined" &&
-                                "randomUUID" in crypto
-                                  ? crypto.randomUUID()
-                                  : `holiday_${Date.now()}`,
+                              id: newHolidayId(),
                               label: "Kỳ lễ mới",
                               start_date: day,
                               end_date: day,

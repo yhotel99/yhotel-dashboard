@@ -110,7 +110,7 @@ export function CreateMultiBookingDialog({
     })
   );
   const { settings } = useSettings();
-  const [prevOpen, setPrevOpen] = useState(open);
+  const prevOpenRef = useRef(open);
 
   const [customerSearch, setCustomerSearch] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
@@ -215,11 +215,9 @@ export function CreateMultiBookingDialog({
     branches,
   ]);
 
-  useEffect(() => {
-    if (staffLockedBranchId && formBranchId !== staffLockedBranchId) {
-      setFormBranchId(staffLockedBranchId);
-    }
-  }, [staffLockedBranchId, formBranchId]);
+  if (staffLockedBranchId && formBranchId !== staffLockedBranchId) {
+    setFormBranchId(staffLockedBranchId);
+  }
 
   // Danh sách phòng trống theo chi nhánh + khoảng ngày (RPC get_available_rooms)
   useEffect(() => {
@@ -274,25 +272,26 @@ export function CreateMultiBookingDialog({
     const holidayPeriods = normalizeHolidayPeriods(
       settings?.pricing_holiday_periods
     );
-    return availableRoomsForBranch
-      .filter((r) => selectedRoomIds.has(r.id))
-      .map((r) => {
-        if (!checkInDate || !checkOutDate || nights <= 0) {
-          return { room: r, amount: 0, breakdown: [] };
-        }
-        const calc = calculateTotalWithWeekdayRates({
-          basePrice: r.price_per_night,
-          checkInDate,
-          checkOutDate,
-          weekdayRates,
-          holidayPeriods,
-        });
-        return {
-          room: r,
-          amount: calc.total,
-          breakdown: calc.breakdown,
-        };
+    return availableRoomsForBranch.reduce<SelectedRoom[]>((acc, r) => {
+      if (!selectedRoomIds.has(r.id)) return acc;
+      if (!checkInDate || !checkOutDate || nights <= 0) {
+        acc.push({ room: r, amount: 0, breakdown: [] });
+        return acc;
+      }
+      const calc = calculateTotalWithWeekdayRates({
+        basePrice: r.price_per_night,
+        checkInDate,
+        checkOutDate,
+        weekdayRates,
+        holidayPeriods,
       });
+      acc.push({
+        room: r,
+        amount: calc.total,
+        breakdown: calc.breakdown,
+      });
+      return acc;
+    }, []);
   }, [
     availableRoomsForBranch,
     selectedRoomIds,
@@ -308,28 +307,41 @@ export function CreateMultiBookingDialog({
     [selectedRoomsWithAmounts]
   );
 
+  const pricingRevisionKey = `${totalAmount}|${checkInDate}|${checkOutDate}|${selectedRoomIds.size}`;
+  const prevPricingRevisionRef = useRef(pricingRevisionKey);
+
   useEffect(() => {
-    if (!isFinalAmountDirty) {
+    const pricingChanged = prevPricingRevisionRef.current !== pricingRevisionKey;
+    if (pricingChanged) {
+      prevPricingRevisionRef.current = pricingRevisionKey;
+      if (voucherState) {
+        setVoucherState(null);
+        setIsApplyingVoucher(false);
+        setVoucherCode("");
+        setIsFinalAmountDirty(false);
+        if (totalAmount > 0) setFinalAmountDigits(String(totalAmount));
+        else setFinalAmountDigits("");
+        return;
+      }
+    }
+
+    if (!voucherState && !isFinalAmountDirty) {
       if (totalAmount > 0) {
         setFinalAmountDigits(String(totalAmount));
       } else {
         setFinalAmountDigits("");
       }
     }
-  }, [totalAmount, isFinalAmountDirty, setFinalAmountDigits]);
-
-  // Clear applied voucher when total changes
-  useEffect(() => {
-    if (voucherState) {
-      setVoucherState(null);
-      setIsApplyingVoucher(false);
-      setVoucherCode("");
-      setIsFinalAmountDirty(false);
-      if (totalAmount > 0) setFinalAmountDigits(String(totalAmount));
-      else setFinalAmountDigits("");
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [totalAmount, checkInDate, checkOutDate, selectedRoomIds.size]);
+  }, [
+    pricingRevisionKey,
+    totalAmount,
+    checkInDate,
+    checkOutDate,
+    selectedRoomIds.size,
+    isFinalAmountDirty,
+    voucherState,
+    setFinalAmountDigits,
+  ]);
 
   const toggleRoom = useCallback((roomId: string) => {
     setSelectedRoomIds((prev) => {
@@ -360,8 +372,8 @@ export function CreateMultiBookingDialog({
     lastSearchRef.current = "";
   }, [setAdvancePaymentDigits, setFinalAmountDigits]);
 
-  if (open !== prevOpen) {
-    setPrevOpen(open);
+  if (open !== prevOpenRef.current) {
+    prevOpenRef.current = open;
     if (open) {
       setFormBranchId(
         getDefaultFormBranchId({

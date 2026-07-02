@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, type ChangeEvent, type FormEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -103,10 +103,10 @@ export function EditBookingDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const loadKey = open && booking ? booking.id : null;
-  const [prevLoadKey, setPrevLoadKey] = useState<string | null>(loadKey);
+  const prevLoadKeyRef = useRef<string | null>(loadKey);
 
-  if (loadKey !== prevLoadKey) {
-    setPrevLoadKey(loadKey);
+  if (loadKey !== prevLoadKeyRef.current) {
+    prevLoadKeyRef.current = loadKey;
     if (loadKey && booking) {
       setFormValues(getInitialFormValues());
       setFinalAmountDigits(

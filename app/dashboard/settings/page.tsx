@@ -6,11 +6,14 @@ import { USER_ROLE } from "@/lib/constants";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const [settings, branchBankAccounts] = await Promise.all([
+  const [
+    {
+      data: { user },
+    },
+    settings,
+    branchBankAccounts,
+  ] = await Promise.all([
+    supabase.auth.getUser(),
     getSettingsAction(),
     listBranchBankAccountsAction().catch(() => []),
   ]);

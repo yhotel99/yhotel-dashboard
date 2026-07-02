@@ -103,24 +103,23 @@ export function ShiftsContent({ initialData, hrAdmin }: ShiftsContentProps) {
     [weekDates]
   );
 
-  const gridEmployees = useMemo(
-    () =>
-      data.users
-        .filter((u) =>
-          [HrUserRole.EMPLOYEE, HrUserRole.MANAGER, HrUserRole.HR].includes(
-            u.role as HrUserRole
-          )
+  const gridEmployees = useMemo(() => {
+    const search = searchName.trim().toLowerCase();
+    return data.users.filter((u) => {
+      if (
+        ![HrUserRole.EMPLOYEE, HrUserRole.MANAGER, HrUserRole.HR].includes(
+          u.role as HrUserRole
         )
-        .filter((u) => u.status !== EmployeeStatus.LEFT)
-        .filter((u) => !departmentFilter || u.department === departmentFilter)
-        .filter((u) => !branchFilter || u.branchId === branchFilter)
-        .filter(
-          (u) =>
-            !searchName.trim() ||
-            u.name.toLowerCase().includes(searchName.trim().toLowerCase())
-        ),
-    [data.users, departmentFilter, branchFilter, searchName]
-  );
+      ) {
+        return false;
+      }
+      if (u.status === EmployeeStatus.LEFT) return false;
+      if (departmentFilter && u.department !== departmentFilter) return false;
+      if (branchFilter && u.branchId !== branchFilter) return false;
+      if (search && !u.name.toLowerCase().includes(search)) return false;
+      return true;
+    });
+  }, [data.users, departmentFilter, branchFilter, searchName]);
 
   const gridEmployeeIds = useMemo(
     () => new Set(gridEmployees.map((e) => e.id)),
@@ -168,10 +167,12 @@ export function ShiftsContent({ initialData, hrAdmin }: ShiftsContentProps) {
     if (!selectedUserId) return [];
     const year = weekStart.getFullYear();
     return data.shifts
-      .filter((r) => r.userId === selectedUserId)
-      .filter((r) => new Date(r.date).getFullYear() === year)
-      .filter((r) => r.shift === ShiftTime.OFF && r.offType === OffType.OFF_PN)
-      .sort((a, b) => a.date - b.date);
+      .filter((r) => {
+        if (r.userId !== selectedUserId) return false;
+        if (new Date(r.date).getFullYear() !== year) return false;
+        return r.shift === ShiftTime.OFF && r.offType === OffType.OFF_PN;
+      })
+      .toSorted((a, b) => a.date - b.date);
   }, [selectedUserId, data.shifts, weekStart]);
 
   const departmentOptions = useMemo(
@@ -371,6 +372,9 @@ export function ShiftsContent({ initialData, hrAdmin }: ShiftsContentProps) {
 
   const isCurrentWeek = isSameWeek(weekStart, new Date());
   const branchLocked = !!getAdminBranchId(hrAdmin);
+  const handleCurrentWeek = useCallback(() => {
+    setWeekStart(getWeekStart(new Date()));
+  }, []);
 
   return (
     <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
@@ -396,7 +400,7 @@ export function ShiftsContent({ initialData, hrAdmin }: ShiftsContentProps) {
               <Button
                 variant={isCurrentWeek ? "default" : "outline"}
                 size="sm"
-                onClick={() => setWeekStart(getWeekStart(new Date()))}
+                onClick={handleCurrentWeek}
               >
                 Tuần này
               </Button>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -59,10 +59,10 @@ export function CheckAvailableRoomsDialog({
   const [isLoading, setIsLoading] = useState(false);
   const [availableRooms, setAvailableRooms] = useState<Room[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
-  const [prevOpen, setPrevOpen] = useState(open);
+  const prevOpenRef = useRef(open);
 
-  if (open !== prevOpen) {
-    setPrevOpen(open);
+  if (open !== prevOpenRef.current) {
+    prevOpenRef.current = open;
     if (open) {
       setFormBranchId(
         getDefaultFormBranchId({
