@@ -1,4 +1,5 @@
 import type { RegistrationFormData } from "@/lib/booking-registration/types";
+import Image from "next/image";
 import { REGISTRATION_LOGO_SRC } from "@/lib/booking-registration/registration-logo-path";
 import { formatRegistrationCompanyLine } from "@/lib/booking-registration/formatters";
 
@@ -16,8 +17,7 @@ export function RegistrationFormHeader({
           {formatRegistrationCompanyLine(data.companyName, data.taxId)}
         </p>
         <div className="mt-2 flex items-center gap-3">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <Image
             src={REGISTRATION_LOGO_SRC}
             alt=""
             width={48}

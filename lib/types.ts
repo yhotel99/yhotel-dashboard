@@ -1,5 +1,6 @@
 // Common types for the application
 import type { RoomMapStatus } from "@/lib/constants";
+import type { RoomCategoryItem } from "@/lib/room-categories";
 
 // ============================================================================
 // Result Types (for error handling without throwing)
@@ -437,17 +438,6 @@ export type UpdateBookingInput = {
   final_amount?: number | null;
 };
 
-// Transfer booking input (for changing room, dates, and payments)
-export type TransferBookingInput = {
-  room_id?: string | null;
-  check_in?: string;
-  check_out?: string;
-  number_of_nights?: number;
-  total_amount?: number;
-  final_amount?: number | null;
-  advance_payment?: number;
-};
-
 // Multi-room booking input (nhiều phòng, thanh toán 1 lần)
 export type MultiBookingInput = {
   customer_id: string;
@@ -872,6 +862,8 @@ export type Settings = {
    * Các kỳ lễ/Tết: mỗi đêm lấy max(% theo thứ, % phụ thu kỳ) nếu ngày nằm trong [start_date, end_date] (inclusive).
    */
   pricing_holiday_periods?: PricingHolidayPeriod[] | null;
+  /** Dynamic room classification options (Phân loại phòng). */
+  room_categories: RoomCategoryItem[];
   created_at: string;
   updated_at: string;
 };
@@ -888,6 +880,7 @@ export type SettingsInput = {
   social_media_links?: Record<string, string> | null;
   pricing_weekday_rates?: number[] | null;
   pricing_holiday_periods?: PricingHolidayPeriod[] | null;
+  room_categories?: RoomCategoryItem[];
 };
 
 // ============================================================================

@@ -2,11 +2,13 @@
 
 import * as React from "react";
 import { IconPlus } from "@tabler/icons-react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useShallowSearchParams } from "@/hooks/use-shallow-search-params";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
 import { toast } from "sonner";
-import { useProfiles } from "@/hooks/use-profiles";
+import { useInitialSwrKey } from "@/hooks/use-initial-swr-key";
+import { useDebouncedUrlSearch } from "@/hooks/use-debounced-url-search";
+import { buildProfilesSwrKey, useProfiles } from "@/hooks/use-profiles";
 import { createProfileAction, updateProfileAction } from "@/actions/profiles";
 import type { Profile, ProfilesResponse } from "@/lib/types";
 import { createColumns } from "@/components/users/columns";
@@ -32,9 +34,7 @@ export function UsersContent({
 }: {
   initialData: ProfilesResponse;
 }) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const [localSearch, setLocalSearch] = React.useState("");
+  const { searchParams, pushSearchParams } = useShallowSearchParams();
   const [openUserDialog, setOpenUserDialog] = React.useState(false);
   const [editingProfile, setEditingProfile] = React.useState<
     Profile | undefined
@@ -60,42 +60,52 @@ export function UsersContent({
   // Update search params
   const updateSearchParams = React.useCallback(
     (newPage: number, newLimit: number, newSearch: string) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (newPage > 1) {
-        params.set("page", newPage.toString());
-      } else {
-        params.delete("page");
-      }
-      if (newLimit !== 10) {
-        params.set("limit", newLimit.toString());
-      } else {
-        params.delete("limit");
-      }
-      if (newSearch) {
-        params.set("search", newSearch);
-      } else {
-        params.delete("search");
-      }
-      router.push(`?${params.toString()}`);
+      pushSearchParams((params) => {
+        if (newPage > 1) {
+          params.set("page", newPage.toString());
+        } else {
+          params.delete("page");
+        }
+        if (newLimit !== 10) {
+          params.set("limit", newLimit.toString());
+        } else {
+          params.delete("limit");
+        }
+        if (newSearch) {
+          params.set("search", newSearch);
+        } else {
+          params.delete("search");
+        }
+      });
     },
-    [router, searchParams]
+    [pushSearchParams]
   );
 
-  // Debounce search
-  React.useEffect(() => {
-    const timer = setTimeout(() => {
-      if (localSearch !== search) {
-        updateSearchParams(1, limit, localSearch);
-      }
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [localSearch, limit, search, updateSearchParams]);
+  const onSearchCommit = React.useCallback(
+    (value: string) => {
+      updateSearchParams(1, limit, value);
+    },
+    [limit, updateSearchParams]
+  );
+  const { localSearch, setLocalSearch } = useDebouncedUrlSearch(
+    search,
+    onSearchCommit,
+    500
+  );
 
   const { branches, filterBranchId } = useBranch();
   const branchNameById = React.useMemo(
     () => Object.fromEntries(branches.map((b) => [b.id, b.name])),
     [branches]
+  );
+
+  const initialSwrKey = useInitialSwrKey(() =>
+    buildProfilesSwrKey({
+      page,
+      limit,
+      search,
+      branchId: filterBranchId,
+    })
   );
 
   const { profiles, isLoading, pagination, refetch, mutate } = useProfiles({
@@ -104,6 +114,7 @@ export function UsersContent({
     search,
     branchId: filterBranchId,
     fallbackData: initialData,
+    initialSwrKey,
   });
 
   // Wrapper functions to call server actions and refresh data
@@ -235,6 +246,7 @@ export function UsersContent({
           fetchData={() => refetch()}
           isLoading={isLoading}
           serverPagination={pagination}
+          paginationVariant="sequential"
           onPageChange={(newPage) => updateSearchParams(newPage, limit, search)}
           onLimitChange={(newLimit) => updateSearchParams(1, newLimit, search)}
           serverSearch={localSearch}

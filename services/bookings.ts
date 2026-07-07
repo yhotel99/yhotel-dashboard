@@ -11,7 +11,6 @@ import type {
   BookingRoomDetail,
   BookingRoomDetailJoinRow,
   UpdateBookingInput,
-  TransferBookingInput,
   PaginationMeta,
   Payment,
 } from "@/lib/types";
@@ -795,199 +794,6 @@ export async function recalculatePendingRoomChargePayment(
 }
 
 /**
- * Transfer booking (update room, check-in, check-out, advance_payment and handle payments)
- * @param bookingId - Booking ID
- * @param input - Transfer booking input data
- * @returns Updated booking record with relations
- */
-export async function transferBooking(
-  bookingId: string,
-  input: TransferBookingInput
-): Promise<BookingRecord> {
-  try {
-    const supabase = await createClient();
-
-    // Step 1: Get current booking to check status
-    const { data: currentBooking, error: fetchError } = await supabase
-      .from("bookings")
-      .select("status, advance_payment, total_amount")
-      .eq("id", bookingId)
-      .single();
-
-    if (fetchError) {
-      throw new Error(fetchError.message);
-    }
-
-    if (!currentBooking) {
-      throw new Error("Không tìm thấy booking");
-    }
-
-    // Step 2: Check if booking is pending (only allow transfer for pending bookings)
-    if (currentBooking.status !== BOOKING_STATUS.PENDING) {
-      throw new Error(
-        "Chỉ có thể chuyển phòng khi booking ở trạng thái pending"
-      );
-    }
-
-    // Step 3: Update booking
-    const { error: updateError } = await supabase
-      .from("bookings")
-      .update(input)
-      .eq("id", bookingId);
-
-    if (updateError) {
-      throw new Error(updateError.message);
-    }
-
-    // Step 4: Fetch updated booking with relations
-    const { data: updatedBooking, error: fetchUpdatedError } = await supabase
-      .from("bookings")
-      .select(
-        `
-        *,
-        rooms:room_id (
-          name
-        ),
-        customers:customer_id (
-          full_name,
-          phone
-        )
-      `
-      )
-      .eq("id", bookingId)
-      .single();
-
-    if (fetchUpdatedError) {
-      throw new Error(fetchUpdatedError.message);
-    }
-
-    if (!updatedBooking) {
-      throw new Error("Không tìm thấy booking sau khi cập nhật");
-    }
-
-    // Step 5: Calculate payment amounts from updated booking
-    const finalTotalAmount =
-      updatedBooking.final_amount ?? updatedBooking.total_amount ?? 0;
-    const finalAdvancePayment = updatedBooking.advance_payment ?? 0;
-    const finalRoomChargeAmount = finalTotalAmount - finalAdvancePayment;
-
-    // Step 6: Get existing payments (only pending payments can be updated)
-    const { data: existingPayments, error: paymentsError } = await supabase
-      .from("payments")
-      .select("id, payment_type, payment_status")
-      .eq("booking_id", bookingId)
-      .eq("payment_status", PAYMENT_STATUS.PENDING);
-
-    if (paymentsError) {
-      console.error("Error fetching payments:", paymentsError);
-      // Continue anyway - we'll try to create/update payments
-    }
-
-    // Step 7: Handle ADVANCE_PAYMENT
-    const existingAdvancePayment = existingPayments?.find(
-      (p) => p.payment_type === PAYMENT_TYPE.ADVANCE_PAYMENT
-    );
-
-    if (existingAdvancePayment) {
-      // Payment exists - update or delete
-      if (finalAdvancePayment > 0) {
-        const { error: updateError } = await supabase
-          .from("payments")
-          .update({ amount: finalAdvancePayment })
-          .eq("id", existingAdvancePayment.id);
-
-        if (updateError) {
-          throw new Error(
-            `Không thể cập nhật advance payment: ${updateError.message}`
-          );
-        }
-      } else {
-        // Delete if advance_payment is 0
-        const { error: deleteError } = await supabase
-          .from("payments")
-          .delete()
-          .eq("id", existingAdvancePayment.id);
-
-        if (deleteError) {
-          throw new Error(
-            `Không thể xóa advance payment: ${deleteError.message}`
-          );
-        }
-      }
-    } else {
-      // Payment doesn't exist - create if needed
-      if (finalAdvancePayment > 0) {
-        const { error: createError } = await supabase.from("payments").insert({
-          booking_id: bookingId,
-          amount: finalAdvancePayment,
-          payment_type: PAYMENT_TYPE.ADVANCE_PAYMENT,
-          payment_method: PAYMENT_METHOD.PAY_AT_HOTEL,
-          payment_status: PAYMENT_STATUS.PENDING,
-        });
-
-        if (createError) {
-          throw new Error(
-            `Không thể tạo advance payment: ${createError.message}`
-          );
-        }
-      }
-    }
-
-    // Step 8: Handle ROOM_CHARGE
-    const existingRoomCharge = existingPayments?.find(
-      (p) => p.payment_type === PAYMENT_TYPE.ROOM_CHARGE
-    );
-
-    if (existingRoomCharge) {
-      // Payment exists - update or delete
-      if (finalRoomChargeAmount > 0) {
-        const { error: updateError } = await supabase
-          .from("payments")
-          .update({ amount: finalRoomChargeAmount })
-          .eq("id", existingRoomCharge.id);
-
-        if (updateError) {
-          throw new Error(
-            `Không thể cập nhật room charge: ${updateError.message}`
-          );
-        }
-      } else {
-        // Delete if room_charge is 0 or negative
-        const { error: deleteError } = await supabase
-          .from("payments")
-          .delete()
-          .eq("id", existingRoomCharge.id);
-
-        if (deleteError) {
-          throw new Error(`Không thể xóa room charge: ${deleteError.message}`);
-        }
-      }
-    } else {
-      // Payment doesn't exist - create if needed
-      if (finalRoomChargeAmount > 0) {
-        const { error: createError } = await supabase.from("payments").insert({
-          booking_id: bookingId,
-          amount: finalRoomChargeAmount,
-          payment_type: PAYMENT_TYPE.ROOM_CHARGE,
-          payment_method: PAYMENT_METHOD.PAY_AT_HOTEL,
-          payment_status: PAYMENT_STATUS.PENDING,
-        });
-
-        if (createError) {
-          throw new Error(`Không thể tạo room charge: ${createError.message}`);
-        }
-      }
-    }
-
-    return updatedBooking as BookingRecord;
-  } catch (err) {
-    const errorMessage =
-      err instanceof Error ? err.message : "Không thể chuyển phòng";
-    throw new Error(errorMessage);
-  }
-}
-
-/**
  * Get booking status and total amount
  * @param bookingId - Booking ID
  * @returns Booking status and total amount
@@ -1165,6 +971,7 @@ export async function getBookingsListWithPagination({
   cursorCreatedAt,
   cursorId,
   branchId,
+  includeTotal = true,
 }: {
   search?: string | null;
   page?: number;
@@ -1178,6 +985,7 @@ export async function getBookingsListWithPagination({
   cursorCreatedAt?: string | null;
   cursorId?: string | null;
   branchId?: string | null;
+  includeTotal?: boolean;
 }): Promise<{
   data: BookingRecord[];
   pagination: PaginationMeta;
@@ -1221,6 +1029,7 @@ export async function getBookingsListWithPagination({
       p_cursor_created_at: useKeyset ? trimmedCursorAt : null,
       p_cursor_id: useKeyset ? trimmedCursorId : null,
       p_branch_id,
+      p_include_total: includeTotal,
     });
 
     if (error) {
@@ -1233,8 +1042,6 @@ export async function getBookingsListWithPagination({
       next_cursor?: { created_at?: string; id?: string } | null;
     } | null;
     const bookings = (payload?.items ?? []) as BookingRecord[];
-    const total = Number(payload?.total ?? 0);
-    const totalPages = Math.ceil(total / limit);
     const nc = payload?.next_cursor;
     const nextCursor =
       nc &&
@@ -1243,6 +1050,14 @@ export async function getBookingsListWithPagination({
       nc.created_at != null
         ? { created_at: String(nc.created_at), id: String(nc.id) }
         : null;
+    const total =
+      payload?.total != null ? Number(payload.total) : 0;
+    const totalPages =
+      payload?.total != null && Number(payload.total) > 0
+        ? Math.ceil(Number(payload.total) / limit)
+        : nextCursor
+          ? page + 1
+          : page;
 
     return {
       data: bookings,

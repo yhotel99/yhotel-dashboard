@@ -15,6 +15,7 @@ import { getBookingsListWithPagination } from "@/services/bookings";
  * - dateTo: YYYY-MM-DD (optional)
  * - status: booking status, matches public.booking_status (optional)
  * - cursorCreatedAt + cursorId: keyset page tiếp theo (cả hai bắt buộc nếu dùng keyset)
+ * - includeTotal: false bỏ count trên RPC (keyset next/prev thông thường)
  */
 export async function GET(req: NextRequest) {
   try {
@@ -31,6 +32,9 @@ export async function GET(req: NextRequest) {
     const cursorCreatedAt = searchParams.get("cursorCreatedAt") || null;
     const cursorId = searchParams.get("cursorId") || null;
     const branchId = searchParams.get("branchId") || null;
+    const includeTotalParam = searchParams.get("includeTotal");
+    const includeTotal =
+      includeTotalParam === "false" || includeTotalParam === "0" ? false : true;
 
     if (page < 1 || limit < 1) {
       return NextResponse.json(
@@ -55,6 +59,7 @@ export async function GET(req: NextRequest) {
       cursorCreatedAt,
       cursorId,
       branchId,
+      includeTotal,
     });
 
     return NextResponse.json({

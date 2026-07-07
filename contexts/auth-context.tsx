@@ -1,6 +1,13 @@
 "use client";
 
-import { createContext, useContext, useState, ReactNode, useCallback } from "react";
+import {
+  createContext,
+  use,
+  useState,
+  useMemo,
+  ReactNode,
+  useCallback,
+} from "react";
 import type { User } from "@supabase/supabase-js";
 import type { Profile } from "@/lib/types";
 import { canViewAllBranches as checkCanViewAllBranches } from "@/lib/branch";
@@ -44,25 +51,34 @@ export function AuthProvider({
     ? checkCanViewAllBranches(profile.role)
     : false;
 
+  const contextValue = useMemo(
+    () => ({
+      currentUser,
+      profile,
+      isLoading,
+      branchId,
+      canViewAllBranches,
+      setAuthData,
+      setLoading,
+    }),
+    [
+      currentUser,
+      profile,
+      isLoading,
+      branchId,
+      canViewAllBranches,
+      setAuthData,
+      setLoading,
+    ]
+  );
+
   return (
-    <AuthContext.Provider
-      value={{
-        currentUser,
-        profile,
-        isLoading,
-        branchId,
-        canViewAllBranches,
-        setAuthData,
-        setLoading,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
+    <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>
   );
 }
 
 export function useAuth() {
-  const ctx = useContext(AuthContext);
+  const ctx = use(AuthContext);
   if (!ctx) throw new Error("useAuth must be used inside AuthProvider");
   return ctx;
 }

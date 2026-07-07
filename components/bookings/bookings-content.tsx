@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useRouter, useSearchParams } from "next/navigation";
 import { IconPlus, IconSearch } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,7 +17,9 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { DataTable } from "@/components/data-table";
-import { useBookings } from "@/hooks/use-bookings";
+import { useShallowSearchParams } from "@/hooks/use-shallow-search-params";
+import { buildBookingsSwrKey, useBookings } from "@/hooks/use-bookings";
+import { useInitialSwrKey } from "@/hooks/use-initial-swr-key";
 import { useBranch } from "@/contexts/branch-context";
 import {
   createBooking as createBookingAction,
@@ -28,7 +29,6 @@ import {
   confirmBookingEmailAction,
   cancelBookingAction,
   type CancelBookingActionOptions,
-  transferBookingAction,
   checkInBookingAction,
   checkOutBookingAction,
 } from "@/actions/bookings";
@@ -42,11 +42,10 @@ import type {
   MultiBookingInput,
   BookingRecord,
   UpdateBookingInput,
-  TransferBookingInput,
   BookingsResponse,
   ConfirmBookingEmailOptions,
 } from "@/lib/types";
-import { useDebounce } from "@/hooks/use-debounce";
+import { useDebouncedUrlSearch } from "@/hooks/use-debounced-url-search";
 import { createColumns, COLUMNS } from "@/components/bookings/columns";
 import { CreateBookingDialog } from "@/components/bookings/create-booking-dialog";
 import { CreateMultiBookingDialog } from "@/components/bookings/create-multi-booking-dialog";
@@ -81,8 +80,7 @@ export function BookingsContent({
 }: {
   initialData: BookingsResponse;
 }) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const { searchParams, pushSearchParams } = useShallowSearchParams();
   const { scope, selectedBranchId, branches } = useBranch();
   const branchNameById = React.useMemo(
     () => Object.fromEntries(branches.map((b) => [b.id, b.name])),
@@ -90,7 +88,6 @@ export function BookingsContent({
   );
   const branchIdForFetch =
     scope.mode === "single" ? scope.branchId : selectedBranchId;
-  const [localSearch, setLocalSearch] = React.useState("");
   const [isCheckAvailableRoomsDialogOpen, setIsCheckAvailableRoomsDialogOpen] =
     React.useState(false);
 
@@ -140,9 +137,6 @@ export function BookingsContent({
     [searchParams]
   );
 
-  // Debounce search
-  const debouncedSearch = useDebounce(localSearch, 300);
-
   // Update search params
   const updateSearchParams = React.useCallback(
     (
@@ -156,84 +150,86 @@ export function BookingsContent({
       newDateTo?: string,
       options?: { resetCursor?: boolean }
     ) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (newPage > 1) {
-        params.set("page", newPage.toString());
-      } else {
-        params.delete("page");
-      }
-      if (newLimit !== 10) {
-        params.set("limit", newLimit.toString());
-      } else {
-        params.delete("limit");
-      }
-      if (newSearch) {
-        params.set("search", newSearch);
-      } else {
-        params.delete("search");
-      }
-      const s = newStatus !== undefined ? newStatus : status;
-      if (s && s.trim() !== "") {
-        params.set("status", s.trim());
-      } else {
-        params.delete("status");
-      }
-      const nextCreatorId = newCreatorId !== undefined ? newCreatorId : creatorId;
-      if (nextCreatorId && nextCreatorId.trim() !== "") {
-        params.set("creatorId", nextCreatorId.trim());
-      } else {
-        params.delete("creatorId");
-      }
-      const nextDateField = newDateField ?? dateField;
-      params.set("dateField", nextDateField);
-      const nextDateFrom = newDateFrom !== undefined ? newDateFrom : dateFrom;
-      if (nextDateFrom && nextDateFrom.trim() !== "") {
-        params.set("dateFrom", nextDateFrom.trim());
-      } else {
-        params.delete("dateFrom");
-      }
-      const nextDateTo = newDateTo !== undefined ? newDateTo : dateTo;
-      if (nextDateTo && nextDateTo.trim() !== "") {
-        params.set("dateTo", nextDateTo.trim());
-      } else {
-        params.delete("dateTo");
-      }
-      if (options?.resetCursor) {
-        params.delete("cursorCreatedAt");
-        params.delete("cursorId");
-      }
-      router.push(`/dashboard/bookings?${params.toString()}`);
+      pushSearchParams((params) => {
+        if (newPage > 1) {
+          params.set("page", newPage.toString());
+        } else {
+          params.delete("page");
+        }
+        if (newLimit !== 10) {
+          params.set("limit", newLimit.toString());
+        } else {
+          params.delete("limit");
+        }
+        if (newSearch) {
+          params.set("search", newSearch);
+        } else {
+          params.delete("search");
+        }
+        const s = newStatus !== undefined ? newStatus : status;
+        if (s && s.trim() !== "") {
+          params.set("status", s.trim());
+        } else {
+          params.delete("status");
+        }
+        const nextCreatorId =
+          newCreatorId !== undefined ? newCreatorId : creatorId;
+        if (nextCreatorId && nextCreatorId.trim() !== "") {
+          params.set("creatorId", nextCreatorId.trim());
+        } else {
+          params.delete("creatorId");
+        }
+        const nextDateField = newDateField ?? dateField;
+        params.set("dateField", nextDateField);
+        const nextDateFrom = newDateFrom !== undefined ? newDateFrom : dateFrom;
+        if (nextDateFrom && nextDateFrom.trim() !== "") {
+          params.set("dateFrom", nextDateFrom.trim());
+        } else {
+          params.delete("dateFrom");
+        }
+        const nextDateTo = newDateTo !== undefined ? newDateTo : dateTo;
+        if (nextDateTo && nextDateTo.trim() !== "") {
+          params.set("dateTo", nextDateTo.trim());
+        } else {
+          params.delete("dateTo");
+        }
+        if (options?.resetCursor) {
+          params.delete("cursorCreatedAt");
+          params.delete("cursorId");
+        }
+      });
     },
-    [router, searchParams, status, creatorId, dateField, dateFrom, dateTo]
+    [pushSearchParams, status, creatorId, dateField, dateFrom, dateTo]
   );
 
-  React.useEffect(() => {
-    if (debouncedSearch !== search) {
+  const onSearchCommit = React.useCallback(
+    (value: string) => {
       updateSearchParams(
         1,
         limit,
-        debouncedSearch,
+        value,
         status,
         creatorId,
         dateField,
         dateFrom,
         dateTo,
-        {
-          resetCursor: true,
-        }
+        { resetCursor: true }
       );
-    }
-  }, [
-    creatorId,
-    dateField,
-    dateFrom,
-    dateTo,
-    debouncedSearch,
-    limit,
+    },
+    [
+      creatorId,
+      dateField,
+      dateFrom,
+      dateTo,
+      limit,
+      status,
+      updateSearchParams,
+    ]
+  );
+  const { localSearch, setLocalSearch } = useDebouncedUrlSearch(
     search,
-    status,
-    updateSearchParams,
-  ]);
+    onSearchCommit
+  );
 
   const statusFilterValue = React.useMemo(() => {
     const s = status.trim();
@@ -252,6 +248,25 @@ export function BookingsContent({
     return c === "" ? null : c;
   }, [creatorId]);
 
+  const useKeysetCursor = Boolean(cursorCreatedAt && cursorId);
+
+  const initialSwrKey = useInitialSwrKey(() =>
+    buildBookingsSwrKey({
+      search,
+      page,
+      limit,
+      creatorId: creatorIdForFetch,
+      dateField,
+      dateFrom: dateFrom || null,
+      dateTo: dateTo || null,
+      status: statusForFetch,
+      cursorCreatedAt,
+      cursorId,
+      branchId: branchIdForFetch,
+      includeTotal: !useKeysetCursor,
+    })
+  );
+
   const { bookings, isLoading, pagination, mutate } = useBookings({
     search,
     page,
@@ -264,8 +279,63 @@ export function BookingsContent({
     cursorCreatedAt,
     cursorId,
     branchId: branchIdForFetch,
+    includeTotal: !useKeysetCursor,
     fallbackData: initialData,
+    initialSwrKey,
   });
+
+  const [cachedTotal, setCachedTotal] = React.useState<number | null>(
+    initialData.pagination.total > 0 ? initialData.pagination.total : null
+  );
+
+  const totalFilterKey = React.useMemo(
+    () =>
+      [
+        branchIdForFetch,
+        search,
+        statusForFetch,
+        creatorIdForFetch,
+        dateField,
+        dateFrom,
+        dateTo,
+      ].join("\0"),
+    [
+      branchIdForFetch,
+      search,
+      statusForFetch,
+      creatorIdForFetch,
+      dateField,
+      dateFrom,
+      dateTo,
+    ]
+  );
+  const prevTotalFilterKeyRef = React.useRef(totalFilterKey);
+
+  if (totalFilterKey !== prevTotalFilterKeyRef.current) {
+    prevTotalFilterKeyRef.current = totalFilterKey;
+    if (cachedTotal !== null) {
+      setCachedTotal(null);
+    }
+  }
+
+  if (pagination.total > 0 && cachedTotal !== pagination.total) {
+    setCachedTotal(pagination.total);
+  }
+
+  const tablePagination = React.useMemo(() => {
+    const total = cachedTotal ?? pagination.total;
+    const totalPages =
+      total > 0 ? Math.ceil(total / pagination.limit) : pagination.page;
+    const hasNextPage =
+      Boolean(pagination.nextCursor) ||
+      (total > 0 && pagination.page < totalPages);
+    return {
+      ...pagination,
+      total,
+      totalPages,
+      hasNextPage,
+    };
+  }, [cachedTotal, pagination]);
 
   const handleStatusFilterChange = React.useCallback(
     (value: string) => {
@@ -287,7 +357,14 @@ export function BookingsContent({
     [creatorId, dateField, dateFrom, dateTo, limit, search, updateSearchParams]
   );
 
-  const { profiles } = useProfiles({ page: 1, limit: 100 });
+  const [filterPopoverOpen, setFilterPopoverOpen] = React.useState(false);
+  const shouldLoadCollaborators =
+    filterPopoverOpen || Boolean(creatorIdForFetch);
+  const { profiles } = useProfiles({
+    page: 1,
+    limit: 100,
+    enabled: shouldLoadCollaborators,
+  });
   const collaboratorOptions = React.useMemo(
     () => profiles.filter((p) => p.status === "active"),
     [profiles]
@@ -472,22 +549,6 @@ export function BookingsContent({
     setIsEditDialogOpen(true);
   }, []);
 
-  const handleTransfer = React.useCallback(
-    async (id: string, input: TransferBookingInput) => {
-      try {
-        await transferBookingAction(id, input);
-        toast.success("Đã chuyển phòng thành công");
-        await mutate();
-      } catch (error) {
-        console.error(error);
-        toast.error("Không thể chuyển phòng", {
-          position: "top-center",
-        });
-      }
-    },
-    [mutate]
-  );
-
   const handleCancelBooking = React.useCallback(
     async (id: string, options?: CancelBookingActionOptions) => {
       try {
@@ -590,7 +651,6 @@ export function BookingsContent({
         handleUpdateStatus,
         {
           onEdit: handleEdit,
-          onTransfer: handleTransfer,
           onMarkAdvancePayment: handleMarkAdvancePayment,
           onCancelBooking: handleCancelBooking,
           checkAdvancePaymentStatus: checkAdvancePaymentStatusAction,
@@ -608,7 +668,6 @@ export function BookingsContent({
     [
       handleUpdateStatus,
       handleEdit,
-      handleTransfer,
       handleMarkAdvancePayment,
       handleCancelBooking,
       pendingBooking,
@@ -652,7 +711,7 @@ export function BookingsContent({
               Bộ lọc:
             </div>
             <div>
-              <Popover>
+              <Popover open={filterPopoverOpen} onOpenChange={setFilterPopoverOpen}>
                 <PopoverTrigger asChild>
                   <Button variant="outline" size="sm" className="h-8 gap-2">
                     <SlidersHorizontal className="size-4" />
@@ -679,7 +738,7 @@ export function BookingsContent({
                       </Select>
                       <DateRangePicker
                         key={`${dateFrom}-${dateTo}`}
-                        initialDateFrom={dateFrom || new Date()}
+                        initialDateFrom={dateFrom || undefined}
                         initialDateTo={dateTo || dateFrom || undefined}
                         showCompare={false}
                         locale="vi-VN"
@@ -799,8 +858,24 @@ export function BookingsContent({
             await mutate();
           }}
           isLoading={isLoading}
-          serverPagination={pagination}
-          onPageChange={(newPage) =>
+          paginationVariant="sequential"
+          serverPagination={tablePagination}
+          onPageChange={(newPage) => {
+            if (newPage === page + 1 && pagination.nextCursor) {
+              pushSearchParams((params) => {
+                if (newPage > 1) {
+                  params.set("page", newPage.toString());
+                } else {
+                  params.delete("page");
+                }
+                params.set(
+                  "cursorCreatedAt",
+                  pagination.nextCursor!.created_at
+                );
+                params.set("cursorId", pagination.nextCursor!.id);
+              });
+              return;
+            }
             updateSearchParams(
               newPage,
               limit,
@@ -811,10 +886,10 @@ export function BookingsContent({
               dateFrom,
               dateTo,
               {
-                resetCursor: true,
+                resetCursor: newPage <= page,
               }
-            )
-          }
+            );
+          }}
           onLimitChange={(newLimit) =>
             updateSearchParams(
               1,

@@ -1,33 +1,24 @@
 "use client";
 
 import { useCallback } from "react";
-import useSWR, { SWRConfiguration } from "swr";
+import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
-import type {  PaginationMeta, ProfilesResponse } from "@/lib/types";
+import type { PaginationMeta, ProfilesResponse } from "@/lib/types";
+import { listSwrConfig } from "@/lib/list-swr";
 
+export type ProfilesSwrParams = {
+  page?: number;
+  limit?: number;
+  search?: string;
+  branchId?: string | null;
+};
 
-/**
- * Hook for fetching profiles with SWR
- * @param page - Page number
- * @param limit - Items per page
- * @param search - Search term
- */
-export function useProfiles(
-  {
-    page = 1,
-    limit = 10,
-    search = "",
-    branchId = null,
-    fallbackData,
-  }: {
-    page?: number;
-    limit?: number;
-    search?: string;
-    branchId?: string | null;
-    fallbackData?: ProfilesResponse;
-  }
-) {
-  // Build query parameters
+export function buildProfilesSwrKey({
+  page = 1,
+  limit = 10,
+  search = "",
+  branchId = null,
+}: ProfilesSwrParams): string {
   const params = new URLSearchParams({
     page: page.toString(),
     limit: limit.toString(),
@@ -38,17 +29,34 @@ export function useProfiles(
   if (branchId) {
     params.append("branchId", branchId);
   }
+  return `/api/profiles?${params.toString()}`;
+}
 
-  const config: SWRConfiguration<ProfilesResponse> = {
-  }
-  if(fallbackData) {
-    config.revalidateOnMount = false;
-    config.fallbackData = fallbackData;
-  }
+export function useProfiles({
+  page = 1,
+  limit = 10,
+  search = "",
+  branchId = null,
+  enabled = true,
+  fallbackData,
+  initialSwrKey = null,
+}: ProfilesSwrParams & {
+  enabled?: boolean;
+  fallbackData?: ProfilesResponse;
+  initialSwrKey?: string | null;
+}) {
+  const swrKey = enabled
+    ? buildProfilesSwrKey({ page, limit, search, branchId })
+    : null;
 
-  // Use SWR to fetch profiles
   const { data, error, isLoading, mutate, isValidating } =
-    useSWR<ProfilesResponse>(`/api/profiles?${params.toString()}`, fetcher, config);
+    useSWR<ProfilesResponse>(
+      swrKey,
+      fetcher,
+      swrKey
+        ? listSwrConfig(swrKey, initialSwrKey, fallbackData, branchId)
+        : undefined
+    );
 
   const profiles = data?.data || [];
   const pagination: PaginationMeta = data?.pagination || {
@@ -58,7 +66,6 @@ export function useProfiles(
     totalPages: 0,
   };
 
-  // Refetch profiles
   const refetch = useCallback(async () => {
     await mutate();
   }, [mutate]);
@@ -73,6 +80,6 @@ export function useProfiles(
       : null,
     pagination,
     refetch,
-    mutate, // dùng để refresh sau khi CRUD
+    mutate,
   };
 }

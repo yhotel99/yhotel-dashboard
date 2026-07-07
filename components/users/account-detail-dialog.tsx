@@ -94,38 +94,38 @@ export function AccountDetailDialog({
               <h3 className="text-lg font-semibold">Thông tin cơ bản</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <span className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                     <IconUser className="size-4" />
                     Họ và tên
-                  </label>
+                  </span>
                   <p className="text-base font-medium">
                     {profile.full_name || "-"}
                   </p>
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <span className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                     <IconMail className="size-4" />
                     Email
-                  </label>
+                  </span>
                   <p className="text-base">{profile.email || "-"}</p>
                 </div>
 
                 {profile.phone && (
                   <div className="space-y-1">
-                    <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <span className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                       <IconPhone className="size-4" />
                       Số điện thoại
-                    </label>
+                    </span>
                     <p className="text-base">{profile.phone}</p>
                   </div>
                 )}
 
                 <div className="space-y-1">
-                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <span className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                     <IconShield className="size-4" />
                     Vai trò
-                  </label>
+                  </span>
                   <div>
                     <RoleBadge role={profile.role} />
                   </div>
@@ -142,15 +142,15 @@ export function AccountDetailDialog({
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-sm font-medium text-muted-foreground">
+                  <span className="text-sm font-medium text-muted-foreground">
                     Tên chi nhánh
-                  </label>
+                  </span>
                   <p className="text-base font-medium">{branchDisplay.name}</p>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-sm font-medium text-muted-foreground">
+                  <span className="text-sm font-medium text-muted-foreground">
                     Mã chi nhánh
-                  </label>
+                  </span>
                   <p className="text-base font-mono">{branchDisplay.code}</p>
                 </div>
               </div>
@@ -163,20 +163,20 @@ export function AccountDetailDialog({
               <h3 className="text-lg font-semibold">Thông tin hệ thống</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <span className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                     <IconCalendar className="size-4" />
                     Ngày tạo tài khoản
-                  </label>
+                  </span>
                   <p className="text-base">
                     {formatDateOnly(profile.created_at)}
                   </p>
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <span className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                     <IconCalendar className="size-4" />
                     Cập nhật lần cuối
-                  </label>
+                  </span>
                   <p className="text-base">
                     {formatDateOnly(profile.updated_at)}
                   </p>
@@ -184,9 +184,9 @@ export function AccountDetailDialog({
 
                 {profile.role === USER_ROLE.ADMIN && (
                   <div className="space-y-1">
-                    <label className="text-sm font-medium text-muted-foreground">
+                    <span className="text-sm font-medium text-muted-foreground">
                       User ID
-                    </label>
+                    </span>
                     <p className="text-base font-mono break-all">
                       {profile.id}
                     </p>

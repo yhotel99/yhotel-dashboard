@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, type ChangeEvent, type FormEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -102,16 +102,18 @@ export function EditBookingDialog({
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Load booking data when dialog opens
-  useEffect(() => {
-    if (open && booking) {
+  const loadKey = open && booking ? booking.id : null;
+  const prevLoadKeyRef = useRef<string | null>(loadKey);
+
+  if (loadKey !== prevLoadKeyRef.current) {
+    prevLoadKeyRef.current = loadKey;
+    if (loadKey && booking) {
       setFormValues(getInitialFormValues());
       setFinalAmountDigits(
         String(booking.final_amount ?? booking.total_amount)
       );
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, booking?.id, setFinalAmountDigits]);
+  }
 
   const handleInputChange =
     (field: keyof EditBookingFormState) =>

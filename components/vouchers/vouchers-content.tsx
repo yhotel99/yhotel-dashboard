@@ -1,13 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useShallowSearchParams } from "@/hooks/use-shallow-search-params";
+import { useInitialSwrKey } from "@/hooks/use-initial-swr-key";
 import { toast } from "sonner";
 import { IconPlus } from "@tabler/icons-react";
 
 import type { Voucher, VoucherInput, VouchersResponse } from "@/lib/types";
-import { useDebounce } from "@/hooks/use-debounce";
-import { useVouchers } from "@/hooks/use-vouchers";
+import { useDebouncedUrlSearch } from "@/hooks/use-debounced-url-search";
+import { buildVouchersSwrKey, useVouchers } from "@/hooks/use-vouchers";
 import {
   createVoucher,
   deleteVoucher,
@@ -24,8 +25,7 @@ import { usePermissions } from "@/contexts/permissions-context";
 import { useBranch } from "@/contexts/branch-context";
 
 export function VouchersContent({ initialData }: { initialData: VouchersResponse }) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const { searchParams, pushSearchParams } = useShallowSearchParams();
   const { hasPermission } = usePermissions();
   const canCreate = hasPermission("create:vouchers");
   const canUpdate = hasPermission("update:vouchers");
@@ -48,32 +48,41 @@ export function VouchersContent({ initialData }: { initialData: VouchersResponse
 
   const updateSearchParams = useCallback(
     (newPage: number, newLimit: number, newSearch?: string) => {
-      const params = new URLSearchParams(searchParams.toString());
+      pushSearchParams((params) => {
+        if (newPage > 1) params.set("page", newPage.toString());
+        else params.delete("page");
 
-      if (newPage > 1) params.set("page", newPage.toString());
-      else params.delete("page");
+        if (newLimit !== 10) params.set("limit", newLimit.toString());
+        else params.delete("limit");
 
-      if (newLimit !== 10) params.set("limit", newLimit.toString());
-      else params.delete("limit");
-
-      if (newSearch !== undefined) {
-        if (newSearch.trim() !== "") params.set("search", newSearch.trim());
-        else params.delete("search");
-      }
-
-      router.push(`/dashboard/vouchers?${params.toString()}`);
+        if (newSearch !== undefined) {
+          if (newSearch.trim() !== "") params.set("search", newSearch.trim());
+          else params.delete("search");
+        }
+      });
     },
-    [searchParams, router]
+    [pushSearchParams]
   );
 
-  const [localSearch, setLocalSearch] = useState(search);
-  const debouncedSearch = useDebounce(localSearch, 300);
+  const onSearchCommit = useCallback(
+    (value: string) => {
+      updateSearchParams(1, limit, value);
+    },
+    [limit, updateSearchParams]
+  );
+  const { localSearch, setLocalSearch } = useDebouncedUrlSearch(
+    search,
+    onSearchCommit
+  );
 
-  useEffect(() => {
-    if (debouncedSearch !== search) {
-      updateSearchParams(1, limit, debouncedSearch);
-    }
-  }, [debouncedSearch, search, limit, updateSearchParams]);
+  const initialSwrKey = useInitialSwrKey(() =>
+    buildVouchersSwrKey({
+      search,
+      page,
+      limit,
+      branchId: filterBranchId,
+    })
+  );
 
   const { vouchers, pagination, isLoading, mutate } = useVouchers({
     search,
@@ -81,6 +90,7 @@ export function VouchersContent({ initialData }: { initialData: VouchersResponse
     limit,
     branchId: filterBranchId,
     fallbackData: initialData,
+    initialSwrKey,
   });
 
   // dialogs
@@ -257,6 +267,7 @@ export function VouchersContent({ initialData }: { initialData: VouchersResponse
           }}
           isLoading={isLoading}
           serverPagination={pagination}
+          paginationVariant="sequential"
           onPageChange={(newPage) => updateSearchParams(newPage, limit, search)}
           onLimitChange={(newLimit) => updateSearchParams(1, newLimit, search)}
           serverSearch={localSearch}

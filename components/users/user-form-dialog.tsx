@@ -3,7 +3,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -30,6 +30,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { Branch, Profile } from "@/lib/types";
+
+const EMPTY_BRANCHES: Branch[] = [];
 import { DEFAULT_BRANCH_ID, USER_ROLE } from "@/lib/constants";
 
 /** Select value when admin/manager has no fixed branch (views all branches). */
@@ -78,7 +80,7 @@ interface UserFormDialogProps {
 
 export function UserFormDialog({
   profile,
-  branches = [],
+  branches = EMPTY_BRANCHES,
   open,
   onOpenChange,
   onCreate,
@@ -98,33 +100,34 @@ export function UserFormDialog({
     },
   });
 
-  // Reset form when profile or open state changes
-  useEffect(() => {
-    if (open) {
-      if (profile) {
-        // Edit mode - populate with profile data
-        form.reset({
-          full_name: profile.full_name,
-          email: profile.email,
-          phone: profile.phone || "",
-          role: profile.role,
-          status: profile.status,
-          branch_id: branchIdToFormValue(profile.role, profile.branch_id),
-        });
-      } else {
-        // Create mode - reset to default
-        form.reset({
-          full_name: "",
-          email: "",
-          password: "",
-          phone: "",
-          role: USER_ROLE.STAFF,
-          status: "active",
-          branch_id: DEFAULT_BRANCH_ID,
-        });
-      }
+  const prevFormSyncKeyRef = useRef<string | null>(null);
+  const formSyncKey = open ? (profile?.id ?? "__create__") : null;
+  if (formSyncKey !== null && formSyncKey !== prevFormSyncKeyRef.current) {
+    prevFormSyncKeyRef.current = formSyncKey;
+    if (profile) {
+      form.reset({
+        full_name: profile.full_name,
+        email: profile.email,
+        phone: profile.phone || "",
+        role: profile.role,
+        status: profile.status,
+        branch_id: branchIdToFormValue(profile.role, profile.branch_id),
+      });
+    } else {
+      form.reset({
+        full_name: "",
+        email: "",
+        password: "",
+        phone: "",
+        role: USER_ROLE.STAFF,
+        status: "active",
+        branch_id: DEFAULT_BRANCH_ID,
+      });
     }
-  }, [open, profile, form]);
+  }
+  if (formSyncKey === null) {
+    prevFormSyncKeyRef.current = null;
+  }
 
   const watchedRole = form.watch("role");
   const isStaffRole = watchedRole === USER_ROLE.STAFF;

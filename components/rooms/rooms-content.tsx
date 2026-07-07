@@ -1,12 +1,14 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useShallowSearchParams } from "@/hooks/use-shallow-search-params";
 import { IconPlus } from "@tabler/icons-react";
 import { useMemo, useEffect, useCallback, useState } from "react";
-import { useDebounce } from "@/hooks/use-debounce";
+import { useDebouncedUrlSearch } from "@/hooks/use-debounced-url-search";
+import { useInitialSwrKey } from "@/hooks/use-initial-swr-key";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
-import { useRooms } from "@/hooks/use-rooms";
+import { buildRoomsSwrKey, useRooms } from "@/hooks/use-rooms";
 import {
   updateRoomStatus as updateRoomStatusAction,
   deleteRoom as deleteRoomAction,
@@ -20,7 +22,7 @@ import { useBranch } from "@/contexts/branch-context";
 
 export function RoomsContent({ initialData }: { initialData: RoomsResponse }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const { searchParams, pushSearchParams } = useShallowSearchParams();
   const { filterBranchId, branches } = useBranch();
   const branchNameById = useMemo(
     () => Object.fromEntries(branches.map((b) => [b.id, b.name])),
@@ -47,42 +49,49 @@ export function RoomsContent({ initialData }: { initialData: RoomsResponse }) {
   // Update URL search params when pagination changes
   const updateSearchParams = useCallback(
     (newPage: number, newLimit: number, newSearch?: string) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (newPage > 1) {
-        params.set("page", newPage.toString());
-      } else {
-        params.delete("page");
-      }
-      if (newLimit !== 10) {
-        params.set("limit", newLimit.toString());
-      } else {
-        params.delete("limit");
-      }
-      if (newSearch !== undefined) {
-        if (newSearch.trim() !== "") {
-          params.set("search", newSearch.trim());
+      pushSearchParams((params) => {
+        if (newPage > 1) {
+          params.set("page", newPage.toString());
         } else {
-          params.delete("search");
+          params.delete("page");
         }
-      }
-      router.push(`/dashboard/rooms?${params.toString()}`);
+        if (newLimit !== 10) {
+          params.set("limit", newLimit.toString());
+        } else {
+          params.delete("limit");
+        }
+        if (newSearch !== undefined) {
+          if (newSearch.trim() !== "") {
+            params.set("search", newSearch.trim());
+          } else {
+            params.delete("search");
+          }
+        }
+      });
     },
-    [searchParams, router]
+    [pushSearchParams]
   );
 
-  // Local search state for immediate UI updates
-  const [localSearch, setLocalSearch] = useState(search);
+  // Local search synced with URL (back/forward) and debounced before push
+  const onSearchCommit = useCallback(
+    (value: string) => {
+      updateSearchParams(1, limit, value);
+    },
+    [limit, updateSearchParams]
+  );
+  const { localSearch, setLocalSearch } = useDebouncedUrlSearch(
+    search,
+    onSearchCommit
+  );
 
-  // Debounce search value - update URL after user stops typing
-  const debouncedSearch = useDebounce(localSearch, 300);
-
-
-  // Update URL when debounced search changes
-  useEffect(() => {
-    if (debouncedSearch !== search) {
-      updateSearchParams(1, limit, debouncedSearch);
-    }
-  }, [debouncedSearch, search, limit, updateSearchParams]);
+  const initialSwrKey = useInitialSwrKey(() =>
+    buildRoomsSwrKey({
+      search,
+      page,
+      limit,
+      branchId: filterBranchId,
+    })
+  );
 
   const { rooms, isLoading, pagination, mutate } = useRooms({
     search,
@@ -90,6 +99,7 @@ export function RoomsContent({ initialData }: { initialData: RoomsResponse }) {
     limit,
     branchId: filterBranchId,
     fallbackData: initialData,
+    initialSwrKey,
   });
 
   // Delete room dialog state
@@ -98,11 +108,11 @@ export function RoomsContent({ initialData }: { initialData: RoomsResponse }) {
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
 
-  // Đóng chi tiết khi đổi chi nhánh để không giữ phòng của CN cũ
-  useEffect(() => {
-    setIsDetailDialogOpen(false);
-    setSelectedRoom(null);
-  }, [filterBranchId]);
+  const detailRoom =
+    selectedRoom &&
+    (filterBranchId == null || selectedRoom.branch_id === filterBranchId)
+      ? selectedRoom
+      : null;
 
   // Handle empty page after deletion or invalid page number
   useEffect(() => {
@@ -227,6 +237,7 @@ export function RoomsContent({ initialData }: { initialData: RoomsResponse }) {
           }}
           isLoading={isLoading}
           serverPagination={pagination}
+          paginationVariant="sequential"
           onPageChange={(newPage) => updateSearchParams(newPage, limit, search)}
           onLimitChange={(newLimit) => updateSearchParams(1, newLimit, search)}
           serverSearch={localSearch}
@@ -247,10 +258,10 @@ export function RoomsContent({ initialData }: { initialData: RoomsResponse }) {
         />
       )}
 
-      {selectedRoom && (
+      {detailRoom ? (
         <RoomDetailDialog
-          key={selectedRoom.id}
-          room={selectedRoom}
+          key={detailRoom.id}
+          room={detailRoom}
           open={isDetailDialogOpen}
           onOpenChange={(open) => {
             setIsDetailDialogOpen(open);
@@ -259,7 +270,7 @@ export function RoomsContent({ initialData }: { initialData: RoomsResponse }) {
             }
           }}
         />
-      )}
+      ) : null}
     </div>
   );
 }

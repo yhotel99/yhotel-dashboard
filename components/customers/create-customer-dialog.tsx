@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, type ChangeEvent, type FormEvent } from "react";
+import { useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { useBranch } from "@/contexts/branch-context";
 import { BranchFormField } from "@/components/branch-form-field";
@@ -93,8 +93,10 @@ export function CreateCustomerDialog({
   );
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const prevOpenRef = useRef(open);
 
-  useEffect(() => {
+  if (open !== prevOpenRef.current) {
+    prevOpenRef.current = open;
     if (open) {
       setFormBranchId(
         defaultBranchId ??
@@ -105,7 +107,7 @@ export function CreateCustomerDialog({
           })
       );
     }
-  }, [open, defaultBranchId, profile, filterBranchId, effectiveBranchId]);
+  }
 
   const handleInputChange =
     (field: keyof CreateCustomerFormState) =>

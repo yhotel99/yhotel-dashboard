@@ -53,6 +53,8 @@ interface ServerPagination {
   limit: number;
   total: number;
   totalPages: number;
+  /** Keyset / sequential mode: next page available without relying on totalPages */
+  hasNextPage?: boolean;
 }
 
 interface DataTableProps<TData, TValue> {
@@ -73,6 +75,8 @@ interface DataTableProps<TData, TValue> {
   serverSearch?: string;
   onSearchChange?: (search: string) => void;
   initialColumnVisibility?: VisibilityState;
+  /** sequential: prev/next only (no jump to first/last) */
+  paginationVariant?: "pages" | "sequential";
 }
 
 export function DataTable<TData, TValue>({
@@ -93,7 +97,9 @@ export function DataTable<TData, TValue>({
   serverSearch,
   onSearchChange,
   initialColumnVisibility,
+  paginationVariant = "pages",
 }: DataTableProps<TData, TValue>) {
+  const isSequentialPagination = paginationVariant === "sequential";
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
@@ -114,6 +120,19 @@ export function DataTable<TData, TValue>({
       });
     }
   }, [serverPagination]);
+
+  const canGoNext = serverPagination
+    ? (serverPagination.hasNextPage ??
+      serverPagination.page < serverPagination.totalPages)
+    : false;
+
+  const showTotalCount =
+    !isSequentialPagination || (serverPagination?.total ?? 0) > 0;
+
+  const showTotalPageCount =
+    !isSequentialPagination ||
+    ((serverPagination?.total ?? 0) > 0 &&
+      (serverPagination?.totalPages ?? 0) > 0);
 
   // Note: React Compiler warning about useReactTable is expected and safe to ignore.
   // TanStack Table returns functions that cannot be memoized, which React Compiler
@@ -333,10 +352,16 @@ export function DataTable<TData, TValue>({
       <div className="flex items-center justify-between px-4">
         <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
           {serverPagination ? (
-            <>
-              Hiển thị {data.length} trong tổng số {serverPagination.total}{" "}
-              {entityName}.
-            </>
+            showTotalCount ? (
+              <>
+                Hiển thị {data.length} trong tổng số {serverPagination.total}{" "}
+                {entityName}.
+              </>
+            ) : (
+              <>
+                Hiển thị {data.length} {entityName}.
+              </>
+            )
           ) : (
             <>
               Hiển thị {table.getRowModel().rows.length} trong tổng số{" "}
@@ -375,31 +400,38 @@ export function DataTable<TData, TValue>({
             </Select>
           </div>
           <div className="flex w-fit items-center justify-center text-sm font-medium">
-            Trang {table.getState().pagination.pageIndex + 1} /{" "}
-            {serverPagination
-              ? serverPagination.totalPages
-              : table.getPageCount()}
+            Trang {table.getState().pagination.pageIndex + 1}
+            {showTotalPageCount ? (
+              <>
+                {" / "}
+                {serverPagination
+                  ? serverPagination.totalPages
+                  : table.getPageCount()}
+              </>
+            ) : null}
           </div>
           <div className="ml-auto flex items-center gap-2 lg:ml-0">
-            <Button
-              variant="outline"
-              className="hidden h-8 w-8 p-0 lg:flex"
-              onClick={() => {
-                if (serverPagination && onPageChange) {
-                  onPageChange(1);
-                } else {
-                  table.setPageIndex(0);
+            {!isSequentialPagination ? (
+              <Button
+                variant="outline"
+                className="hidden h-8 w-8 p-0 lg:flex"
+                onClick={() => {
+                  if (serverPagination && onPageChange) {
+                    onPageChange(1);
+                  } else {
+                    table.setPageIndex(0);
+                  }
+                }}
+                disabled={
+                  serverPagination
+                    ? serverPagination.page <= 1
+                    : !table.getCanPreviousPage()
                 }
-              }}
-              disabled={
-                serverPagination
-                  ? serverPagination.page <= 1
-                  : !table.getCanPreviousPage()
-              }
-            >
-              <span className="sr-only">Đi tới trang đầu</span>
-              <IconChevronsLeft />
-            </Button>
+              >
+                <span className="sr-only">Đi tới trang đầu</span>
+                <IconChevronsLeft />
+              </Button>
+            ) : null}
             <Button
               variant="outline"
               className="size-8"
@@ -432,34 +464,32 @@ export function DataTable<TData, TValue>({
                 }
               }}
               disabled={
-                serverPagination
-                  ? serverPagination.page >= serverPagination.totalPages
-                  : !table.getCanNextPage()
+                serverPagination ? !canGoNext : !table.getCanNextPage()
               }
             >
               <span className="sr-only">Trang sau</span>
               <IconChevronRight />
             </Button>
-            <Button
-              variant="outline"
-              className="hidden size-8 lg:flex"
-              size="icon"
-              onClick={() => {
-                if (serverPagination && onPageChange) {
-                  onPageChange(serverPagination.totalPages);
-                } else {
-                  table.setPageIndex(table.getPageCount() - 1);
+            {!isSequentialPagination ? (
+              <Button
+                variant="outline"
+                className="hidden size-8 lg:flex"
+                size="icon"
+                onClick={() => {
+                  if (serverPagination && onPageChange) {
+                    onPageChange(serverPagination.totalPages);
+                  } else {
+                    table.setPageIndex(table.getPageCount() - 1);
+                  }
+                }}
+                disabled={
+                  serverPagination ? !canGoNext : !table.getCanNextPage()
                 }
-              }}
-              disabled={
-                serverPagination
-                  ? serverPagination.page >= serverPagination.totalPages
-                  : !table.getCanNextPage()
-              }
-            >
-              <span className="sr-only">Đi tới trang cuối</span>
-              <IconChevronsRight />
-            </Button>
+              >
+                <span className="sr-only">Đi tới trang cuối</span>
+                <IconChevronsRight />
+              </Button>
+            ) : null}
           </div>
         </div>
       </div>

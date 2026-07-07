@@ -1,31 +1,11 @@
 "use client";
 
-import useSWR, { SWRConfiguration } from "swr";
+import useSWR from "swr";
 import type { PaymentsResponse } from "@/lib/types";
 import { fetcher } from "@/lib/fetcher";
+import { listSwrConfig } from "@/lib/list-swr";
 
-
-
-/**
- * Hook for fetching payments with SWR
- * @param search - Search term
- * @param page - Page number
- * @param limit - Items per page
- * @param bookingId - Optional booking ID to filter payments
- */
-export function usePayments({
-  search = "",
-  page = 1,
-  limit = 10,
-  bookingId = null,
-  paymentStatus = null,
-  paymentType = null,
-  dateField = "created_at",
-  dateFrom = null,
-  dateTo = null,
-  branchId = null,
-  fallbackData,
-}: {
+export type PaymentsSwrParams = {
   search?: string;
   page?: number;
   limit?: number;
@@ -36,10 +16,20 @@ export function usePayments({
   dateFrom?: string | null;
   dateTo?: string | null;
   branchId?: string | null;
-  fallbackData?: PaymentsResponse;
-}) {
+};
 
-  // Build query parameters
+export function buildPaymentsSwrKey({
+  search = "",
+  page = 1,
+  limit = 10,
+  bookingId = null,
+  paymentStatus = null,
+  paymentType = null,
+  dateField = "created_at",
+  dateFrom = null,
+  dateTo = null,
+  branchId = null,
+}: PaymentsSwrParams): string {
   const params = new URLSearchParams({
     page: page.toString(),
     limit: limit.toString(),
@@ -68,16 +58,48 @@ export function usePayments({
   if (branchId) {
     params.append("branchId", branchId);
   }
+  return `/api/payments?${params.toString()}`;
+}
 
-  const config: SWRConfiguration<PaymentsResponse> = {
-  }
-  if(fallbackData) {
-    config.revalidateOnMount = false;
-    config.fallbackData = fallbackData;
-  }
+/**
+ * Hook for fetching payments with SWR
+ */
+export function usePayments({
+  search = "",
+  page = 1,
+  limit = 10,
+  bookingId = null,
+  paymentStatus = null,
+  paymentType = null,
+  dateField = "created_at",
+  dateFrom = null,
+  dateTo = null,
+  branchId = null,
+  fallbackData,
+  initialSwrKey = null,
+}: PaymentsSwrParams & {
+  fallbackData?: PaymentsResponse;
+  initialSwrKey?: string | null;
+}) {
+  const swrKey = buildPaymentsSwrKey({
+    search,
+    page,
+    limit,
+    bookingId,
+    paymentStatus,
+    paymentType,
+    dateField,
+    dateFrom,
+    dateTo,
+    branchId,
+  });
 
   const { data, error, isLoading, mutate, isValidating } =
-    useSWR<PaymentsResponse>(`/api/payments?${params.toString()}`, fetcher, config);
+    useSWR<PaymentsResponse>(
+      swrKey,
+      fetcher,
+      listSwrConfig(swrKey, initialSwrKey, fallbackData, branchId)
+    );
 
   return {
     payments: data?.data || [],
@@ -93,6 +115,6 @@ export function usePayments({
         ? error.message
         : "Không thể tải danh sách thanh toán"
       : null,
-    mutate, // dùng để refresh sau khi CRUD
+    mutate,
   };
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import * as React from "react";
 import useSWR from "swr";
 import {
@@ -11,16 +12,9 @@ import {
   subDays,
 } from "date-fns";
 import { IconFlame, IconInfoCircle } from "@tabler/icons-react";
-import {
-  CartesianGrid,
-  ComposedChart,
-  Line,
-  LineChart,
-  XAxis,
-  YAxis,
-} from "recharts";
 
 import { formatCurrency } from "@/lib/functions";
+import { buildDrillTrendPoints } from "@/components/hotel-performance-recharts";
 import { DateRangePicker } from "@/components/date-range/date-range-picker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,11 +25,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  ChartContainer,
-  ChartTooltip,
-  type ChartConfig,
-} from "@/components/ui/chart";
 import {
   Select,
   SelectContent,
@@ -78,6 +67,25 @@ import {
 import { cn } from "@/lib/utils";
 import { useBranch } from "@/contexts/branch-context";
 import { ChevronDown, Filter, RotateCcw } from "lucide-react";
+
+const PerformanceRevenueChart = dynamic(
+  () =>
+    import("@/components/hotel-performance-recharts").then((m) => ({
+      default: m.PerformanceRevenueChart,
+    })),
+  {
+    ssr: false,
+    loading: () => <div className="h-[320px] animate-pulse rounded-md bg-muted" />,
+  }
+);
+
+const PerformanceDrillLineChart = dynamic(
+  () =>
+    import("@/components/hotel-performance-recharts").then((m) => ({
+      default: m.PerformanceDrillLineChart,
+    })),
+  { ssr: false, loading: () => <div className="h-48 animate-pulse rounded-md bg-muted" /> }
+);
 
 const CYAN = "#00FFFF";
 
@@ -234,9 +242,7 @@ function summarizeFloors(
   const map = new Map(
     choices.map((c) => [Number.parseInt(c.value, 10), c.label] as const)
   );
-  const labels = [...selected]
-    .sort((a, b) => a - b)
-    .map((v) => map.get(v) ?? `Tầng ${v}`);
+  const labels = selected.toSorted((a, b) => a - b).map((v) => map.get(v) ?? `Tầng ${v}`);
   if (labels.length === 1) return labels[0]!;
   if (labels.length === 2) return `${labels[0]!}, ${labels[1]!}`;
   return `${labels[0]!}, ${labels[1]!} +${labels.length - 2}`;
@@ -246,16 +252,15 @@ function InfoTip({ content }: { content: string }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span
-          role="button"
-          tabIndex={0}
+        <button
+          type="button"
           className="inline-flex cursor-help rounded-full text-muted-foreground hover:text-foreground"
           aria-label="Giải thích"
           onClick={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
         >
           <IconInfoCircle className="size-3.5 shrink-0" />
-        </span>
+        </button>
       </TooltipTrigger>
       <TooltipContent className="max-w-xs text-left text-xs leading-snug">
         {content}
@@ -263,12 +268,6 @@ function InfoTip({ content }: { content: string }) {
     </Tooltip>
   );
 }
-
-const chartCfg = {
-  op: { label: "Vận hành", color: CYAN },
-  cash: { label: "Tiền về", color: "var(--primary)" },
-  occ: { label: "Occ %", color: "var(--muted-foreground)" },
-} satisfies ChartConfig;
 
 export function HotelPerformanceDashboard() {
   const defaultRange = React.useMemo(() => {
@@ -323,12 +322,12 @@ export function HotelPerformanceDashboard() {
     if (roomType !== "all") p.set("roomType", roomType);
     if (source !== "all") p.set("source", source);
     if (statusPresets.length > 0) {
-      p.set("statusPreset", [...statusPresets].sort().join(","));
+      p.set("statusPreset", statusPresets.toSorted().join(","));
     }
     if (balance !== "all") p.set("balance", balance);
     if (paymentMethod !== "all") p.set("paymentMethod", paymentMethod);
     if (selectedFloors.length > 0) {
-      p.set("floor", [...selectedFloors].sort((a, b) => a - b).join(","));
+      p.set("floor", selectedFloors.toSorted((a, b) => a - b).join(","));
     }
     if (minAmount.trim()) p.set("minAmount", minAmount.trim());
     if (maxAmount.trim()) p.set("maxAmount", maxAmount.trim());
@@ -401,6 +400,32 @@ export function HotelPerformanceDashboard() {
         ? "var(--primary)"
         : "var(--muted-foreground)";
 
+  const handleTodayRange = React.useCallback(() => {
+    const now = new Date();
+    setRange({ from: startOfDay(now), to: endOfDay(now) });
+  }, []);
+
+  const handleYesterdayRange = React.useCallback(() => {
+    const day = subDays(new Date(), 1);
+    setRange({ from: startOfDay(day), to: endOfDay(day) });
+  }, []);
+
+  const handleThisWeekRange = React.useCallback(() => {
+    const now = new Date();
+    setRange({
+      from: startOfWeek(now, { weekStartsOn: 1 }),
+      to: endOfWeek(now, { weekStartsOn: 1 }),
+    });
+  }, []);
+
+  const drillTrendPoints = React.useMemo(
+    () =>
+      data && drill
+        ? buildDrillTrendPoints(drill, data.trend, data.dailyMetrics)
+        : [],
+    [data, drill]
+  );
+
   const filterOptions = data?.meta.filterOptions;
 
   const statusPresetChoices = React.useMemo(() => {
@@ -416,7 +441,7 @@ export function HotelPerformanceDashboard() {
       const next = new Set(prev);
       if (next.has(value)) next.delete(value);
       else next.add(value);
-      return [...next].sort();
+      return Array.from(next).toSorted();
     });
   }, []);
 
@@ -430,7 +455,7 @@ export function HotelPerformanceDashboard() {
       const next = new Set(prev);
       if (next.has(floorNum)) next.delete(floorNum);
       else next.add(floorNum);
-      return [...next].sort((a, b) => a - b);
+      return Array.from(next).toSorted((a, b) => a - b);
     });
   }, []);
 
@@ -462,16 +487,13 @@ export function HotelPerformanceDashboard() {
         </div>
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
           <div className="flex flex-wrap gap-1">
-            <Button variant="outline" size="sm" onClick={() => setRange({ from: startOfDay(new Date()), to: endOfDay(new Date()) })}>
+            <Button variant="outline" size="sm" onClick={handleTodayRange}>
               Hôm nay
             </Button>
-            <Button variant="outline" size="sm" onClick={() => setRange({ from: startOfDay(subDays(new Date(), 1)), to: endOfDay(subDays(new Date(), 1)) })}>
+            <Button variant="outline" size="sm" onClick={handleYesterdayRange}>
               Hôm qua
             </Button>
-            <Button variant="outline" size="sm" onClick={() => {
-              const now = new Date();
-              setRange({ from: startOfWeek(now, { weekStartsOn: 1 }), to: endOfWeek(now, { weekStartsOn: 1 }) });
-            }}>
+            <Button variant="outline" size="sm" onClick={handleThisWeekRange}>
               Tuần này
             </Button>
           </div>
@@ -910,7 +932,7 @@ export function HotelPerformanceDashboard() {
                   type="button"
                   onClick={() => setDrill(kpi.key)}
                   className={cn(
-                    "group relative flex flex-col gap-3 rounded-2xl border p-4 text-left shadow-sm transition hover:shadow-md",
+                    "group relative flex w-full cursor-pointer flex-col gap-3 rounded-2xl border p-4 text-left shadow-sm transition hover:shadow-md focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-[color:var(--hp-accent)]/50",
                     kpi.highlight &&
                       "border-[color:var(--hp-accent)] bg-linear-to-br from-cyan-500/[0.07] to-card ring-1 ring-[color:var(--hp-accent)]/20"
                   )}
@@ -982,89 +1004,13 @@ export function HotelPerformanceDashboard() {
               </div>
             </CardHeader>
             <CardContent className="space-y-2 px-2 pb-4 sm:px-4">
-              <div className="h-[320px]">
-              <ChartContainer
-                config={chartCfg}
-                className="aspect-auto min-h-0 h-full w-full [&>div]:h-full [&_.recharts-responsive-container]:h-full"
-              >
-                <ComposedChart data={chartMerged} margin={{ top: 8, right: overlayOcc ? 48 : 8, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
-                  <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} />
-                  <YAxis
-                    yAxisId="left"
-                    tickLine={false}
-                    axisLine={false}
-                    domain={[0, (max: number) => (Number.isFinite(max) && max > 0 ? max * 1.08 : 1)]}
-                    tickFormatter={(v) =>
-                      v >= 1e6 ? `${(v / 1e6).toFixed(1)}tr` : v >= 1e3 ? `${(v / 1e3).toFixed(0)}k` : `${v}`
-                    }
-                  />
-                  {overlayOcc ? (
-                    <YAxis
-                      yAxisId="right"
-                      orientation="right"
-                      domain={[0, 100]}
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(v) => `${v}%`}
-                    />
-                  ) : null}
-                  <ChartTooltip
-                    content={({ active, payload }) => {
-                      if (!active || !payload?.length) return null;
-                      const row = payload[0].payload as (typeof chartMerged)[0];
-                      const val = row[lineKey];
-                      return (
-                        <div className="rounded-lg border bg-background px-3 py-2 text-sm shadow-lg">
-                          <p className="font-medium">{row.label}</p>
-                          <p className="text-muted-foreground">
-                            {lineKey === "operating" && "Đêm ở"}
-                            {lineKey === "cash" && "Tiền về"}
-                            {lineKey === "checkout" && "Check-out"}:{" "}
-                            <span className="font-semibold text-foreground">{formatCurrency(val)}</span>
-                          </p>
-                          {overlayOcc ? (
-                            <p className="text-xs text-muted-foreground">
-                              Công suất: {row.occupancyPct.toFixed(1)}%
-                            </p>
-                          ) : null}
-                        </div>
-                      );
-                    }}
-                  />
-                  <Line
-                    yAxisId="left"
-                    type="monotone"
-                    dataKey={lineKey}
-                    stroke={lineColor}
-                    strokeWidth={2}
-                    dot={false}
-                    animationDuration={350}
-                  />
-                  {overlayOcc ? (
-                    <Line
-                      yAxisId="right"
-                      type="monotone"
-                      dataKey="occupancyPct"
-                      stroke="var(--muted-foreground)"
-                      strokeWidth={1.5}
-                      strokeDasharray="4 4"
-                      dot={false}
-                      opacity={0.85}
-                    />
-                  ) : null}
-                </ComposedChart>
-              </ChartContainer>
-              </div>
-              {chartMetricMax === 0 && chartMerged.length > 0 ? (
-                <p className="text-center text-xs text-muted-foreground">
-                  {chartSeries === "cash"
-                    ? "Không có thanh toán (paid) phân bổ trong các ngày của kỳ — kiểm tra bộ lọc hoặc ngày paid_at."
-                    : chartSeries === "checkout"
-                      ? "Không có booking check-out rơi vào các ngày trong kỳ (theo ngày check-out)."
-                      : "Không có doanh thu phân bổ theo đêm trong kỳ."}
-                </p>
-              ) : null}
+              <PerformanceRevenueChart
+                chartMerged={chartMerged}
+                chartSeries={chartSeries}
+                lineColor={lineColor}
+                overlayOcc={overlayOcc}
+                chartMetricMax={chartMetricMax}
+              />
             </CardContent>
           </Card>
 
@@ -1341,30 +1287,7 @@ export function HotelPerformanceDashboard() {
                         )}
                   </p>
                 </div>
-                <ChartContainer config={chartCfg} className="h-48 w-full aspect-auto">
-                  <LineChart
-                    data={data.trend.map((t, i) => ({
-                      label: format(new Date(t.date + "T12:00:00"), "dd/MM"),
-                      v:
-                        drill === "operating"
-                          ? t.operating
-                          : drill === "cash"
-                            ? t.cash
-                            : drill === "ar"
-                              ? t.outstandingExposure
-                              : drill === "occ"
-                                ? data.dailyMetrics[i]?.occupancyPct ?? 0
-                                : drill === "adr"
-                                  ? data.dailyMetrics[i]?.adr ?? 0
-                                  : data.dailyMetrics[i]?.revpar ?? 0,
-                    }))}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border/40" />
-                    <XAxis dataKey="label" tick={{ fontSize: 10 }} />
-                    <YAxis tick={{ fontSize: 10 }} width={40} />
-                    <Line type="monotone" dataKey="v" stroke={CYAN} strokeWidth={2} dot={false} />
-                  </LineChart>
-                </ChartContainer>
+                <PerformanceDrillLineChart points={drillTrendPoints} />
               </div>
             </>
           ) : null}

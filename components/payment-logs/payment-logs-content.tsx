@@ -1,24 +1,23 @@
 "use client";
 
 import { useMemo, useEffect, useState, useCallback } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useShallowSearchParams } from "@/hooks/use-shallow-search-params";
+import { useInitialSwrKey } from "@/hooks/use-initial-swr-key";
 import { DataTable } from "@/components/data-table";
-import { usePaymentLogs } from "@/hooks/use-payment-logs";
-import type { PaymentLogsResponse } from "@/lib/types";
-import { useDebounce } from "@/hooks/use-debounce";
+import { buildPaymentLogsSwrKey, usePaymentLogs } from "@/hooks/use-payment-logs";
+import { useDebouncedUrlSearch } from "@/hooks/use-debounced-url-search";
 import { useBranch } from "@/contexts/branch-context";
 import { createPaymentLogColumns, PAYMENT_LOG_COLUMNS } from "./columns";
 import { useRoomNumberLookup } from "@/hooks/use-room-number-lookup";
+import type { PaymentLogsResponse } from "@/lib/types";
 
 export function PaymentLogsContent({
   initialData,
 }: {
   initialData: PaymentLogsResponse;
 }) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const { searchParams, pushSearchParams } = useShallowSearchParams();
   const { filterBranchId } = useBranch();
-  const [localSearch, setLocalSearch] = useState("");
 
   // Get pagination and search from URL params
   const page = useMemo(() => {
@@ -40,35 +39,46 @@ export function PaymentLogsContent({
   // Update search params
   const updateSearchParams = useCallback(
     (newPage: number, newLimit: number, newSearch: string) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (newPage > 1) {
-        params.set("page", newPage.toString());
-      } else {
-        params.delete("page");
-      }
-      if (newLimit !== 10) {
-        params.set("limit", newLimit.toString());
-      } else {
-        params.delete("limit");
-      }
-      if (newSearch) {
-        params.set("search", newSearch);
-      } else {
-        params.delete("search");
-      }
-      router.push(`/dashboard/payment-logs?${params.toString()}`);
+      pushSearchParams((params) => {
+        if (newPage > 1) {
+          params.set("page", newPage.toString());
+        } else {
+          params.delete("page");
+        }
+        if (newLimit !== 10) {
+          params.set("limit", newLimit.toString());
+        } else {
+          params.delete("limit");
+        }
+        if (newSearch) {
+          params.set("search", newSearch);
+        } else {
+          params.delete("search");
+        }
+      });
     },
-    [router, searchParams]
+    [pushSearchParams]
   );
 
-  // Debounce search
-  const debouncedSearch = useDebounce(localSearch, 300);
+  const onSearchCommit = useCallback(
+    (value: string) => {
+      updateSearchParams(1, limit, value);
+    },
+    [limit, updateSearchParams]
+  );
+  const { localSearch, setLocalSearch } = useDebouncedUrlSearch(
+    search,
+    onSearchCommit
+  );
 
-  useEffect(() => {
-    if (debouncedSearch !== search) {
-      updateSearchParams(1, limit, debouncedSearch);
-    }
-  }, [debouncedSearch, search, limit, updateSearchParams]);
+  const initialSwrKey = useInitialSwrKey(() =>
+    buildPaymentLogsSwrKey({
+      search,
+      page,
+      limit,
+      branchId: filterBranchId,
+    })
+  );
 
   const { paymentLogs, isLoading, pagination, mutate } = usePaymentLogs({
     search,
@@ -76,6 +86,7 @@ export function PaymentLogsContent({
     limit,
     branchId: filterBranchId,
     fallbackData: initialData,
+    initialSwrKey,
   });
 
   const { data: roomNumberById } = useRoomNumberLookup();
@@ -137,6 +148,7 @@ export function PaymentLogsContent({
           }}
           isLoading={isLoading}
           serverPagination={pagination}
+          paginationVariant="sequential"
           onPageChange={(newPage) => updateSearchParams(newPage, limit, search)}
           onLimitChange={(newLimit) => updateSearchParams(1, newLimit, search)}
           serverSearch={localSearch}

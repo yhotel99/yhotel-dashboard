@@ -19,20 +19,21 @@ export function RelatedCustomersAlert({
   excludeId,
   currentBranchId,
 }: RelatedCustomersAlertProps) {
+  const trimmedEmail = email?.trim() ?? "";
+  const trimmedPhone = phone?.trim() ?? "";
+  const canSearch = Boolean(trimmedEmail || trimmedPhone);
   const [related, setRelated] = useState<RelatedCustomerRow[]>([]);
 
-  useEffect(() => {
-    const trimmedEmail = email?.trim();
-    const trimmedPhone = phone?.trim();
+  if (!canSearch && related.length > 0) {
+    setRelated([]);
+  }
 
-    if (!trimmedEmail && !trimmedPhone) {
-      setRelated([]);
-      return;
-    }
+  useEffect(() => {
+    if (!canSearch) return;
 
     const timer = setTimeout(() => {
       findRelatedCustomersAction({
-        email: trimmedEmail,
+        email: trimmedEmail || undefined,
         phone: trimmedPhone || undefined,
         excludeId,
         currentBranchId,
@@ -46,7 +47,7 @@ export function RelatedCustomersAlert({
     }, 400);
 
     return () => clearTimeout(timer);
-  }, [email, phone, excludeId, currentBranchId]);
+  }, [canSearch, trimmedEmail, trimmedPhone, excludeId, currentBranchId]);
 
   if (related.length === 0) return null;
 

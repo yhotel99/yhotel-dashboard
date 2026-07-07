@@ -14,9 +14,10 @@ import { Badge } from "@/components/ui/badge";
 import {
   roomTypeLabels,
   roomStatusLabels,
-  roomCategoryCodeLabels,
   AMENITIES_OPTIONS,
 } from "@/lib/constants";
+import { getRoomCategoryLabel } from "@/lib/room-categories";
+import { useRoomCategories } from "@/hooks/use-room-categories";
 import { formatCurrency } from "@/lib/functions";
 import { resolveBranchDisplay } from "@/lib/branch";
 import { useBranch } from "@/contexts/branch-context";
@@ -36,6 +37,7 @@ export function RoomDetailDialog({
   onOpenChange,
 }: RoomDetailDialogProps) {
   const { branches } = useBranch();
+  const { categories } = useRoomCategories();
   const branchDisplay = useMemo(
     () => resolveBranchDisplay(room.branch_id, branches),
     [room.branch_id, branches]
@@ -101,9 +103,7 @@ export function RoomDetailDialog({
                 </p>
                 <p className="text-sm">
                   {room.category_code
-                    ? roomCategoryCodeLabels[
-                        room.category_code as keyof typeof roomCategoryCodeLabels
-                      ] || room.category_code
+                    ? getRoomCategoryLabel(room.category_code, categories)
                     : "-"}
                 </p>
               </div>

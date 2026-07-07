@@ -1,6 +1,9 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { useShallowSearchParams } from "@/hooks/use-shallow-search-params";
+import { useInitialSwrKey } from "@/hooks/use-initial-swr-key";
+import { useDebouncedUrlSearch } from "@/hooks/use-debounced-url-search";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { IconSearch, IconRefresh, IconCalendar, IconInnerShadowTop, IconEye } from "@tabler/icons-react";
@@ -9,7 +12,10 @@ import { Loader2 } from "lucide-react";
 import { formatDateOnly, formatCurrency } from "@/lib/functions";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { useUpcomingCheckins } from "@/hooks/use-upcoming-checkins";
+import {
+  buildUpcomingCheckinsSwrKey,
+  useUpcomingCheckins,
+} from "@/hooks/use-upcoming-checkins";
 import { useAvailableRooms } from "@/hooks/use-available-rooms";
 import { useBranch } from "@/contexts/branch-context";
 import type { BookingRecord, BookingsResponse } from "@/lib/types";
@@ -236,16 +242,44 @@ interface KanbanContentProps {
 }
 
 export function KanbanContent({ initialData }: KanbanContentProps) {
+  const { searchParams, pushSearchParams } = useShallowSearchParams();
   const { filterBranchId } = useBranch();
-  const [search, setSearch] = useState("");
+  const search = useMemo(() => searchParams.get("search") || "", [searchParams]);
+
+  const updateSearch = useCallback(
+    (newSearch: string) => {
+      pushSearchParams((params) => {
+        if (newSearch) {
+          params.set("search", newSearch);
+        } else {
+          params.delete("search");
+        }
+      });
+    },
+    [pushSearchParams]
+  );
+
+  const { localSearch, setLocalSearch } = useDebouncedUrlSearch(
+    search,
+    updateSearch
+  );
+
   const [selectedBooking, setSelectedBooking] = useState<BookingRecord | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [isAvailableRoomsDialogOpen, setIsAvailableRoomsDialogOpen] = useState(false);
+
+  const initialSwrKey = useInitialSwrKey(() =>
+    buildUpcomingCheckinsSwrKey({
+      search,
+      branchId: filterBranchId,
+    })
+  );
 
   const { bookings, isLoading, error, refetch } = useUpcomingCheckins({
     search,
     branchId: filterBranchId,
     fallbackData: initialData,
+    initialSwrKey,
   });
 
   const { availableRooms, isLoading: isAvailableRoomsLoading, refetch: refetchAvailableRooms } = useAvailableRooms(filterBranchId);
@@ -329,8 +363,8 @@ export function KanbanContent({ initialData }: KanbanContentProps) {
           <IconSearch className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Tìm kiếm theo mã booking, tên khách, phòng..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={localSearch}
+            onChange={(e) => setLocalSearch(e.target.value)}
             className="pl-9"
           />
         </div>

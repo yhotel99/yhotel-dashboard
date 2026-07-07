@@ -1,12 +1,13 @@
 "use client";
 
 import { useMemo, useEffect, useState, useCallback } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useShallowSearchParams } from "@/hooks/use-shallow-search-params";
+import { useInitialSwrKey } from "@/hooks/use-initial-swr-key";
 
 import { DataTable } from "@/components/data-table";
-import { usePayments } from "@/hooks/use-payments";
+import { buildPaymentsSwrKey, usePayments } from "@/hooks/use-payments";
 import type { PaymentStatus, PaymentType, PaymentsResponse } from "@/lib/types";
-import { useDebounce } from "@/hooks/use-debounce";
+import { useDebouncedUrlSearch } from "@/hooks/use-debounced-url-search";
 import { createPaymentsColumns, PAYMENTS_COLUMNS } from "./columns";
 import { useRoomNumberLookup } from "@/hooks/use-room-number-lookup";
 import {
@@ -36,14 +37,12 @@ export function PaymentsContent({
 }: {
   initialData: PaymentsResponse;
 }) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const { searchParams, pushSearchParams } = useShallowSearchParams();
   const { filterBranchId, branches } = useBranch();
   const branchNameById = useMemo(
     () => Object.fromEntries(branches.map((b) => [b.id, b.name])),
     [branches]
   );
-  const [localSearch, setLocalSearch] = useState("");
 
   // Get pagination and search from URL params
   const page = useMemo(() => {
@@ -90,7 +89,6 @@ export function PaymentsContent({
         dateTo: string | null;
       }>
     ) => {
-      const params = new URLSearchParams(searchParams.toString());
       const hasOverride = <K extends string>(key: K) =>
         Boolean(overrides && key in overrides);
       const resolvedPaymentStatus = hasOverride("paymentStatus")
@@ -109,59 +107,76 @@ export function PaymentsContent({
         ? overrides?.dateTo ?? null
         : dateTo ?? null;
 
-      if (newPage > 1) {
-        params.set("page", newPage.toString());
-      } else {
-        params.delete("page");
-      }
-      if (newLimit !== 10) {
-        params.set("limit", newLimit.toString());
-      } else {
-        params.delete("limit");
-      }
-      if (newSearch) {
-        params.set("search", newSearch);
-      } else {
-        params.delete("search");
-      }
-      if (resolvedPaymentStatus) {
-        params.set("paymentStatus", resolvedPaymentStatus);
-      } else {
-        params.delete("paymentStatus");
-      }
-      if (resolvedPaymentType) {
-        params.set("paymentType", resolvedPaymentType);
-      } else {
-        params.delete("paymentType");
-      }
-      if (resolvedDateField) {
-        params.set("dateField", resolvedDateField);
-      } else {
-        params.delete("dateField");
-      }
-      if (resolvedDateFrom) {
-        params.set("dateFrom", resolvedDateFrom);
-      } else {
-        params.delete("dateFrom");
-      }
-      if (resolvedDateTo) {
-        params.set("dateTo", resolvedDateTo);
-      } else {
-        params.delete("dateTo");
-      }
-      router.push(`/dashboard/payments?${params.toString()}`);
+      pushSearchParams((params) => {
+        if (newPage > 1) {
+          params.set("page", newPage.toString());
+        } else {
+          params.delete("page");
+        }
+        if (newLimit !== 10) {
+          params.set("limit", newLimit.toString());
+        } else {
+          params.delete("limit");
+        }
+        if (newSearch) {
+          params.set("search", newSearch);
+        } else {
+          params.delete("search");
+        }
+        if (resolvedPaymentStatus) {
+          params.set("paymentStatus", resolvedPaymentStatus);
+        } else {
+          params.delete("paymentStatus");
+        }
+        if (resolvedPaymentType) {
+          params.set("paymentType", resolvedPaymentType);
+        } else {
+          params.delete("paymentType");
+        }
+        if (resolvedDateField) {
+          params.set("dateField", resolvedDateField);
+        } else {
+          params.delete("dateField");
+        }
+        if (resolvedDateFrom) {
+          params.set("dateFrom", resolvedDateFrom);
+        } else {
+          params.delete("dateFrom");
+        }
+        if (resolvedDateTo) {
+          params.set("dateTo", resolvedDateTo);
+        } else {
+          params.delete("dateTo");
+        }
+      });
     },
-    [router, searchParams, paymentStatus, paymentType, dateField, dateFrom, dateTo]
+    [pushSearchParams, paymentStatus, paymentType, dateField, dateFrom, dateTo]
   );
 
-  // Debounce search
-  const debouncedSearch = useDebounce(localSearch, 300);
+  const onSearchCommit = useCallback(
+    (value: string) => {
+      updateSearchParams(1, limit, value);
+    },
+    [limit, updateSearchParams]
+  );
+  const { localSearch, setLocalSearch } = useDebouncedUrlSearch(
+    search,
+    onSearchCommit
+  );
 
-  useEffect(() => {
-    if (debouncedSearch !== search) {
-      updateSearchParams(1, limit, debouncedSearch);
-    }
-  }, [debouncedSearch, search, limit, updateSearchParams]);
+  const initialSwrKey = useInitialSwrKey(() =>
+    buildPaymentsSwrKey({
+      search,
+      page,
+      limit,
+      paymentStatus,
+      paymentType,
+      dateField,
+      dateFrom,
+      dateTo,
+      branchId: filterBranchId,
+    })
+  );
 
   const { payments, isLoading, pagination, mutate } = usePayments({
     search,
@@ -174,6 +189,7 @@ export function PaymentsContent({
     dateTo,
     branchId: filterBranchId,
     fallbackData: initialData,
+    initialSwrKey,
   });
 
   const { data: roomNumberById } = useRoomNumberLookup();
@@ -318,7 +334,7 @@ export function PaymentsContent({
                   <div className="w-full">
                     <DateRangePicker
                       key={`${dateFrom}-${dateTo}`}
-                      initialDateFrom={dateFrom || new Date()}
+                      initialDateFrom={dateFrom || undefined}
                       initialDateTo={dateTo || dateFrom || undefined}
                       showCompare={false}
                       fullWidth
@@ -408,6 +424,7 @@ export function PaymentsContent({
           }}
           isLoading={isLoading}
           serverPagination={pagination}
+          paginationVariant="sequential"
           onPageChange={(newPage) => updateSearchParams(newPage, limit, search)}
           onLimitChange={(newLimit) => updateSearchParams(1, newLimit, search)}
           serverSearch={localSearch}

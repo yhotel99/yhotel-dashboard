@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -40,9 +41,9 @@ import {
   AMENITIES_OPTIONS,
   ROOM_STATUS,
   roomStatusLabels,
-  ROOM_CATEGORY_CODE,
-  roomCategoryCodeLabels,
 } from "@/lib/constants";
+import { getRoomFormCategoryOptions } from "@/lib/room-categories";
+import { useRoomCategories } from "@/hooks/use-room-categories";
 import { MultiSelect } from "@/components/multi-select";
 import { mutate } from "swr";
 import { useBranch } from "@/contexts/branch-context";
@@ -186,6 +187,13 @@ export function RoomForm({
       }
       : defaultFormValues,
   });
+
+  const { categories, isLoading: categoriesLoading } = useRoomCategories();
+  const watchedCategoryCode = form.watch("category_code");
+  const categoryOptions = useMemo(
+    () => getRoomFormCategoryOptions(categories, watchedCategoryCode),
+    [categories, watchedCategoryCode]
+  );
 
   const handleSubmit = async (data: RoomFormValues) => {
     try {
@@ -393,18 +401,29 @@ export function RoomForm({
                   <FormItem>
                     <FormLabel>Phân loại phòng</FormLabel>
                     <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      onValueChange={(value) =>
+                        field.onChange(value === "__none__" ? undefined : value)
+                      }
+                      value={field.value ?? "__none__"}
+                      disabled={categoriesLoading}
                     >
                       <FormControl className="w-full">
                         <SelectTrigger>
-                          <SelectValue placeholder="Chọn phân loại" />
+                          <SelectValue
+                            placeholder={
+                              categoriesLoading
+                                ? "Đang tải phân loại..."
+                                : "Chọn phân loại"
+                            }
+                          />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {Object.values(ROOM_CATEGORY_CODE).map((code) => (
-                          <SelectItem key={code} value={code}>
-                            {roomCategoryCodeLabels[code]}
+                        <SelectItem value="__none__">Không chọn</SelectItem>
+                        {categoryOptions.map((item) => (
+                          <SelectItem key={item.code} value={item.code}>
+                            {item.name}
+                            {!item.is_active ? " (Đã ngừng)" : ""}
                           </SelectItem>
                         ))}
                       </SelectContent>

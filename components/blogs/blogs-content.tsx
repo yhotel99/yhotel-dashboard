@@ -2,14 +2,16 @@
 
 import * as React from "react";
 import { IconPlus } from "@tabler/icons-react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useShallowSearchParams } from "@/hooks/use-shallow-search-params";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
-import { useDebounce } from "@/hooks/use-debounce";
+import { useDebouncedUrlSearch } from "@/hooks/use-debounced-url-search";
 import { BLOG_COLUMNS, createColumns } from "@/components/blogs/columns";
 import { DeleteBlogDialog } from "@/components/blogs/delete-blog-dialog";
 import { toast } from "sonner";
-import { useBlogs } from "@/hooks/use-blogs";
+import { useInitialSwrKey } from "@/hooks/use-initial-swr-key";
+import { buildBlogsSwrKey, useBlogs } from "@/hooks/use-blogs";
 import {
   updateBlogStatus as updateBlogStatusAction,
   deleteBlog as deleteBlogAction,
@@ -18,8 +20,7 @@ import type { Blog, BlogsResponse } from "@/lib/types";
 
 export function BlogsContent({ initialData }: { initialData: BlogsResponse }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const [localSearch, setLocalSearch] = React.useState("");
+  const { searchParams, pushSearchParams } = useShallowSearchParams();
   const [openDeleteDialog, setOpenDeleteDialog] = React.useState(false);
   const [blogToDelete, setBlogToDelete] = React.useState<Blog | null>(null);
 
@@ -43,41 +44,48 @@ export function BlogsContent({ initialData }: { initialData: BlogsResponse }) {
   // Update search params
   const updateSearchParams = React.useCallback(
     (newPage: number, newLimit: number, newSearch: string) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (newPage > 1) {
-        params.set("page", newPage.toString());
-      } else {
-        params.delete("page");
-      }
-      if (newLimit !== 10) {
-        params.set("limit", newLimit.toString());
-      } else {
-        params.delete("limit");
-      }
-      if (newSearch) {
-        params.set("search", newSearch);
-      } else {
-        params.delete("search");
-      }
-      router.push(`/dashboard/blogs?${params.toString()}`);
+      pushSearchParams((params) => {
+        if (newPage > 1) {
+          params.set("page", newPage.toString());
+        } else {
+          params.delete("page");
+        }
+        if (newLimit !== 10) {
+          params.set("limit", newLimit.toString());
+        } else {
+          params.delete("limit");
+        }
+        if (newSearch) {
+          params.set("search", newSearch);
+        } else {
+          params.delete("search");
+        }
+      });
     },
-    [router, searchParams]
+    [pushSearchParams]
   );
 
-  // Debounce search
-  const debouncedSearch = useDebounce(localSearch, 300);
+  const onSearchCommit = React.useCallback(
+    (value: string) => {
+      updateSearchParams(1, limit, value);
+    },
+    [limit, updateSearchParams]
+  );
+  const { localSearch, setLocalSearch } = useDebouncedUrlSearch(
+    search,
+    onSearchCommit
+  );
 
-  React.useEffect(() => {
-    if (debouncedSearch !== search) {
-      updateSearchParams(1, limit, debouncedSearch);
-    }
-  }, [debouncedSearch, search, limit, updateSearchParams]);
+  const initialSwrKey = useInitialSwrKey(() =>
+    buildBlogsSwrKey({ search, page, limit })
+  );
 
   const { blogs, isLoading, pagination, mutate } = useBlogs({
     search,
     page,
     limit,
     fallbackData: initialData,
+    initialSwrKey,
   });
 
 
@@ -179,6 +187,7 @@ export function BlogsContent({ initialData }: { initialData: BlogsResponse }) {
           }}
           isLoading={isLoading}
           serverPagination={pagination}
+          paginationVariant="sequential"
           onPageChange={(newPage) => updateSearchParams(newPage, limit, search)}
           onLimitChange={(newLimit) => updateSearchParams(1, newLimit, search)}
           serverSearch={localSearch}

@@ -50,6 +50,8 @@ export async function updateSettingsAction(
     const settings = await updateSettings(input);
 
     revalidatePath("/dashboard/settings");
+    revalidatePath("/dashboard/rooms/create");
+    revalidatePath("/dashboard/rooms", "layout");
     revalidatePath("/", "layout");
 
     return settings;

@@ -139,15 +139,15 @@ export function BranchDetailSection({
       ) : null}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-1">
-          <label className="text-sm font-medium text-muted-foreground">
+          <span className="text-sm font-medium text-muted-foreground">
             Tên chi nhánh
-          </label>
+          </span>
           <p className="text-base font-medium">{display.name}</p>
         </div>
         <div className="space-y-1">
-          <label className="text-sm font-medium text-muted-foreground">
+          <span className="text-sm font-medium text-muted-foreground">
             Mã chi nhánh
-          </label>
+          </span>
           <p className="text-base font-mono">{display.code}</p>
         </div>
       </div>

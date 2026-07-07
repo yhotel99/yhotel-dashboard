@@ -157,10 +157,10 @@ export function RefundRequestDetailDialog({
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                  <span className="text-sm font-medium text-muted-foreground flex items-center gap-1">
                     <IconBuilding className="size-3.5" />
                     Chi nhánh
-                  </label>
+                  </span>
                   <p className="text-base font-medium">{branchDisplay.name}</p>
                   <p className="text-xs font-mono text-muted-foreground">
                     {branchDisplay.code}
@@ -168,36 +168,36 @@ export function RefundRequestDetailDialog({
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-sm font-medium text-muted-foreground">
+                  <span className="text-sm font-medium text-muted-foreground">
                     Khách hàng
-                  </label>
+                  </span>
                   <p className="text-base font-medium">
                     {refundRequest.bookings?.customers?.full_name || "-"}
                   </p>
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-sm font-medium text-muted-foreground">
+                  <span className="text-sm font-medium text-muted-foreground">
                     Số điện thoại
-                  </label>
+                  </span>
                   <p className="text-base">
                     {refundRequest.bookings?.customers?.phone || "-"}
                   </p>
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-sm font-medium text-muted-foreground">
+                  <span className="text-sm font-medium text-muted-foreground">
                     Phòng
-                  </label>
+                  </span>
                   <p className="text-base font-medium">
                     {refundRequest.bookings?.rooms?.name || "-"}
                   </p>
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-sm font-medium text-muted-foreground">
+                  <span className="text-sm font-medium text-muted-foreground">
                     Người yêu cầu
-                  </label>
+                  </span>
                   <p className="text-base font-medium">
                     {refundRequest.request_by_profile?.full_name || "-"}
                   </p>
@@ -215,20 +215,20 @@ export function RefundRequestDetailDialog({
               </h3>
               <div className="space-y-4">
                 <div className="space-y-1 bg-muted/30 p-3 rounded-md">
-                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <span className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                     <IconMessage className="size-4" />
                     Lý do yêu cầu
-                  </label>
+                  </span>
                   <p className="text-base italic whitespace-pre-wrap">
                     {refundRequest.reason || "Không có lý do được cung cấp."}
                   </p>
                 </div>
 
                 <div className="space-y-1 bg-muted/30 p-3 rounded-md">
-                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <span className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                     <IconNotes className="size-4" />
                     Ghi chú nội bộ
-                  </label>
+                  </span>
                   <p className="text-base whitespace-pre-wrap">
                     {refundRequest.note || "Không có ghi chú."}
                   </p>
@@ -256,9 +256,9 @@ export function RefundRequestDetailDialog({
                           </span>
                         </div>
                         <div className="space-y-1 ml-5">
-                          <label className="text-xs font-medium text-muted-foreground">
+                          <span className="text-xs font-medium text-muted-foreground">
                             Người duyệt
-                          </label>
+                          </span>
                           <p className="text-sm font-medium">
                             {refundRequest.approved_by_profile?.full_name ||
                               "-"}
@@ -276,9 +276,9 @@ export function RefundRequestDetailDialog({
                           </span>
                         </div>
                         <div className="space-y-1 ml-5">
-                          <label className="text-xs font-medium text-muted-foreground">
+                          <span className="text-xs font-medium text-muted-foreground">
                             Người thực hiện
-                          </label>
+                          </span>
                           <p className="text-sm font-medium">
                             {refundRequest.refunded_by_profile?.full_name ||
                               "-"}
@@ -301,18 +301,18 @@ export function RefundRequestDetailDialog({
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-sm font-medium text-muted-foreground">
+                  <span className="text-sm font-medium text-muted-foreground">
                     Ngày yêu cầu
-                  </label>
+                  </span>
                   <p className="text-base">
                     {formatDateOnly(refundRequest.created_at)}
                   </p>
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-sm font-medium text-muted-foreground">
+                  <span className="text-sm font-medium text-muted-foreground">
                     Cập nhật lần cuối
-                  </label>
+                  </span>
                   <p className="text-base">
                     {formatDateOnly(refundRequest.updated_at)}
                   </p>

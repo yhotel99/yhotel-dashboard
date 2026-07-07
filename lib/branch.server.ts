@@ -1,9 +1,11 @@
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import type { BranchScope, Profile } from "@/lib/types";
 import {
   getBranchScopeFromProfile,
   resolveBranchFilterId,
 } from "@/lib/branch";
+import { BRANCH_STORAGE_KEY } from "@/lib/branch-storage";
 
 export { canViewAllBranches, getBranchScopeFromProfile, resolveBranchFilterId } from "@/lib/branch";
 
@@ -31,6 +33,28 @@ export async function getCurrentUserBranchScope(): Promise<{
     scope: getBranchScopeFromProfile(profile as Profile | null),
     profile: (profile as Profile) ?? null,
   };
+}
+
+/** Branch filter for list RSC pages: scope + optional ?branchId= + admin cookie. */
+export async function resolveListBranchId(
+  requestedBranchId?: string | null
+): Promise<string | null> {
+  const { scope } = await getCurrentUserBranchScope();
+  const trimmedRequest = requestedBranchId?.trim() || null;
+
+  if (trimmedRequest) {
+    return resolveBranchFilterId(scope, trimmedRequest);
+  }
+
+  if (scope.mode === "all") {
+    const cookieStore = await cookies();
+    const fromCookie = cookieStore.get(BRANCH_STORAGE_KEY)?.value?.trim() || null;
+    if (fromCookie) {
+      return resolveBranchFilterId(scope, fromCookie);
+    }
+  }
+
+  return resolveBranchFilterId(scope, null);
 }
 
 /** Throws if the current user cannot access the booking's branch. */

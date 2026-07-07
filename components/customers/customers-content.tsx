@@ -2,23 +2,25 @@
 
 import * as React from "react";
 import { IconPlus } from "@tabler/icons-react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useShallowSearchParams } from "@/hooks/use-shallow-search-params";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table";
-import { useDebounce } from "@/hooks/use-debounce";
+import { useDebouncedUrlSearch } from "@/hooks/use-debounced-url-search";
 import { createColumns, CUSTOMER_COLUMNS } from "@/components/customers/columns";
 import { CreateCustomerDialog } from "@/components/customers/create-customer-dialog";
 import { EditCustomerDialog } from "@/components/customers/edit-customer-dialog";
 import { DeleteCustomerDialog } from "@/components/customers/delete-customer-dialog";
 import { CustomerDetailDialog } from "@/components/customers/customer-detail-dialog";
 import { toast } from "sonner";
-import { useCustomers } from "@/hooks/use-customers";
+import { useInitialSwrKey } from "@/hooks/use-initial-swr-key";
+import { buildCustomersSwrKey, useCustomers } from "@/hooks/use-customers";
 import {
   createCustomerAction,
   updateCustomerAction,
   deleteCustomerAction,
 } from "@/actions/customers";
-import { type Customer, CustomersResponse } from "@/lib/types";
+import { type Customer, type CustomersResponse } from "@/lib/types";
 import { useBranch } from "@/contexts/branch-context";
 
 export function CustomersContent({
@@ -27,13 +29,12 @@ export function CustomersContent({
   initialData: CustomersResponse;
 }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const { searchParams, pushSearchParams } = useShallowSearchParams();
   const { filterBranchId, branches } = useBranch();
   const branchNameById = React.useMemo(
     () => Object.fromEntries(branches.map((b) => [b.id, b.name])),
     [branches]
   );
-  const [localSearch, setLocalSearch] = React.useState("");
   const [openCreateDialog, setOpenCreateDialog] = React.useState(false);
   const [openEditDialog, setOpenEditDialog] = React.useState(false);
   const [editingCustomer, setEditingCustomer] = React.useState<Customer | null>(
@@ -67,35 +68,46 @@ export function CustomersContent({
   // Update search params
   const updateSearchParams = React.useCallback(
     (newPage: number, newLimit: number, newSearch: string) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (newPage > 1) {
-        params.set("page", newPage.toString());
-      } else {
-        params.delete("page");
-      }
-      if (newLimit !== 10) {
-        params.set("limit", newLimit.toString());
-      } else {
-        params.delete("limit");
-      }
-      if (newSearch) {
-        params.set("search", newSearch);
-      } else {
-        params.delete("search");
-      }
-      router.push(`/dashboard/customers?${params.toString()}`);
+      pushSearchParams((params) => {
+        if (newPage > 1) {
+          params.set("page", newPage.toString());
+        } else {
+          params.delete("page");
+        }
+        if (newLimit !== 10) {
+          params.set("limit", newLimit.toString());
+        } else {
+          params.delete("limit");
+        }
+        if (newSearch) {
+          params.set("search", newSearch);
+        } else {
+          params.delete("search");
+        }
+      });
     },
-    [router, searchParams]
+    [pushSearchParams]
   );
 
-  // Debounce search
-  const debouncedSearch = useDebounce(localSearch, 300);
+  const onSearchCommit = React.useCallback(
+    (value: string) => {
+      updateSearchParams(1, limit, value);
+    },
+    [limit, updateSearchParams]
+  );
+  const { localSearch, setLocalSearch } = useDebouncedUrlSearch(
+    search,
+    onSearchCommit
+  );
 
-  React.useEffect(() => {
-    if (debouncedSearch !== search) {
-      updateSearchParams(1, limit, debouncedSearch);
-    }
-  }, [debouncedSearch, search, limit, updateSearchParams]);
+  const initialSwrKey = useInitialSwrKey(() =>
+    buildCustomersSwrKey({
+      search,
+      page,
+      limit,
+      branchId: filterBranchId,
+    })
+  );
 
   const { customers, isLoading, pagination, mutate } = useCustomers({
     search,
@@ -103,6 +115,7 @@ export function CustomersContent({
     limit,
     branchId: filterBranchId,
     fallbackData: initialData,
+    initialSwrKey,
   });
 
   const handleEditCustomer = (customer: Customer) => {
@@ -215,6 +228,7 @@ export function CustomersContent({
           }}
           isLoading={isLoading}
           serverPagination={pagination}
+          paginationVariant="sequential"
           onPageChange={(newPage) => updateSearchParams(newPage, limit, search)}
           onLimitChange={(newLimit) => updateSearchParams(1, newLimit, search)}
           serverSearch={localSearch}
