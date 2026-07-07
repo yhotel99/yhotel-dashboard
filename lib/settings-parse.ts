@@ -1,4 +1,5 @@
 import type { Settings } from "@/lib/types";
+import { parseRoomCategories } from "@/lib/room-categories";
 
 /** Normalize raw settings row from Supabase (JSONB fields). */
 export function parseSettingsRow(
@@ -45,6 +46,8 @@ export function parseSettingsRow(
   } else if (!settings.pricing_holiday_periods) {
     settings.pricing_holiday_periods = [];
   }
+
+  settings.room_categories = parseRoomCategories(settings.room_categories);
 
   return settings as Settings;
 }

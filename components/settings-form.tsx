@@ -40,8 +40,10 @@ import type { ImageValue } from "@/lib/types";
 import { IconPlus, IconTrash } from "@tabler/icons-react";
 import { DEFAULT_WEEKDAY_RATES, normalizeHolidayPeriods } from "@/lib/pricing";
 import type { WeekdayRates } from "@/lib/types";
-import { Banknote, CalendarRange, CreditCard, Globe, Settings as SettingsIcon } from "lucide-react";
+import { Banknote, CalendarRange, CreditCard, Globe, Hotel, Settings as SettingsIcon } from "lucide-react";
 import { BranchBankAccountsTab } from "@/components/branch-bank-accounts-tab";
+import { SettingsRoomCategoriesSection } from "@/components/settings-room-categories-section";
+import { sortRoomCategories } from "@/lib/room-categories";
 
 function ymdToday(): string {
   const d = new Date();
@@ -136,6 +138,16 @@ const holidayPeriodRowSchema = z.object({
   surcharge_percent: z.coerce.number().min(0).max(100),
 });
 
+const roomCategoryRowSchema = z.object({
+  code: z
+    .string()
+    .regex(/^[A-Z][A-Z0-9_]*$/, "Mã phải là CHỮ_IN_HOA và số, VD: URBAN_COMPACT_TWIN"),
+  name: z.string().min(1, "Tên hiển thị không được để trống"),
+  description: z.string().nullable().optional(),
+  sort_order: z.coerce.number(),
+  is_active: z.boolean(),
+});
+
 const settingsSchema = z.object({
   site_title: z.string().min(1, "Tiêu đề không được để trống"),
   site_description: z.string().min(1, "Mô tả không được để trống"),
@@ -181,6 +193,7 @@ const settingsSchema = z.object({
     .nullable()
     .optional(),
   pricing_holiday_periods: z.array(holidayPeriodRowSchema),
+  room_categories: z.array(roomCategoryRowSchema),
 }).superRefine((data, ctx) => {
   data.pricing_holiday_periods.forEach((row, i) => {
     if (row.start_date > row.end_date) {
@@ -190,6 +203,18 @@ const settingsSchema = z.object({
         path: ["pricing_holiday_periods", i, "end_date"],
       });
     }
+  });
+
+  const codes = new Set<string>();
+  data.room_categories.forEach((row, i) => {
+    if (codes.has(row.code)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Mã phân loại bị trùng",
+        path: ["room_categories", i, "code"],
+      });
+    }
+    codes.add(row.code);
   });
 });
 
@@ -211,7 +236,7 @@ export function SettingsForm({
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState<
-    "general" | "pricing" | "social" | "bank"
+    "general" | "pricing" | "room-categories" | "social" | "bank"
   >("general");
   const presetYears = getSupportedPresetYears();
   const [presetYear, setPresetYear] = useState<number>(() => {
@@ -244,6 +269,7 @@ export function SettingsForm({
       pricing_holiday_periods: normalizeHolidayPeriods(
         initialData?.pricing_holiday_periods
       ),
+      room_categories: sortRoomCategories(initialData?.room_categories ?? []),
     },
   });
 
@@ -273,6 +299,7 @@ export function SettingsForm({
         pricing_holiday_periods: normalizeHolidayPeriods(
           initialData.pricing_holiday_periods
         ),
+        room_categories: sortRoomCategories(initialData.room_categories ?? []),
       });
       setHeroImages(initialData.hero_images || []);
     }
@@ -346,6 +373,10 @@ export function SettingsForm({
         working_hours: data.working_hours || null,
         social_media_links: cleanedSocialLinks,
         pricing_holiday_periods: data.pricing_holiday_periods ?? [],
+        room_categories: (data.room_categories ?? []).map((item, index) => ({
+          ...item,
+          sort_order: index + 1,
+        })),
       };
 
       await updateSettingsAction(cleanedData);
@@ -392,11 +423,16 @@ export function SettingsForm({
               onValueChange={(v) => setActiveTab(v as typeof activeTab)}
               className="w-full"
             >
-              <nav className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-4">
+              <nav className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-5">
                 {(
                   [
                     { key: "general", label: "Chung", icon: SettingsIcon },
                     { key: "pricing", label: "Giá", icon: CreditCard },
+                    {
+                      key: "room-categories",
+                      label: "Phân loại phòng",
+                      icon: Hotel,
+                    },
                     { key: "social", label: "Mạng xã hội", icon: Globe },
                     { key: "bank", label: "Tài khoản ngân hàng", icon: Banknote },
                   ] as const
@@ -895,6 +931,10 @@ export function SettingsForm({
                     </div>
                   </div>
                 </div>
+              </TabsContent>
+
+              <TabsContent value="room-categories" className="space-y-4 mt-6">
+                <SettingsRoomCategoriesSection />
               </TabsContent>
 
               <TabsContent value="social" className="space-y-4 mt-6">

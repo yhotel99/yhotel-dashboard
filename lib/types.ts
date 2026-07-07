@@ -1,5 +1,6 @@
 // Common types for the application
 import type { RoomMapStatus } from "@/lib/constants";
+import type { RoomCategoryItem } from "@/lib/room-categories";
 
 // ============================================================================
 // Result Types (for error handling without throwing)
@@ -861,6 +862,8 @@ export type Settings = {
    * Các kỳ lễ/Tết: mỗi đêm lấy max(% theo thứ, % phụ thu kỳ) nếu ngày nằm trong [start_date, end_date] (inclusive).
    */
   pricing_holiday_periods?: PricingHolidayPeriod[] | null;
+  /** Dynamic room classification options (Phân loại phòng). */
+  room_categories: RoomCategoryItem[];
   created_at: string;
   updated_at: string;
 };
@@ -877,6 +880,7 @@ export type SettingsInput = {
   social_media_links?: Record<string, string> | null;
   pricing_weekday_rates?: number[] | null;
   pricing_holiday_periods?: PricingHolidayPeriod[] | null;
+  room_categories?: RoomCategoryItem[];
 };
 
 // ============================================================================
