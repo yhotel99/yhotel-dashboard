@@ -82,6 +82,7 @@ import {
   normalizeHolidayPeriods,
   normalizeWeekdayRates,
 } from "@/lib/pricing";
+import { CreateMultiBookingConfirmDialog } from "@/components/bookings/create-multi-booking-confirm-dialog";
 
 type SelectedRoom = {
   room: Room;
@@ -149,6 +150,7 @@ export function CreateMultiBookingDialog({
   const [selectedRoomIds, setSelectedRoomIds] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [selectedRoomForDetail, setSelectedRoomForDetail] = useState<Room | null>(null);
   const [isRoomDetailOpen, setIsRoomDetailOpen] = useState(false);
   const lastSearchRef = useRef<string>("");
@@ -369,6 +371,7 @@ export function CreateMultiBookingDialog({
     setAvailableRooms([]);
     setSelectedRoomIds(new Set());
     setError(null);
+    setIsConfirmOpen(false);
     lastSearchRef.current = "";
   }, [setAdvancePaymentDigits, setFinalAmountDigits]);
 
@@ -406,53 +409,60 @@ export function CreateMultiBookingDialog({
     setIsRoomDetailOpen(true);
   };
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setError(null);
+  const resolvedFinalAmount = voucherState
+    ? voucherState.finalAmount
+    : finalAmountValue;
 
+  const validateForm = useCallback((): string | null => {
     if (!branchIdForBooking) {
-      setError("Vui lòng chọn chi nhánh");
-      return;
+      return "Vui lòng chọn chi nhánh";
     }
     if (!selectedCustomer) {
-      setError("Vui lòng chọn khách hàng");
-      return;
+      return "Vui lòng chọn khách hàng";
     }
     const roomBranchMismatch = selectedRoomsWithAmounts.some(
       (item) =>
         item.room.branch_id && item.room.branch_id !== branchIdForBooking
     );
     if (roomBranchMismatch) {
-      setError("Một hoặc nhiều phòng không thuộc chi nhánh đang chọn");
-      return;
+      return "Một hoặc nhiều phòng không thuộc chi nhánh đang chọn";
     }
     if (selectedRoomsWithAmounts.length === 0) {
-      setError("Vui lòng chọn ít nhất một phòng");
-      return;
+      return "Vui lòng chọn ít nhất một phòng";
     }
     if (!checkInISO || !checkOutISO || nights <= 0) {
-      setError("Vui lòng chọn ngày check-in và check-out hợp lệ");
-      return;
+      return "Vui lòng chọn ngày check-in và check-out hợp lệ";
     }
     const guests = Number(totalGuests);
     if (!Number.isFinite(guests) || guests < 1) {
-      setError("Số khách phải từ 1 trở lên");
-      return;
+      return "Số khách phải từ 1 trở lên";
     }
-    const resolvedFinalAmount = voucherState
-      ? voucherState.finalAmount
-      : finalAmountValue;
     if (resolvedFinalAmount <= 0) {
-      setError("Số tiền thanh toán cuối cùng phải lớn hơn 0");
-      return;
+      return "Số tiền thanh toán cuối cùng phải lớn hơn 0";
     }
     const advance = advanceAmountValue;
     if (advance < 0 || advance > resolvedFinalAmount) {
-      setError("Tiền cọc không hợp lệ (không được lớn hơn số tiền thanh toán cuối cùng)");
-      return;
+      return "Tiền cọc không hợp lệ (không được lớn hơn số tiền thanh toán cuối cùng)";
+    }
+    return null;
+  }, [
+    advanceAmountValue,
+    branchIdForBooking,
+    checkInISO,
+    checkOutISO,
+    nights,
+    resolvedFinalAmount,
+    selectedCustomer,
+    selectedRoomsWithAmounts,
+    totalGuests,
+  ]);
+
+  const buildPayload = useCallback((): MultiBookingInput => {
+    if (!selectedCustomer || !checkInISO || !checkOutISO) {
+      throw new Error("Thiếu thông tin bắt buộc");
     }
 
-    const payload: MultiBookingInput = {
+    return {
       customer_id: selectedCustomer.id,
       room_items: selectedRoomsWithAmounts.map(({ room, amount }) => ({
         room_id: room.id,
@@ -461,23 +471,63 @@ export function CreateMultiBookingDialog({
       check_in: checkInISO,
       check_out: checkOutISO,
       number_of_nights: nights,
-      total_guests: guests,
+      total_guests: Number(totalGuests),
       notes: notes.trim() || null,
       payment_method: paymentMethod as PaymentMethod,
-      advance_payment: advance,
+      advance_payment: advanceAmountValue,
       final_amount: voucherState ? undefined : resolvedFinalAmount,
       voucher_code: voucherState ? voucherState.code : null,
       branch_code: getBranchCodeById(branchIdForBooking, branches),
     };
+  }, [
+    advanceAmountValue,
+    branchIdForBooking,
+    branches,
+    checkInISO,
+    checkOutISO,
+    nights,
+    notes,
+    paymentMethod,
+    resolvedFinalAmount,
+    selectedCustomer,
+    selectedRoomsWithAmounts,
+    totalGuests,
+    voucherState,
+  ]);
+
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError(null);
+
+    const validationError = validateForm();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    setIsConfirmOpen(true);
+  };
+
+  const handleConfirmCreate = async () => {
+    setError(null);
+
+    const validationError = validateForm();
+    if (validationError) {
+      setError(validationError);
+      setIsConfirmOpen(false);
+      return;
+    }
 
     setIsSubmitting(true);
     try {
-      await onCreate(payload);
+      await onCreate(buildPayload());
+      setIsConfirmOpen(false);
       onOpenChange(false);
     } catch (err) {
       const msg =
         err instanceof Error ? err.message : "Không thể tạo booking";
       setError(translateBookingError(msg));
+      setIsConfirmOpen(false);
     } finally {
       setIsSubmitting(false);
     }
@@ -487,6 +537,50 @@ export function CreateMultiBookingDialog({
     debouncedSearch.trim().length >= SEARCH_CUSTOMER_MIN_LENGTH
       ? searchCustomers
       : [];
+
+  const confirmSummary = useMemo(
+    () => ({
+      branchLabel: branchLabelForRooms,
+      customer: selectedCustomer
+        ? {
+            fullName: selectedCustomer.full_name,
+            phone: selectedCustomer.phone,
+            email: selectedCustomer.email,
+          }
+        : null,
+      checkInDate,
+      checkOutDate,
+      nights,
+      totalGuests,
+      paymentMethod,
+      selectedRooms: selectedRoomsWithAmounts.map(({ room, amount }) => ({
+        id: room.id,
+        name: room.name,
+        roomNumber: room.room_number ?? null,
+        amount,
+      })),
+      totalAmount,
+      voucherState,
+      advanceAmount: advanceAmountValue,
+      resolvedFinalAmount,
+      notes,
+    }),
+    [
+      advanceAmountValue,
+      branchLabelForRooms,
+      checkInDate,
+      checkOutDate,
+      nights,
+      notes,
+      paymentMethod,
+      resolvedFinalAmount,
+      selectedCustomer,
+      selectedRoomsWithAmounts,
+      totalAmount,
+      totalGuests,
+      voucherState,
+    ]
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -999,6 +1093,14 @@ export function CreateMultiBookingDialog({
           }}
         />
       )}
+
+      <CreateMultiBookingConfirmDialog
+        open={isConfirmOpen}
+        onOpenChange={setIsConfirmOpen}
+        onConfirm={handleConfirmCreate}
+        isSubmitting={isSubmitting}
+        summary={confirmSummary}
+      />
     </Dialog>
   );
 }
