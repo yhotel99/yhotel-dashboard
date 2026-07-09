@@ -17,6 +17,12 @@ import type {
 import { logPriceUpdate } from "@/lib/audit-helpers";
 import { DEFAULT_BRANCH_ID } from "@/lib/constants";
 import { getCurrentUserBranchScope, resolveBranchFilterId } from "@/lib/branch.server";
+import {
+  buildWebCategoryManagementData,
+  type WebDisplayCategoryGroup,
+  type WebCategoryManagementData,
+} from "@/lib/room-web-display";
+import { parseRoomCategories } from "@/lib/room-categories";
 
 
 
@@ -588,5 +594,200 @@ export async function getRoomsByIds(
       ok: false,
       message: errorMessage,
     };
+  }
+}
+
+export async function getWebCategoryManagementDataAction(
+  branchId?: string | null,
+  options?: { viewAllBranches?: boolean }
+): Promise<Result<WebCategoryManagementData>> {
+  try {
+    const supabase = await createClient();
+    const { scope } = await getCurrentUserBranchScope();
+    const viewAllBranches = options?.viewAllBranches ?? scope.mode === "all";
+    const resolvedBranchId = viewAllBranches
+      ? null
+      : resolveBranchFilterId(scope, branchId);
+
+    let roomsQuery = supabase
+      .from("rooms")
+      .select(
+        "id, name, description, room_type, category_code, branch_id, price_per_night, max_guests, amenities, status, room_number, floor_number"
+      )
+      .is("deleted_at", null)
+      .order("name");
+
+    if (resolvedBranchId) {
+      roomsQuery = roomsQuery.eq("branch_id", resolvedBranchId);
+    }
+
+    const [
+      { data: rooms, error: roomsError },
+      { data: settings },
+      { data: branchRows },
+    ] = await Promise.all([
+      roomsQuery,
+      supabase.from("settings").select("room_categories").limit(1).maybeSingle(),
+      supabase
+        .from("branches")
+        .select("id, name")
+        .eq("is_active", true)
+        .is("deleted_at", null)
+        .order("name"),
+    ]);
+
+    if (roomsError) {
+      return {
+        ok: false,
+        message: roomsError.message || "Không thể lấy danh sách phòng",
+      };
+    }
+
+    const roomList = rooms ?? [];
+    const categorizedRoomIds = roomList
+      .filter((room) => room.category_code)
+      .map((room) => room.id);
+
+    const thumbnailByRoomId = new Map<string, string>();
+    if (categorizedRoomIds.length > 0) {
+      const { data: imagesData } = await supabase
+        .from("room_images")
+        .select(
+          `
+          room_id,
+          position,
+          is_main,
+          images (
+            url
+          )
+        `
+        )
+        .in("room_id", categorizedRoomIds)
+        .order("position");
+
+      for (const row of imagesData ?? []) {
+        const image = Array.isArray(row.images) ? row.images[0] : row.images;
+        if (!image?.url) continue;
+        if (row.is_main || !thumbnailByRoomId.has(row.room_id)) {
+          thumbnailByRoomId.set(row.room_id, image.url);
+        }
+      }
+    }
+
+    const categories = parseRoomCategories(settings?.room_categories);
+    const branches = (branchRows ?? []).map((b) => ({
+      id: b.id as string,
+      name: b.name as string,
+    }));
+    const data = buildWebCategoryManagementData(
+      roomList.map((room) => ({
+        ...room,
+        amenities: Array.isArray(room.amenities) ? room.amenities : [],
+        thumbnail_url: room.category_code
+          ? thumbnailByRoomId.get(room.id) ?? null
+          : null,
+      })),
+      categories,
+      {
+        branchFilter: resolvedBranchId,
+        branches,
+      }
+    );
+
+    return { ok: true, data };
+  } catch (err) {
+    const errorMessage =
+      err instanceof Error
+        ? err.message
+        : "Không thể lấy dữ liệu hạng phòng web";
+    return { ok: false, message: errorMessage };
+  }
+}
+
+export async function getWebDisplayCategoriesAction(
+  branchId?: string | null
+): Promise<Result<WebDisplayCategoryGroup[]>> {
+  const result = await getWebCategoryManagementDataAction(branchId, {
+    viewAllBranches: false,
+  });
+  if (!result.ok) {
+    return { ok: false, message: result.message };
+  }
+  return {
+    ok: true,
+    data: result.data.groups.filter((group) => !group.is_empty),
+  };
+}
+
+export async function assignRoomsToCategoryAction(
+  roomIds: string[],
+  categoryCode: string | null
+): Promise<Result<{ updated: number }>> {
+  try {
+    if (!roomIds.length) {
+      return { ok: false, message: "Chưa chọn phòng nào" };
+    }
+
+    const supabase = await createClient();
+    const { error } = await supabase
+      .from("rooms")
+      .update({ category_code: categoryCode })
+      .in("id", roomIds);
+
+    if (error) {
+      return {
+        ok: false,
+        message: error.message || "Không thể gán hạng phòng",
+      };
+    }
+
+    revalidatePath("/dashboard/rooms", "page");
+    return { ok: true, data: { updated: roomIds.length } };
+  } catch (err) {
+    const errorMessage =
+      err instanceof Error ? err.message : "Không thể gán hạng phòng";
+    return { ok: false, message: errorMessage };
+  }
+}
+
+export async function getRoomCountsByCategoryAction(): Promise<
+  Result<Record<string, number>>
+> {
+  try {
+    const supabase = await createClient();
+    const { scope } = await getCurrentUserBranchScope();
+    const branchId = resolveBranchFilterId(scope, null);
+
+    let query = supabase
+      .from("rooms")
+      .select("category_code")
+      .is("deleted_at", null)
+      .not("category_code", "is", null);
+
+    if (branchId) {
+      query = query.eq("branch_id", branchId);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      return {
+        ok: false,
+        message: error.message || "Không thể đếm phòng theo hạng",
+      };
+    }
+
+    const counts: Record<string, number> = {};
+    for (const row of data ?? []) {
+      if (!row.category_code) continue;
+      counts[row.category_code] = (counts[row.category_code] ?? 0) + 1;
+    }
+
+    return { ok: true, data: counts };
+  } catch (err) {
+    const errorMessage =
+      err instanceof Error
+        ? err.message
+        : "Không thể đếm phòng theo hạng";
+    return { ok: false, message: errorMessage };
   }
 }

@@ -1,10 +1,13 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useFieldArray, useFormContext } from "react-hook-form";
 import { IconArrowDown, IconArrowUp, IconPlus, IconTrash } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import {
   FormControl,
   FormDescription,
@@ -22,7 +25,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { normalizeCategoryCode } from "@/lib/room-categories";
-import { useState } from "react";
+import { getRoomCountsByCategoryAction } from "@/actions/rooms";
 
 export type RoomCategoryFormRow = {
   code: string;
@@ -42,6 +45,15 @@ export function SettingsRoomCategoriesSection() {
 
   const [newCode, setNewCode] = useState("");
   const [newName, setNewName] = useState("");
+  const [roomCounts, setRoomCounts] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    void getRoomCountsByCategoryAction().then((result) => {
+      if (result.ok) {
+        setRoomCounts(result.data);
+      }
+    });
+  }, [fields.length]);
 
   const handleAdd = () => {
     const code = normalizeCategoryCode(newCode);
@@ -70,23 +82,31 @@ export function SettingsRoomCategoriesSection() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h3 className="text-lg font-semibold">Phân loại phòng</h3>
-        <p className="text-sm text-muted-foreground">
-          Quản lý danh sách phân loại hiển thị khi tạo/sửa phòng. Mã không thể
-          đổi sau khi tạo.
+      <div className="rounded-lg border bg-muted/30 p-4 text-sm">
+        <h3 className="text-lg font-semibold">Hạng phòng hiển thị web</h3>
+        <p className="mt-1 text-muted-foreground">
+          Đây là danh sách <strong>hạng phòng</strong> dùng khi tạo phòng vật lý.
+          Website sẽ gom tất cả phòng cùng hạng thành một thẻ đặt phòng.
         </p>
+        <ol className="mt-3 list-decimal space-y-1 pl-5 text-muted-foreground">
+          <li>Tạo hạng phòng tại đây (mã + tên hiển thị)</li>
+          <li>Vào Quản lý phòng → Tạo phòng → chọn hạng tương ứng</li>
+          <li>Mỗi phòng vật lý (101, 102...) gán cùng một hạng nếu cùng loại</li>
+        </ol>
       </div>
 
       <div className="grid gap-3 rounded-lg border p-4 md:grid-cols-[1fr_1fr_auto] md:items-end">
         <div className="space-y-2">
-          <FormLabel>Mã phân loại</FormLabel>
+          <FormLabel>Mã hạng phòng</FormLabel>
           <Input
             placeholder="VD: URBAN_COMPACT_TWIN"
             value={newCode}
             onChange={(e) => setNewCode(e.target.value)}
             onBlur={() => setNewCode(normalizeCategoryCode(newCode))}
           />
+          <p className="text-xs text-muted-foreground">
+            Mã không đổi sau khi tạo. Dùng UPPER_SNAKE_CASE.
+          </p>
         </div>
         <div className="space-y-2">
           <FormLabel>Tên hiển thị</FormLabel>
@@ -104,7 +124,7 @@ export function SettingsRoomCategoriesSection() {
           disabled={!normalizeCategoryCode(newCode) || !newName.trim()}
         >
           <IconPlus className="size-4" />
-          Thêm
+          Thêm hạng
         </Button>
       </div>
 
@@ -117,9 +137,12 @@ export function SettingsRoomCategoriesSection() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[180px]">Mã</TableHead>
-                    <TableHead>Tên hiển thị</TableHead>
-                    <TableHead className="w-[100px] text-center">
+                    <TableHead className="w-[160px]">Mã</TableHead>
+                    <TableHead>Tên & mô tả</TableHead>
+                    <TableHead className="w-[90px] text-center">
+                      Phòng
+                    </TableHead>
+                    <TableHead className="w-[90px] text-center">
                       Hoạt động
                     </TableHead>
                     <TableHead className="w-[120px] text-right">
@@ -131,33 +154,55 @@ export function SettingsRoomCategoriesSection() {
                   {fields.length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={4}
+                        colSpan={5}
                         className="text-center text-muted-foreground"
                       >
-                        Chưa có phân loại nào
+                        Chưa có hạng phòng nào — hãy thêm hạng để gán cho phòng
                       </TableCell>
                     </TableRow>
                   ) : (
                     fields.map((field, index) => (
                       <TableRow key={field._rhfRowId}>
-                        <TableCell className="font-mono text-xs">
+                        <TableCell className="align-top font-mono text-xs">
                           {field.code}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="align-top space-y-2">
                           <FormField
                             control={form.control}
                             name={`room_categories.${index}.name`}
                             render={({ field: nameField }) => (
                               <FormItem className="space-y-0">
                                 <FormControl>
-                                  <Input {...nameField} />
+                                  <Input {...nameField} placeholder="Tên hạng" />
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
                             )}
                           />
+                          <FormField
+                            control={form.control}
+                            name={`room_categories.${index}.description`}
+                            render={({ field: descField }) => (
+                              <FormItem className="space-y-0">
+                                <FormControl>
+                                  <Textarea
+                                    {...descField}
+                                    value={descField.value ?? ""}
+                                    placeholder="Ghi chú nội bộ (không hiện trực tiếp trên web)"
+                                    rows={2}
+                                    className="text-xs"
+                                  />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
                         </TableCell>
-                        <TableCell className="text-center">
+                        <TableCell className="align-top text-center">
+                          <Badge variant="secondary">
+                            {roomCounts[field.code] ?? 0}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="align-top text-center">
                           <FormField
                             control={form.control}
                             name={`room_categories.${index}.is_active`}
@@ -173,7 +218,7 @@ export function SettingsRoomCategoriesSection() {
                             )}
                           />
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="align-top text-right">
                           <div className="flex justify-end gap-1">
                             <Button
                               type="button"
@@ -213,8 +258,8 @@ export function SettingsRoomCategoriesSection() {
               </Table>
             </div>
             <FormDescription>
-              Tắt hoạt động hoặc xóa phân loại đang được phòng sử dụng sẽ bị
-              chặn khi lưu.
+              Cột &quot;Phòng&quot; là số phòng vật lý đang gán hạng này. Tắt hoạt
+              động hoặc xóa hạng đang được phòng sử dụng sẽ bị chặn khi lưu.
             </FormDescription>
             <FormMessage />
           </FormItem>

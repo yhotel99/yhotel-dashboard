@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { updateSettingsAction } from "@/actions/settings";
 import type { BranchBankAccount, Settings } from "@/lib/types";
 import {
@@ -234,10 +234,24 @@ export function SettingsForm({
   canEditBank = false,
 }: SettingsFormProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState<
     "general" | "pricing" | "room-categories" | "social" | "bank"
   >("general");
+
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (
+      tab === "general" ||
+      tab === "pricing" ||
+      tab === "room-categories" ||
+      tab === "social" ||
+      tab === "bank"
+    ) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
   const presetYears = getSupportedPresetYears();
   const [presetYear, setPresetYear] = useState<number>(() => {
     if (presetYears.includes(2026)) return 2026;
@@ -430,7 +444,7 @@ export function SettingsForm({
                     { key: "pricing", label: "Giá", icon: CreditCard },
                     {
                       key: "room-categories",
-                      label: "Phân loại phòng",
+                      label: "Hạng phòng web",
                       icon: Hotel,
                     },
                     { key: "social", label: "Mạng xã hội", icon: Globe },

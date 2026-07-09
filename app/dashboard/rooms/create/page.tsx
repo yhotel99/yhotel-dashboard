@@ -24,7 +24,7 @@ export default function CreateRoomPage() {
         <div>
           <h1 className="text-2xl font-bold">Tạo phòng mới</h1>
           <p className="text-muted-foreground text-sm">
-            Thêm phòng mới vào hệ thống quản lý khách sạn
+            Thêm phòng vật lý và gán hạng để hiển thị trên website
           </p>
         </div>
       </div>

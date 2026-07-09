@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useShallowSearchParams } from "@/hooks/use-shallow-search-params";
-import { IconPlus } from "@tabler/icons-react";
+import { IconPlus, IconWorld } from "@tabler/icons-react";
 import { useMemo, useEffect, useCallback, useState } from "react";
 import { useDebouncedUrlSearch } from "@/hooks/use-debounced-url-search";
 import { useInitialSwrKey } from "@/hooks/use-initial-swr-key";
@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { createColumns, ROOMS_COLUMNS } from "@/components/rooms/columns";
 import { DeleteRoomDialog } from "@/components/rooms/delete-room-dialog";
 import { RoomDetailDialog } from "@/components/rooms/room-detail-dialog";
+import { WebCategoriesDialog } from "@/components/rooms/web-categories-dialog";
 import type { Room, RoomsResponse } from "@/lib/types";
 import { useBranch } from "@/contexts/branch-context";
 
@@ -107,6 +108,7 @@ export function RoomsContent({ initialData }: { initialData: RoomsResponse }) {
   const [roomToDelete, setRoomToDelete] = useState<Room | null>(null);
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  const [isWebCategoriesOpen, setIsWebCategoriesOpen] = useState(false);
 
   const detailRoom =
     selectedRoom &&
@@ -214,13 +216,23 @@ export function RoomsContent({ initialData }: { initialData: RoomsResponse }) {
         <div>
           <h1 className="text-2xl font-bold">Quản lý phòng</h1>
           <p className="text-muted-foreground text-sm">
-            Quản lý và theo dõi thông tin các phòng trong khách sạn
+            Quản lý phòng vật lý và xem trước hạng phòng trên website
           </p>
         </div>
-        <Button onClick={handleCreateRoom} className="gap-2">
-          <IconPlus className="size-4" />
-          Tạo phòng mới
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setIsWebCategoriesOpen(true)}
+            className="gap-2"
+          >
+            <IconWorld className="size-4" />
+            Xem hạng phòng web
+          </Button>
+          <Button onClick={handleCreateRoom} className="gap-2">
+            <IconPlus className="size-4" />
+            Tạo phòng mới
+          </Button>
+        </div>
       </div>
 
       <div className="px-4 lg:px-6">
@@ -271,6 +283,11 @@ export function RoomsContent({ initialData }: { initialData: RoomsResponse }) {
           }}
         />
       ) : null}
+
+      <WebCategoriesDialog
+        open={isWebCategoriesOpen}
+        onOpenChange={setIsWebCategoriesOpen}
+      />
     </div>
   );
 }
