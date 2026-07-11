@@ -33,6 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { ImageSelector, ImageListSelector } from "@/components/image-selector";
 import { RoomDescriptionEditor } from "@/components/room-description-editor";
@@ -50,6 +51,9 @@ import { useBranch } from "@/contexts/branch-context";
 import { useAuth } from "@/contexts/auth-context";
 import { canViewAllBranches } from "@/lib/branch";
 import { DEFAULT_BRANCH_ID } from "@/lib/constants";
+import { RoomCategoryPicker } from "@/components/rooms/room-category-picker";
+import { RoomWebPreview } from "@/components/rooms/room-web-preview";
+import { buildRoomWebPreviewData } from "@/lib/room-web-display";
 
 // Room type enum matching database
 export const roomTypeEnum = [
@@ -195,6 +199,41 @@ export function RoomForm({
     [categories, watchedCategoryCode]
   );
 
+  const watchedPreview = form.watch([
+    "name",
+    "description",
+    "room_type",
+    "category_code",
+    "price_per_night",
+    "max_guests",
+    "amenities",
+    "thumbnail",
+  ]);
+  const previewData = useMemo(
+    () =>
+      buildRoomWebPreviewData(
+        {
+          name: watchedPreview[0] ?? "",
+          description: watchedPreview[1],
+          room_type: watchedPreview[2] ?? "standard",
+          category_code: watchedPreview[3],
+          price_per_night: watchedPreview[4] ?? "0",
+          max_guests: watchedPreview[5] ?? "2",
+          amenities: watchedPreview[6] ?? [],
+          thumbnail: watchedPreview[7],
+        },
+        categories
+      ),
+    [watchedPreview, categories]
+  );
+
+  const handleSuggestCategoryName = (categoryName: string) => {
+    const currentName = form.getValues("name")?.trim();
+    if (!currentName) {
+      form.setValue("name", categoryName, { shouldDirty: true });
+    }
+  };
+
   const handleSubmit = async (data: RoomFormValues) => {
     try {
       if (externalOnSubmit) {
@@ -269,400 +308,412 @@ export function RoomForm({
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>
-          {mode === "edit" ? "Chỉnh sửa thông tin phòng" : "Thông tin phòng"}
-        </CardTitle>
-        <CardDescription>
-          {mode === "edit"
-            ? "Cập nhật thông tin phòng trong hệ thống"
-            : "Điền đầy đủ thông tin để tạo phòng mới"}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(handleSubmit)}
-            className="space-y-6"
-          >
-            <div className="grid gap-6 md:grid-cols-2">
-              {showBranchPicker ? (
+    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            {mode === "edit" ? "Chỉnh sửa thông tin phòng" : "Thông tin phòng"}
+          </CardTitle>
+          <CardDescription>
+            {mode === "edit"
+              ? "Cập nhật thông tin phòng trong hệ thống"
+              : "Tạo phòng vật lý và cấu hình nội dung hiển thị trên website"}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-6 rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground">
+            <p className="font-medium text-foreground">Quy trình gợi ý</p>
+            <ol className="mt-2 list-decimal space-y-1 pl-5">
+              <li>Tạo <strong>Hạng phòng web</strong> trong Cài đặt (nếu chưa có)</li>
+              <li>Gán hạng cho phòng — các phòng cùng hạng sẽ gom thành 1 thẻ trên web</li>
+              <li>Điền tên, mô tả, ảnh, giá — đây là nội dung khách nhìn thấy</li>
+            </ol>
+          </div>
+
+          <Form {...form}>
+            <form
+              onSubmit={form.handleSubmit(handleSubmit)}
+              className="space-y-8"
+            >
+              <section className="space-y-4">
+                <div>
+                  <h3 className="text-base font-semibold">Hiển thị trên website</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Thông tin khách thấy khi đặt phòng trên web client
+                  </p>
+                </div>
+
                 <FormField
                   control={form.control}
-                  name="branch_id"
+                  name="category_code"
                   render={({ field }) => (
                     <FormItem>
-                      {canSelectRoomBranch ? (
-                        <>
-                          <FormLabel>Chi nhánh *</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={
-                              field.value ?? filterBranchId ?? DEFAULT_BRANCH_ID
-                            }
-                          >
-                            <FormControl className="w-full">
-                              <SelectTrigger>
-                                <SelectValue placeholder="Chọn chi nhánh" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {branches.map((b) => (
-                                <SelectItem key={b.id} value={b.id}>
-                                  {b.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormDescription>
-                            Chọn chi nhánh quản lý phòng này
-                          </FormDescription>
-                        </>
-                      ) : (
-                        <>
-                          <FormLabel>Chi nhánh *</FormLabel>
-                          <FormControl>
-                            <Input
-                              readOnly
-                              value={
-                                branches.find(
-                                  (b) =>
-                                    b.id ===
-                                    (field.value ??
-                                      profile?.branch_id ??
-                                      DEFAULT_BRANCH_ID)
-                                )?.name ?? "Chi nhánh mặc định"
-                              }
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Phòng thuộc chi nhánh của tài khoản bạn
-                          </FormDescription>
-                        </>
-                      )}
+                      <FormLabel>Hạng phòng web *</FormLabel>
+                      <FormControl>
+                        <RoomCategoryPicker
+                          value={field.value}
+                          options={categoryOptions}
+                          isLoading={categoriesLoading}
+                          onChange={field.onChange}
+                          onSuggestName={handleSuggestCategoryName}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Bắt buộc để phòng xuất hiện trên website. Các phòng cùng
+                        hạng được gom chung.
+                      </FormDescription>
                     </FormItem>
                   )}
                 />
-              ) : null}
 
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tên phòng *</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="VD: Deluxe 301, Suite 201..."
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Tên phòng phải là duy nhất trong hệ thống
-                    </FormDescription>
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="room_type"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Loại phòng *</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl className="w-full">
-                        <SelectTrigger>
-                          <SelectValue placeholder="Chọn loại phòng" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="standard">Standard</SelectItem>
-                        <SelectItem value="deluxe">Deluxe</SelectItem>
-                        <SelectItem value="superior">Superior</SelectItem>
-                        <SelectItem value="family">Family</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormDescription>
-                      Loại phòng xác định mức giá và tiện ích
-                    </FormDescription>
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="category_code"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Phân loại phòng</FormLabel>
-                    <Select
-                      onValueChange={(value) =>
-                        field.onChange(value === "__none__" ? undefined : value)
-                      }
-                      value={field.value ?? "__none__"}
-                      disabled={categoriesLoading}
-                    >
-                      <FormControl className="w-full">
-                        <SelectTrigger>
-                          <SelectValue
-                            placeholder={
-                              categoriesLoading
-                                ? "Đang tải phân loại..."
-                                : "Chọn phân loại"
-                            }
+                <div className="grid gap-6 md:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tên hiển thị *</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="VD: Urban Compact Twin..."
+                            {...field}
                           />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="__none__">Không chọn</SelectItem>
-                        {categoryOptions.map((item) => (
-                          <SelectItem key={item.code} value={item.code}>
-                            {item.name}
-                            {!item.is_active ? " (Đã ngừng)" : ""}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormDescription>
-                      Phân loại chi tiết để quản lý phòng dễ dàng hơn
-                    </FormDescription>
-                  </FormItem>
-                )}
-              />
+                        </FormControl>
+                        <FormDescription>
+                          Tên khách thấy trên website (có thể trùng giữa các phòng
+                          cùng hạng)
+                        </FormDescription>
+                      </FormItem>
+                    )}
+                  />
 
-              <FormField
-                control={form.control}
-                name="room_number"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Số phòng</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="VD: 101, 102, A01..."
-                        {...field}
+                  <FormField
+                    control={form.control}
+                    name="room_type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Nhãn loại phòng</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                        >
+                          <FormControl className="w-full">
+                            <SelectTrigger>
+                              <SelectValue placeholder="Chọn loại phòng" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="standard">Standard</SelectItem>
+                            <SelectItem value="deluxe">Deluxe</SelectItem>
+                            <SelectItem value="superior">Superior</SelectItem>
+                            <SelectItem value="family">Family</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>
+                          Badge nhỏ trên thẻ phòng web (Standard, Deluxe...)
+                        </FormDescription>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="price_per_night"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Giá mỗi đêm (VNĐ) *</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="VD: 500000"
+                            {...field}
+                            value={field.value ?? ""}
+                            min={0}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Giá hiển thị trên web{" "}
+                          <span className="text-base font-bold text-green-400">
+                            {formatCurrency(Number(field.value))}
+                          </span>
+                        </FormDescription>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="max_guests"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Số khách tối đa *</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="VD: 2, 4, 6..."
+                            {...field}
+                            value={field.value ?? ""}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Số khách tối đa hiển thị trên web
+                        </FormDescription>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="amenities"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tiện ích</FormLabel>
+                      <MultiSelect
+                        options={AMENITIES_OPTIONS}
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                        placeholder="Chọn tiện ích phòng"
+                        variant="default"
+                        maxCount={5}
+                        modalPopover={false}
+                        className="w-full"
                       />
-                    </FormControl>
-                    <FormDescription>
-                      Số phòng để dễ dàng quản lý và tra cứu
-                    </FormDescription>
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="floor_number"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Số tầng</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="VD: 1, 2, 3..."
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Tầng mà phòng này nằm ở
-                    </FormDescription>
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="price_per_night"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Giá mỗi đêm (VNĐ) *</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="VD: 500000"
-                        {...field}
-                        value={field.value ?? ""}
-                        min={0}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Giá phòng cho một đêm{" "}
-                      <span className="text-base font-bold text-green-400">
-                        {formatCurrency(Number(field.value))}
-                      </span>
-                    </FormDescription>
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="max_guests"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Số khách tối đa *</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="VD: 2, 4, 6..."
-                        {...field}
-                        value={field.value ?? ""}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Số lượng người tối đa có thể ở
-                    </FormDescription>
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Trạng thái *</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl className="w-full">
-                        <SelectTrigger>
-                          <SelectValue placeholder="Chọn trạng thái" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value={ROOM_STATUS.AVAILABLE}>
-                          {roomStatusLabels[ROOM_STATUS.AVAILABLE]}
-                        </SelectItem>
-                        <SelectItem value={ROOM_STATUS.MAINTENANCE}>
-                          {roomStatusLabels[ROOM_STATUS.MAINTENANCE]}
-                        </SelectItem>
-                        <SelectItem value={ROOM_STATUS.NOT_CLEAN}>
-                          {roomStatusLabels[ROOM_STATUS.NOT_CLEAN]}
-                        </SelectItem>
-                        <SelectItem value={ROOM_STATUS.CLEAN}>
-                          {roomStatusLabels[ROOM_STATUS.CLEAN]}
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormDescription>
-                      Trạng thái kỹ thuật/quản trị của phòng
-                    </FormDescription>
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="amenities"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tiện ích</FormLabel>
-                    <MultiSelect
-                      options={AMENITIES_OPTIONS}
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                      placeholder="Chọn tiện ích phòng"
-                      variant="default"
-                      maxCount={5}
-                      modalPopover={false}
-                      className="w-full"
-                    />
-                    <FormDescription>
-                      Chọn các tiện ích có trong phòng (tùy chọn)
-                    </FormDescription>
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Mô tả</FormLabel>
-                  <FormControl>
-                    <RoomDescriptionEditor
-                      content={field.value ?? ""}
-                      onChange={field.onChange}
-                      placeholder="Mô tả chi tiết về phòng..."
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Mô tả chi tiết về phòng và các đặc điểm nổi bật
-                  </FormDescription>
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="thumbnail"
-              render={({ field, fieldState }) => (
-                <FormItem>
-                  <FormLabel>
-                    Ảnh chính (Thumbnail) {mode === "create" && "*"}
-                  </FormLabel>
-                  <FormControl>
-                    <ImageSelector
-                      value={field.value}
-                      onChange={field.onChange}
-                      description={
-                        mode === "create"
-                          ? "Chọn ảnh đại diện cho phòng (bắt buộc)"
-                          : "Chọn ảnh đại diện cho phòng"
-                      }
-                    />
-                  </FormControl>
-                  {fieldState.error && (
-                    <p className="text-sm font-medium text-destructive">
-                      {fieldState.error.message}
-                    </p>
+                      <FormDescription>
+                        Icon tiện ích hiển thị trên thẻ phòng web
+                      </FormDescription>
+                    </FormItem>
                   )}
-                </FormItem>
-              )}
-            />
+                />
 
-            <FormField
-              control={form.control}
-              name="images"
-              render={({ field }) => (
-                <FormItem>
-                  <FormControl>
-                    <ImageListSelector
-                      value={field.value || []}
-                      onChange={field.onChange}
-                      label="Danh sách ảnh"
-                      description="Chọn nhiều ảnh để hiển thị trong chi tiết phòng"
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Mô tả</FormLabel>
+                      <FormControl>
+                        <RoomDescriptionEditor
+                          content={field.value ?? ""}
+                          onChange={field.onChange}
+                          placeholder="Mô tả chi tiết về phòng..."
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Phòng có mô tả sẽ được ưu tiên làm nội dung đại diện cho
+                        cả hạng trên web
+                      </FormDescription>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="thumbnail"
+                  render={({ field, fieldState }) => (
+                    <FormItem>
+                      <FormLabel>
+                        Ảnh đại diện {mode === "create" && "*"}
+                      </FormLabel>
+                      <FormControl>
+                        <ImageSelector
+                          value={field.value}
+                          onChange={field.onChange}
+                          description={
+                            mode === "create"
+                              ? "Ảnh chính trên thẻ phòng web (bắt buộc)"
+                              : "Ảnh chính trên thẻ phòng web"
+                          }
+                        />
+                      </FormControl>
+                      {fieldState.error ? (
+                        <p className="text-sm font-medium text-destructive">
+                          {fieldState.error.message}
+                        </p>
+                      ) : null}
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="images"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <ImageListSelector
+                          value={field.value || []}
+                          onChange={field.onChange}
+                          label="Thư viện ảnh"
+                          description="Ảnh bổ sung trong trang chi tiết hạng phòng trên web"
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </section>
+
+              <Separator />
+
+              <section className="space-y-4">
+                <div>
+                  <h3 className="text-base font-semibold">Quản lý nội bộ</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Thông tin vận hành, không hiển thị trực tiếp cho khách
+                  </p>
+                </div>
+
+                <div className="grid gap-6 md:grid-cols-2">
+                  {showBranchPicker ? (
+                    <FormField
+                      control={form.control}
+                      name="branch_id"
+                      render={({ field }) => (
+                        <FormItem>
+                          {canSelectRoomBranch ? (
+                            <>
+                              <FormLabel>Chi nhánh *</FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                value={
+                                  field.value ?? filterBranchId ?? DEFAULT_BRANCH_ID
+                                }
+                              >
+                                <FormControl className="w-full">
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Chọn chi nhánh" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {branches.map((b) => (
+                                    <SelectItem key={b.id} value={b.id}>
+                                      {b.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </>
+                          ) : (
+                            <>
+                              <FormLabel>Chi nhánh *</FormLabel>
+                              <FormControl>
+                                <Input
+                                  readOnly
+                                  value={
+                                    branches.find(
+                                      (b) =>
+                                        b.id ===
+                                        (field.value ??
+                                          profile?.branch_id ??
+                                          DEFAULT_BRANCH_ID)
+                                    )?.name ?? "Chi nhánh mặc định"
+                                  }
+                                />
+                              </FormControl>
+                            </>
+                          )}
+                        </FormItem>
+                      )}
                     />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
+                  ) : null}
 
-            <div className="flex justify-end gap-4">
-              <Button type="button" variant="outline" onClick={handleCancel}>
-                Hủy
-              </Button>
-              <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting
-                  ? mode === "edit"
-                    ? "Đang cập nhật..."
-                    : "Đang tạo..."
-                  : mode === "edit"
-                    ? "Cập nhật phòng"
-                    : "Tạo phòng"}
-              </Button>
-            </div>
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
+                  <FormField
+                    control={form.control}
+                    name="room_number"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Số phòng</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="VD: 101, 102, A01..."
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Mã phòng vật lý để quản lý lễ tân
+                        </FormDescription>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="floor_number"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Số tầng</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="VD: 1, 2, 3..."
+                            {...field}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="status"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Trạng thái *</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                        >
+                          <FormControl className="w-full">
+                            <SelectTrigger>
+                              <SelectValue placeholder="Chọn trạng thái" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value={ROOM_STATUS.AVAILABLE}>
+                              {roomStatusLabels[ROOM_STATUS.AVAILABLE]}
+                            </SelectItem>
+                            <SelectItem value={ROOM_STATUS.MAINTENANCE}>
+                              {roomStatusLabels[ROOM_STATUS.MAINTENANCE]}
+                            </SelectItem>
+                            <SelectItem value={ROOM_STATUS.NOT_CLEAN}>
+                              {roomStatusLabels[ROOM_STATUS.NOT_CLEAN]}
+                            </SelectItem>
+                            <SelectItem value={ROOM_STATUS.CLEAN}>
+                              {roomStatusLabels[ROOM_STATUS.CLEAN]}
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>
+                          Trạng thái kỹ thuật/quản trị của phòng
+                        </FormDescription>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </section>
+
+              <div className="flex justify-end gap-4">
+                <Button type="button" variant="outline" onClick={handleCancel}>
+                  Hủy
+                </Button>
+                <Button type="submit" disabled={form.formState.isSubmitting}>
+                  {form.formState.isSubmitting
+                    ? mode === "edit"
+                      ? "Đang cập nhật..."
+                      : "Đang tạo..."
+                    : mode === "edit"
+                      ? "Cập nhật phòng"
+                      : "Tạo phòng"}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
+
+      <div className="xl:sticky xl:top-6 xl:self-start">
+        <RoomWebPreview data={previewData} />
+      </div>
+    </div>
   );
 }
