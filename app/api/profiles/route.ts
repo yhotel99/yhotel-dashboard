@@ -4,7 +4,14 @@ import {
   getCurrentUserBranchScope,
   resolveBranchFilterId,
 } from "@/lib/branch.server";
-import type { Profile } from "@/lib/types";
+import type { Profile, UserRole, UserStatus } from "@/lib/types";
+
+const ALLOWED_ROLES = new Set<UserRole>(["admin", "manager", "staff"]);
+const ALLOWED_STATUSES = new Set<UserStatus>([
+  "active",
+  "inactive",
+  "suspended",
+]);
 
 /**
  * GET /api/profiles
@@ -19,6 +26,8 @@ export async function GET(req: NextRequest) {
     const page = Number(searchParams.get("page") || 1);
     const limit = Number(searchParams.get("limit") || 10);
     const requestedBranchId = searchParams.get("branchId") || null;
+    const roleParam = searchParams.get("role");
+    const statusParam = searchParams.get("status");
     const { scope } = await getCurrentUserBranchScope();
     const branchId = resolveBranchFilterId(scope, requestedBranchId);
 
@@ -34,6 +43,14 @@ export async function GET(req: NextRequest) {
 
     if (branchId) {
       query = query.eq("branch_id", branchId);
+    }
+
+    if (roleParam && ALLOWED_ROLES.has(roleParam as UserRole)) {
+      query = query.eq("role", roleParam);
+    }
+
+    if (statusParam && ALLOWED_STATUSES.has(statusParam as UserStatus)) {
+      query = query.eq("status", statusParam);
     }
 
     // Add search filter if search term exists

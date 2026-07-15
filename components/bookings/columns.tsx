@@ -63,6 +63,7 @@ export function createColumns(
       bookingId: string,
       options?: CancelBookingConfirmOptions
     ) => Promise<void>;
+    onBookingUpdated?: () => void;
   },
   options?: {
     /** id phòng → số phòng (bảng rooms, cùng nguồn /dashboard/rooms) */
@@ -281,6 +282,7 @@ export function createColumns(
             handlers?.checkedOutBooking ||
             (async (id: string) => await updateStatus(id, "checked_out")),
           cancelledBooking: defaultCancelledBooking,
+          onBookingUpdated: handlers?.onBookingUpdated,
         };
 
         return (

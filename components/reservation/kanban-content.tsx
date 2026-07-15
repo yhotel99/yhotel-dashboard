@@ -444,6 +444,7 @@ export function KanbanContent({ initialData }: KanbanContentProps) {
         open={isDetailDialogOpen}
         onOpenChange={handleCloseDetailDialog}
         booking={selectedBooking}
+        onUpdated={refetch}
       />
 
       {/* Available Rooms Dialog */}
