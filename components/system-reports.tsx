@@ -198,6 +198,7 @@ type UserKpiRow = {
   fullName: string | null;
   email: string | null;
   totalBookings: number;
+  totalRevenue: number;
   pendingBookings: number;
   confirmedBookings: number;
   checkedInBookings: number;
@@ -761,7 +762,7 @@ export function SystemReports() {
           </CardHeader>
           <CardContent>
             <p className="mb-3 text-sm text-muted-foreground">
-              Tỷ lệ xử lý = (Confirmed + Check-in + Check-out) / Tổng booking. Tỷ lệ pending = Pending / Tổng booking.
+              Tỷ lệ xử lý = Số booking của nhân viên / Tổng booking của tất cả nhân viên. Tỷ lệ pending = Pending / Tổng booking của nhân viên.
             </p>
             <div className="rounded-md border border-primary/20 overflow-x-auto">
               <Table>
@@ -770,6 +771,7 @@ export function SystemReports() {
                     <TableHead>Nhân viên</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead className="text-right">Tổng booking</TableHead>
+                    <TableHead className="text-right">Tổng doanh thu</TableHead>
                     <TableHead className="text-right">Đã xác nhận</TableHead>
                     <TableHead className="text-right">Check-in</TableHead>
                     <TableHead className="text-right">Check-out</TableHead>
@@ -794,6 +796,9 @@ export function SystemReports() {
                       </TableCell>
                       <TableCell className="text-right font-semibold text-primary">
                         {row.totalBookings}
+                      </TableCell>
+                      <TableCell className="text-right font-bold text-green-600">
+                        {formatCurrency(row.totalRevenue)}
                       </TableCell>
                       <TableCell className="text-right font-semibold">
                         {row.confirmedBookings}

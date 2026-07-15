@@ -71,6 +71,7 @@ export interface UserBookingsKpiRow {
   fullName: string | null;
   email: string | null;
   totalBookings: number;
+  totalRevenue: number;
   pendingBookings: number;
   confirmedBookings: number;
   checkedInBookings: number;
