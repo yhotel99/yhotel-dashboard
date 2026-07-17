@@ -16,7 +16,11 @@ import type {
   PaymentWithBooking,
   PaymentsResponse,
 } from "@/lib/types";
-import { formatCurrency, formatDate, formatDateOnly } from "@/lib/functions";
+import {
+  formatCurrency,
+  formatDateOnly,
+  formatDateTimeWithSeconds,
+} from "@/lib/functions";
 import { StatusBadge } from "@/components/bookings/status";
 import {
   CalendarIcon,
@@ -510,7 +514,7 @@ export function BookingDetailDialog({
                   <p className="text-sm text-muted-foreground">Check-in thực tế</p>
                   <p className="font-medium">
                     {booking.actual_check_in
-                      ? formatDate(booking.actual_check_in)
+                      ? formatDateTimeWithSeconds(booking.actual_check_in)
                       : "—"}
                   </p>
                 </div>
@@ -518,7 +522,7 @@ export function BookingDetailDialog({
                   <p className="text-sm text-muted-foreground">Check-out thực tế</p>
                   <p className="font-medium">
                     {booking.actual_check_out
-                      ? formatDate(booking.actual_check_out)
+                      ? formatDateTimeWithSeconds(booking.actual_check_out)
                       : "—"}
                   </p>
                 </div>
@@ -792,13 +796,13 @@ export function BookingDetailDialog({
                 <div>
                   <p className="text-muted-foreground">Ngày tạo</p>
                   <p className="font-medium">
-                    {formatDateOnly(booking.created_at)}
+                    {formatDateTimeWithSeconds(booking.created_at)}
                   </p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Cập nhật lần cuối</p>
                   <p className="font-medium">
-                    {formatDateOnly(
+                    {formatDateTimeWithSeconds(
                       displayBooking?.updated_at ?? booking.updated_at
                     )}
                   </p>
