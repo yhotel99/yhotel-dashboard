@@ -8,6 +8,7 @@ export type AuditAction =
   | 'booking.update'
   | 'booking.cancel'
   | 'booking.create'
+  | 'booking.assign_creator'
   | 'refund.process'
   | 'refund.approve'
   | 'refund.reject'

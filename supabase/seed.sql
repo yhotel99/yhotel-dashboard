@@ -13,7 +13,9 @@ insert into permissions (name, description) values
   ('view:refund-requests', 'View refund requests page'),
   ('view:reservations', 'View reservations page'),
   ('view:branches', 'View branches list'),
-  ('manage:branches', 'Create, update, delete branches')
+  ('manage:branches', 'Create, update, delete branches'),
+  ('assign:bookings', 'Gắn người tạo vào booking khi chưa có người tạo'),
+  ('update:booking-creator', 'Sửa hoặc đổi người tạo của booking đã có')
 on conflict (name) do nothing;
 
 -- Seed role_permissions for ADMIN role
@@ -35,7 +37,9 @@ where name in (
   'view:refund-requests',
   'view:reservations',
   'view:branches',
-  'manage:branches'
+  'manage:branches',
+  'assign:bookings',
+  'update:booking-creator'
 )
 on conflict (role, permission_id) do nothing;
 
@@ -55,7 +59,9 @@ where name in (
   'view:customers',
   'view:refund-requests',
   'view:reservations',
-  'view:branches'
+  'view:branches',
+  'assign:bookings',
+  'update:booking-creator'
 )
 on conflict (role, permission_id) do nothing;
 
@@ -66,7 +72,8 @@ from permissions
 where name in (
   'view:reservations',
   'view:bookings',
-  'view:customers'
+  'view:customers',
+  'assign:bookings'
 )
 on conflict (role, permission_id) do nothing;
 

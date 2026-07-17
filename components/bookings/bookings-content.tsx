@@ -659,6 +659,9 @@ export function BookingsContent({
           checkedInBooking,
           checkedOutBooking,
           cancelledBooking,
+          onBookingUpdated: () => {
+            void mutate();
+          },
         },
         {
           ...(roomNumberById ? { roomNumberById } : {}),
@@ -677,6 +680,7 @@ export function BookingsContent({
       cancelledBooking,
       roomNumberById,
       branchNameById,
+      mutate,
     ]
   );
 

@@ -68,6 +68,25 @@ export function formatDate(dateString: string): string {
 }
 
 /**
+ * Format date with time including seconds (for TIMESTAMPTZ)
+ * @param dateString - ISO date string
+ * @returns Formatted date string with day/time/seconds or "-" if invalid
+ */
+export function formatDateTimeWithSeconds(dateString: string): string {
+  if (!dateString) return "-";
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return "-";
+  return date.toLocaleString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
+/**
  * Format date only (without time)
  * @param dateString - ISO date string
  * @returns Formatted date string (DD/MM/YYYY) or "-" if invalid

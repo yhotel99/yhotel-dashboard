@@ -107,6 +107,7 @@ export function BookingActionsCell({
   checkedOutBooking,
   cancelledBooking,
   onViewDetails,
+  onBookingUpdated,
 }: {
   booking: BookingRecord;
   customerId: string | null;
@@ -133,6 +134,7 @@ export function BookingActionsCell({
     options?: CancelBookingConfirmOptions
   ) => Promise<void>;
   onViewDetails?: (booking: BookingRecord) => void;
+  onBookingUpdated?: () => void;
 }) {
   const [openCancel, setOpenCancel] = useState(false);
   const [openChangeStatus, setOpenChangeStatus] = useState(false);
@@ -344,6 +346,7 @@ export function BookingActionsCell({
           open={openDetail}
           onOpenChange={setOpenDetail}
           booking={booking}
+          onUpdated={onBookingUpdated}
         />
       )}
 

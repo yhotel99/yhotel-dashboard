@@ -18,8 +18,9 @@ import type {
 import type { RegistrationFormData } from "@/lib/booking-registration/types";
 import { BOOKING_STATUS, PAYMENT_METHOD } from "@/lib/constants";
 import { mapBookingError, formatDateTimePretty } from "@/lib/functions";
-import { logBookingCreate, logBookingUpdate, logBookingCancel } from "@/lib/audit-helpers";
+import { logBookingCreate, logBookingUpdate, logBookingCancel, logBookingAssignCreator } from "@/lib/audit-helpers";
 import { getBookingRoomDetails, getBookingRegistrationData } from "@/services/bookings";
+import { checkPermission } from "@/services/permissions";
 import { getSettings } from "@/services/settings";
 import { getResendClient, getResendFromAddress } from "@/lib/email/resend";
 import { renderCancelBookingHTML } from "@/lib/email/templates/cancel-booking";
@@ -442,6 +443,174 @@ export async function updateBooking(
     ok: true,
     data: updatedBooking as BookingRecord,
   };
+}
+
+/**
+ * Gắn hoặc đổi người tạo (created_by) của booking.
+ * - created_by đang trống → cần permission assign:bookings
+ * - đã có người tạo / xóa người tạo → cần permission update:booking-creator
+ */
+export async function assignBookingCreatorAction(
+  bookingId: string,
+  creatorId: string | null
+): Promise<Result<BookingRecord>> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { ok: false, message: "Bạn cần đăng nhập" };
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile?.role) {
+    return { ok: false, message: "Không tìm thấy thông tin người dùng" };
+  }
+
+  const { data: booking, error: fetchError } = await supabase
+    .from("bookings")
+    .select(
+      `
+      id,
+      created_by,
+      branch_id,
+      deleted_at,
+      created_by_profile:profiles!bookings_created_by_fkey (
+        full_name
+      )
+    `
+    )
+    .eq("id", bookingId)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (fetchError || !booking) {
+    return { ok: false, message: "Không tìm thấy booking" };
+  }
+
+  const currentCreatorId = booking.created_by as string | null;
+  const nextCreatorId = creatorId;
+
+  if (currentCreatorId === nextCreatorId) {
+    return { ok: false, message: "Người tạo không thay đổi" };
+  }
+
+  const isAssign = currentCreatorId == null && nextCreatorId != null;
+  const isReassignOrClear = currentCreatorId != null;
+
+  if (isAssign) {
+    const canAssign = await checkPermission(
+      profile.role,
+      "assign",
+      "bookings",
+      supabase
+    );
+    if (!canAssign) {
+      return {
+        ok: false,
+        message: "Bạn không có quyền gắn người tạo cho booking",
+      };
+    }
+  } else if (isReassignOrClear) {
+    const canUpdate = await checkPermission(
+      profile.role,
+      "update",
+      "booking-creator",
+      supabase
+    );
+    if (!canUpdate) {
+      return {
+        ok: false,
+        message: "Bạn không có quyền sửa người tạo của booking",
+      };
+    }
+  } else {
+    // both null — already handled by equality check above
+    return { ok: false, message: "Người tạo không thay đổi" };
+  }
+
+  let nextCreatorName: string | null = null;
+  if (nextCreatorId) {
+    const { data: creatorProfile, error: creatorError } = await supabase
+      .from("profiles")
+      .select("id, full_name, role, status, deleted_at")
+      .eq("id", nextCreatorId)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (creatorError || !creatorProfile) {
+      return { ok: false, message: "Không tìm thấy người dùng được chọn" };
+    }
+    if (creatorProfile.status !== "active") {
+      return { ok: false, message: "Chỉ có thể gắn người dùng đang hoạt động" };
+    }
+    if (creatorProfile.role !== "staff") {
+      return {
+        ok: false,
+        message: "Chỉ có thể gắn nhân viên (staff) làm người tạo booking",
+      };
+    }
+    nextCreatorName = creatorProfile.full_name;
+  }
+
+  type CreatorProfileJoin = { full_name: string | null } | { full_name: string | null }[] | null;
+  const beforeProfile = booking.created_by_profile as CreatorProfileJoin;
+  const beforeName = Array.isArray(beforeProfile)
+    ? beforeProfile[0]?.full_name ?? null
+    : beforeProfile?.full_name ?? null;
+
+  const { data: updated, error: updateError } = await supabase
+    .from("bookings")
+    .update({ created_by: nextCreatorId })
+    .eq("id", bookingId)
+    .is("deleted_at", null)
+    .select(
+      `
+      *,
+      customers:customer_id (
+        id,
+        full_name,
+        phone,
+        email
+      ),
+      created_by_profile:profiles!bookings_created_by_fkey (
+        full_name
+      ),
+      rooms:room_id (
+        id,
+        name
+      )
+    `
+    )
+    .single();
+
+  if (updateError || !updated) {
+    console.error("Error assigning booking creator:", updateError);
+    return { ok: false, message: "Không thể cập nhật người tạo" };
+  }
+
+  await logBookingAssignCreator(
+    bookingId,
+    user.id,
+    user.email ?? "",
+    { created_by: currentCreatorId, creator_name: beforeName },
+    { created_by: nextCreatorId, creator_name: nextCreatorName },
+    {
+      branchId: booking.branch_id as string | null,
+      bookingCode: (updated as BookingRecord).booking_code,
+    }
+  );
+
+  revalidatePath("/dashboard/bookings");
+  revalidatePath("/dashboard/audit-logs");
+
+  return { ok: true, data: updated as BookingRecord };
 }
 
 /**

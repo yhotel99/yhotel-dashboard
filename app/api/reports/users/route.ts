@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
 
     let bookingsQuery = supabase
       .from("bookings")
-      .select("id, created_by, status")
+      .select("id, created_by, status, final_amount, total_amount")
       .is("deleted_at", null)
       .gte("created_at", fromISO)
       .lte("created_at", toISO);
@@ -53,6 +53,7 @@ export async function GET(req: NextRequest) {
       string | null,
       {
         totalBookings: number;
+        totalRevenue: number;
         pendingBookings: number;
         confirmedBookings: number;
         checkedInBookings: number;
@@ -64,6 +65,7 @@ export async function GET(req: NextRequest) {
       const key = (b.created_by as string | null) ?? null;
       const current = counts.get(key) || {
         totalBookings: 0,
+        totalRevenue: 0,
         pendingBookings: 0,
         confirmedBookings: 0,
         checkedInBookings: 0,
@@ -71,7 +73,15 @@ export async function GET(req: NextRequest) {
       };
 
       current.totalBookings += 1;
+      
       const status = (b.status as string | null) ?? null;
+      
+      // Calculate revenue: only count checked_in and checked_out bookings
+      if (status === "checked_in" || status === "checked_out") {
+        const revenue = (b.final_amount as number | null) ?? (b.total_amount as number | null) ?? 0;
+        current.totalRevenue += revenue;
+      }
+      
       if (status === "pending") {
         current.pendingBookings += 1;
       }
@@ -118,15 +128,22 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // Calculate total bookings across all users for percentage distribution
+    const totalBookingsAllUsers = Array.from(counts.values()).reduce(
+      (sum, metric) => sum + metric.totalBookings,
+      0
+    );
+
     const rows: UserBookingsKpiRow[] = Array.from(counts.entries()).map(
       ([userId, metric]) => {
         const processedBookings =
           metric.confirmedBookings +
           metric.checkedInBookings +
           metric.checkedOutBookings;
+        // Processing rate = this user's total bookings / total bookings of all users
         const processingRate =
-          metric.totalBookings > 0
-            ? (processedBookings / metric.totalBookings) * 100
+          totalBookingsAllUsers > 0
+            ? (metric.totalBookings / totalBookingsAllUsers) * 100
             : 0;
         const pendingRate =
           metric.totalBookings > 0
@@ -139,6 +156,7 @@ export async function GET(req: NextRequest) {
             fullName: null,
             email: null,
             totalBookings: metric.totalBookings,
+            totalRevenue: metric.totalRevenue,
             pendingBookings: metric.pendingBookings,
             confirmedBookings: metric.confirmedBookings,
             checkedInBookings: metric.checkedInBookings,
@@ -153,6 +171,7 @@ export async function GET(req: NextRequest) {
           fullName: profile?.full_name ?? null,
           email: profile?.email ?? null,
           totalBookings: metric.totalBookings,
+          totalRevenue: metric.totalRevenue,
           pendingBookings: metric.pendingBookings,
           confirmedBookings: metric.confirmedBookings,
           checkedInBookings: metric.checkedInBookings,

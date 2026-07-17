@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import {
   Dialog,
   DialogContent,
@@ -16,7 +16,11 @@ import type {
   PaymentWithBooking,
   PaymentsResponse,
 } from "@/lib/types";
-import { formatCurrency, formatDate, formatDateOnly } from "@/lib/functions";
+import {
+  formatCurrency,
+  formatDateOnly,
+  formatDateTimeWithSeconds,
+} from "@/lib/functions";
 import { StatusBadge } from "@/components/bookings/status";
 import {
   CalendarIcon,
@@ -36,12 +40,20 @@ import { buildSepayQrImageUrl } from "@/lib/payment-qr";
 import { PaymentQrImage } from "@/components/payment-qr-image";
 import { PaymentStatusBadge } from "@/components/payments/status";
 import type { Room } from "@/lib/types";
-import { getBookingRoomDetailsAction } from "@/actions/bookings";
+import {
+  assignBookingCreatorAction,
+  getBookingRoomDetailsAction,
+} from "@/actions/bookings";
 import { getRoomsByIds } from "@/actions/rooms";
 import { useSettings } from "@/hooks/use-settings";
 import { useBranchBankAccounts } from "@/hooks/use-branch-bank-accounts";
+import { usePermissions } from "@/contexts/permissions-context";
 import { DEFAULT_BRANCH_ID } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
+import {
+  BOOKING_CREATOR_CLEAR_VALUE,
+  BookingCreatorPicker,
+} from "@/components/bookings/booking-creator-picker";
 import { IconFileTypePdf } from "@tabler/icons-react";
 import { BookingRegistrationDialog } from "@/components/bookings/registration/booking-registration-dialog";
 import {
@@ -49,24 +61,102 @@ import {
   normalizeHolidayPeriods,
   normalizeWeekdayRates,
 } from "@/lib/pricing";
+import { toast } from "sonner";
 
 interface BookingDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   booking: BookingRecord | null;
+  onUpdated?: () => void;
 }
 
 export function BookingDetailDialog({
   open,
   onOpenChange,
   booking,
+  onUpdated,
 }: BookingDetailDialogProps) {
   const [openRegistration, setOpenRegistration] = useState(false);
-  const bookingId = booking?.id ?? null;
+  const [localBooking, setLocalBooking] = useState<BookingRecord | null>(null);
+  const [selectedCreatorId, setSelectedCreatorId] = useState("");
+  const [syncedBookingKey, setSyncedBookingKey] = useState<string | null>(null);
+  const [isSavingCreator, startSaveCreator] = useTransition();
+  const { hasPermission } = usePermissions();
+  const canAssignCreator = hasPermission("assign:bookings");
+  const canUpdateCreator = hasPermission("update:booking-creator");
+
+  const displayBooking =
+    localBooking?.id === booking?.id ? localBooking : booking;
+  const bookingSyncKey = `${booking?.id ?? "none"}:${booking?.created_by ?? ""}:${booking?.updated_at ?? ""}:${canUpdateCreator ? "1" : "0"}`;
+
+  if (bookingSyncKey !== syncedBookingKey) {
+    setSyncedBookingKey(bookingSyncKey);
+    setLocalBooking(null);
+    if (booking?.created_by) {
+      setSelectedCreatorId(booking.created_by);
+    } else {
+      setSelectedCreatorId(
+        canUpdateCreator ? BOOKING_CREATOR_CLEAR_VALUE : ""
+      );
+    }
+  }
+
+  const currentCreatorId = displayBooking?.created_by ?? null;
+  const hasCreator = Boolean(currentCreatorId);
+  const canEditCreator = hasCreator ? canUpdateCreator : canAssignCreator;
+  const nextCreatorId =
+    selectedCreatorId === "" ||
+    selectedCreatorId === BOOKING_CREATOR_CLEAR_VALUE
+      ? null
+      : selectedCreatorId;
+  const isCreatorUnchanged = nextCreatorId === currentCreatorId;
+  const bookingId = displayBooking?.id ?? null;
   const paymentsUrl =
     open && bookingId
       ? `/api/payments?bookingId=${bookingId}&page=1&limit=20`
       : null;
+
+  const handleSaveCreator = () => {
+    if (!displayBooking) return;
+    if (isCreatorUnchanged) {
+      toast.info("Người tạo không thay đổi");
+      return;
+    }
+    if (hasCreator && !canUpdateCreator) {
+      toast.error("Bạn không có quyền sửa người tạo");
+      return;
+    }
+    if (!hasCreator && !canAssignCreator) {
+      toast.error("Bạn không có quyền gắn người tạo");
+      return;
+    }
+    if (!hasCreator && nextCreatorId == null) {
+      toast.error("Vui lòng chọn người tạo");
+      return;
+    }
+
+    startSaveCreator(async () => {
+      const result = await assignBookingCreatorAction(
+        displayBooking.id,
+        nextCreatorId
+      );
+      if (!result.ok) {
+        toast.error(result.message ?? "Không thể cập nhật người tạo");
+        return;
+      }
+      setLocalBooking(result.data);
+      setSelectedCreatorId(
+        result.data.created_by ??
+          (canUpdateCreator ? BOOKING_CREATOR_CLEAR_VALUE : "")
+      );
+      toast.success(
+        result.data.created_by
+          ? "Đã cập nhật người tạo booking"
+          : "Đã gỡ người tạo khỏi booking"
+      );
+      onUpdated?.();
+    });
+  };
 
   const { data: paymentsResponse, isLoading: isPaymentsLoading } =
     useSWR<PaymentsResponse>(paymentsUrl, fetcher, {
@@ -424,7 +514,7 @@ export function BookingDetailDialog({
                   <p className="text-sm text-muted-foreground">Check-in thực tế</p>
                   <p className="font-medium">
                     {booking.actual_check_in
-                      ? formatDate(booking.actual_check_in)
+                      ? formatDateTimeWithSeconds(booking.actual_check_in)
                       : "—"}
                   </p>
                 </div>
@@ -432,7 +522,7 @@ export function BookingDetailDialog({
                   <p className="text-sm text-muted-foreground">Check-out thực tế</p>
                   <p className="font-medium">
                     {booking.actual_check_out
-                      ? formatDate(booking.actual_check_out)
+                      ? formatDateTimeWithSeconds(booking.actual_check_out)
                       : "—"}
                   </p>
                 </div>
@@ -666,26 +756,55 @@ export function BookingDetailDialog({
             <div className="space-y-3">
               <h3 className="text-lg font-semibold">Thời gian hệ thống</h3>
               <div className="grid grid-cols-2 gap-4 pl-7 text-sm">
-                <div>
-                  <p className="text-muted-foreground">Tên người tạo</p>
-                  <p className="font-medium">
-                    {booking.created_by_profile?.full_name || "N/A"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">ID người tạo</p>
-                  <p className="font-medium">{booking.created_by || "N/A"}</p>
+                <div className="col-span-2 space-y-2">
+                  <p className="text-muted-foreground">Người tạo</p>
+                  {canEditCreator ? (
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <BookingCreatorPicker
+                        value={selectedCreatorId}
+                        onChange={setSelectedCreatorId}
+                        disabled={isSavingCreator}
+                        allowClear={canUpdateCreator}
+                        selectedLabel={
+                          displayBooking?.created_by_profile?.full_name ?? null
+                        }
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={handleSaveCreator}
+                        disabled={isSavingCreator || isCreatorUnchanged}
+                      >
+                        {isSavingCreator
+                          ? "Đang lưu..."
+                          : hasCreator
+                            ? "Cập nhật"
+                            : "Gắn người tạo"}
+                      </Button>
+                    </div>
+                  ) : (
+                    <p className="font-medium">
+                      {displayBooking?.created_by_profile?.full_name || "N/A"}
+                    </p>
+                  )}
+                  {displayBooking?.created_by ? (
+                    <p className="text-xs text-muted-foreground font-mono">
+                      ID: {displayBooking.created_by}
+                    </p>
+                  ) : null}
                 </div>
                 <div>
                   <p className="text-muted-foreground">Ngày tạo</p>
                   <p className="font-medium">
-                    {formatDateOnly(booking.created_at)}
+                    {formatDateTimeWithSeconds(booking.created_at)}
                   </p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Cập nhật lần cuối</p>
                   <p className="font-medium">
-                    {formatDateOnly(booking.updated_at)}
+                    {formatDateTimeWithSeconds(
+                      displayBooking?.updated_at ?? booking.updated_at
+                    )}
                   </p>
                 </div>
               </div>

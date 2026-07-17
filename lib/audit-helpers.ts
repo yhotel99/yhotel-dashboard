@@ -107,6 +107,42 @@ export async function logBookingCreate(
   });
 }
 
+/** Log gắn / đổi người tạo booking (created_by). */
+export async function logBookingAssignCreator(
+  bookingId: string,
+  userId: string,
+  userEmail: string,
+  beforeData: { created_by: string | null; creator_name?: string | null },
+  afterData: { created_by: string | null; creator_name?: string | null },
+  metadata?: Record<string, unknown>
+) {
+  const requestMeta = await getRequestMetadata();
+  const branchId = await resolveAuditBranchId({
+    entityType: 'booking',
+    entityId: bookingId,
+    branchId:
+      typeof metadata?.branchId === 'string' ? metadata.branchId : null,
+  });
+
+  return createAuditLog({
+    action: 'booking.assign_creator',
+    entityType: 'booking',
+    entityId: bookingId,
+    branchId,
+    userId,
+    userEmail,
+    changes: {
+      before: toRecord(beforeData),
+      after: toRecord(afterData),
+    },
+    metadata: {
+      ...metadata,
+      action: beforeData.created_by ? 'reassign_creator' : 'assign_creator',
+    },
+    ...requestMeta,
+  });
+}
+
 // Log refund processing
 export async function logRefundProcess(
   refundId: string,

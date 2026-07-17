@@ -3,7 +3,12 @@
 import { useCallback } from "react";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
-import type { PaginationMeta, ProfilesResponse } from "@/lib/types";
+import type {
+  PaginationMeta,
+  ProfilesResponse,
+  UserRole,
+  UserStatus,
+} from "@/lib/types";
 import { listSwrConfig } from "@/lib/list-swr";
 
 export type ProfilesSwrParams = {
@@ -11,6 +16,8 @@ export type ProfilesSwrParams = {
   limit?: number;
   search?: string;
   branchId?: string | null;
+  role?: UserRole | null;
+  status?: UserStatus | null;
 };
 
 export function buildProfilesSwrKey({
@@ -18,6 +25,8 @@ export function buildProfilesSwrKey({
   limit = 10,
   search = "",
   branchId = null,
+  role = null,
+  status = null,
 }: ProfilesSwrParams): string {
   const params = new URLSearchParams({
     page: page.toString(),
@@ -29,6 +38,12 @@ export function buildProfilesSwrKey({
   if (branchId) {
     params.append("branchId", branchId);
   }
+  if (role) {
+    params.append("role", role);
+  }
+  if (status) {
+    params.append("status", status);
+  }
   return `/api/profiles?${params.toString()}`;
 }
 
@@ -37,6 +52,8 @@ export function useProfiles({
   limit = 10,
   search = "",
   branchId = null,
+  role = null,
+  status = null,
   enabled = true,
   fallbackData,
   initialSwrKey = null,
@@ -46,7 +63,7 @@ export function useProfiles({
   initialSwrKey?: string | null;
 }) {
   const swrKey = enabled
-    ? buildProfilesSwrKey({ page, limit, search, branchId })
+    ? buildProfilesSwrKey({ page, limit, search, branchId, role, status })
     : null;
 
   const { data, error, isLoading, mutate, isValidating } =
