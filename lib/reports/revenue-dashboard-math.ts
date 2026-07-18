@@ -77,6 +77,16 @@ export function toYyyyMmDdVN(d: Date): string {
   return d.toLocaleDateString("en-CA", { timeZone: "Asia/Ho_Chi_Minh" });
 }
 
+/** Instant 00:00 ngày lịch VN (không phụ thuộc TZ process Node/Vercel). */
+export function startOfDayVNFromKey(yyyyMmDd: string): Date {
+  return new Date(`${yyyyMmDd}T00:00:00+07:00`);
+}
+
+/** Instant 23:59:59.999 ngày lịch VN. */
+export function endOfDayVNFromKey(yyyyMmDd: string): Date {
+  return new Date(`${yyyyMmDd}T23:59:59.999+07:00`);
+}
+
 function pad2(n: number) {
   return String(n).padStart(2, "0");
 }

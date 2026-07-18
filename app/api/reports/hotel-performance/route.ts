@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  differenceInCalendarDays,
-  startOfDay,
-  endOfDay,
-  subDays,
-} from "date-fns";
+import { subDays } from "date-fns";
 import { createClient } from "@/lib/supabase/server";
 import {
   BOOKING_STATUS,
@@ -40,11 +35,14 @@ import { listBranches } from "@/services/branches";
 import {
   checkoutCalendarDate,
   countOngoingStayContributions,
-  eachCalendarDayVN,
+  endOfDayVNFromKey,
   fullStayRoomNights,
+  iterateYyyyMmDdInclusive,
   nightlyOperatingBreakdown,
   nightlyRemainingBreakdown,
   operatingRevenueInWindow,
+  startOfDayVNFromKey,
+  toYyyyMmDdLocal,
   toYyyyMmDdVN,
   type RevenueBookingRow,
 } from "@/lib/reports/revenue-dashboard-math";
@@ -235,16 +233,29 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Invalid date format" }, { status: 400 });
     }
 
-    const periodStart = startOfDay(fromDate);
-    const periodEnd = endOfDay(toDate);
-    const fromISO = periodStart.toISOString();
-    const toISO = periodEnd.toISOString();
+    // Lịch VN từ ISO client — không dùng startOfDay/endOfDay (TZ process = UTC trên Vercel).
+    const periodStartStr = toYyyyMmDdVN(fromDate);
+    const periodEndStr = toYyyyMmDdVN(toDate);
+    if (periodStartStr > periodEndStr) {
+      return NextResponse.json(
+        { error: "fromDate must be <= toDate" },
+        { status: 400 }
+      );
+    }
 
-    const daySpan = Math.max(1, differenceInCalendarDays(periodEnd, periodStart) + 1);
-    const prevPeriodEnd = endOfDay(subDays(periodStart, 1));
-    const prevPeriodStart = startOfDay(subDays(prevPeriodEnd, daySpan - 1));
-    const prevFromISO = prevPeriodStart.toISOString();
-    const prevToISO = prevPeriodEnd.toISOString();
+    const periodStart = parseLocalDateOnly(periodStartStr);
+    const periodEnd = parseLocalDateOnly(periodEndStr);
+    const fromISO = startOfDayVNFromKey(periodStartStr).toISOString();
+    const toISO = endOfDayVNFromKey(periodEndStr).toISOString();
+
+    const dateKeys = iterateYyyyMmDdInclusive(periodStartStr, periodEndStr);
+    const daySpan = Math.max(1, dateKeys.length);
+    const prevPeriodEnd = subDays(periodStart, 1);
+    const prevPeriodStart = subDays(prevPeriodEnd, daySpan - 1);
+    const prevPeriodStartStr = toYyyyMmDdLocal(prevPeriodStart);
+    const prevPeriodEndStr = toYyyyMmDdLocal(prevPeriodEnd);
+    const prevFromISO = startOfDayVNFromKey(prevPeriodStartStr).toISOString();
+    const prevToISO = endOfDayVNFromKey(prevPeriodEndStr).toISOString();
 
     const statusList = parseStatusPresetsFromSearchParams(searchParams);
 
@@ -341,7 +352,7 @@ export async function GET(req: NextRequest) {
     const candIdSet = new Set(candIds);
     const candPrevIdSet = new Set(candPrevIds);
 
-    const today = startOfDay(new Date());
+    const today = parseLocalDateOnly(toYyyyMmDdVN(new Date()));
 
     const [
       { data: paymentsPeriod },
@@ -482,17 +493,13 @@ export async function GET(req: NextRequest) {
     }
 
     let checkoutRevenue = 0;
-    const periodStartStr = toYyyyMmDdVN(periodStart);
-    const periodEndStr = toYyyyMmDdVN(periodEnd);
 
     function dateInRange(isoDate: string): boolean {
       return isoDate >= periodStartStr && isoDate <= periodEndStr;
     }
 
     function dateInPrevRange(isoDate: string): boolean {
-      const a = toYyyyMmDdVN(prevPeriodStart);
-      const z = toYyyyMmDdVN(prevPeriodEnd);
-      return isoDate >= a && isoDate <= z;
+      return isoDate >= prevPeriodStartStr && isoDate <= prevPeriodEndStr;
     }
 
     for (const b of bookings) {
@@ -587,8 +594,6 @@ export async function GET(req: NextRequest) {
       if (!dateInRange(d)) continue;
       dailyCash.set(d, (dailyCash.get(d) ?? 0) + parsePaymentAmount(p as { amount?: unknown }));
     }
-
-    const dateKeys = eachCalendarDayVN(periodStart, periodEnd);
 
     const trend = dateKeys.map((date) => ({
       date,
@@ -957,8 +962,10 @@ export async function GET(req: NextRequest) {
       insights,
       tableRows,
       meta: {
-        periodStart: periodStart.toISOString(),
-        periodEnd: periodEnd.toISOString(),
+        periodStart: fromISO,
+        periodEnd: toISO,
+        periodStartDate: periodStartStr,
+        periodEndDate: periodEndStr,
         ongoingStaysContributing: ongoingStays,
         unpaidOperatingGap: unpaidActiveContributing,
         filterOptions,

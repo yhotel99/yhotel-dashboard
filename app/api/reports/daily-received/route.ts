@@ -7,7 +7,9 @@ import {
 } from "@/lib/constants";
 import { getReportBranchIdFromRequest } from "@/lib/reports/branch-filter";
 import {
+  endOfDayVNFromKey,
   iterateYyyyMmDdInclusive,
+  startOfDayVNFromKey,
   toYyyyMmDdVN,
 } from "@/lib/reports/revenue-dashboard-math";
 import { parseLocalDateOnly } from "@/lib/reports/occupancy-room-nights";
@@ -80,6 +82,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "fromDate must be <= toDate" }, { status: 400 });
     }
 
+    const fromISO = startOfDayVNFromKey(fromKey).toISOString();
+    const toISO = endOfDayVNFromKey(toKey).toISOString();
+
     const supabase = await createClient();
     const branchId = await getReportBranchIdFromRequest(searchParams);
 
@@ -93,8 +98,8 @@ export async function GET(req: NextRequest) {
       .eq("payment_status", PAYMENT_STATUS.PAID)
       .eq("reporting_status", REPORTING_STATUS.INCLUDED)
       .not("paid_at", "is", null)
-      .gte("paid_at", fromDate.toISOString())
-      .lte("paid_at", toDate.toISOString());
+      .gte("paid_at", fromISO)
+      .lte("paid_at", toISO);
     if (branchId) paymentsQuery = paymentsQuery.eq("branch_id", branchId);
     const { data: paymentRows, error: paymentsError } = await paymentsQuery;
 
