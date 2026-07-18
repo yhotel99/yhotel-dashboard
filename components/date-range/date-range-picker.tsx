@@ -556,7 +556,22 @@ export const DateRangePicker: FC<DateRangePickerProps> = ({
           <Button
             onClick={() => {
               setIsOpen(false);
-              onUpdate?.({ range, rangeCompare });
+              // Calendar/DateInput thường trả 00:00 — chuẩn hóa cả ngày để API (paid_at, v.v.) không mất dữ liệu.
+              const from = new Date(range.from);
+              from.setHours(0, 0, 0, 0);
+              const to = new Date(range.to ?? range.from);
+              to.setHours(23, 59, 59, 999);
+
+              let compare: DateRange | undefined;
+              if (rangeCompare) {
+                const cFrom = new Date(rangeCompare.from);
+                cFrom.setHours(0, 0, 0, 0);
+                const cTo = new Date(rangeCompare.to ?? rangeCompare.from);
+                cTo.setHours(23, 59, 59, 999);
+                compare = { from: cFrom, to: cTo };
+              }
+
+              onUpdate?.({ range: { from, to }, rangeCompare: compare });
             }}
           >
             Update

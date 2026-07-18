@@ -12,10 +12,16 @@ import { parseBookingRevenueAmount } from "@/lib/reports/booking-revenue";
 import { getReportBranchIdFromRequest } from "@/lib/reports/branch-filter";
 import {
   countInventoryRoomsForOccupancy,
+  parseLocalDateOnly,
   summarizeRoomUsageInPeriod,
   sumAvailableRoomNightsInRange,
   totalRoomNightsInPeriod,
 } from "@/lib/reports/occupancy-room-nights";
+import {
+  endOfDayVNFromKey,
+  startOfDayVNFromKey,
+  toYyyyMmDdVN,
+} from "@/lib/reports/revenue-dashboard-math";
 
 /**
  * GET /api/reports/summary
@@ -50,8 +56,19 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const fromISO = fromDate.toISOString();
-    const toISO = toDate.toISOString();
+    const fromKey = toYyyyMmDdVN(fromDate);
+    const toKey = toYyyyMmDdVN(toDate);
+    if (fromKey > toKey) {
+      return NextResponse.json(
+        { error: "fromDate must be <= toDate" },
+        { status: 400 }
+      );
+    }
+
+    const fromISO = startOfDayVNFromKey(fromKey).toISOString();
+    const toISO = endOfDayVNFromKey(toKey).toISOString();
+    const periodStart = parseLocalDateOnly(fromKey);
+    const periodEnd = parseLocalDateOnly(toKey);
     const branchId = await getReportBranchIdFromRequest(searchParams);
 
     const supabase = await createClient();
@@ -159,22 +176,22 @@ export async function GET(req: NextRequest) {
     const inventoryRoomCount = countInventoryRoomsForOccupancy(totalRooms);
     const sellableRoomsPerDay = Math.max(inventoryRoomCount, 1);
     const availableRoomNightsInRange = sumAvailableRoomNightsInRange(
-      fromDate,
-      toDate,
+      periodStart,
+      periodEnd,
       () => sellableRoomsPerDay
     );
 
     const currentRoomNights = totalRoomNightsInPeriod(
       currentBookingsForOccupancy || [],
-      fromDate,
-      toDate,
+      periodStart,
+      periodEnd,
       REPORT_METRICS_BOOKING_STATUSES
     );
     const { roomUsage, earlyCheckOutCount, resoldRoomCount } =
       summarizeRoomUsageInPeriod(
         currentBookingsForOccupancy || [],
-        fromDate,
-        toDate,
+        periodStart,
+        periodEnd,
         REPORT_METRICS_BOOKING_STATUSES
       );
 

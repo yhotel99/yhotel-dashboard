@@ -9,6 +9,12 @@ import {
 } from "@/lib/reports/occupancy-room-nights";
 import { DailyReportData } from "../types";
 import { getReportBranchIdFromRequest } from "@/lib/reports/branch-filter";
+import {
+  endOfDayVNFromKey,
+  iterateYyyyMmDdInclusive,
+  startOfDayVNFromKey,
+  toYyyyMmDdVN,
+} from "@/lib/reports/revenue-dashboard-math";
 
 /**
  * GET /api/reports/daily
@@ -39,8 +45,17 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const fromISO = fromDate.toISOString();
-    const toISO = toDate.toISOString();
+    const fromKey = toYyyyMmDdVN(fromDate);
+    const toKey = toYyyyMmDdVN(toDate);
+    if (fromKey > toKey) {
+      return NextResponse.json(
+        { error: "fromDate must be <= toDate" },
+        { status: 400 }
+      );
+    }
+
+    const fromISO = startOfDayVNFromKey(fromKey).toISOString();
+    const toISO = endOfDayVNFromKey(toKey).toISOString();
 
     const branchId = await getReportBranchIdFromRequest(searchParams);
     const supabase = await createClient();
@@ -74,20 +89,8 @@ export async function GET(req: NextRequest) {
       1
     );
 
-    const fromDateOnly = new Date(fromDate);
-    fromDateOnly.setHours(0, 0, 0, 0);
-    const toDateOnly = new Date(toDate);
-    toDateOnly.setHours(23, 59, 59, 999);
-
-    const dateRange: string[] = [];
-    const currentDate = new Date(fromDateOnly);
-    while (currentDate <= toDateOnly) {
-      const y = currentDate.getFullYear();
-      const m = String(currentDate.getMonth() + 1).padStart(2, "0");
-      const d = String(currentDate.getDate()).padStart(2, "0");
-      dateRange.push(`${y}-${m}-${d}`);
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
+    // Lịch VN — không dùng setHours trên server UTC (Vercel).
+    const dateRange = iterateYyyyMmDdInclusive(fromKey, toKey);
 
     const dailyDataMap = new Map<string, DailyReportData>();
 
