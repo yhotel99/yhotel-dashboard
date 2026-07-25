@@ -7,24 +7,36 @@ interface EmailPayload {
   customer_name: string;
   check_in: string;
   check_out: string;
-  total_price?: string;
+  total_price?: string | number;
   hotel_name?: string;
   hotline?: string;
   support_email?: string;
+  hotel_address?: string | null;
+  branch_name?: string | null;
+  room_numbers?: string | null;
+  number_of_nights?: number | null;
+  total_guests?: number | null;
+  customer_phone?: string | null;
+  payment_status_label?: string | null;
+  advance_payment?: number | null;
+  notes?: string | null;
 }
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 
-/* =======================
-   Utils
-======================= */
-function formatDateTimePretty(
-  isoString: string,
-  timeZone = 7,
-): string {
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function formatDateTimePretty(isoString: string, timeZone = 7): string {
   const date = new Date(isoString);
   if (isNaN(date.getTime())) {
-    return "⏰ --:-- | 📅 Ngày không hợp lệ";
+    return "--:-- | Ngày không hợp lệ";
   }
 
   const local = new Date(date.getTime() + timeZone * 3600 * 1000);
@@ -47,14 +59,13 @@ function formatDateTimePretty(
 
   const weekday = weekdays[local.getUTCDay()];
 
-  return `⏰ ${h}:${m} | 📅 ${weekday}, ${d}/${mo}/${y}`;
+  return `${h}:${m} | ${weekday}, ${d}/${mo}/${y}`;
 }
 
 function formatCurrencyVND(amount?: string | number): string {
   if (amount === undefined || amount === null) return "";
 
   const numeric = Number(amount);
-
   if (Number.isNaN(numeric)) return "";
 
   return numeric.toLocaleString("vi-VN", {
@@ -63,9 +74,15 @@ function formatCurrencyVND(amount?: string | number): string {
   });
 }
 
-/* =======================
-   Handler
-======================= */
+function detailRow(label: string, value: string | null | undefined): string {
+  if (value == null || String(value).trim() === "") return "";
+  return `
+                <tr>
+                  <td style="border:1px solid #ddd;padding:8px;width:40%;vertical-align:top;color:#555">${label}</td>
+                  <td style="border:1px solid #ddd;padding:8px">${value}</td>
+                </tr>`;
+}
+
 Deno.serve(async (req) => {
   try {
     if (req.method !== "POST") {
@@ -77,6 +94,36 @@ Deno.serve(async (req) => {
     }
 
     const payload: EmailPayload = await req.json();
+
+    if (!payload.customer_email?.trim() || !payload.booking_code?.trim()) {
+      return new Response("Missing required fields", { status: 400 });
+    }
+
+    const hotelName = escapeHtml(payload.hotel_name ?? "YHotel");
+    const customerName = escapeHtml(payload.customer_name || "Quý khách");
+    const bookingCode = escapeHtml(payload.booking_code);
+    const hotline = escapeHtml(payload.hotline ?? "0787 913 388");
+    const supportEmail = escapeHtml(payload.support_email ?? "hello@yhotel.vn");
+    const phone = "+84 7879 13388";
+    const zalo = "+84 786 456 469";
+
+    const roomParts = (payload.room_name || "")
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
+    const roomLabel =
+      roomParts.length > 0
+        ? roomParts.map((line) => escapeHtml(line)).join("<br/>")
+        : "-";
+
+    const stayParts: string[] = [];
+    if (payload.number_of_nights != null && payload.number_of_nights > 0) {
+      stayParts.push(`${payload.number_of_nights} đêm`);
+    }
+    if (payload.total_guests != null && payload.total_guests > 0) {
+      stayParts.push(`${payload.total_guests} khách`);
+    }
+    const staySummary = stayParts.join(" · ");
 
     const html = `<!DOCTYPE html>
 <html lang="vi">
@@ -98,60 +145,47 @@ Deno.serve(async (req) => {
 
           <tr>
             <td style="padding:24px;font-size:14px;line-height:1.6;color:#333">
-              <p>Kính chào <strong>${payload.customer_name}</strong>,</p>
+              <p>Kính chào <strong>${customerName}</strong>,</p>
 
               <p>
-                Cảm ơn Quý khách đã đặt phòng tại 
-                <strong>${payload.hotel_name ?? "YHotel"}</strong>.
-                Thông tin chi tiết:
+                Cảm ơn Quý khách đã đặt phòng tại <strong>${hotelName}</strong>.
+                Đặt phòng đã được xác nhận. Thông tin chi tiết:
               </p>
 
               <table width="100%" style="border-collapse:collapse;margin:16px 0">
-                <tr>
-                  <td style="border:1px solid #ddd;padding:8px">Mã đặt phòng</td>
-                  <td style="border:1px solid #ddd;padding:8px">
-                    <strong>${payload.booking_code}</strong>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="border:1px solid #ddd;padding:8px">Phòng</td>
-                  <td style="border:1px solid #ddd;padding:8px">
-                    ${payload.room_name}
-                  </td>
-                </tr>
-                <tr>
-                  <td style="border:1px solid #ddd;padding:8px">Nhận phòng</td>
-                  <td style="border:1px solid #ddd;padding:8px">
-                    ${formatDateTimePretty(payload.check_in)}
-                  </td>
-                </tr>
-                <tr>
-                  <td style="border:1px solid #ddd;padding:8px">Trả phòng</td>
-                  <td style="border:1px solid #ddd;padding:8px">
-                    ${formatDateTimePretty(payload.check_out)}
-                  </td>
-                </tr>
+                ${detailRow("Mã đặt phòng", `<strong>${bookingCode}</strong>`)}
+                ${detailRow(
+                  "Chi nhánh",
+                  payload.branch_name ? escapeHtml(payload.branch_name) : ""
+                )}
+                ${detailRow(
+                  "Địa chỉ",
+                  payload.hotel_address ? escapeHtml(payload.hotel_address) : ""
+                )}
+                ${detailRow("Phòng", roomLabel)}
+                ${detailRow("Nhận phòng", formatDateTimePretty(payload.check_in))}
+                ${detailRow("Trả phòng", formatDateTimePretty(payload.check_out))}
+                ${detailRow("Thời gian lưu trú", staySummary)}
                 ${
-                  payload.total_price
-                    ? `
-                <tr>
-                  <td style="border:1px solid #ddd;padding:8px">Tổng tiền</td>
-                  <td style="border:1px solid #ddd;padding:8px">
-                    <strong>${formatCurrencyVND(payload.total_price)}</strong>
-                  </td>
-                </tr>`
+                  payload.total_price != null && payload.total_price !== ""
+                    ? detailRow(
+                      "Tổng tiền",
+                      `<strong>${formatCurrencyVND(payload.total_price)}</strong>`
+                    )
                     : ""
                 }
               </table>
 
               <p>
-                📞 ${payload.hotline ?? "0787 913 388"}<br/>
-                📧 ${payload.support_email ?? "hello@yhotel.vn"}
+                📞 Hotline: ${hotline}<br/>
+                ☎️ Điện thoại: ${phone}<br/>
+                💬 Zalo/WhatsApp: ${zalo}<br/>
+                📧 Email: ${supportEmail}
               </p>
 
               <p>
                 Trân trọng,<br/>
-                <strong>${payload.hotel_name ?? "YHotel"}</strong>
+                <strong>${hotelName}</strong>
               </p>
             </td>
           </tr>

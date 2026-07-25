@@ -865,9 +865,15 @@ export async function confirmBookingEmailAction(
       check_out,
       total_amount,
       final_amount,
-      customer:customer_id(email, full_name),
+      number_of_nights,
+      total_guests,
+      advance_payment,
+      notes,
+      branch_id,
+      branch:branch_id(name, address),
+      customer:customer_id(email, full_name, phone),
       booking_rooms(
-        room:room_id(name),
+        room:room_id(name, room_number),
         amount
       )
     `
@@ -917,17 +923,22 @@ export async function confirmBookingEmailAction(
     const hotline = settings?.contact_phone || "0787 913 388";
     const supportEmail = settings?.contact_email || "hello@yhotel.vn";
 
-    const roomNames = (bookingData.booking_rooms ?? [])
-      .map((br: BookingEmailBookingRoomsJoinRow) => {
-        const roomRaw = br.room;
-        const room = Array.isArray(roomRaw) ? roomRaw[0] : roomRaw;
-        return room?.name ?? undefined;
-      })
-      .filter(
-        (name: unknown): name is string =>
-          typeof name === "string" && name.trim().length > 0
-      );
-    const roomType = roomNames.length ? roomNames.join(", ") : "-";
+    const branchRaw = bookingData.branch;
+    const branch = Array.isArray(branchRaw) ? branchRaw[0] : branchRaw;
+    const hotelAddress =
+      branch?.address?.trim() || settings?.contact_address?.trim() || null;
+
+    const roomLabels: string[] = [];
+    for (const br of bookingData.booking_rooms ?? []) {
+      const roomRaw = br.room;
+      const room = Array.isArray(roomRaw) ? roomRaw[0] : roomRaw;
+      const name = room?.name?.trim() || "";
+      const number = room?.room_number?.trim() || "";
+      if (name && number) roomLabels.push(`${name} (${number})`);
+      else if (name) roomLabels.push(name);
+      else if (number) roomLabels.push(`Phòng ${number}`);
+    }
+    const roomType = roomLabels.length ? roomLabels.join("\n") : "-";
 
     const html = renderBookingConfirmationHTML({
       customer_name: customer?.full_name?.trim() || "Quý khách",
@@ -944,6 +955,18 @@ export async function confirmBookingEmailAction(
         Number(bookingData.final_amount ?? bookingData.total_amount) || 0,
       hotline,
       support_email: supportEmail,
+      hotel_address: hotelAddress,
+      branch_name: branch?.name?.trim() || null,
+      number_of_nights: bookingData.number_of_nights ?? null,
+      total_guests: bookingData.total_guests ?? null,
+      customer_phone: customer?.phone?.trim() || null,
+      customer_email: customerEmail,
+      payment_status_label: "Đã xác nhận",
+      advance_payment:
+        bookingData.advance_payment != null
+          ? Number(bookingData.advance_payment)
+          : null,
+      notes: bookingData.notes?.trim() || null,
     });
 
     await resend.emails.send({
