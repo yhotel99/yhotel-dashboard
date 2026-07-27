@@ -58,6 +58,7 @@ export async function GET(req: NextRequest) {
         confirmedBookings: number;
         checkedInBookings: number;
         checkedOutBookings: number;
+        cancelledBookings: number;
       }
     >();
 
@@ -70,6 +71,7 @@ export async function GET(req: NextRequest) {
         confirmedBookings: 0,
         checkedInBookings: 0,
         checkedOutBookings: 0,
+        cancelledBookings: 0,
       };
 
       current.totalBookings += 1;
@@ -93,6 +95,9 @@ export async function GET(req: NextRequest) {
       }
       if (status === "checked_out") {
         current.checkedOutBookings += 1;
+      }
+      if (status === "cancelled") {
+        current.cancelledBookings += 1;
       }
 
       counts.set(key, current);
@@ -161,6 +166,7 @@ export async function GET(req: NextRequest) {
             confirmedBookings: metric.confirmedBookings,
             checkedInBookings: metric.checkedInBookings,
             checkedOutBookings: metric.checkedOutBookings,
+            cancelledBookings: metric.cancelledBookings,
             processingRate: Math.round(processingRate * 100) / 100,
             pendingRate: Math.round(pendingRate * 100) / 100,
           };
@@ -176,6 +182,7 @@ export async function GET(req: NextRequest) {
           confirmedBookings: metric.confirmedBookings,
           checkedInBookings: metric.checkedInBookings,
           checkedOutBookings: metric.checkedOutBookings,
+          cancelledBookings: metric.cancelledBookings,
           processingRate: Math.round(processingRate * 100) / 100,
           pendingRate: Math.round(pendingRate * 100) / 100,
         };

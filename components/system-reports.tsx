@@ -70,6 +70,7 @@ import { DASHBOARD_URLS } from "@/lib/constants";
 import { PaymentStatusBadge } from "@/components/payments/status";
 import type { PaymentWithBooking } from "@/lib/types";
 import Papa from "papaparse";
+import { ReceptionistRevenueReport } from "@/components/receptionist-revenue-report";
 
 const chartConfig = {
   revenue: {
@@ -136,6 +137,7 @@ const PAYMENT_METHOD_COLORS = [
 // Types for API responses
 type SummaryResponse = {
   grossRevenueByPaidAt: number;
+  netRevenueByPaidAt: number;
   revenueByCheckIn: number;
   bookingsByCheckIn: number;
   occupancyPctFromRoomNights: number;
@@ -191,20 +193,6 @@ type DailyOccupancyResponse = {
 type DailyReceivedResponse = {
   date: string;
   amount: number;
-}[];
-
-type UserKpiRow = {
-  userId: string | null;
-  fullName: string | null;
-  email: string | null;
-  totalBookings: number;
-  totalRevenue: number;
-  pendingBookings: number;
-  confirmedBookings: number;
-  checkedInBookings: number;
-  checkedOutBookings: number;
-  processingRate: number;
-  pendingRate: number;
 }[];
 
 type PaymentsResponse = {
@@ -280,9 +268,6 @@ export function SystemReports() {
   const paymentMethodsUrl = `/api/reports/payment-methods?fromDate=${encodeURIComponent(
     fromISO
   )}&toDate=${encodeURIComponent(toISO)}${branchQ}`;
-  const usersKpiUrl = `/api/reports/users?fromDate=${encodeURIComponent(
-    fromISO
-  )}&toDate=${encodeURIComponent(toISO)}${branchQ}`;
   const dailyReceivedUrl = `/api/reports/daily-received?fromDate=${encodeURIComponent(
     fromISO
   )}&toDate=${encodeURIComponent(toISO)}${branchQ}`;
@@ -336,10 +321,6 @@ export function SystemReports() {
     fetcher
   );
   const {
-    data: usersKpiData,
-    isLoading: isLoadingUsersKpi,
-  } = useSWR<UserKpiRow>(usersKpiUrl, fetcher);
-  const {
     data: dailyReceivedData,
     isLoading: isLoadingDailyReceived,
   } = useSWR<DailyReceivedResponse>(dailyReceivedUrl, fetcher);
@@ -357,6 +338,13 @@ export function SystemReports() {
   // Derived state with safe defaults - ensure arrays are always arrays
   const summaryStats = {
     grossRevenueByPaidAt: summaryData?.grossRevenueByPaidAt ?? 0,
+    netRevenueByPaidAt:
+      summaryData?.netRevenueByPaidAt ??
+      Math.max(
+        0,
+        (summaryData?.grossRevenueByPaidAt ?? 0) -
+          (summaryData?.refundCashflowByUpdatedAt ?? 0)
+      ),
     revenueByCheckIn: summaryData?.revenueByCheckIn ?? 0,
     bookingsByCheckIn: summaryData?.bookingsByCheckIn ?? 0,
     occupancyPctFromRoomNights:
@@ -439,7 +427,11 @@ export function SystemReports() {
     const summaryData = [
       ["Chỉ số", "Giá trị"],
       [
-        "Tổng thu (Gross, theo ngày thanh toán — paid_at)",
+        "Tổng thu thực (Net = đã thu − hoàn tiền)",
+        formatCurrency(summaryStats.netRevenueByPaidAt),
+      ],
+      [
+        "Tổng thu Gross (theo ngày thanh toán — paid_at)",
         formatCurrency(summaryStats.grossRevenueByPaidAt),
       ],
       [
@@ -660,10 +652,10 @@ export function SystemReports() {
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0">
             <div>
               <CardTitle className="text-sm font-medium">
-                🟩 Tổng thu (Gross)
+                🟩 Tổng thu thực (Net)
               </CardTitle>
               <CardDescription className="text-xs pt-1">
-                Tổng số tiền đã thu (paid), theo mốc paid_at trong kỳ
+                Tiền đã về túi = đã thu (paid_at) − hoàn tiền trong kỳ
               </CardDescription>
             </div>
             <div className="rounded-full bg-green-500/10 p-2">
@@ -672,8 +664,12 @@ export function SystemReports() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {formatCurrency(summaryStats.grossRevenueByPaidAt)}
+              {formatCurrency(summaryStats.netRevenueByPaidAt)}
             </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Gross {formatCurrency(summaryStats.grossRevenueByPaidAt)} − Hoàn{" "}
+              {formatCurrency(summaryStats.refundCashflowByUpdatedAt)}
+            </p>
           </CardContent>
         </Card>
 
@@ -746,86 +742,11 @@ export function SystemReports() {
 
       </div>
 
-      {!isLoadingUsersKpi &&
-        usersKpiData &&
-        usersKpiData.some((row) => row.totalBookings > 0) ? (
-        <Card className="border-primary/20 bg-linear-to-br from-primary/5 via-card to-card">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-2xl">KPI theo nhân viên</CardTitle>
-                <CardDescription className="text-base mt-1">
-                  Theo dõi hiệu suất xử lý booking của từng nhân viên trong khoảng thời gian đã chọn.
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <p className="mb-3 text-sm text-muted-foreground">
-              Tỷ lệ xử lý = Số booking của nhân viên / Tổng booking của tất cả nhân viên. Tỷ lệ pending = Pending / Tổng booking của nhân viên.
-            </p>
-            <div className="rounded-md border border-primary/20 overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nhân viên</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead className="text-right">Tổng booking</TableHead>
-                    <TableHead className="text-right">Tổng doanh thu</TableHead>
-                    <TableHead className="text-right">Đã xác nhận</TableHead>
-                    <TableHead className="text-right">Check-in</TableHead>
-                    <TableHead className="text-right">Check-out</TableHead>
-                    <TableHead className="text-right">Pending</TableHead>
-                    <TableHead className="text-right">Tỷ lệ xử lý</TableHead>
-                    <TableHead className="text-right">Tỷ lệ pending</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {usersKpiData.map((row, index) => (
-                    <TableRow key={row.userId ?? `unknown-${index}`}>
-                      <TableCell className="font-medium">
-                        {row.fullName || "Không xác định"}
-                        {!row.userId && (
-                          <span className="ml-2 text-xs text-muted-foreground">
-                            (dữ liệu cũ / không gắn user)
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {row.email || "-"}
-                      </TableCell>
-                      <TableCell className="text-right font-semibold text-primary">
-                        {row.totalBookings}
-                      </TableCell>
-                      <TableCell className="text-right font-bold text-green-600">
-                        {formatCurrency(row.totalRevenue)}
-                      </TableCell>
-                      <TableCell className="text-right font-semibold">
-                        {row.confirmedBookings}
-                      </TableCell>
-                      <TableCell className="text-right font-semibold">
-                        {row.checkedInBookings}
-                      </TableCell>
-                      <TableCell className="text-right font-semibold">
-                        {row.checkedOutBookings}
-                      </TableCell>
-                      <TableCell className="text-right font-semibold">
-                        {row.pendingBookings}
-                      </TableCell>
-                      <TableCell className="text-right font-bold text-emerald-600">
-                        {row.processingRate.toFixed(2)}%
-                      </TableCell>
-                      <TableCell className="text-right font-bold text-amber-600">
-                        {row.pendingRate.toFixed(2)}%
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-      ) : null}
+      <ReceptionistRevenueReport
+        fromDate={dateRange.from}
+        toDate={dateRange.to}
+        branchId={branchIdForFetch}
+      />
 
       {/* Charts Section */}
       <div className="flex flex-col gap-4">
