@@ -424,9 +424,9 @@ export function ReceptionistRevenueReport({
           <div>
             <CardTitle className="text-2xl">Báo cáo lễ tân</CardTitle>
             <CardDescription className="text-base mt-1">
-              Tiền về túi (chuẩn chính): đã thu theo ngày thanh toán (paid_at),
-              trừ hoàn tiền trong kỳ. Bấm &quot;Xem chi tiết&quot; để xem đầy đủ
-              các cột booking.
+              Tiền về túi: theo ngày thanh toán (paid_at), trừ hoàn tiền trong kỳ.
+              Cột booking: theo ngày check-in — lên đơn tháng này nhưng khách ở
+              tháng sau thì tính tháng sau.
             </CardDescription>
           </div>
           {hasRows ? (
@@ -511,7 +511,7 @@ export function ReceptionistRevenueReport({
                   <DialogDescription>
                     Kỳ {format(fromDate, "dd/MM/yyyy")} –{" "}
                     {format(toDate, "dd/MM/yyyy")}. Tiền về túi theo paid_at;
-                    booking KPI theo ngày tạo đơn.
+                    booking KPI theo ngày check-in.
                   </DialogDescription>
                 </DialogHeader>
                 <ScrollArea className="min-h-0 flex-1 px-6 pb-6">
