@@ -2,10 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { UserBookingsKpiRow } from "../types";
 import { getReportBranchIdFromRequest } from "@/lib/reports/branch-filter";
+import {
+  endOfDayVNFromKey,
+  startOfDayVNFromKey,
+  toYyyyMmDdVN,
+} from "@/lib/reports/revenue-dashboard-math";
 
 /**
  * GET /api/reports/users
- * KPI bookings by user/profile (created_by)
+ * KPI bookings by user/profile (created_by), filtered by check_in date in range.
  * Query parameters:
  * - fromDate: Start date (ISO string, required)
  * - toDate: End date (ISO string, required)
@@ -30,8 +35,17 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Invalid date format" }, { status: 400 });
     }
 
-    const fromISO = fromDate.toISOString();
-    const toISO = toDate.toISOString();
+    const fromKey = toYyyyMmDdVN(fromDate);
+    const toKey = toYyyyMmDdVN(toDate);
+    if (fromKey > toKey) {
+      return NextResponse.json(
+        { error: "fromDate must be <= toDate" },
+        { status: 400 }
+      );
+    }
+
+    const fromISO = startOfDayVNFromKey(fromKey).toISOString();
+    const toISO = endOfDayVNFromKey(toKey).toISOString();
 
     const supabase = await createClient();
     const branchId = await getReportBranchIdFromRequest(searchParams);
@@ -40,8 +54,8 @@ export async function GET(req: NextRequest) {
       .from("bookings")
       .select("id, created_by, status, final_amount, total_amount")
       .is("deleted_at", null)
-      .gte("created_at", fromISO)
-      .lte("created_at", toISO);
+      .gte("check_in", fromISO)
+      .lte("check_in", toISO);
     if (branchId) bookingsQuery = bookingsQuery.eq("branch_id", branchId);
     const { data: bookings, error: bookingsError } = await bookingsQuery;
 
@@ -58,6 +72,7 @@ export async function GET(req: NextRequest) {
         confirmedBookings: number;
         checkedInBookings: number;
         checkedOutBookings: number;
+        cancelledBookings: number;
       }
     >();
 
@@ -70,6 +85,7 @@ export async function GET(req: NextRequest) {
         confirmedBookings: 0,
         checkedInBookings: 0,
         checkedOutBookings: 0,
+        cancelledBookings: 0,
       };
 
       current.totalBookings += 1;
@@ -93,6 +109,9 @@ export async function GET(req: NextRequest) {
       }
       if (status === "checked_out") {
         current.checkedOutBookings += 1;
+      }
+      if (status === "cancelled") {
+        current.cancelledBookings += 1;
       }
 
       counts.set(key, current);
@@ -161,6 +180,7 @@ export async function GET(req: NextRequest) {
             confirmedBookings: metric.confirmedBookings,
             checkedInBookings: metric.checkedInBookings,
             checkedOutBookings: metric.checkedOutBookings,
+            cancelledBookings: metric.cancelledBookings,
             processingRate: Math.round(processingRate * 100) / 100,
             pendingRate: Math.round(pendingRate * 100) / 100,
           };
@@ -176,6 +196,7 @@ export async function GET(req: NextRequest) {
           confirmedBookings: metric.confirmedBookings,
           checkedInBookings: metric.checkedInBookings,
           checkedOutBookings: metric.checkedOutBookings,
+          cancelledBookings: metric.cancelledBookings,
           processingRate: Math.round(processingRate * 100) / 100,
           pendingRate: Math.round(pendingRate * 100) / 100,
         };

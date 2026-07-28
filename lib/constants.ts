@@ -617,6 +617,8 @@ export const DASHBOARD_URLS = {
   BLOGS: "/dashboard/blogs",
   SETTINGS: "/dashboard/settings",
   SHIFTS: "/dashboard/shifts",
+  /** Báo cáo thực thu phòng theo lễ tân */
+  RECEPTIONIST_REVENUE: "/dashboard/receptionist-revenue",
   /** Công cụ tạo QR thanh toán (không có trong sidebar) */
   PAYMENT_QR: "/dashboard/tools/payment-qr",
 } as const;

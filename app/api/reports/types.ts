@@ -9,6 +9,7 @@
  * **Mixed time models (by design for ops dashboards):**
  * - `grossRevenueByPaidAt` — cash-like gross: sum of `payments.amount` with
  *   `payment_status = paid` + `reporting_status = included` and `paid_at` in the window
+ * - `netRevenueByPaidAt` — gross minus refunded cashflow in the same window
  * - `revenueByCheckIn` / `bookingsByCheckIn` — booking value / count by `bookings.check_in`
  * - `refundCashflowByUpdatedAt` — transaction-based on `refund_requests.updated_at`
  * - `occupancyPctFromRoomNights` — night occupancy (overnight room-nights only)
@@ -21,6 +22,11 @@ export interface ReportSummary {
    * (tiền mặt / đã ghi nhận thanh toán tại thời điểm đó).
    */
   grossRevenueByPaidAt: number;
+  /**
+   * Net tiền còn lại trong túi theo kỳ:
+   * `grossRevenueByPaidAt - refundCashflowByUpdatedAt` (không âm).
+   */
+  netRevenueByPaidAt: number;
   /**
    * Recognized booking revenue for the range: sum of `final_amount ?? total_amount` for
    * `REPORT_METRICS_BOOKING_STATUSES` bookings with `check_in` in the filter window.
@@ -76,6 +82,7 @@ export interface UserBookingsKpiRow {
   confirmedBookings: number;
   checkedInBookings: number;
   checkedOutBookings: number;
+  cancelledBookings: number;
   processingRate: number;
   pendingRate: number;
 }
@@ -90,4 +97,48 @@ export interface UserBookingDetailRow {
   status: string | null;
   totalAmount: number;
   createdAt: string | null;
+}
+
+/**
+ * Per-receptionist cash-in-pocket row.
+ * Time basis: payments by `paid_at`, refunds by `updated_at`.
+ * Net = collected − refunded (never negative).
+ */
+export interface ReceptionistRevenueRow {
+  userId: string | null;
+  fullName: string | null;
+  email: string | null;
+  /** Tiền đã thu (gross) trong kỳ. */
+  collectedGross: number;
+  /** Tiền về túi sau trừ hoàn (= net). Alias giữ tương thích UI cũ. */
+  roomRevenueCollected: number;
+  /** Tổng hoàn tiền đã trừ trong kỳ. */
+  refundedAmount: number;
+  /** Số lần thanh toán thành công trong kỳ. */
+  paymentCount: number;
+  /** Số booking liên quan tới các giao dịch trong kỳ. */
+  bookingCount: number;
+  /** @deprecated dùng bookingCount — giữ để UI cũ không vỡ. */
+  checkedOutBookings: number;
+  /** @deprecated dùng bookingCount — giữ để UI cũ không vỡ. */
+  checkedInBookings: number;
+}
+
+/**
+ * Hotel-wide + per-receptionist cash-in-pocket report (cùng chuẩn card Net).
+ */
+export interface ReceptionistRevenueReport {
+  fromDate: string;
+  toDate: string;
+  /** Tổng đã thu (gross) theo paid_at. */
+  totalCollectedGross: number;
+  /** Tổng hoàn tiền theo updated_at. */
+  totalRefundedAmount: number;
+  /** Tổng tiền về túi = gross − hoàn. */
+  totalRoomRevenueCollected: number;
+  /** Tổng số booking liên quan. */
+  totalCheckedOutBookings: number;
+  /** Tổng số payment thành công trong kỳ. */
+  totalPaymentCount: number;
+  rows: ReceptionistRevenueRow[];
 }

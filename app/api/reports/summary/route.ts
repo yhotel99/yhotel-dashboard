@@ -172,6 +172,11 @@ export async function GET(req: NextRequest) {
         },
         0
       ) || 0;
+    const safeGross = isNaN(grossRevenueByPaidAt) ? 0 : grossRevenueByPaidAt;
+    const safeRefund = isNaN(refundCashflowByUpdatedAt)
+      ? 0
+      : refundCashflowByUpdatedAt;
+    const netRevenueByPaidAt = Math.max(0, safeGross - safeRefund);
 
     const inventoryRoomCount = countInventoryRoomsForOccupancy(totalRooms);
     const sellableRoomsPerDay = Math.max(inventoryRoomCount, 1);
@@ -204,9 +209,8 @@ export async function GET(req: NextRequest) {
 
     const summary: ReportSummary = {
       revenueByCheckIn: isNaN(revenueByCheckIn) ? 0 : revenueByCheckIn,
-      grossRevenueByPaidAt: isNaN(grossRevenueByPaidAt)
-        ? 0
-        : grossRevenueByPaidAt,
+      grossRevenueByPaidAt: safeGross,
+      netRevenueByPaidAt,
       bookingsByCheckIn: isNaN(bookingsByCheckIn) ? 0 : bookingsByCheckIn,
       occupancyPctFromRoomNights: Math.min(
         Math.round(
@@ -215,9 +219,7 @@ export async function GET(req: NextRequest) {
         ) / 100,
         100
       ),
-      refundCashflowByUpdatedAt: isNaN(refundCashflowByUpdatedAt)
-        ? 0
-        : refundCashflowByUpdatedAt,
+      refundCashflowByUpdatedAt: safeRefund,
       roomUsage: isNaN(roomUsage) ? 0 : roomUsage,
       roomTurnoverRate: isNaN(roomTurnoverRate)
         ? 0
