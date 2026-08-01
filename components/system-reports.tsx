@@ -444,10 +444,13 @@ export function SystemReports() {
         formatCurrency(summaryStats.revenueByCheckIn),
       ],
       [
-        "Tổng tiền phòng checkout trong kỳ (final/total)",
+        "Tổng tiền phòng checkout thực tế trong kỳ (final/total)",
         formatCurrency(summaryStats.revenueByCheckOut),
       ],
-      ["Số phòng checkout trong kỳ", summaryStats.bookingsByCheckOut.toString()],
+      [
+        "Số phòng checkout thực tế trong kỳ",
+        summaryStats.bookingsByCheckOut.toString(),
+      ],
       [
         "Số đặt phòng (theo ngày check-in)",
         summaryStats.bookingsByCheckIn.toString(),
@@ -750,7 +753,7 @@ export function SystemReports() {
               </CardTitle>
               <CardDescription className="text-xs pt-1">
                 Tổng tiền phòng (final/total) · {summaryStats.bookingsByCheckOut}{" "}
-                booking · theo ngày check-out
+                booking · theo ngày checkout thực tế
               </CardDescription>
             </div>
             <div className="rounded-full bg-cyan-500/10 p-2">

@@ -18,7 +18,6 @@ import {
   totalRoomNightsInPeriod,
 } from "@/lib/reports/occupancy-room-nights";
 import {
-  checkoutCalendarDate,
   endOfDayVNFromKey,
   startOfDayVNFromKey,
   toYyyyMmDdVN,
@@ -125,22 +124,12 @@ export async function GET(req: NextRequest) {
     const checkoutSelect =
       "id, check_in, check_out, actual_check_out, status, final_amount, total_amount";
 
-    let byScheduledCheckout = supabase
-      .from("bookings")
-      .select(checkoutSelect)
-      .is("deleted_at", null)
-      .in("status", [...REPORT_METRICS_BOOKING_STATUSES])
-      .gte("check_out", fromISO)
-      .lte("check_out", toISO);
-    if (branchId) {
-      byScheduledCheckout = byScheduledCheckout.eq("branch_id", branchId);
-    }
-
     let byActualCheckout = supabase
       .from("bookings")
       .select(checkoutSelect)
       .is("deleted_at", null)
       .in("status", [...REPORT_METRICS_BOOKING_STATUSES])
+      .not("actual_check_out", "is", null)
       .gte("actual_check_out", fromISO)
       .lte("actual_check_out", toISO);
     if (branchId) {
@@ -153,7 +142,6 @@ export async function GET(req: NextRequest) {
       { data: currentRefunds, error: refundsError },
       { data: totalRooms, error: roomsError },
       { data: currentBookingsForOccupancy, error: occupancyError },
-      { data: scheduledCheckoutInPeriod, error: scheduledCheckoutError },
       { data: actualCheckoutInPeriod, error: actualCheckoutError },
     ] = await Promise.all([
       bookingsQuery,
@@ -161,7 +149,6 @@ export async function GET(req: NextRequest) {
       refundsQuery,
       roomsQuery,
       occupancyQuery,
-      byScheduledCheckout,
       byActualCheckout,
     ]);
 
@@ -171,7 +158,6 @@ export async function GET(req: NextRequest) {
       refundsError ||
       roomsError ||
       occupancyError ||
-      scheduledCheckoutError ||
       actualCheckoutError
     ) {
       return NextResponse.json(
@@ -242,17 +228,12 @@ export async function GET(req: NextRequest) {
 
     let revenueByCheckOut = 0;
     let bookingsByCheckOut = 0;
-    const checkoutById = new Map<string, RevenueBookingRow>();
-    for (const b of [
-      ...(scheduledCheckoutInPeriod ?? []),
-      ...(actualCheckoutInPeriod ?? []),
-    ]) {
-      if (b.id) checkoutById.set(b.id, b as RevenueBookingRow);
-    }
-    for (const b of checkoutById.values()) {
-      const cd = checkoutCalendarDate(b);
-      if (!cd || cd < fromKey || cd > toKey) continue;
-      revenueByCheckOut += parseBookingRevenueAmount(b);
+    for (const b of actualCheckoutInPeriod ?? []) {
+      const raw = b.actual_check_out;
+      if (!raw) continue;
+      const cd = toYyyyMmDdVN(new Date(raw));
+      if (cd < fromKey || cd > toKey) continue;
+      revenueByCheckOut += parseBookingRevenueAmount(b as RevenueBookingRow);
       bookingsByCheckOut += 1;
     }
 
