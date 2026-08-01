@@ -8,6 +8,7 @@ import {
   IconChartBar,
   IconBed,
   IconReceipt,
+  IconLogout,
 } from "@tabler/icons-react";
 
 import {
@@ -140,6 +141,8 @@ type SummaryResponse = {
   netRevenueByPaidAt: number;
   revenueByCheckIn: number;
   bookingsByCheckIn: number;
+  revenueByCheckOut: number;
+  bookingsByCheckOut: number;
   occupancyPctFromRoomNights: number;
   roomUsage: number;
   roomTurnoverRate: number;
@@ -347,6 +350,8 @@ export function SystemReports() {
       ),
     revenueByCheckIn: summaryData?.revenueByCheckIn ?? 0,
     bookingsByCheckIn: summaryData?.bookingsByCheckIn ?? 0,
+    revenueByCheckOut: summaryData?.revenueByCheckOut ?? 0,
+    bookingsByCheckOut: summaryData?.bookingsByCheckOut ?? 0,
     occupancyPctFromRoomNights:
       summaryData?.occupancyPctFromRoomNights ?? 0,
     roomUsage: summaryData?.roomUsage ?? 0,
@@ -437,6 +442,14 @@ export function SystemReports() {
       [
         "Doanh thu booking (theo ngày check-in, final/total)",
         formatCurrency(summaryStats.revenueByCheckIn),
+      ],
+      [
+        "Tổng tiền phòng checkout thực tế trong kỳ (final/total)",
+        formatCurrency(summaryStats.revenueByCheckOut),
+      ],
+      [
+        "Số phòng checkout thực tế trong kỳ",
+        summaryStats.bookingsByCheckOut.toString(),
       ],
       [
         "Số đặt phòng (theo ngày check-in)",
@@ -647,7 +660,7 @@ export function SystemReports() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <Card className="border-green-500/20 bg-linear-to-br from-green-500/5 to-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0">
             <div>
@@ -728,6 +741,30 @@ export function SystemReports() {
           <CardContent>
             <div className="text-2xl font-bold text-primary">
               {summaryStats.occupancyPctFromRoomNights.toFixed(2)}%
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-cyan-500/20 bg-linear-to-br from-cyan-500/5 to-card">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0">
+            <div>
+              <CardTitle className="text-sm font-medium">
+                Checkout trong kỳ
+              </CardTitle>
+              <CardDescription className="text-xs pt-1">
+                Tổng tiền phòng (final/total) · {summaryStats.bookingsByCheckOut}{" "}
+                booking · theo ngày checkout thực tế
+              </CardDescription>
+            </div>
+            <div className="rounded-full bg-cyan-500/10 p-2">
+              <IconLogout className="h-4 w-4 text-cyan-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-cyan-600">
+              {isLoadingSummary
+                ? "…"
+                : formatCurrency(summaryStats.revenueByCheckOut)}
             </div>
           </CardContent>
         </Card>

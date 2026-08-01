@@ -346,13 +346,15 @@ export type BookingRoomDetailJoinRow = {
 export type BookingEmailCustomerJoinRow = {
   full_name: string | null;
   email: string | null;
+  phone?: string | null;
 };
 
 /**
- * Join `room:room_id(name)` trong `booking_rooms` cho template email.
+ * Join `room:room_id(name, room_number)` trong `booking_rooms` cho template email.
  */
 export type BookingEmailRoomNameJoinRow = {
   name: string | null;
+  room_number?: string | null;
 };
 
 export type BookingEmailBookingRoomsJoinRow = {
@@ -368,6 +370,15 @@ export type BookingForTransactionalEmail = {
   check_out: string;
   total_amount: number;
   final_amount?: number | null;
+  number_of_nights?: number | null;
+  total_guests?: number | null;
+  advance_payment?: number | null;
+  notes?: string | null;
+  branch_id?: string | null;
+  branch?:
+    | { name?: string | null; address?: string | null }
+    | { name?: string | null; address?: string | null }[]
+    | null;
   customer: BookingEmailCustomerJoinRow | BookingEmailCustomerJoinRow[] | null;
   booking_rooms: BookingEmailBookingRoomsJoinRow[] | null;
 };

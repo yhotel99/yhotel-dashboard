@@ -21,6 +21,7 @@ import {
   endOfDayVNFromKey,
   startOfDayVNFromKey,
   toYyyyMmDdVN,
+  type RevenueBookingRow,
 } from "@/lib/reports/revenue-dashboard-math";
 
 /**
@@ -120,18 +121,35 @@ export async function GET(req: NextRequest) {
       refundsQuery = refundsQuery.eq("branch_id", branchId);
     }
 
+    const checkoutSelect =
+      "id, check_in, check_out, actual_check_out, status, final_amount, total_amount";
+
+    let byActualCheckout = supabase
+      .from("bookings")
+      .select(checkoutSelect)
+      .is("deleted_at", null)
+      .in("status", [...REPORT_METRICS_BOOKING_STATUSES])
+      .not("actual_check_out", "is", null)
+      .gte("actual_check_out", fromISO)
+      .lte("actual_check_out", toISO);
+    if (branchId) {
+      byActualCheckout = byActualCheckout.eq("branch_id", branchId);
+    }
+
     const [
       { data: currentBookings, error: bookingsError },
       { data: paidPaymentsInPeriod, error: paymentsSummaryError },
       { data: currentRefunds, error: refundsError },
       { data: totalRooms, error: roomsError },
       { data: currentBookingsForOccupancy, error: occupancyError },
+      { data: actualCheckoutInPeriod, error: actualCheckoutError },
     ] = await Promise.all([
       bookingsQuery,
       paymentsQuery,
       refundsQuery,
       roomsQuery,
       occupancyQuery,
+      byActualCheckout,
     ]);
 
     if (
@@ -139,7 +157,8 @@ export async function GET(req: NextRequest) {
       paymentsSummaryError ||
       refundsError ||
       roomsError ||
-      occupancyError
+      occupancyError ||
+      actualCheckoutError
     ) {
       return NextResponse.json(
         { error: "Error fetching report data" },
@@ -207,11 +226,24 @@ export async function GET(req: NextRequest) {
     const roomTurnoverRate =
       inventoryRoomCount > 0 ? roomUsage / inventoryRoomCount : 0;
 
+    let revenueByCheckOut = 0;
+    let bookingsByCheckOut = 0;
+    for (const b of actualCheckoutInPeriod ?? []) {
+      const raw = b.actual_check_out;
+      if (!raw) continue;
+      const cd = toYyyyMmDdVN(new Date(raw));
+      if (cd < fromKey || cd > toKey) continue;
+      revenueByCheckOut += parseBookingRevenueAmount(b as RevenueBookingRow);
+      bookingsByCheckOut += 1;
+    }
+
     const summary: ReportSummary = {
       revenueByCheckIn: isNaN(revenueByCheckIn) ? 0 : revenueByCheckIn,
       grossRevenueByPaidAt: safeGross,
       netRevenueByPaidAt,
       bookingsByCheckIn: isNaN(bookingsByCheckIn) ? 0 : bookingsByCheckIn,
+      revenueByCheckOut: isNaN(revenueByCheckOut) ? 0 : revenueByCheckOut,
+      bookingsByCheckOut: isNaN(bookingsByCheckOut) ? 0 : bookingsByCheckOut,
       occupancyPctFromRoomNights: Math.min(
         Math.round(
           (isNaN(occupancyPctFromRoomNights) ? 0 : occupancyPctFromRoomNights) *

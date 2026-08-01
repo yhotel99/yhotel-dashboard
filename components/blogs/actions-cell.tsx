@@ -4,9 +4,11 @@ import {
   IconDotsVertical,
   IconEdit,
   IconEye,
+  IconLink,
   IconTrash,
 } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -32,6 +34,12 @@ export function BlogActionsCell({
     router.push(`/dashboard/blogs/${blog.slug}`);
   };
 
+  const handleCopyShareLink = async () => {
+    const shareUrl = `${window.location.origin}/blogs/${blog.slug}`;
+    await navigator.clipboard.writeText(shareUrl);
+    toast.success("Đã sao chép link chia sẻ");
+  };
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -52,6 +60,10 @@ export function BlogActionsCell({
         <DropdownMenuItem onClick={() => onEdit(blog)}>
           <IconEdit className="mr-2 size-4" />
           Chỉnh sửa
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={handleCopyShareLink}>
+          <IconLink className="mr-2 size-4" />
+          Sao chép link chia sẻ
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem

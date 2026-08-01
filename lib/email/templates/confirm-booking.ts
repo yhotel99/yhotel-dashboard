@@ -10,7 +10,27 @@ export type ConfirmBookingEmailPayload = {
   total_price: number;
   hotline: string;
   support_email: string;
+  /** Optional details — only shown when present */
+  hotel_address?: string | null;
+  branch_name?: string | null;
+  room_numbers?: string | null;
+  number_of_nights?: number | null;
+  total_guests?: number | null;
+  customer_phone?: string | null;
+  customer_email?: string | null;
+  payment_status_label?: string | null;
+  advance_payment?: number | null;
+  notes?: string | null;
 };
+
+function detailRow(label: string, value: string | null | undefined): string {
+  if (value == null || String(value).trim() === "") return "";
+  return `
+                <tr>
+                  <td style="border:1px solid #ddd;padding:8px;width:40%;vertical-align:top;color:#555">${label}</td>
+                  <td style="border:1px solid #ddd;padding:8px">${value}</td>
+                </tr>`;
+}
 
 export function renderBookingConfirmationHTML(
   payload: ConfirmBookingEmailPayload
@@ -18,11 +38,31 @@ export function renderBookingConfirmationHTML(
   const customer_name = escapeHtml(payload.customer_name);
   const hotel_name = escapeHtml(payload.hotel_name);
   const booking_code = escapeHtml(payload.booking_code);
-  const room_type = escapeHtml(payload.room_type);
   const check_in = escapeHtml(payload.check_in);
   const check_out = escapeHtml(payload.check_out);
   const hotline = escapeHtml(payload.hotline);
   const support_email = escapeHtml(payload.support_email);
+
+  const branch_name = payload.branch_name
+    ? escapeHtml(payload.branch_name)
+    : "";
+  const hotel_address = payload.hotel_address
+    ? escapeHtml(payload.hotel_address)
+    : "";
+
+  // room_type may be multi-line: one room per line, e.g. "Deluxe (301)\nSuite (302)"
+  const roomLabel =
+    escapeHtml(payload.room_type?.trim() || "-").replaceAll("\n", "<br/>") ||
+    "-";
+
+  const stayParts: string[] = [];
+  if (payload.number_of_nights != null && payload.number_of_nights > 0) {
+    stayParts.push(`${payload.number_of_nights} đêm`);
+  }
+  if (payload.total_guests != null && payload.total_guests > 0) {
+    stayParts.push(`${payload.total_guests} khách`);
+  }
+  const staySummary = stayParts.join(" · ");
 
   const phone = "+84 7879 13388";
   const zalo = "+84 786 456 469";
@@ -51,36 +91,27 @@ export function renderBookingConfirmationHTML(
 
               <p>
                 Cảm ơn Quý khách đã đặt phòng tại <strong>${hotel_name}</strong>.
-                Thông tin chi tiết:
+                Đặt phòng đã được xác nhận. Thông tin chi tiết:
               </p>
 
               <table width="100%" style="border-collapse:collapse;margin:16px 0">
-                <tr>
-                  <td style="border:1px solid #ddd;padding:8px">Mã đặt phòng</td>
-                  <td style="border:1px solid #ddd;padding:8px"><strong>${booking_code}</strong></td>
-                </tr>
-                <tr>
-                  <td style="border:1px solid #ddd;padding:8px">Phòng</td>
-                  <td style="border:1px solid #ddd;padding:8px">${room_type}</td>
-                </tr>
-                <tr>
-                  <td style="border:1px solid #ddd;padding:8px">Nhận phòng</td>
-                  <td style="border:1px solid #ddd;padding:8px">${check_in}</td>
-                </tr>
-                <tr>
-                  <td style="border:1px solid #ddd;padding:8px">Trả phòng</td>
-                  <td style="border:1px solid #ddd;padding:8px">${check_out}</td>
-                </tr>
-                <tr>
-                  <td style="border:1px solid #ddd;padding:8px">Tổng tiền</td>
-                  <td style="border:1px solid #ddd;padding:8px"><strong>${formatCurrencyVND(payload.total_price)}</strong></td>
-                </tr>
+                ${detailRow("Mã đặt phòng", `<strong>${booking_code}</strong>`)}
+                ${detailRow("Chi nhánh", branch_name)}
+                ${detailRow("Địa chỉ", hotel_address)}
+                ${detailRow("Phòng", roomLabel)}
+                ${detailRow("Nhận phòng", check_in)}
+                ${detailRow("Trả phòng", check_out)}
+                ${detailRow("Thời gian lưu trú", staySummary)}
+                ${detailRow(
+                  "Tổng tiền",
+                  `<strong>${formatCurrencyVND(payload.total_price)}</strong>`
+                )}
               </table>
 
               <p>
                 📞 Hotline: ${hotline}<br/>
                 ☎️ Điện thoại: ${phone}<br/>
-                💬 Zalo/whatsapp: ${zalo}<br/>
+                💬 Zalo/WhatsApp: ${zalo}<br/>
                 📧 Email: ${support_email}
               </p>
 
