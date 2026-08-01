@@ -18,9 +18,11 @@ import {
   totalRoomNightsInPeriod,
 } from "@/lib/reports/occupancy-room-nights";
 import {
+  checkoutCalendarDate,
   endOfDayVNFromKey,
   startOfDayVNFromKey,
   toYyyyMmDdVN,
+  type RevenueBookingRow,
 } from "@/lib/reports/revenue-dashboard-math";
 
 /**
@@ -120,18 +122,47 @@ export async function GET(req: NextRequest) {
       refundsQuery = refundsQuery.eq("branch_id", branchId);
     }
 
+    const checkoutSelect =
+      "id, check_in, check_out, actual_check_out, status, final_amount, total_amount";
+
+    let byScheduledCheckout = supabase
+      .from("bookings")
+      .select(checkoutSelect)
+      .is("deleted_at", null)
+      .in("status", [...REPORT_METRICS_BOOKING_STATUSES])
+      .gte("check_out", fromISO)
+      .lte("check_out", toISO);
+    if (branchId) {
+      byScheduledCheckout = byScheduledCheckout.eq("branch_id", branchId);
+    }
+
+    let byActualCheckout = supabase
+      .from("bookings")
+      .select(checkoutSelect)
+      .is("deleted_at", null)
+      .in("status", [...REPORT_METRICS_BOOKING_STATUSES])
+      .gte("actual_check_out", fromISO)
+      .lte("actual_check_out", toISO);
+    if (branchId) {
+      byActualCheckout = byActualCheckout.eq("branch_id", branchId);
+    }
+
     const [
       { data: currentBookings, error: bookingsError },
       { data: paidPaymentsInPeriod, error: paymentsSummaryError },
       { data: currentRefunds, error: refundsError },
       { data: totalRooms, error: roomsError },
       { data: currentBookingsForOccupancy, error: occupancyError },
+      { data: scheduledCheckoutInPeriod, error: scheduledCheckoutError },
+      { data: actualCheckoutInPeriod, error: actualCheckoutError },
     ] = await Promise.all([
       bookingsQuery,
       paymentsQuery,
       refundsQuery,
       roomsQuery,
       occupancyQuery,
+      byScheduledCheckout,
+      byActualCheckout,
     ]);
 
     if (
@@ -139,7 +170,9 @@ export async function GET(req: NextRequest) {
       paymentsSummaryError ||
       refundsError ||
       roomsError ||
-      occupancyError
+      occupancyError ||
+      scheduledCheckoutError ||
+      actualCheckoutError
     ) {
       return NextResponse.json(
         { error: "Error fetching report data" },
@@ -207,11 +240,29 @@ export async function GET(req: NextRequest) {
     const roomTurnoverRate =
       inventoryRoomCount > 0 ? roomUsage / inventoryRoomCount : 0;
 
+    let revenueByCheckOut = 0;
+    let bookingsByCheckOut = 0;
+    const checkoutById = new Map<string, RevenueBookingRow>();
+    for (const b of [
+      ...(scheduledCheckoutInPeriod ?? []),
+      ...(actualCheckoutInPeriod ?? []),
+    ]) {
+      if (b.id) checkoutById.set(b.id, b as RevenueBookingRow);
+    }
+    for (const b of checkoutById.values()) {
+      const cd = checkoutCalendarDate(b);
+      if (!cd || cd < fromKey || cd > toKey) continue;
+      revenueByCheckOut += parseBookingRevenueAmount(b);
+      bookingsByCheckOut += 1;
+    }
+
     const summary: ReportSummary = {
       revenueByCheckIn: isNaN(revenueByCheckIn) ? 0 : revenueByCheckIn,
       grossRevenueByPaidAt: safeGross,
       netRevenueByPaidAt,
       bookingsByCheckIn: isNaN(bookingsByCheckIn) ? 0 : bookingsByCheckIn,
+      revenueByCheckOut: isNaN(revenueByCheckOut) ? 0 : revenueByCheckOut,
+      bookingsByCheckOut: isNaN(bookingsByCheckOut) ? 0 : bookingsByCheckOut,
       occupancyPctFromRoomNights: Math.min(
         Math.round(
           (isNaN(occupancyPctFromRoomNights) ? 0 : occupancyPctFromRoomNights) *

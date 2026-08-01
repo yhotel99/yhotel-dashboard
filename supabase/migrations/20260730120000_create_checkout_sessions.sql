@@ -269,6 +269,10 @@ DECLARE
   v_primary_room_id uuid := NULL;
   v_now timestamptz := now();
   v_method text;
+  -- Phase 1: collect resolved room ids before any mutation
+  v_room_mappings uuid[][] := '{}';
+  v_idx integer;
+  v_alt_set uuid[] := '{}';
 BEGIN
   IF p_session_id IS NOT NULL THEN
     SELECT * INTO v_session
@@ -313,7 +317,10 @@ BEGIN
   v_method := COALESCE(NULLIF(btrim(COALESCE(p_payment_method, '')), ''), v_session.payment_method);
   v_booking_code := v_session.payment_code;
 
-  -- Resolve rooms (with same-type fallback)
+  -- =========================================================================
+  -- PHASE 1: Check all rooms first — NO hold release yet
+  -- Collect (original_room_id, resolved_room_id) for every row.
+  -- =========================================================================
   FOR v_room IN
     SELECT *
     FROM public.checkout_session_rooms
@@ -321,11 +328,6 @@ BEGIN
     ORDER BY created_at
   LOOP
     v_resolved_room_id := v_room.room_id;
-
-    -- Temporarily release this hold so booking_rooms insert won't trip checkout hold trigger
-    UPDATE public.checkout_session_rooms
-    SET status = 'released'
-    WHERE id = v_room.id;
 
     -- Check if original room is free against bookings
     IF EXISTS (
@@ -345,7 +347,9 @@ BEGIN
       INTO v_alt_room_id
       FROM public.rooms r
       WHERE r.deleted_at IS NULL
+        AND r.status IN ('available', 'clean')
         AND r.id <> v_room.room_id
+        AND NOT (r.id = ANY(v_alt_set))
         AND (
           (v_category_code IS NOT NULL AND r.category_code = v_category_code)
           OR (v_category_code IS NULL AND r.room_type = v_room_type)
@@ -374,6 +378,7 @@ BEGIN
       LIMIT 1;
 
       IF v_alt_room_id IS NULL THEN
+        -- No mutation happened yet — safe to just return
         UPDATE public.checkout_sessions
         SET status = 'failed',
             failure_reason = 'ROOM_NOT_AVAILABLE',
@@ -389,14 +394,25 @@ BEGIN
       END IF;
 
       v_resolved_room_id := v_alt_room_id;
-      UPDATE public.checkout_session_rooms
-      SET room_id = v_alt_room_id
-      WHERE id = v_room.id;
+      v_alt_set := array_append(v_alt_set, v_alt_room_id);
     END IF;
+
+    v_room_mappings := array_append(v_room_mappings, ARRAY[v_room.id, v_resolved_room_id]);
 
     IF v_primary_room_id IS NULL THEN
       v_primary_room_id := v_resolved_room_id;
     END IF;
+  END LOOP;
+
+  -- =========================================================================
+  -- PHASE 2: All rooms resolved — now release holds and insert
+  -- =========================================================================
+  FOR v_idx IN 1..array_length(v_room_mappings, 1)
+  LOOP
+    UPDATE public.checkout_session_rooms
+    SET status = 'released',
+        room_id = v_room_mappings[v_idx][2]
+    WHERE id = v_room_mappings[v_idx][1];
   END LOOP;
 
   BEGIN
@@ -440,12 +456,13 @@ BEGIN
     )
     RETURNING id INTO v_booking_id;
 
-    FOR v_room IN
-      SELECT *
-      FROM public.checkout_session_rooms
-      WHERE session_id = v_session.id
-      ORDER BY created_at
+    FOR v_idx IN 1..array_length(v_room_mappings, 1)
     LOOP
+      SELECT *
+      INTO v_room
+      FROM public.checkout_session_rooms
+      WHERE id = v_room_mappings[v_idx][1];
+
       INSERT INTO public.booking_rooms (
         booking_id,
         room_id,
@@ -458,7 +475,7 @@ BEGIN
       )
       VALUES (
         v_booking_id,
-        v_room.room_id,
+        v_room_mappings[v_idx][2],
         v_room.check_in,
         v_room.check_out,
         v_room.number_of_nights,
@@ -474,6 +491,7 @@ BEGIN
       payment_type,
       payment_method,
       payment_status,
+      reporting_status,
       paid_at,
       created_at
     )
@@ -483,6 +501,7 @@ BEGIN
       'room_charge',
       v_method,
       'paid',
+      'included',
       v_now,
       v_now
     );

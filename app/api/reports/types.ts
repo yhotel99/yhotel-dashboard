@@ -11,6 +11,7 @@
  *   `payment_status = paid` + `reporting_status = included` and `paid_at` in the window
  * - `netRevenueByPaidAt` — gross minus refunded cashflow in the same window
  * - `revenueByCheckIn` / `bookingsByCheckIn` — booking value / count by `bookings.check_in`
+ * - `revenueByCheckOut` / `bookingsByCheckOut` — booking value / count by checkout calendar date in window
  * - `refundCashflowByUpdatedAt` — transaction-based on `refund_requests.updated_at`
  * - `occupancyPctFromRoomNights` — night occupancy (overnight room-nights only)
  * - `roomUsage` / `roomTurnoverRate` — operational room usage per day, includes short stay + resale
@@ -35,6 +36,13 @@ export interface ReportSummary {
   revenueByCheckIn: number;
   /** Count of those same bookings (confirmed | checked_in | checked_out). */
   bookingsByCheckIn: number;
+  /**
+   * Tổng giá trị booking (`final_amount ?? total_amount`) có ngày checkout (actual hoặc
+   * dự kiến) nằm trong khoảng `[fromDate, toDate]` theo lịch VN.
+   */
+  revenueByCheckOut: number;
+  /** Số booking checkout trong kỳ (cùng tập với `revenueByCheckOut`). */
+  bookingsByCheckOut: number;
   /**
    * Occupancy % = **sold room-nights** (stays overlapping the range, confirmed+,
    * `booking_rooms` count or 1) ÷ **available room-nights** (sum over each calendar day in the
