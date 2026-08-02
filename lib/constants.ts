@@ -371,6 +371,7 @@ export const DATABASE_ERROR_CODES = {
 
 export const BOOKING_ERROR_PATTERNS = {
   ROOM_NOT_AVAILABLE: "Room is not available for the selected date/time",
+  ROOM_HELD_BY_CHECKOUT: "ROOM_HELD_BY_CHECKOUT",
   CONFLICT_EXCLUSION_CONSTRAINT:
     'conflicting key value violates exclusion constraint "bookings_no_overlap"',
   CONFLICT_EXCLUSION_CONSTRAINT_GENERAL:
@@ -386,6 +387,11 @@ const BOOKING_ERROR_PATTERNS_CONFIG: Array<{
   pattern: string | RegExp;
   message: string;
 }> = [
+  {
+    pattern: BOOKING_ERROR_PATTERNS.ROOM_HELD_BY_CHECKOUT,
+    message:
+      "Phòng đang được khách giữ để thanh toán online. Đây không phải lỗi hệ thống — vui lòng đợi hết phiên thanh toán hoặc chọn phòng khác.",
+  },
   {
     pattern: BOOKING_ERROR_PATTERNS.ROOM_NOT_AVAILABLE,
     message:

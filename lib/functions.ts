@@ -351,6 +351,10 @@ export function formatTimeForInput(
  * @returns Translated error message
  */
 export function translateBookingError(rawMessage: string): string {
+  if (rawMessage.includes("ROOM_HELD_BY_CHECKOUT")) {
+    return "Phòng đang được khách giữ để thanh toán online. Đây không phải lỗi hệ thống — vui lòng đợi hết phiên thanh toán hoặc chọn phòng khác.";
+  }
+
   // Lỗi về phòng không khả dụng
   if (
     rawMessage.includes("Room is not available for the selected date/time") ||
@@ -621,21 +625,43 @@ export function formatDateTimePretty(isoString: string, options: {
 
 
 
-export function mapBookingError(code: string): string {
- switch (code) {
-   case "ROOM_NOT_AVAILABLE":
-     return "Phòng đã được đặt trong thời gian này";
-   case "INVALID_DATE_RANGE":
-     return "Ngày check-out phải sau check-in";
-   case "INVALID_NIGHTS":
-     return "Số đêm không hợp lệ";
-   case "INVALID_AMOUNT":
-     return "Số tiền không hợp lệ";
-   case "ADVANCE_EXCEEDS_TOTAL":
-     return "Tiền cọc không được lớn hơn tổng tiền";
-   case "NO_ROOMS":
-     return "Vui lòng chọn ít nhất một phòng";
-   default:
-     return "Không thể tạo booking";
- }
+export type MapBookingErrorDetails = {
+  hold_expires_at?: string | null;
+};
+
+export function mapBookingError(
+  code: string,
+  details?: MapBookingErrorDetails
+): string {
+  switch (code) {
+    case "ROOM_HELD_BY_CHECKOUT": {
+      const expiresAt = details?.hold_expires_at
+        ? new Date(details.hold_expires_at)
+        : null;
+      const expiresLabel =
+        expiresAt && !Number.isNaN(expiresAt.getTime())
+          ? expiresAt.toLocaleTimeString("vi-VN", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })
+          : null;
+      return expiresLabel
+        ? `Phòng đang được khách giữ để thanh toán online (hết hạn khoảng ${expiresLabel}). Đây không phải lỗi hệ thống — vui lòng đợi hoặc chọn phòng khác.`
+        : "Phòng đang được khách giữ để thanh toán online. Đây không phải lỗi hệ thống — vui lòng đợi hết phiên thanh toán hoặc chọn phòng khác.";
+    }
+    case "ROOM_NOT_AVAILABLE":
+      return "Phòng đã được đặt trong thời gian này";
+    case "INVALID_DATE_RANGE":
+      return "Ngày check-out phải sau check-in";
+    case "INVALID_NIGHTS":
+      return "Số đêm không hợp lệ";
+    case "INVALID_AMOUNT":
+      return "Số tiền không hợp lệ";
+    case "ADVANCE_EXCEEDS_TOTAL":
+      return "Tiền cọc không được lớn hơn tổng tiền";
+    case "NO_ROOMS":
+      return "Vui lòng chọn ít nhất một phòng";
+    default:
+      return "Không thể tạo booking";
+  }
 }

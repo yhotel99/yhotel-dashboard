@@ -16,15 +16,19 @@ export function getBranchTableLabel(
 export function resolveBranchDisplay(
   branchId: string | undefined | null,
   branches: Branch[],
-  fallbackBranchId: string = DEFAULT_BRANCH_ID
+  /** Only used when explicitly passed — do not silently map null → main. */
+  fallbackBranchId?: string | null
 ): { name: string; code: string } {
-  const id = branchId ?? fallbackBranchId;
+  const id = branchId ?? fallbackBranchId ?? null;
+  if (!id) {
+    return { name: "—", code: "—" };
+  }
   const branch = branches.find((b) => b.id === id);
   if (branch) {
     return { name: branch.name, code: branch.code };
   }
   return {
-    name: branchId ? "Không xác định" : "Chi nhánh mặc định",
+    name: "Không xác định",
     code: "—",
   };
 }
