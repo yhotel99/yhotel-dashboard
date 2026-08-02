@@ -48,7 +48,6 @@ import { getRoomsByIds } from "@/actions/rooms";
 import { useSettings } from "@/hooks/use-settings";
 import { useBranchBankAccounts } from "@/hooks/use-branch-bank-accounts";
 import { usePermissions } from "@/contexts/permissions-context";
-import { DEFAULT_BRANCH_ID } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import {
   BOOKING_CREATOR_CLEAR_VALUE,
@@ -264,8 +263,8 @@ export function BookingDetailDialog({
   }, [booking, roomsData, settings?.pricing_weekday_rates, settings?.pricing_holiday_periods]);
 
   const bankInfo = useMemo(() => {
-    if (!booking) return null;
-    return getBankInfo(booking.branch_id ?? DEFAULT_BRANCH_ID);
+    if (!booking?.branch_id) return null;
+    return getBankInfo(booking.branch_id);
   }, [booking, getBankInfo]);
 
   const bookingQrImageUrl = useMemo(() => {

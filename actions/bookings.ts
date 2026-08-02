@@ -241,7 +241,9 @@ export async function createBooking(
   if (!data?.ok) {
     return {
       ok: false,
-      message: mapBookingError(data.error_code),
+      message: mapBookingError(data.error_code, {
+        hold_expires_at: data.hold_expires_at ?? null,
+      }),
     };
   }
 
@@ -318,7 +320,9 @@ export async function createMultiBooking(
   if (!data?.ok) {
     return {
       ok: false,
-      message: mapBookingError(data.error_code ?? "UNKNOWN"),
+      message: mapBookingError(data.error_code ?? "UNKNOWN", {
+        hold_expires_at: data.hold_expires_at ?? null,
+      }),
     };
   }
 
