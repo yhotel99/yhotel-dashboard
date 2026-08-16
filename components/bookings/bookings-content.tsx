@@ -68,6 +68,33 @@ const BOOKING_STATUS_FILTER_VALUES = new Set<string>([
   BOOKING_STATUS.CANCELLED,
 ]);
 
+type BookingDateField =
+  | "created_at"
+  | "check_in"
+  | "check_out"
+  | "actual_check_out";
+
+const BOOKING_DATE_FIELDS = new Set<BookingDateField>([
+  "created_at",
+  "check_in",
+  "check_out",
+  "actual_check_out",
+]);
+
+const BOOKING_DATE_FIELD_LABELS: Record<BookingDateField, string> = {
+  created_at: "Theo ngày tạo",
+  check_in: "Theo ngày check-in",
+  check_out: "Theo ngày check-out",
+  actual_check_out: "Theo ngày check-out thực tế",
+};
+
+function parseBookingDateField(raw: string | null): BookingDateField {
+  if (raw && BOOKING_DATE_FIELDS.has(raw as BookingDateField)) {
+    return raw as BookingDateField;
+  }
+  return "created_at";
+}
+
 const toDateParam = (date: Date) => {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -118,8 +145,7 @@ export function BookingsContent({
     return searchParams.get("creatorId") || "";
   }, [searchParams]);
   const dateField = React.useMemo(() => {
-    const raw = searchParams.get("dateField") || "created_at";
-    return raw === "check_in" ? "check_in" : "created_at";
+    return parseBookingDateField(searchParams.get("dateField"));
   }, [searchParams]);
   const dateFrom = React.useMemo(() => {
     return searchParams.get("dateFrom") || "";
@@ -145,7 +171,7 @@ export function BookingsContent({
       newSearch: string,
       newStatus?: string,
       newCreatorId?: string,
-      newDateField?: "created_at" | "check_in",
+      newDateField?: BookingDateField,
       newDateFrom?: string,
       newDateTo?: string,
       options?: { resetCursor?: boolean }
@@ -405,7 +431,7 @@ export function BookingsContent({
   );
 
   const handleDateFieldChange = React.useCallback(
-    (value: "created_at" | "check_in") => {
+    (value: BookingDateField) => {
       updateSearchParams(
         1,
         limit,
@@ -729,15 +755,25 @@ export function BookingsContent({
                       <Select
                         value={dateField}
                         onValueChange={(v) =>
-                          handleDateFieldChange(v as "created_at" | "check_in")
+                          handleDateFieldChange(parseBookingDateField(v))
                         }
                       >
                         <SelectTrigger className="h-9 w-full">
                           <SelectValue placeholder="Loại ngày" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="created_at">Theo ngày tạo</SelectItem>
-                          <SelectItem value="check_in">Theo ngày check-in</SelectItem>
+                          <SelectItem value="created_at">
+                            {BOOKING_DATE_FIELD_LABELS.created_at}
+                          </SelectItem>
+                          <SelectItem value="check_in">
+                            {BOOKING_DATE_FIELD_LABELS.check_in}
+                          </SelectItem>
+                          <SelectItem value="check_out">
+                            {BOOKING_DATE_FIELD_LABELS.check_out}
+                          </SelectItem>
+                          <SelectItem value="actual_check_out">
+                            {BOOKING_DATE_FIELD_LABELS.actual_check_out}
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                       <DateRangePicker
@@ -817,7 +853,7 @@ export function BookingsContent({
             </div>
             {dateField !== "created_at" && (
               <Badge variant="outline" className="h-7 rounded-md">
-                Loại ngày: Check-in
+                Loại ngày: {BOOKING_DATE_FIELD_LABELS[dateField]}
               </Badge>
             )}
             {dateFrom && (

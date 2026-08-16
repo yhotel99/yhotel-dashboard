@@ -13,7 +13,10 @@ export default async function BookingsPage({ searchParams }: PageProps) {
   const creatorId = params.creatorId ? String(params.creatorId) : null;
   const dateFieldRaw = params.dateField ? String(params.dateField) : null;
   const dateField =
-    dateFieldRaw === "created_at" || dateFieldRaw === "check_in"
+    dateFieldRaw === "created_at" ||
+    dateFieldRaw === "check_in" ||
+    dateFieldRaw === "check_out" ||
+    dateFieldRaw === "actual_check_out"
       ? dateFieldRaw
       : null;
   const dateFrom = params.dateFrom ? String(params.dateFrom) : null;
