@@ -11,7 +11,12 @@ export type BookingsSwrParams = {
   limit?: number;
   customerId?: string | null;
   creatorId?: string | null;
-  dateField?: "created_at" | "check_in" | null;
+  dateField?:
+    | "created_at"
+    | "check_in"
+    | "check_out"
+    | "actual_check_out"
+    | null;
   dateFrom?: string | null;
   dateTo?: string | null;
   status?: string;

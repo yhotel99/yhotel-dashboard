@@ -978,7 +978,7 @@ export async function getBookingsListWithPagination({
   limit?: number;
   customerId?: string | null;
   creatorId?: string | null;
-  dateField?: "created_at" | "check_in" | null;
+  dateField?: "created_at" | "check_in" | "check_out" | "actual_check_out" | null;
   dateFrom?: string | null;
   dateTo?: string | null;
   status?: string | null;
@@ -1003,7 +1003,10 @@ export async function getBookingsListWithPagination({
     const trimmedCustomerId = customerId?.trim() || null;
     const trimmedCreatorId = creatorId?.trim() || null;
     const normalizedDateField =
-      dateField === "created_at" || dateField === "check_in"
+      dateField === "created_at" ||
+      dateField === "check_in" ||
+      dateField === "check_out" ||
+      dateField === "actual_check_out"
         ? dateField
         : null;
     const trimmedDateFrom = dateFrom?.trim() || null;

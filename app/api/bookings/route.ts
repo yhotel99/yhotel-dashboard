@@ -10,7 +10,7 @@ import { getBookingsListWithPagination } from "@/services/bookings";
  * - limit: Items per page (default: 10)
  * - customerId: Customer ID to filter (optional)
  * - creatorId: User ID created booking to filter (optional)
- * - dateField: created_at | check_in (optional)
+ * - dateField: created_at | check_in | check_out | actual_check_out (optional)
  * - dateFrom: YYYY-MM-DD (optional)
  * - dateTo: YYYY-MM-DD (optional)
  * - status: booking status, matches public.booking_status (optional)
@@ -50,7 +50,10 @@ export async function GET(req: NextRequest) {
       customerId: customerId?.trim() || null,
       creatorId: creatorId?.trim() || null,
       dateField:
-        dateField === "created_at" || dateField === "check_in"
+        dateField === "created_at" ||
+        dateField === "check_in" ||
+        dateField === "check_out" ||
+        dateField === "actual_check_out"
           ? dateField
           : null,
       dateFrom: dateFrom?.trim() || null,
