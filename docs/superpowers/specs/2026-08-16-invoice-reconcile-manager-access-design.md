@@ -31,27 +31,27 @@ Dùng lại pattern `ADMIN_MANAGER_ONLY_PATHS` + `canViewAllBranches()` — nh�
 
 ```ts
 // trước: if (profile?.role !== USER_ROLE.ADMIN) {
-if (!canViewAllBranches(profile.role)) {
+if (!profile || !canViewAllBranches(profile.role)) {
   redirect(DASHBOARD_URLS.DASHBOARD);
 }
 ```
 
-Import `canViewAllBranches` từ `@/lib/branch`. Bỏ import `USER_ROLE` nếu không còn dùng.
+Import `canViewAllBranches` từ `@/lib/branch`. Bỏ import `USER_ROLE` nếu không còn dùng. Guard `!profile` bắt buộc để truyền `UserRole` (không phải `undefined`) vào `canViewAllBranches(role: UserRole)`.
 
 ### 3. `components/app-sidebar.tsx` (dòng 46)
 
 ```ts
 // trước: if (profile?.role === USER_ROLE.ADMIN) {
-if (canViewAllBranches(profile?.role)) {
+if (profile && canViewAllBranches(profile.role)) {
   items.push({ title: "Đối soát Excel", url: DASHBOARD_URLS.INVOICE_RECONCILE, icon: FileSpreadsheet });
 }
 ```
 
-Import `canViewAllBranches` từ `@/lib/branch`. `lib/branch.ts` là module thuần (chỉ import type + constants) nên an toàn dùng trong client component.
+Import `canViewAllBranches` từ `@/lib/branch`. `lib/branch.ts` là module thuần (chỉ import type + constants) nên an toàn dùng trong client component. Guard `profile &&` để pass được kiểu `UserRole`.
 
 ### 4. `app/api/reports/invoice-reconcile/route.ts` — `requireAdminUser()` (dòng 20-41)
 
-- Đổi điều kiện sang `canViewAllBranches(profile.role)`.
+- Đổi điều kiện sang `if (!profile || !canViewAllBranches(profile.role))` (guard null profile tương tự — tránh lỗi TS khi truyền `undefined`).
 - Đổi thông báo: `"Chỉ admin mới được đối soát Excel"` → `"Chỉ admin và quản lý mới được đối soát Excel"`.
 - Bắt buộc: nếu chỉ sửa page mà không sửa API, manager vào được trang nhưng upload đều nhận 403.
 
