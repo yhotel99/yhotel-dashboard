@@ -5,6 +5,11 @@ export function buildBranchNameById(branches: Branch[]): Record<string, string> 
   return Object.fromEntries(branches.map((b) => [b.id, b.name]));
 }
 
+/** Branches available for pickers / filters (excludes inactive). */
+export function getActiveBranches(branches: Branch[]): Branch[] {
+  return branches.filter((b) => b.is_active);
+}
+
 export function getBranchTableLabel(
   branchId: string | undefined | null,
   branchNameById: Readonly<Record<string, string>>

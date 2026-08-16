@@ -80,9 +80,9 @@ export function VoucherFormDialog({
   onSubmitVoucher: (input: VoucherInput) => Promise<void>;
 }) {
   const { profile } = useAuth();
-  const { branches, filterBranchId } = useBranch();
+  const { activeBranches, filterBranchId } = useBranch();
   const showBranchScope =
-    profile && canViewAllBranches(profile.role) && branches.length > 0;
+    profile && canViewAllBranches(profile.role) && activeBranches.length > 0;
 
   const [formValues, setFormValues] = useState<VoucherFormState>(() => {
     const base = fromVoucher(initialVoucher);
@@ -227,7 +227,7 @@ export function VoucherFormDialog({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__global__">Toàn hệ thống</SelectItem>
-                  {branches.map((b) => (
+                  {activeBranches.map((b) => (
                     <SelectItem key={b.id} value={b.id}>
                       {b.name}
                     </SelectItem>

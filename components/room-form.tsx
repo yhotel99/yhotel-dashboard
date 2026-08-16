@@ -157,8 +157,8 @@ export function RoomForm({
 }: RoomFormProps) {
   const router = useRouter();
   const { profile } = useAuth();
-  const { branches, filterBranchId } = useBranch();
-  const showBranchPicker = Boolean(profile && branches.length > 0);
+  const { branches, activeBranches, filterBranchId } = useBranch();
+  const showBranchPicker = Boolean(profile && activeBranches.length > 0);
   const canSelectRoomBranch = Boolean(
     profile && canViewAllBranches(profile.role)
   );
@@ -585,7 +585,7 @@ export function RoomForm({
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  {branches.map((b) => (
+                                  {activeBranches.map((b) => (
                                     <SelectItem key={b.id} value={b.id}>
                                       {b.name}
                                     </SelectItem>

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { FileSpreadsheet } from "lucide-react";
 import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
 import {
@@ -15,7 +16,12 @@ import {
 import Link from "next/link";
 import { useAuth } from "@/contexts/auth-context";
 import { usePermissions } from "@/contexts/permissions-context";
-import { allNavItems, SIDEBAR_URLS } from "@/lib/constants";
+import {
+  allNavItems,
+  DASHBOARD_URLS,
+  SIDEBAR_URLS,
+  USER_ROLE,
+} from "@/lib/constants";
 import Image from "next/image";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -30,6 +36,22 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       hasViewPermission(item.resource)
     );
   }, [currentUser, profile, hasViewPermission]);
+
+  const navItems = React.useMemo(() => {
+    const items = filteredNavItems.map(({ title, url, icon }) => ({
+      title,
+      url,
+      icon,
+    }));
+    if (profile?.role === USER_ROLE.ADMIN) {
+      items.push({
+        title: "Đối soát Excel",
+        url: DASHBOARD_URLS.INVOICE_RECONCILE,
+        icon: FileSpreadsheet,
+      });
+    }
+    return items;
+  }, [filteredNavItems, profile?.role]);
 
   // Get first allowed page for logo link (fallback to first item or dashboard)
   const logoLink = React.useMemo(() => {
@@ -58,13 +80,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain
-          items={filteredNavItems.map(({ title, url, icon }) => ({
-            title,
-            url,
-            icon,
-          }))}
-        />
+        <NavMain items={navItems} />
       </SidebarContent>
       <SidebarFooter>
         {profile && <NavUser profile={profile} />}

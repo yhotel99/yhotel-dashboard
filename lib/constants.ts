@@ -627,10 +627,17 @@ export const DASHBOARD_URLS = {
   RECEPTIONIST_REVENUE: "/dashboard/receptionist-revenue",
   /** Công cụ tạo QR thanh toán (không có trong sidebar) */
   PAYMENT_QR: "/dashboard/tools/payment-qr",
+  /** Đối soát Excel HĐ checkout — chỉ admin */
+  INVOICE_RECONCILE: "/dashboard/tools/invoice-reconcile",
 } as const;
 
 /** Đường dẫn chỉ admin và manager được truy cập (không dùng permission DB). */
 export const ADMIN_MANAGER_ONLY_PATHS = [] as const;
+
+/** Đường dẫn chỉ admin (kiểm tra trước AUTHENTICATED_ONLY_PATHS). */
+export const ADMIN_ONLY_PATHS = [
+  DASHBOARD_URLS.INVOICE_RECONCILE,
+] as const;
 
 /** Đường dẫn mọi user đã đăng nhập được truy cập (không kiểm tra permission DB). */
 export const AUTHENTICATED_ONLY_PATHS = ["/dashboard/tools"] as const;

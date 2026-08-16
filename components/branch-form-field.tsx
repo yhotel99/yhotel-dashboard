@@ -39,7 +39,7 @@ export function BranchFormField({
   lockedBranchId,
 }: BranchFormFieldProps) {
   const { profile } = useAuth();
-  const { branches, filterBranchId, effectiveBranchId } = useBranch();
+  const { branches, activeBranches, filterBranchId, effectiveBranchId } = useBranch();
 
   const effectiveId =
     lockedBranchId ??
@@ -59,7 +59,7 @@ export function BranchFormField({
 
   const display = resolveBranchDisplay(effectiveId, branches);
 
-  if (!showSelect || branches.length === 0) {
+  if (!showSelect || activeBranches.length === 0) {
     return (
       <div className={className}>
         <Label className="text-sm font-medium">
@@ -98,7 +98,7 @@ export function BranchFormField({
           <SelectValue placeholder="Chọn chi nhánh" />
         </SelectTrigger>
         <SelectContent>
-          {branches.map((b) => (
+          {activeBranches.map((b) => (
             <SelectItem key={b.id} value={b.id}>
               {b.name}
             </SelectItem>

@@ -30,25 +30,37 @@ export function WebCategoriesDialog({
   open,
   onOpenChange,
 }: WebCategoriesDialogProps) {
-  const { filterBranchId, branches, canSelectBranch } = useBranch();
+  const { filterBranchId, branches, activeBranches, canSelectBranch } =
+    useBranch();
   const [data, setData] = useState<WebCategoryManagementData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeBranchId, setActiveBranchId] = useState<string | null>(null);
 
-  const showBranchTabs = branches.length > 1;
+  const showBranchTabs = activeBranches.length > 1;
 
-  useEffect(() => {
-    if (!open) return;
-    const defaultBranchId =
-      filterBranchId ??
-      (canSelectBranch ? (branches[0]?.id ?? null) : branches[0]?.id ?? null);
-    setActiveBranchId(defaultBranchId);
-  }, [open, filterBranchId, canSelectBranch, branches]);
+  // Reset the viewed branch and loading state when the dialog opens or the
+  // branch scope changes. Done during render (React docs pattern) rather than
+  // in an effect to avoid cascading renders.
+  const defaultBranchId = filterBranchId ?? activeBranches[0]?.id ?? null;
+  const [branchScopeSnapshot, setBranchScopeSnapshot] = useState<{
+    open: boolean;
+    defaultBranchId: string | null;
+  }>({ open, defaultBranchId });
+
+  if (
+    branchScopeSnapshot.open !== open ||
+    branchScopeSnapshot.defaultBranchId !== defaultBranchId
+  ) {
+    setBranchScopeSnapshot({ open, defaultBranchId });
+    if (open) {
+      setActiveBranchId(defaultBranchId);
+      setIsLoading(true);
+      setError(null);
+    }
+  }
 
   const loadData = useCallback(() => {
-    setIsLoading(true);
-    setError(null);
     return getWebCategoryManagementDataAction(
       canSelectBranch ? null : filterBranchId,
       { viewAllBranches: canSelectBranch }
@@ -62,6 +74,12 @@ export function WebCategoriesDialog({
       setIsLoading(false);
     });
   }, [canSelectBranch, filterBranchId]);
+
+  const handleCategoryUpdated = useCallback(() => {
+    setIsLoading(true);
+    setError(null);
+    return loadData();
+  }, [loadData]);
 
   useEffect(() => {
     if (!open) return;
@@ -121,7 +139,7 @@ export function WebCategoriesDialog({
               className="mt-3 w-full"
             >
               <TabsList className="h-auto w-full flex-wrap justify-start gap-1">
-                {branches.map((branch) => (
+                {activeBranches.map((branch) => (
                   <TabsTrigger
                     key={branch.id}
                     value={branch.id}
@@ -161,7 +179,7 @@ export function WebCategoriesDialog({
                     assignableRooms={assignableRooms}
                     defaultExpanded={category.rooms.length > 0}
                     showBranchName={false}
-                    onUpdated={loadData}
+                    onUpdated={handleCategoryUpdated}
                   />
                 ))}
               </div>

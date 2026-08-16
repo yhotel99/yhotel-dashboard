@@ -3,7 +3,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -33,6 +33,7 @@ import type { Branch, Profile } from "@/lib/types";
 
 const EMPTY_BRANCHES: Branch[] = [];
 import { DEFAULT_BRANCH_ID, USER_ROLE } from "@/lib/constants";
+import { getActiveBranches } from "@/lib/branch";
 
 /** Select value when admin/manager has no fixed branch (views all branches). */
 export const BRANCH_NONE_VALUE = "__none__";
@@ -136,6 +137,18 @@ export function UserFormDialog({
     (isEdit &&
       (watchedRole === USER_ROLE.ADMIN ||
         watchedRole === USER_ROLE.MANAGER));
+
+  // Pickers show active branches; keep the currently-assigned branch even if
+  // inactive so editing an existing user never drops the assignment.
+  const displayBranches = useMemo(() => {
+    const active = getActiveBranches(branches);
+    const currentBranchId = profile?.branch_id;
+    if (!currentBranchId || active.some((b) => b.id === currentBranchId)) {
+      return active;
+    }
+    const current = branches.find((b) => b.id === currentBranchId);
+    return current ? [...active, current] : active;
+  }, [branches, profile]);
 
   useEffect(() => {
     const current = form.getValues("branch_id");
@@ -300,7 +313,7 @@ export function UserFormDialog({
                         (isStaffRole ? DEFAULT_BRANCH_ID : BRANCH_NONE_VALUE)
                       }
                       onValueChange={(value) => field.onChange(value)}
-                      disabled={branches.length === 0}
+                      disabled={displayBranches.length === 0}
                     >
                       <FormControl className="w-full">
                         <SelectTrigger>
@@ -313,14 +326,14 @@ export function UserFormDialog({
                             Toàn hệ thống (không cố định)
                           </SelectItem>
                         ) : null}
-                        {branches.map((b) => (
+                        {displayBranches.map((b) => (
                           <SelectItem key={b.id} value={b.id}>
                             {b.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                    {branches.length === 0 ? (
+                    {displayBranches.length === 0 ? (
                       <p className="text-sm text-muted-foreground">
                         Chưa có chi nhánh. Vui lòng tạo chi nhánh trước.
                       </p>
