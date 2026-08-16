@@ -45,17 +45,17 @@ function SummaryRow({
 }
 
 export function PaymentQrGenerator() {
-  const { branches, filterBranchId, selectedBranchId } = useBranch();
+  const { activeBranches, filterBranchId, selectedBranchId } = useBranch();
   const { getBankInfo, getBranchBankAccount, isLoading: isBankLoading } =
     useBranchBankAccounts();
   const { amount, inputProps: amountInputProps } = useVndAmountInput();
   const [description, setDescription] = useState("");
   const [branchId, setBranchId] = useState<string>(
-    () => filterBranchId ?? selectedBranchId ?? branches[0]?.id ?? ""
+    () => filterBranchId ?? selectedBranchId ?? activeBranches[0]?.id ?? ""
   );
 
   const activeBranchId =
-    branchId || filterBranchId || selectedBranchId || branches[0]?.id;
+    branchId || filterBranchId || selectedBranchId || activeBranches[0]?.id;
 
   const branchAccount = useMemo(
     () => (activeBranchId ? getBranchBankAccount(activeBranchId) : undefined),
@@ -117,13 +117,13 @@ export function PaymentQrGenerator() {
               <Select
                 value={activeBranchId}
                 onValueChange={setBranchId}
-                disabled={branches.length === 0}
+                disabled={activeBranches.length === 0}
               >
                 <SelectTrigger id="payment-qr-branch" className="h-11 w-full">
                   <SelectValue placeholder="Chọn chi nhánh" />
                 </SelectTrigger>
                 <SelectContent>
-                  {branches.map((branch) => (
+                  {activeBranches.map((branch) => (
                     <SelectItem key={branch.id} value={branch.id}>
                       {branch.name}
                     </SelectItem>

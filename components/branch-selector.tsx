@@ -17,13 +17,13 @@ type BranchSelectorProps = {
 
 export function BranchSelector({ className }: BranchSelectorProps) {
   const {
-    branches,
+    activeBranches,
     canSelectBranch,
     selectedBranchId,
     setSelectedBranchId,
   } = useBranch();
 
-  if (!canSelectBranch || branches.length === 0) {
+  if (!canSelectBranch || activeBranches.length === 0) {
     return null;
   }
 
@@ -40,7 +40,7 @@ export function BranchSelector({ className }: BranchSelectorProps) {
       </SelectTrigger>
       <SelectContent align="end">
         <SelectItem value="__all__">Tất cả chi nhánh</SelectItem>
-        {branches.map((b) => (
+        {activeBranches.map((b) => (
           <SelectItem key={b.id} value={b.id}>
             {b.name}
           </SelectItem>

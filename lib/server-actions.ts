@@ -4,8 +4,10 @@ import { hasViewPermission, getFirstAllowedPage } from "@/lib/permissions";
 import { canViewAllBranches } from "@/lib/branch";
 import {
   ADMIN_MANAGER_ONLY_PATHS,
+  ADMIN_ONLY_PATHS,
   AUTHENTICATED_ONLY_PATHS,
   DASHBOARD_URLS,
+  USER_ROLE,
 } from "@/lib/constants";
 import { Profile } from "./types";
 import { User } from "@supabase/supabase-js";
@@ -60,6 +62,16 @@ export async function checkRoutePermissionStatus(
 ): Promise<{ hasPermission: boolean; fallbackUrl: string }> {
   if (!user || !profile) {
     return { hasPermission: false, fallbackUrl: "/login" };
+  }
+
+  const isAdminOnlyRoute = ADMIN_ONLY_PATHS.some(
+    (path) => pathname === path || pathname.startsWith(`${path}/`)
+  );
+  if (isAdminOnlyRoute) {
+    return {
+      hasPermission: profile.role === USER_ROLE.ADMIN,
+      fallbackUrl: await getFirstAllowedPage(profile.role),
+    };
   }
 
   const isAdminManagerOnlyRoute = ADMIN_MANAGER_ONLY_PATHS.some(

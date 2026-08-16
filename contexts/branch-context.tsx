@@ -11,7 +11,7 @@ import {
 } from "react";
 import type { Branch, BranchScope } from "@/lib/types";
 import { useAuth } from "@/contexts/auth-context";
-import { canViewAllBranches } from "@/lib/branch";
+import { canViewAllBranches, getActiveBranches } from "@/lib/branch";
 import { DEFAULT_BRANCH_ID } from "@/lib/constants";
 import {
   readStoredBranchId,
@@ -20,6 +20,8 @@ import {
 
 type BranchContextType = {
   branches: Branch[];
+  /** Active branches only — use for selectors and filters. */
+  activeBranches: Branch[];
   scope: BranchScope;
   selectedBranchId: string | null;
   setSelectedBranchId: (id: string | null) => void;
@@ -50,6 +52,11 @@ export function BranchProvider({
 
   const canSelectBranch = profile ? canViewAllBranches(profile.role) : false;
 
+  const activeBranches = useMemo(
+    () => getActiveBranches(branches),
+    [branches]
+  );
+
   const setSelectedBranchId = useCallback((id: string | null) => {
     setSelectedBranchIdState(id);
   }, []);
@@ -60,11 +67,11 @@ export function BranchProvider({
 
   const activeSelectedBranchId = useMemo(() => {
     if (!canSelectBranch || !selectedBranchId) return selectedBranchId;
-    if (branches.length === 0) return selectedBranchId;
-    return branches.some((b) => b.id === selectedBranchId)
+    if (activeBranches.length === 0) return selectedBranchId;
+    return activeBranches.some((b) => b.id === selectedBranchId)
       ? selectedBranchId
       : null;
-  }, [canSelectBranch, selectedBranchId, branches]);
+  }, [canSelectBranch, selectedBranchId, activeBranches]);
 
   if (activeSelectedBranchId !== selectedBranchId) {
     setSelectedBranchIdState(activeSelectedBranchId);
@@ -96,6 +103,7 @@ export function BranchProvider({
   const contextValue = useMemo(
     () => ({
       branches,
+      activeBranches,
       scope,
       selectedBranchId: activeSelectedBranchId,
       setSelectedBranchId,
@@ -106,6 +114,7 @@ export function BranchProvider({
     }),
     [
       branches,
+      activeBranches,
       scope,
       activeSelectedBranchId,
       setSelectedBranchId,
