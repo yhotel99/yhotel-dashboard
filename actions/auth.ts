@@ -5,7 +5,13 @@ import { createClient } from "@/lib/supabase/server";
 import { ROLE_REDIRECT, SIDEBAR_URLS, USER_STATUS } from "@/lib/constants";
 import { getProfileById } from "@/services/profiles";
 
-export async function loginAction(formData: FormData) {
+export type LoginActionResult =
+  | { error: string; redirectTo?: never }
+  | { error?: never; redirectTo: string };
+
+export async function loginAction(
+  formData: FormData
+): Promise<LoginActionResult> {
   const email = String(formData.get("email") || "").trim();
   const password = String(formData.get("password") || "");
 
@@ -23,7 +29,10 @@ export async function loginAction(formData: FormData) {
 
     if (error) {
       console.error("Login error:", error);
-      if (error.message === "Failed to fetch" || error.message.includes("fetch")) {
+      if (
+        error.message === "Failed to fetch" ||
+        error.message.includes("fetch")
+      ) {
         return {
           error:
             "Không thể kết nối máy chủ. Vui lòng kiểm tra kết nối mạng và thử lại.",
@@ -51,26 +60,16 @@ export async function loginAction(formData: FormData) {
         profile.status === USER_STATUS.INACTIVE
           ? "Tài khoản của bạn đã bị vô hiệu hóa"
           : profile.status === USER_STATUS.SUSPENDED
-          ? "Tài khoản của bạn đã bị tạm khóa"
-          : "Tài khoản của bạn không được phép đăng nhập";
+            ? "Tài khoản của bạn đã bị tạm khóa"
+            : "Tài khoản của bạn không được phép đăng nhập";
 
       return { error: msg };
     }
 
-    // Get first allowed page based on role permissions
-    // const redirectPath = await getFirstAllowedPage(profile.role); if too many role ( current role: 3 )
-
-  const redirectPath =
-    ROLE_REDIRECT[profile.role] ?? SIDEBAR_URLS.RESERVATION;
-
-    
-    redirect(redirectPath);
+    return {
+      redirectTo: ROLE_REDIRECT[profile.role] ?? SIDEBAR_URLS.RESERVATION,
+    };
   } catch (error) {
-    // NEXT_REDIRECT is not an error, it's how Next.js handles redirects
-    if (error instanceof Error && error.message.includes("NEXT_REDIRECT")) {
-      throw error; // Re-throw redirect to let Next.js handle it
-    }
-    
     console.error("Unexpected login error:", error);
 
     const isNetworkError =
@@ -93,5 +92,5 @@ export async function loginAction(formData: FormData) {
 export async function logoutAction() {
   const supabase = await createClient();
   await supabase.auth.signOut();
-  redirect('/login');
+  redirect("/login");
 }

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useFormStatus } from "react-dom";
+import { useRouter } from "next/navigation";
 import { loginAction } from "@/actions/auth";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -29,16 +30,29 @@ export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
+  const router = useRouter();
   const [error, setError] = React.useState<string | null>(null);
 
   async function handleSubmit(formData: FormData) {
     setError(null);
     try {
       const result = await loginAction(formData);
-      if (result?.error) {
+
+      if (result.error) {
         setError(result.error);
         toast.error(result.error);
+        return;
       }
+
+      if (!result.redirectTo) {
+        const message = "Đã xảy ra lỗi khi đăng nhập. Vui lòng thử lại.";
+        setError(message);
+        toast.error(message);
+        return;
+      }
+
+      router.replace(result.redirectTo);
+      router.refresh();
     } catch {
       const message =
         "Không thể kết nối máy chủ. Vui lòng kiểm tra kết nối mạng và thử lại.";
