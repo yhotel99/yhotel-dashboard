@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { FileSpreadsheet } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { DASHBOARD_URLS, USER_ROLE } from "@/lib/constants";
+import { DASHBOARD_URLS } from "@/lib/constants";
+import { canViewAllBranches } from "@/lib/branch";
 import { InvoiceReconcileTool } from "@/components/tools/invoice-reconcile";
 
 export default async function InvoiceReconcilePage() {
@@ -17,7 +18,7 @@ export default async function InvoiceReconcilePage() {
     .eq("id", user.id)
     .single();
 
-  if (profile?.role !== USER_ROLE.ADMIN) {
+  if (!profile || !canViewAllBranches(profile.role)) {
     redirect(DASHBOARD_URLS.DASHBOARD);
   }
 

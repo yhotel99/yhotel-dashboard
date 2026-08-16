@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 import { createClient } from "@/lib/supabase/server";
-import { USER_ROLE } from "@/lib/constants";
 import { resolveReportBranchId } from "@/lib/reports/branch-filter";
+import { canViewAllBranches } from "@/lib/branch";
 import { getBookingsListWithPagination } from "@/services/bookings";
 import type { BookingRecord } from "@/lib/types";
 import {
@@ -30,11 +30,11 @@ async function requireAdminUser() {
     .select("role")
     .eq("id", user.id)
     .single();
-  if (profile?.role !== USER_ROLE.ADMIN) {
+  if (!profile || !canViewAllBranches(profile.role)) {
     return {
       ok: false as const,
       status: 403,
-      message: "Chỉ admin mới được đối soát Excel",
+      message: "Chỉ admin và quản lý mới được đối soát Excel",
     };
   }
   return { ok: true as const, supabase, userId: user.id };
