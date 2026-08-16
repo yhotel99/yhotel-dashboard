@@ -20,8 +20,8 @@ import {
   allNavItems,
   DASHBOARD_URLS,
   SIDEBAR_URLS,
-  USER_ROLE,
 } from "@/lib/constants";
+import { canViewAllBranches } from "@/lib/branch";
 import Image from "next/image";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -43,7 +43,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       url,
       icon,
     }));
-    if (profile?.role === USER_ROLE.ADMIN) {
+    if (profile && canViewAllBranches(profile.role)) {
       items.push({
         title: "Đối soát Excel",
         url: DASHBOARD_URLS.INVOICE_RECONCILE,
@@ -51,7 +51,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       });
     }
     return items;
-  }, [filteredNavItems, profile?.role]);
+  }, [filteredNavItems, profile]);
 
   // Get first allowed page for logo link (fallback to first item or dashboard)
   const logoLink = React.useMemo(() => {
