@@ -8,6 +8,7 @@ import {
   IconReceiptRefund,
   IconNews,
   IconHistory,
+  IconQrcode,
   IconFileText,
   IconTicket,
   IconWifi,
@@ -154,6 +155,27 @@ export const bookingStatusLabels: Record<
   [BOOKING_STATUS.CHECKED_IN]: "Đã check-in",
   [BOOKING_STATUS.CHECKED_OUT]: "Đã check-out",
   [BOOKING_STATUS.CANCELLED]: "Đã hủy",
+};
+
+export const CHECKOUT_SESSION_STATUS = {
+  PENDING: "pending",
+  EXPIRED: "expired",
+  COMPLETED: "completed",
+  FAILED: "failed",
+  NEEDS_ACTION: "needs_action",
+} as const;
+
+export type CheckoutSessionStatus =
+  (typeof CHECKOUT_SESSION_STATUS)[keyof typeof CHECKOUT_SESSION_STATUS];
+
+export const checkoutSessionStatusLabels: Record<
+  Exclude<CheckoutSessionStatus, "needs_action">,
+  string
+> = {
+  [CHECKOUT_SESSION_STATUS.PENDING]: "Đang chờ",
+  [CHECKOUT_SESSION_STATUS.EXPIRED]: "Hết hạn",
+  [CHECKOUT_SESSION_STATUS.COMPLETED]: "Đã tạo booking",
+  [CHECKOUT_SESSION_STATUS.FAILED]: "Thất bại",
 };
 
 /**
@@ -337,6 +359,7 @@ export const SIDEBAR_URLS = {
   CUSTOMERS: "/dashboard/customers",
   PAYMENTS: "/dashboard/payments",
   PAYMENT_LOGS: "/dashboard/payment-logs",
+  CHECKOUT_SESSIONS: "/dashboard/checkout-sessions",
   REFUND_REQUESTS: "/dashboard/refund-requests",
   AUDIT_LOGS: "/dashboard/audit-logs",
   GALLERY: "/dashboard/gallery",
@@ -473,6 +496,7 @@ export const PATH_TO_RESOURCE: Record<string, string> = {
   [SIDEBAR_URLS.CUSTOMERS]: "customers",
   [SIDEBAR_URLS.PAYMENTS]: "payments",
   [SIDEBAR_URLS.PAYMENT_LOGS]: "payment-logs",
+  [SIDEBAR_URLS.CHECKOUT_SESSIONS]: "checkout-sessions",
   [SIDEBAR_URLS.REFUND_REQUESTS]: "refund-requests",
   [SIDEBAR_URLS.AUDIT_LOGS]: "audit-logs",
   [SIDEBAR_URLS.GALLERY]: "gallery",
@@ -551,6 +575,12 @@ export const allNavItems = [
     resource: "payment-logs",
   },
   {
+    title: "Phiên thanh toán online",
+    url: SIDEBAR_URLS.CHECKOUT_SESSIONS,
+    icon: IconQrcode,
+    resource: "checkout-sessions",
+  },
+  {
     title: "Hoàn Tiền",
     url: SIDEBAR_URLS.REFUND_REQUESTS,
     icon: IconReceiptRefund,
@@ -616,6 +646,7 @@ export const DASHBOARD_URLS = {
   PAYMENTS: "/dashboard/payments",
   VOUCHERS: "/dashboard/vouchers",
   PAYMENT_LOGS: "/dashboard/payment-logs",
+  CHECKOUT_SESSIONS: "/dashboard/checkout-sessions",
   REFUND_REQUESTS: "/dashboard/refund-requests",
   AUDIT_LOGS: "/dashboard/audit-logs",
   GALLERY: "/dashboard/gallery",

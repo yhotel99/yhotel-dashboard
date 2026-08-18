@@ -1,6 +1,10 @@
 import { parse, formatISO, format, parseISO } from "date-fns";
-import { CUSTOMER_ERROR_PATTERNS } from "@/lib/constants";
-import type { BookingRoomNumbersSlice } from "@/lib/types";
+import { CUSTOMER_ERROR_PATTERNS, roomTypeLabels } from "@/lib/constants";
+import type {
+  BookingRoomNumbersSlice,
+  CheckoutSessionRoom,
+  RoomType,
+} from "@/lib/types";
 
 // 🎨 Hàm tạo màu gradient ổn định dựa vào user.id
 export function generateGradient(id: string) {
@@ -206,6 +210,54 @@ export function formatRoomNumbersWithTypeNameFallback(
   if (n !== "-") return n;
   const name = slice.rooms?.name?.trim();
   return name || "-";
+}
+
+function checkoutSessionRoomTypeLabel(room: CheckoutSessionRoom): string {
+  const type = room.room_type;
+  if (type && type in roomTypeLabels) {
+    return roomTypeLabels[type as RoomType];
+  }
+  return room.name?.trim() || room.category_code?.trim() || "";
+}
+
+function formatCheckoutSessionRoomPart(
+  room: CheckoutSessionRoom,
+  roomNumberById: Readonly<Record<string, string>> | undefined,
+  includeAmount: boolean
+): string {
+  const number = (
+    roomNumberById?.[room.id] ||
+    room.room_number ||
+    ""
+  ).trim();
+  const typeLabel = checkoutSessionRoomTypeLabel(room);
+  const nights =
+    room.number_of_nights > 0 ? `${room.number_of_nights} đêm` : "";
+  const parts = [number, typeLabel, nights].filter(Boolean);
+  if (includeAmount && room.amount > 0) {
+    parts.push(formatCurrency(room.amount));
+  }
+  return parts.join(" · ");
+}
+
+/**
+ * Một chuỗi phòng cho bảng checkout_sessions: số · loại · số đêm.
+ * Lookup số phòng từ bảng rooms khi có; tooltip nên gọi với includeAmount.
+ */
+export function formatCheckoutSessionRoomsLabel(
+  rooms: CheckoutSessionRoom[],
+  roomNumberById?: Readonly<Record<string, string>>,
+  options?: { includeAmount?: boolean }
+): string {
+  if (!rooms.length) return "-";
+  const includeAmount = options?.includeAmount === true;
+  const labels = rooms
+    .map((room) =>
+      formatCheckoutSessionRoomPart(room, roomNumberById, includeAmount)
+    )
+    .filter(Boolean);
+  if (labels.length === 0) return "-";
+  return includeAmount ? labels.join("\n") : labels.join("; ");
 }
 
 /**

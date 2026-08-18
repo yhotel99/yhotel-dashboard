@@ -5,6 +5,7 @@ insert into permissions (name, description) values
   ('view:rooms', 'View rooms management page'),
   ('view:payments', 'View payments management page'),
   ('view:payment-logs', 'View payment logs page'),
+  ('view:checkout-sessions', 'View online checkout sessions and create bookings from expired sessions'),
   ('view:reports', 'View reports page'),
   ('view:gallery', 'View gallery management page'),
   ('view:blogs', 'View blogs management page'),
@@ -29,6 +30,7 @@ where name in (
   'view:rooms',
   'view:payments',
   'view:payment-logs',
+  'view:checkout-sessions',
   'view:reports',
   'view:gallery',
   'view:blogs',
@@ -53,6 +55,7 @@ where name in (
   'view:rooms',
   'view:payments',
   'view:payment-logs',
+  'view:checkout-sessions',
   'view:reports',
   'view:gallery',
   'view:blogs',
@@ -73,6 +76,7 @@ where name in (
   'view:reservations',
   'view:bookings',
   'view:customers',
+  'view:checkout-sessions',
   'assign:bookings'
 )
 on conflict (role, permission_id) do nothing;

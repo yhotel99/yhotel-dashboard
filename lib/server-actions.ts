@@ -22,6 +22,8 @@ const PATH_TO_RESOURCE: Record<string, string> = {
   [DASHBOARD_URLS.CUSTOMERS]: "customers",
   [DASHBOARD_URLS.PAYMENTS]: "payments",
   [DASHBOARD_URLS.VOUCHERS]: "vouchers",
+  [DASHBOARD_URLS.PAYMENT_LOGS]: "payment-logs",
+  [DASHBOARD_URLS.CHECKOUT_SESSIONS]: "checkout-sessions",
   [DASHBOARD_URLS.REFUND_REQUESTS]: "refund-requests",
   [DASHBOARD_URLS.GALLERY]: "gallery",
   [DASHBOARD_URLS.USERS]: "users",
