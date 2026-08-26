@@ -48,16 +48,21 @@ export function AuditLogsContent() {
         <CardContent>
           <div className="flex gap-4 items-end">
             <div className="flex-1">
-              <Label htmlFor="entity-id">Tìm theo ID (Booking, Refund, Room, Payment)</Label>
+              <Label htmlFor="entity-id">Tìm theo mã booking (YH...), hoặc ID Refund/Room/Payment</Label>
               <Input
                 id="entity-id"
-                placeholder="Nhập ID để tìm kiếm..."
+                placeholder="Ví dụ: YH2026..., hoặc dán ID liên quan..."
                 value={entityId}
                 onChange={(e) => setEntityId(e.target.value)}
                 className='mt-2'
               />
               {entityId && entityId !== debouncedEntityId && (
                 <p className="text-xs text-muted-foreground mt-1">Đang tìm kiếm...</p>
+              )}
+              {debouncedEntityId && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Hỗ trợ tìm theo mã booking YH (tự quy đổi sang UUID) và các ID liên quan trong metadata.
+                </p>
               )}
             </div>
           </div>

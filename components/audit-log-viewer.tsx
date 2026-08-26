@@ -13,6 +13,8 @@ interface AuditLog {
   action: string;
   entity_type: string;
   entity_id: string;
+  booking_id?: string | null;
+  booking_code?: string | null;
   branch_id?: string | null;
   user_email: string;
   changes?: {
@@ -78,6 +80,24 @@ export function AuditLogViewer({ entityType, entityId, branchId = null, limit = 
     limit: limit,
     totalPages: 0,
   });
+
+  const getEntityDisplay = (log: AuditLog) => {
+    const entityLabelMap: Record<string, string> = {
+      booking: 'booking',
+      refund: 'yêu cầu hoàn tiền',
+      room: 'phòng',
+      payment: 'thanh toán',
+    };
+
+    const entityLabel = entityLabelMap[log.entity_type] || log.entity_type;
+    const bookingCode = log.booking_code?.trim();
+
+    if (bookingCode) {
+      return `${entityLabel} ${bookingCode}`;
+    }
+
+    return `${entityLabel} #${log.entity_id.slice(0, 8)}`;
+  };
 
   const fetchLogs = useCallback(async (page: number) => {
     try {
@@ -174,9 +194,14 @@ export function AuditLogViewer({ entityType, entityId, branchId = null, limit = 
                 <div className="text-sm text-gray-700 mb-1">
                   <span className="font-medium">{log.user_email}</span>
                   {' '}đã thực hiện thay đổi trên{' '}
-                  <span className="font-medium">{log.entity_type}</span>
-                  {' '}ID: <code className="bg-gray-100 px-1 rounded">{log.entity_id}</code>
+                  <span className="font-medium">{getEntityDisplay(log)}</span>
                 </div>
+
+                {expandedLog === log.id && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    Mã kỹ thuật: <code className="bg-gray-100 px-1 rounded">{log.entity_id}</code>
+                  </div>
+                )}
 
                 {log.metadata && Object.keys(log.metadata).length > 0 && (
                   <div className="text-xs text-gray-600 mt-2">
