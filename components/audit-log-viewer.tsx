@@ -15,6 +15,8 @@ interface AuditLog {
   entity_id: string;
   booking_id?: string | null;
   booking_code?: string | null;
+  room_name?: string | null;
+  room_number?: string | null;
   branch_id?: string | null;
   user_email: string;
   changes?: {
@@ -23,6 +25,17 @@ interface AuditLog {
   };
   metadata?: Record<string, unknown>;
   created_at: string;
+}
+
+const currencyFormatter = new Intl.NumberFormat('vi-VN', {
+  style: 'currency',
+  currency: 'VND',
+  maximumFractionDigits: 0,
+});
+
+function formatMoney(value: unknown): string | null {
+  if (typeof value !== 'number' || Number.isNaN(value)) return null;
+  return currencyFormatter.format(value);
 }
 
 interface Pagination {
@@ -82,21 +95,61 @@ export function AuditLogViewer({ entityType, entityId, branchId = null, limit = 
   });
 
   const getEntityDisplay = (log: AuditLog) => {
-    const entityLabelMap: Record<string, string> = {
-      booking: 'booking',
-      refund: 'yêu cầu hoàn tiền',
-      room: 'phòng',
-      payment: 'thanh toán',
-    };
-
-    const entityLabel = entityLabelMap[log.entity_type] || log.entity_type;
     const bookingCode = log.booking_code?.trim();
 
-    if (bookingCode) {
-      return `${entityLabel} ${bookingCode}`;
+    if (log.entity_type === 'room') {
+      const roomNumber = log.room_number?.trim();
+      const roomName = log.room_name?.trim();
+      if (roomNumber && roomName && roomNumber !== roomName) {
+        return `phòng ${roomNumber} (${roomName})`;
+      }
+      if (roomNumber || roomName) {
+        return `phòng ${roomNumber || roomName}`;
+      }
+      return `phòng #${log.entity_id.slice(0, 8)}`;
     }
 
-    return `${entityLabel} #${log.entity_id.slice(0, 8)}`;
+    if (log.entity_type === 'refund') {
+      return bookingCode
+        ? `hoàn tiền booking ${bookingCode}`
+        : `yêu cầu hoàn tiền #${log.entity_id.slice(0, 8)}`;
+    }
+
+    if (log.entity_type === 'payment') {
+      return bookingCode
+        ? `thanh toán booking ${bookingCode}`
+        : `thanh toán #${log.entity_id.slice(0, 8)}`;
+    }
+
+    if (log.entity_type === 'booking') {
+      return bookingCode
+        ? `booking ${bookingCode}`
+        : `booking #${log.entity_id.slice(0, 8)}`;
+    }
+
+    return `${log.entity_type} #${log.entity_id.slice(0, 8)}`;
+  };
+
+  const getReadableSummary = (log: AuditLog): string[] => {
+    const lines: string[] = [];
+    const beforePrice = formatMoney(log.changes?.before?.price);
+    const afterPrice = formatMoney(log.changes?.after?.price);
+
+    if (log.action === 'price.update' && beforePrice && afterPrice) {
+      lines.push(`Giá: ${beforePrice} → ${afterPrice}`);
+      return lines;
+    }
+
+    if (log.entity_type === 'refund' && log.metadata) {
+      const amount = formatMoney(log.metadata.amount);
+      if (amount) lines.push(`Số tiền: ${amount}`);
+      if (typeof log.metadata.status === 'string') {
+        lines.push(`Trạng thái: ${log.metadata.status}`);
+      }
+      return lines;
+    }
+
+    return lines;
   };
 
   const fetchLogs = useCallback(async (page: number) => {
@@ -197,23 +250,19 @@ export function AuditLogViewer({ entityType, entityId, branchId = null, limit = 
                   <span className="font-medium">{getEntityDisplay(log)}</span>
                 </div>
 
-                {expandedLog === log.id && (
-                  <div className="text-xs text-gray-500 mt-1">
-                    Mã kỹ thuật: <code className="bg-gray-100 px-1 rounded">{log.entity_id}</code>
-                  </div>
-                )}
+                {(() => {
+                  const summary = getReadableSummary(log);
+                  if (summary.length === 0) return null;
+                  return (
+                    <div className="text-xs text-gray-600 mt-2 space-y-0.5">
+                      {summary.map((line) => (
+                        <div key={line}>{line}</div>
+                      ))}
+                    </div>
+                  );
+                })()}
 
-                {log.metadata && Object.keys(log.metadata).length > 0 && (
-                  <div className="text-xs text-gray-600 mt-2">
-                    {Object.entries(log.metadata).map(([key, value]) => (
-                      <div key={key}>
-                        <span className="font-medium">{key}:</span> {JSON.stringify(value)}
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {log.changes && (
+                {(log.changes || (log.metadata && Object.keys(log.metadata).length > 0)) && (
                   <button
                     onClick={() => setExpandedLog(expandedLog === log.id ? null : log.id)}
                     className="text-xs text-blue-600 hover:text-blue-800 mt-2"
@@ -222,21 +271,36 @@ export function AuditLogViewer({ entityType, entityId, branchId = null, limit = 
                   </button>
                 )}
 
-                {expandedLog === log.id && log.changes && (
-                  <div className="mt-3 grid grid-cols-2 gap-4 text-xs">
-                    {log.changes.before && (
-                      <div>
-                        <div className="font-medium text-gray-700 mb-1">Trước:</div>
-                        <pre className="bg-gray-100 p-2 rounded overflow-auto">
-                          {JSON.stringify(log.changes.before, null, 2)}
-                        </pre>
+                {expandedLog === log.id && (
+                  <div className="mt-3 space-y-3 text-xs">
+                    <div className="text-gray-500">
+                      Mã kỹ thuật: <code className="bg-gray-100 px-1 rounded">{log.entity_id}</code>
+                    </div>
+                    {log.changes && (
+                      <div className="grid grid-cols-2 gap-4">
+                        {log.changes.before && (
+                          <div>
+                            <div className="font-medium text-gray-700 mb-1">Trước:</div>
+                            <pre className="bg-gray-100 p-2 rounded overflow-auto">
+                              {JSON.stringify(log.changes.before, null, 2)}
+                            </pre>
+                          </div>
+                        )}
+                        {log.changes.after && (
+                          <div>
+                            <div className="font-medium text-gray-700 mb-1">Sau:</div>
+                            <pre className="bg-gray-100 p-2 rounded overflow-auto">
+                              {JSON.stringify(log.changes.after, null, 2)}
+                            </pre>
+                          </div>
+                        )}
                       </div>
                     )}
-                    {log.changes.after && (
+                    {log.metadata && Object.keys(log.metadata).length > 0 && (
                       <div>
-                        <div className="font-medium text-gray-700 mb-1">Sau:</div>
+                        <div className="font-medium text-gray-700 mb-1">Metadata:</div>
                         <pre className="bg-gray-100 p-2 rounded overflow-auto">
-                          {JSON.stringify(log.changes.after, null, 2)}
+                          {JSON.stringify(log.metadata, null, 2)}
                         </pre>
                       </div>
                     )}
