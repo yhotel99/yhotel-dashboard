@@ -506,109 +506,151 @@ export const PATH_TO_RESOURCE: Record<string, string> = {
   [SIDEBAR_URLS.SHIFTS]: "dashboard",
 };
 
+export const NAV_GROUP = {
+  OVERVIEW: "overview",
+  OPERATIONS: "operations",
+  FINANCE: "finance",
+  CONTENT: "content",
+  SYSTEM: "system",
+} as const;
+
+export type NavGroupId = (typeof NAV_GROUP)[keyof typeof NAV_GROUP];
+
+export const navGroupLabels: Record<NavGroupId, string> = {
+  [NAV_GROUP.OVERVIEW]: "Tổng quan",
+  [NAV_GROUP.OPERATIONS]: "Vận hành",
+  [NAV_GROUP.FINANCE]: "Thanh toán",
+  [NAV_GROUP.CONTENT]: "Nội dung",
+  [NAV_GROUP.SYSTEM]: "Hệ thống",
+};
+
+export const navGroupOrder: NavGroupId[] = [
+  NAV_GROUP.OVERVIEW,
+  NAV_GROUP.OPERATIONS,
+  NAV_GROUP.FINANCE,
+  NAV_GROUP.CONTENT,
+  NAV_GROUP.SYSTEM,
+];
+
 export const allNavItems = [
   {
-    title: "Tổng Quan",
+    title: "Tổng quan",
     url: SIDEBAR_URLS.DASHBOARD,
     icon: IconDashboard,
     resource: "dashboard",
+    group: NAV_GROUP.OVERVIEW,
   },
   {
     title: "Quản lý ca",
     url: SIDEBAR_URLS.SHIFTS,
     icon: IconCalendarWeek,
     resource: "dashboard",
+    group: NAV_GROUP.OVERVIEW,
   },
   {
-    title: "Hiệu Suất & Báo Cáo",
+    title: "Báo cáo",
     url: SIDEBAR_URLS.ANALYTICS,
     icon: IconChartBar,
     resource: "dashboard",
+    group: NAV_GROUP.OVERVIEW,
   },
   {
     title: "Chi nhánh",
     url: SIDEBAR_URLS.BRANCHES,
     icon: IconBuildingSkyscraper,
     resource: "branches",
+    group: NAV_GROUP.OPERATIONS,
   },
   {
-    title: "Phòng Khách Sạn",
+    title: "Phòng",
     url: SIDEBAR_URLS.ROOMS,
     icon: HotelIcon,
     resource: "rooms",
+    group: NAV_GROUP.OPERATIONS,
   },
   {
-    title: "Đặt Chỗ",
+    title: "Đặt chỗ",
     url: SIDEBAR_URLS.RESERVATION,
     icon: IconInnerShadowTop,
     resource: "reservations",
+    group: NAV_GROUP.OPERATIONS,
   },
   {
-    title: "Đơn Đặt Phòng",
+    title: "Đơn đặt phòng",
     url: SIDEBAR_URLS.BOOKINGS,
     icon: IconChartBar,
     resource: "bookings",
+    group: NAV_GROUP.OPERATIONS,
   },
-
   {
-    title: "Khách Hàng",
+    title: "Khách hàng",
     url: SIDEBAR_URLS.CUSTOMERS,
     icon: UserCircle,
     resource: "customers",
+    group: NAV_GROUP.OPERATIONS,
   },
   {
-    title: "Thanh Toán",
+    title: "Thanh toán",
     url: SIDEBAR_URLS.PAYMENTS,
     icon: IconCreditCard,
     resource: "payments",
+    group: NAV_GROUP.FINANCE,
   },
   {
     title: "Voucher",
     url: SIDEBAR_URLS.VOUCHERS,
     icon: IconTicket,
     resource: "vouchers",
+    group: NAV_GROUP.FINANCE,
   },
   {
-    title: "Lịch Sử Webhook",
-    url: SIDEBAR_URLS.PAYMENT_LOGS,
-    icon: IconHistory,
-    resource: "payment-logs",
-  },
-  {
-    title: "Phiên thanh toán online",
+    title: "Phiên online",
     url: SIDEBAR_URLS.CHECKOUT_SESSIONS,
     icon: IconQrcode,
     resource: "checkout-sessions",
+    group: NAV_GROUP.FINANCE,
   },
   {
-    title: "Hoàn Tiền",
+    title: "Hoàn tiền",
     url: SIDEBAR_URLS.REFUND_REQUESTS,
     icon: IconReceiptRefund,
     resource: "refund-requests",
+    group: NAV_GROUP.FINANCE,
   },
   {
-    title: "Nhật Ký Hệ Thống",
-    url: SIDEBAR_URLS.AUDIT_LOGS,
-    icon: IconFileText,
-    resource: "audit-logs",
+    title: "Webhook",
+    url: SIDEBAR_URLS.PAYMENT_LOGS,
+    icon: IconHistory,
+    resource: "payment-logs",
+    group: NAV_GROUP.FINANCE,
   },
   {
-    title: "Bộ Sưu Tập Ảnh",
+    title: "Thư viện ảnh",
     url: SIDEBAR_URLS.GALLERY,
     icon: Images,
     resource: "gallery",
+    group: NAV_GROUP.CONTENT,
   },
   {
     title: "Blog",
     url: "/dashboard/blogs",
     icon: IconNews,
     resource: "blogs",
+    group: NAV_GROUP.CONTENT,
   },
   {
-    title: "Người Dùng",
+    title: "Người dùng",
     url: SIDEBAR_URLS.USERS,
     icon: User2,
     resource: "users",
+    group: NAV_GROUP.SYSTEM,
+  },
+  {
+    title: "Nhật ký",
+    url: SIDEBAR_URLS.AUDIT_LOGS,
+    icon: IconFileText,
+    resource: "audit-logs",
+    group: NAV_GROUP.SYSTEM,
   },
 ];
 

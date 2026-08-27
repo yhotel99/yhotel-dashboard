@@ -252,15 +252,14 @@ function InfoTip({ content }: { content: string }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <button
-          type="button"
+        <span
           className="inline-flex cursor-help rounded-full text-muted-foreground hover:text-foreground"
           aria-label="Giải thích"
           onClick={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
         >
-          <IconInfoCircle className="size-3.5 shrink-0" />
-        </button>
+          <IconInfoCircle className="size-3.5 shrink-0" aria-hidden />
+        </span>
       </TooltipTrigger>
       <TooltipContent className="max-w-xs text-left text-xs leading-snug">
         {content}

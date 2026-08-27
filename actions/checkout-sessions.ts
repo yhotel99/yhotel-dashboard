@@ -70,10 +70,12 @@ export async function finalizeCheckoutSessionAction(
     }
 
     const supabase = await createClient();
+    // Pass null so RPC keeps session.payment_method (bank_transfer / onepay / …).
+    // Hardcoding bank_transfer would overwrite OnePay sessions.
     const { data, error } = await supabase.rpc("finalize_checkout_session", {
       p_session_id: sessionId,
       p_payment_code: null,
-      p_payment_method: "bank_transfer",
+      p_payment_method: null,
     });
 
     if (error) {
