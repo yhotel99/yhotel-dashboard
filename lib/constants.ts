@@ -583,6 +583,13 @@ export const allNavItems = [
     group: NAV_GROUP.OPERATIONS,
   },
   {
+    title: "Phiên online",
+    url: SIDEBAR_URLS.CHECKOUT_SESSIONS,
+    icon: IconQrcode,
+    resource: "checkout-sessions",
+    group: NAV_GROUP.OPERATIONS,
+  },
+  {
     title: "Khách hàng",
     url: SIDEBAR_URLS.CUSTOMERS,
     icon: UserCircle,
@@ -601,13 +608,6 @@ export const allNavItems = [
     url: SIDEBAR_URLS.VOUCHERS,
     icon: IconTicket,
     resource: "vouchers",
-    group: NAV_GROUP.FINANCE,
-  },
-  {
-    title: "Phiên online",
-    url: SIDEBAR_URLS.CHECKOUT_SESSIONS,
-    icon: IconQrcode,
-    resource: "checkout-sessions",
     group: NAV_GROUP.FINANCE,
   },
   {
