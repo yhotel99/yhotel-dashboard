@@ -10,6 +10,7 @@ import {
 } from "@/lib/functions";
 import type { CheckoutSessionRecord } from "@/lib/types";
 import { SIDEBAR_URLS } from "@/lib/constants";
+import { getBranchTableLabel } from "@/lib/branch";
 import { PaymentLogStatusBadge } from "@/components/payment-logs/status";
 import { CheckoutSessionStatusBadge } from "./status";
 import { CheckoutSessionActionsCell } from "./actions-cell";
@@ -22,6 +23,7 @@ import {
 export const CHECKOUT_SESSION_COLUMNS = {
   PAYMENT_CODE: { accessorKey: "Mã thanh toán", header: "Mã thanh toán" },
   GUEST: { accessorKey: "Khách hàng", header: "Khách hàng" },
+  BRANCH: { accessorKey: "Chi nhánh", header: "Chi nhánh" },
   PHONE: { accessorKey: "Số điện thoại", header: "SĐT" },
   ROOMS: { accessorKey: "Phòng", header: "Phòng" },
   CHECK_IN: { accessorKey: "Check-in", header: "Check-in" },
@@ -37,8 +39,10 @@ export const CHECKOUT_SESSION_COLUMNS = {
 export function createCheckoutSessionColumns(options?: {
   onCreated?: () => void;
   roomNumberById?: Readonly<Record<string, string>>;
+  branchNameById?: Readonly<Record<string, string>>;
 }): ColumnDef<CheckoutSessionRecord>[] {
   const roomNumberById = options?.roomNumberById;
+  const branchNameById = options?.branchNameById;
   return [
     {
       accessorKey: CHECKOUT_SESSION_COLUMNS.PAYMENT_CODE.accessorKey,
@@ -67,6 +71,31 @@ export function createCheckoutSessionColumns(options?: {
       cell: ({ row }) => row.original.guest_name || "-",
       size: 150,
       minSize: 120,
+    },
+    {
+      accessorKey: CHECKOUT_SESSION_COLUMNS.BRANCH.accessorKey,
+      header: CHECKOUT_SESSION_COLUMNS.BRANCH.header,
+      cell: ({ row }) => {
+        const branchId = row.original.branch_id;
+        const fromId =
+          branchNameById && branchId
+            ? getBranchTableLabel(branchId, branchNameById)
+            : "—";
+        const label =
+          fromId !== "—" ? fromId : row.original.branch_code?.trim() || "—";
+        return (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="max-w-[140px] truncate block">{label}</span>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{label}</p>
+            </TooltipContent>
+          </Tooltip>
+        );
+      },
+      size: 120,
+      minSize: 90,
     },
     {
       accessorKey: CHECKOUT_SESSION_COLUMNS.PHONE.accessorKey,

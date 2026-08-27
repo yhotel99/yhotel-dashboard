@@ -11,6 +11,7 @@ import {
 import { useDebouncedUrlSearch } from "@/hooks/use-debounced-url-search";
 import { useBranch } from "@/contexts/branch-context";
 import { useRoomNumberLookup } from "@/hooks/use-room-number-lookup";
+import { buildBranchNameById } from "@/lib/branch";
 import {
   createCheckoutSessionColumns,
   CHECKOUT_SESSION_COLUMNS,
@@ -36,7 +37,11 @@ export function CheckoutSessionsContent({
   initialData: CheckoutSessionsResponse;
 }) {
   const { searchParams, pushSearchParams } = useShallowSearchParams();
-  const { filterBranchId } = useBranch();
+  const { filterBranchId, branches } = useBranch();
+  const branchNameById = useMemo(
+    () => buildBranchNameById(branches),
+    [branches]
+  );
 
   const page = useMemo(() => {
     const pageParam = searchParams.get("page");
@@ -152,11 +157,12 @@ export function CheckoutSessionsContent({
     () =>
       createCheckoutSessionColumns({
         roomNumberById,
+        branchNameById,
         onCreated: () => {
           void mutate();
         },
       }),
-    [mutate, roomNumberById]
+    [mutate, roomNumberById, branchNameById]
   );
 
   const statusSelectValue = status || CHECKOUT_SESSION_STATUS.NEEDS_ACTION;
@@ -226,6 +232,7 @@ export function CheckoutSessionsContent({
           onSearchChange={setLocalSearch}
           initialColumnVisibility={{
             [CHECKOUT_SESSION_COLUMNS.PHONE.accessorKey]: false,
+            [CHECKOUT_SESSION_COLUMNS.BRANCH.accessorKey]: false,
           }}
         />
       </div>
