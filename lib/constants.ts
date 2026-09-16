@@ -8,6 +8,7 @@ import {
   IconReceiptRefund,
   IconNews,
   IconHistory,
+  IconQrcode,
   IconFileText,
   IconTicket,
   IconWifi,
@@ -156,6 +157,27 @@ export const bookingStatusLabels: Record<
   [BOOKING_STATUS.CANCELLED]: "Đã hủy",
 };
 
+export const CHECKOUT_SESSION_STATUS = {
+  PENDING: "pending",
+  EXPIRED: "expired",
+  COMPLETED: "completed",
+  FAILED: "failed",
+  NEEDS_ACTION: "needs_action",
+} as const;
+
+export type CheckoutSessionStatus =
+  (typeof CHECKOUT_SESSION_STATUS)[keyof typeof CHECKOUT_SESSION_STATUS];
+
+export const checkoutSessionStatusLabels: Record<
+  Exclude<CheckoutSessionStatus, "needs_action">,
+  string
+> = {
+  [CHECKOUT_SESSION_STATUS.PENDING]: "Đang chờ",
+  [CHECKOUT_SESSION_STATUS.EXPIRED]: "Hết hạn",
+  [CHECKOUT_SESSION_STATUS.COMPLETED]: "Đã tạo booking",
+  [CHECKOUT_SESSION_STATUS.FAILED]: "Thất bại",
+};
+
 /**
  * Payment type values
  */
@@ -292,8 +314,13 @@ export const refundRequestStatusLabels: Record<
 export const CUSTOMER_SOURCE = {
   WEBSITE: "website",
   AGODA: "agoda",
+  EXPEDIA: "expedia",
+  TRIP: "trip",
   BOOKING: "booking",
   TRAVELOKA: "traveloka",
+  FACEBOOK: "facebook",
+  TIKTOK: "tiktok",
+  HOTLINE_ZALO: "hotline_zalo",
   OTHER: "khác",
 } as const;
 
@@ -306,8 +333,13 @@ export const customerSourceLabels: Record<
 > = {
   [CUSTOMER_SOURCE.WEBSITE]: "Website",
   [CUSTOMER_SOURCE.AGODA]: "Agoda",
+  [CUSTOMER_SOURCE.EXPEDIA]: "Expedia",
+  [CUSTOMER_SOURCE.TRIP]: "Trip",
   [CUSTOMER_SOURCE.BOOKING]: "Booking",
   [CUSTOMER_SOURCE.TRAVELOKA]: "Traveloka",
+  [CUSTOMER_SOURCE.FACEBOOK]: "Facebook",
+  [CUSTOMER_SOURCE.TIKTOK]: "Tiktok",
+  [CUSTOMER_SOURCE.HOTLINE_ZALO]: "Hotline/zalo",
   [CUSTOMER_SOURCE.OTHER]: "Khác",
 };
 
@@ -337,6 +369,7 @@ export const SIDEBAR_URLS = {
   CUSTOMERS: "/dashboard/customers",
   PAYMENTS: "/dashboard/payments",
   PAYMENT_LOGS: "/dashboard/payment-logs",
+  CHECKOUT_SESSIONS: "/dashboard/checkout-sessions",
   REFUND_REQUESTS: "/dashboard/refund-requests",
   AUDIT_LOGS: "/dashboard/audit-logs",
   GALLERY: "/dashboard/gallery",
@@ -473,6 +506,7 @@ export const PATH_TO_RESOURCE: Record<string, string> = {
   [SIDEBAR_URLS.CUSTOMERS]: "customers",
   [SIDEBAR_URLS.PAYMENTS]: "payments",
   [SIDEBAR_URLS.PAYMENT_LOGS]: "payment-logs",
+  [SIDEBAR_URLS.CHECKOUT_SESSIONS]: "checkout-sessions",
   [SIDEBAR_URLS.REFUND_REQUESTS]: "refund-requests",
   [SIDEBAR_URLS.AUDIT_LOGS]: "audit-logs",
   [SIDEBAR_URLS.GALLERY]: "gallery",
@@ -482,103 +516,151 @@ export const PATH_TO_RESOURCE: Record<string, string> = {
   [SIDEBAR_URLS.SHIFTS]: "dashboard",
 };
 
+export const NAV_GROUP = {
+  OVERVIEW: "overview",
+  OPERATIONS: "operations",
+  FINANCE: "finance",
+  CONTENT: "content",
+  SYSTEM: "system",
+} as const;
+
+export type NavGroupId = (typeof NAV_GROUP)[keyof typeof NAV_GROUP];
+
+export const navGroupLabels: Record<NavGroupId, string> = {
+  [NAV_GROUP.OVERVIEW]: "Tổng quan",
+  [NAV_GROUP.OPERATIONS]: "Vận hành",
+  [NAV_GROUP.FINANCE]: "Thanh toán",
+  [NAV_GROUP.CONTENT]: "Nội dung",
+  [NAV_GROUP.SYSTEM]: "Hệ thống",
+};
+
+export const navGroupOrder: NavGroupId[] = [
+  NAV_GROUP.OVERVIEW,
+  NAV_GROUP.OPERATIONS,
+  NAV_GROUP.FINANCE,
+  NAV_GROUP.CONTENT,
+  NAV_GROUP.SYSTEM,
+];
+
 export const allNavItems = [
   {
-    title: "Tổng Quan",
+    title: "Tổng quan",
     url: SIDEBAR_URLS.DASHBOARD,
     icon: IconDashboard,
     resource: "dashboard",
+    group: NAV_GROUP.OVERVIEW,
   },
   {
     title: "Quản lý ca",
     url: SIDEBAR_URLS.SHIFTS,
     icon: IconCalendarWeek,
     resource: "dashboard",
+    group: NAV_GROUP.OVERVIEW,
   },
   {
-    title: "Hiệu Suất & Báo Cáo",
+    title: "Báo cáo",
     url: SIDEBAR_URLS.ANALYTICS,
     icon: IconChartBar,
     resource: "dashboard",
+    group: NAV_GROUP.OVERVIEW,
   },
   {
     title: "Chi nhánh",
     url: SIDEBAR_URLS.BRANCHES,
     icon: IconBuildingSkyscraper,
     resource: "branches",
+    group: NAV_GROUP.OPERATIONS,
   },
   {
-    title: "Phòng Khách Sạn",
+    title: "Phòng",
     url: SIDEBAR_URLS.ROOMS,
     icon: HotelIcon,
     resource: "rooms",
+    group: NAV_GROUP.OPERATIONS,
   },
   {
-    title: "Đặt Chỗ",
+    title: "Đặt chỗ",
     url: SIDEBAR_URLS.RESERVATION,
     icon: IconInnerShadowTop,
     resource: "reservations",
+    group: NAV_GROUP.OPERATIONS,
   },
   {
-    title: "Đơn Đặt Phòng",
+    title: "Đơn đặt phòng",
     url: SIDEBAR_URLS.BOOKINGS,
     icon: IconChartBar,
     resource: "bookings",
+    group: NAV_GROUP.OPERATIONS,
   },
-
   {
-    title: "Khách Hàng",
+    title: "Phiên online",
+    url: SIDEBAR_URLS.CHECKOUT_SESSIONS,
+    icon: IconQrcode,
+    resource: "checkout-sessions",
+    group: NAV_GROUP.OPERATIONS,
+  },
+  {
+    title: "Khách hàng",
     url: SIDEBAR_URLS.CUSTOMERS,
     icon: UserCircle,
     resource: "customers",
+    group: NAV_GROUP.OPERATIONS,
   },
   {
-    title: "Thanh Toán",
+    title: "Thanh toán",
     url: SIDEBAR_URLS.PAYMENTS,
     icon: IconCreditCard,
     resource: "payments",
+    group: NAV_GROUP.FINANCE,
   },
   {
     title: "Voucher",
     url: SIDEBAR_URLS.VOUCHERS,
     icon: IconTicket,
     resource: "vouchers",
+    group: NAV_GROUP.FINANCE,
   },
   {
-    title: "Lịch Sử Webhook",
-    url: SIDEBAR_URLS.PAYMENT_LOGS,
-    icon: IconHistory,
-    resource: "payment-logs",
-  },
-  {
-    title: "Hoàn Tiền",
+    title: "Hoàn tiền",
     url: SIDEBAR_URLS.REFUND_REQUESTS,
     icon: IconReceiptRefund,
     resource: "refund-requests",
+    group: NAV_GROUP.FINANCE,
   },
   {
-    title: "Nhật Ký Hệ Thống",
-    url: SIDEBAR_URLS.AUDIT_LOGS,
-    icon: IconFileText,
-    resource: "audit-logs",
+    title: "Webhook",
+    url: SIDEBAR_URLS.PAYMENT_LOGS,
+    icon: IconHistory,
+    resource: "payment-logs",
+    group: NAV_GROUP.FINANCE,
   },
   {
-    title: "Bộ Sưu Tập Ảnh",
+    title: "Thư viện ảnh",
     url: SIDEBAR_URLS.GALLERY,
     icon: Images,
     resource: "gallery",
+    group: NAV_GROUP.CONTENT,
   },
   {
     title: "Blog",
     url: "/dashboard/blogs",
     icon: IconNews,
     resource: "blogs",
+    group: NAV_GROUP.CONTENT,
   },
   {
-    title: "Người Dùng",
+    title: "Người dùng",
     url: SIDEBAR_URLS.USERS,
     icon: User2,
     resource: "users",
+    group: NAV_GROUP.SYSTEM,
+  },
+  {
+    title: "Nhật ký",
+    url: SIDEBAR_URLS.AUDIT_LOGS,
+    icon: IconFileText,
+    resource: "audit-logs",
+    group: NAV_GROUP.SYSTEM,
   },
 ];
 
@@ -616,6 +698,7 @@ export const DASHBOARD_URLS = {
   PAYMENTS: "/dashboard/payments",
   VOUCHERS: "/dashboard/vouchers",
   PAYMENT_LOGS: "/dashboard/payment-logs",
+  CHECKOUT_SESSIONS: "/dashboard/checkout-sessions",
   REFUND_REQUESTS: "/dashboard/refund-requests",
   AUDIT_LOGS: "/dashboard/audit-logs",
   GALLERY: "/dashboard/gallery",

@@ -1,18 +1,23 @@
 import { CUSTOMER_SOURCE } from "@/lib/constants";
 import type { RevenueBookingRow } from "@/lib/reports/revenue-dashboard-math";
 
-export function normalizeCustomerSource(raw: string | null | undefined): string {
+type CustomerSourceValue =
+  (typeof CUSTOMER_SOURCE)[keyof typeof CUSTOMER_SOURCE];
+
+export function normalizeCustomerSource(
+  raw: string | null | undefined
+): CustomerSourceValue {
   const s = raw?.toLowerCase()?.trim() || "";
   if (!s) return CUSTOMER_SOURCE.OTHER;
-  if (s === CUSTOMER_SOURCE.WEBSITE) return CUSTOMER_SOURCE.WEBSITE;
-  if (s === CUSTOMER_SOURCE.AGODA) return CUSTOMER_SOURCE.AGODA;
-  if (s === CUSTOMER_SOURCE.TRAVELOKA) return CUSTOMER_SOURCE.TRAVELOKA;
   if (
     s === CUSTOMER_SOURCE.BOOKING ||
     s.includes("booking.com") ||
     s.includes("booking_com")
   ) {
     return CUSTOMER_SOURCE.BOOKING;
+  }
+  for (const value of Object.values(CUSTOMER_SOURCE)) {
+    if (s === value) return value;
   }
   return CUSTOMER_SOURCE.OTHER;
 }

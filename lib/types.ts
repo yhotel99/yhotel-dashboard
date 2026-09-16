@@ -786,6 +786,57 @@ export type PaymentLogsResponse = {
   pagination: PaginationMeta;
 };
 
+export type CheckoutSessionStatusValue =
+  | "pending"
+  | "expired"
+  | "completed"
+  | "failed";
+
+export type CheckoutSessionRoom = {
+  id: string;
+  name: string | null;
+  room_number: string | null;
+  room_type: RoomType | null;
+  category_code: string | null;
+  check_in: string | null;
+  check_out: string | null;
+  number_of_nights: number;
+  amount: number;
+};
+
+export type CheckoutSessionRecord = {
+  id: string;
+  payment_code: string;
+  customer_id: string;
+  branch_code: string | null;
+  branch_id: string | null;
+  check_in: string;
+  check_out: string;
+  number_of_nights: number;
+  total_guests: number;
+  notes: string | null;
+  total_amount: number;
+  final_amount: number;
+  payment_method: string;
+  status: CheckoutSessionStatusValue;
+  expires_at: string;
+  booking_id: string | null;
+  failure_reason: string | null;
+  guest_name: string | null;
+  guest_email: string | null;
+  guest_phone: string | null;
+  created_at: string;
+  updated_at: string;
+  rooms: CheckoutSessionRoom[];
+  payment_log_status: string | null;
+  payment_log_id: string | null;
+};
+
+export type CheckoutSessionsResponse = {
+  data: CheckoutSessionRecord[];
+  pagination: PaginationMeta;
+};
+
 export type ProfilesResponse = {
   data: Profile[];
   pagination: PaginationMeta;

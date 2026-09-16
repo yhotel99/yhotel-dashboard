@@ -366,21 +366,11 @@ export function EditCustomerDialog({
                   <SelectValue placeholder="Chọn nguồn khách hàng" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={CUSTOMER_SOURCE.WEBSITE}>
-                    {customerSourceLabels[CUSTOMER_SOURCE.WEBSITE]}
-                  </SelectItem>
-                  <SelectItem value={CUSTOMER_SOURCE.AGODA}>
-                    {customerSourceLabels[CUSTOMER_SOURCE.AGODA]}
-                  </SelectItem>
-                  <SelectItem value={CUSTOMER_SOURCE.BOOKING}>
-                    {customerSourceLabels[CUSTOMER_SOURCE.BOOKING]}
-                  </SelectItem>
-                  <SelectItem value={CUSTOMER_SOURCE.TRAVELOKA}>
-                    {customerSourceLabels[CUSTOMER_SOURCE.TRAVELOKA]}
-                  </SelectItem>
-                  <SelectItem value={CUSTOMER_SOURCE.OTHER}>
-                    {customerSourceLabels[CUSTOMER_SOURCE.OTHER]}
-                  </SelectItem>
+                  {Object.values(CUSTOMER_SOURCE).map((source) => (
+                    <SelectItem key={source} value={source}>
+                      {customerSourceLabels[source]}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

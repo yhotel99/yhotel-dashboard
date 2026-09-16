@@ -16,7 +16,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { allNavItems, DASHBOARD_URLS } from "@/lib/constants";
+import { allNavItems, DASHBOARD_URLS, navGroupLabels, navGroupOrder } from "@/lib/constants";
 import { useAuth } from "@/contexts/auth-context";
 import { usePermissions } from "@/contexts/permissions-context";
 
@@ -26,16 +26,22 @@ export function SiteHeader() {
   const { hasViewPermission } = usePermissions();
   const [open, setOpen] = useState(false);
 
-  // Filter navigation items based on permissions
-  const navigationItems = useMemo(() => {
+  const navigationGroups = useMemo(() => {
     if (!profile) {
       return [];
     }
 
-    // Filter all items including dashboard based on permissions
-    return allNavItems.filter((item) =>
+    const allowed = allNavItems.filter((item) =>
       hasViewPermission(item.resource)
     );
+
+    return navGroupOrder
+      .map((groupId) => ({
+        id: groupId,
+        label: navGroupLabels[groupId],
+        items: allowed.filter((item) => item.group === groupId),
+      }))
+      .filter((group) => group.items.length > 0);
   }, [profile, hasViewPermission]);
 
   // Handle Command + K keyboard shortcut
@@ -97,21 +103,23 @@ export function SiteHeader() {
         <CommandInput placeholder="Tìm kiếm trang hoặc lệnh..." />
         <CommandList>
           <CommandEmpty>Không tìm thấy kết quả.</CommandEmpty>
-          <CommandGroup heading="Điều hướng">
-            {navigationItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <CommandItem
-                  key={item.url}
-                  value={item.title}
-                  onSelect={() => handleSelect(item.url)}
-                >
-                  <Icon className="size-4" />
-                  <span>{item.title}</span>
-                </CommandItem>
-              );
-            })}
-          </CommandGroup>
+          {navigationGroups.map((group) => (
+            <CommandGroup key={group.id} heading={group.label}>
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <CommandItem
+                    key={item.url}
+                    value={`${group.label} ${item.title}`}
+                    onSelect={() => handleSelect(item.url)}
+                  >
+                    <Icon className="size-4" />
+                    <span>{item.title}</span>
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          ))}
           <CommandGroup heading="Công cụ">
             <CommandItem
               value="Tạo mã QR thanh toán"

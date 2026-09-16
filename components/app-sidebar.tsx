@@ -2,7 +2,10 @@
 
 import * as React from "react";
 import { FileSpreadsheet } from "lucide-react";
-import { NavMain } from "@/components/nav-main";
+import Link from "next/link";
+import Image from "next/image";
+
+import { NavMain, type NavMainGroup } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
 import {
   Sidebar,
@@ -13,47 +16,58 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import Link from "next/link";
 import { useAuth } from "@/contexts/auth-context";
 import { usePermissions } from "@/contexts/permissions-context";
 import {
   allNavItems,
   DASHBOARD_URLS,
+  NAV_GROUP,
+  navGroupLabels,
+  navGroupOrder,
   SIDEBAR_URLS,
 } from "@/lib/constants";
 import { canViewAllBranches } from "@/lib/branch";
-import Image from "next/image";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { currentUser, profile } = useAuth();
   const { hasViewPermission } = usePermissions();
 
-  // Filter nav items based on permissions
   const filteredNavItems = React.useMemo(() => {
     if (!currentUser || !profile) return [];
 
-    return allNavItems.filter((item) =>
-      hasViewPermission(item.resource)
-    );
+    return allNavItems.filter((item) => hasViewPermission(item.resource));
   }, [currentUser, profile, hasViewPermission]);
 
-  const navItems = React.useMemo(() => {
-    const items = filteredNavItems.map(({ title, url, icon }) => ({
-      title,
-      url,
-      icon,
-    }));
-    if (profile && canViewAllBranches(profile.role)) {
-      items.push({
-        title: "Đối soát Excel",
-        url: DASHBOARD_URLS.INVOICE_RECONCILE,
-        icon: FileSpreadsheet,
-      });
-    }
-    return items;
+  const navGroups = React.useMemo((): NavMainGroup[] => {
+    const groups = navGroupOrder
+      .map((groupId) => {
+        const items = filteredNavItems
+          .filter((item) => item.group === groupId)
+          .map(({ title, url, icon }) => ({ title, url, icon }));
+
+        if (
+          groupId === NAV_GROUP.FINANCE &&
+          profile &&
+          canViewAllBranches(profile.role)
+        ) {
+          items.push({
+            title: "Đối soát Excel",
+            url: DASHBOARD_URLS.INVOICE_RECONCILE,
+            icon: FileSpreadsheet,
+          });
+        }
+
+        return {
+          id: groupId,
+          label: navGroupLabels[groupId],
+          items,
+        };
+      })
+      .filter((group) => group.items.length > 0);
+
+    return groups;
   }, [filteredNavItems, profile]);
 
-  // Get first allowed page for logo link (fallback to first item or dashboard)
   const logoLink = React.useMemo(() => {
     if (!profile) {
       return SIDEBAR_URLS.DASHBOARD;
@@ -72,7 +86,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               className="data-[slot=sidebar-menu-button]:p-1.5!"
             >
               <Link href={logoLink}>
-                <Image src="/favicon.ico" alt="YHotel" width={24} height={24} className="rounded-full border-2 border-primary" />
+                <Image
+                  src="/favicon.ico"
+                  alt="YHotel"
+                  width={24}
+                  height={24}
+                  className="rounded-full border-2 border-primary"
+                />
                 <span className="text-base font-semibold">YHotel</span>
               </Link>
             </SidebarMenuButton>
@@ -80,7 +100,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={navItems} />
+        <NavMain groups={navGroups} />
       </SidebarContent>
       <SidebarFooter>
         {profile && <NavUser profile={profile} />}
