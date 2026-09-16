@@ -110,10 +110,16 @@ const ROOM_TYPE_COLORS = [
 
 // Colors for pie chart - Customer Sources
 const CUSTOMER_SOURCE_COLORS = [
-  "hsl(217, 91%, 60%)", // Blue for Booking.com
-  "hsl(142, 76%, 36%)", // Green for Agoda
-  "hsl(47, 96%, 53%)", // Orange for Vãng lai
-  "hsl(0, 0%, 60%)", // Grey for Website
+  "hsl(217, 91%, 60%)",
+  "hsl(142, 76%, 36%)",
+  "hsl(47, 96%, 53%)",
+  "hsl(0, 0%, 60%)",
+  "hsl(330, 81%, 60%)",
+  "hsl(262, 83%, 58%)",
+  "hsl(187, 92%, 45%)",
+  "hsl(25, 95%, 53%)",
+  "hsl(199, 89%, 48%)",
+  "hsl(0, 72%, 51%)",
 ];
 
 // Colors for pie chart - Countries (more colors for many countries)

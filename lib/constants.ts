@@ -314,8 +314,13 @@ export const refundRequestStatusLabels: Record<
 export const CUSTOMER_SOURCE = {
   WEBSITE: "website",
   AGODA: "agoda",
+  EXPEDIA: "expedia",
+  TRIP: "trip",
   BOOKING: "booking",
   TRAVELOKA: "traveloka",
+  FACEBOOK: "facebook",
+  TIKTOK: "tiktok",
+  HOTLINE_ZALO: "hotline_zalo",
   OTHER: "khác",
 } as const;
 
@@ -328,8 +333,13 @@ export const customerSourceLabels: Record<
 > = {
   [CUSTOMER_SOURCE.WEBSITE]: "Website",
   [CUSTOMER_SOURCE.AGODA]: "Agoda",
+  [CUSTOMER_SOURCE.EXPEDIA]: "Expedia",
+  [CUSTOMER_SOURCE.TRIP]: "Trip",
   [CUSTOMER_SOURCE.BOOKING]: "Booking",
   [CUSTOMER_SOURCE.TRAVELOKA]: "Traveloka",
+  [CUSTOMER_SOURCE.FACEBOOK]: "Facebook",
+  [CUSTOMER_SOURCE.TIKTOK]: "Tiktok",
+  [CUSTOMER_SOURCE.HOTLINE_ZALO]: "Hotline/zalo",
   [CUSTOMER_SOURCE.OTHER]: "Khác",
 };
 
