@@ -46,6 +46,7 @@ import { BookingDetailDialog } from "./booking-detail-dialog";
 import { BOOKING_STATUS } from "@/lib/constants";
 import { updateQRDisplayAction } from "@/actions/qr-display";
 import { BookingRegistrationDialog } from "./registration/booking-registration-dialog";
+import { usePermissions } from "@/contexts/permissions-context";
 
 // Context to update booking status from action cells
 export const UpdateBookingStatusContext = React.createContext<
@@ -149,6 +150,8 @@ export function BookingActionsCell({
   const [isCheckingAdvancePayment, setIsCheckingAdvancePayment] =
     useState(false);
   const [hasCheckedStatus, setHasCheckedStatus] = useState(false);
+  const { hasPermission } = usePermissions();
+  const canManagePostCheckout = hasPermission("manage:post-checkout-bookings");
 
   // Check advance payment status only when dropdown opens (lazy check)
   const handleDropdownOpenChange = React.useCallback(
@@ -225,7 +228,12 @@ export function BookingActionsCell({
     }
   };
 
-  const disabledBooking = booking.status === BOOKING_STATUS.CANCELLED || booking.status === BOOKING_STATUS.CHECKED_OUT
+  const disabledBooking =
+    booking.status === BOOKING_STATUS.CANCELLED ||
+    booking.status === BOOKING_STATUS.CHECKED_OUT;
+  const disableCancel =
+    booking.status === BOOKING_STATUS.CANCELLED ||
+    (booking.status === BOOKING_STATUS.CHECKED_OUT && !canManagePostCheckout);
 
   return (
     <>
@@ -285,7 +293,7 @@ export function BookingActionsCell({
           <DropdownMenuItem
             variant="destructive"
             onClick={() => setOpenCancel(true)}
-            disabled={disabledBooking}
+            disabled={disableCancel}
           >
             <IconX className="mr-2 size-4" />
             Hủy booking
