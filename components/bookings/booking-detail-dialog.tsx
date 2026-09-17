@@ -35,7 +35,7 @@ import { resolveBranchDisplay } from "@/lib/branch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
-import { PAYMENT_TYPE } from "@/lib/constants";
+import { PAYMENT_TYPE, BOOKING_STATUS } from "@/lib/constants";
 import { buildSepayQrImageUrl } from "@/lib/payment-qr";
 import { PaymentQrImage } from "@/components/payment-qr-image";
 import { PaymentStatusBadge } from "@/components/payments/status";
@@ -309,6 +309,19 @@ export function BookingDetailDialog({
             </Button>
           </DialogDescription>
         </DialogHeader>
+
+        {(displayBooking ?? booking).status === BOOKING_STATUS.CANCELLED ? (
+          <div className="rounded-md border border-amber-500/40 bg-amber-500/5 px-3 py-2 text-sm text-amber-900 dark:text-amber-100">
+            <p className="font-medium">Lưu ý hoàn tiền</p>
+            <p className="text-muted-foreground dark:text-amber-100/80">
+              Nếu booking đã thanh toán, hãy tạo{" "}
+              <span className="font-medium text-foreground dark:text-amber-50">
+                Yêu cầu hoàn tiền
+              </span>{" "}
+              để tránh lệch sổ.
+            </p>
+          </div>
+        ) : null}
 
         <ScrollArea className="max-h-[70vh] pr-4 scrollbar-hide">
           <div className="space-y-6">

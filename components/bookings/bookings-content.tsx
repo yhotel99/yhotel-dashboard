@@ -584,6 +584,10 @@ export function BookingsContent({
           throw new Error(result.message ?? "Không thể hủy booking");
         }
         toast.success("Đã hủy booking thành công");
+        toast.warning(
+          "Nếu đã thanh toán, hãy tạo Yêu cầu hoàn tiền để tránh lệch sổ.",
+          { duration: 8000 }
+        );
         await mutate();
       } catch {
         toast.error("Không thể hủy booking");
@@ -666,6 +670,10 @@ export function BookingsContent({
       if (!result.ok) {
         throw new Error(result.message ?? "Không thể hủy booking");
       }
+      toast.warning(
+        "Nếu đã thanh toán, hãy tạo Yêu cầu hoàn tiền để tránh lệch sổ.",
+        { duration: 8000 }
+      );
       await mutate();
     },
     [mutate]

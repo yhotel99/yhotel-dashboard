@@ -1,676 +1,375 @@
-# Tài Liệu Hướng Dẫn Sử Dụng Hệ Thống YHotel Dashboard
+# Hướng dẫn sử dụng YHotel Dashboard
 
-## Mục Lục
+Tài liệu này dành cho **nhân viên lễ tân**, **quản lý** và **tài khoản toàn quyền (quản trị viên)**. Đọc phần vai trò của bạn trước, rồi làm theo quy trình nghiệp vụ khi cần.
 
-1. [Giới Thiệu](#giới-thiệu)
-2. [Đăng Nhập Hệ Thống](#đăng-nhập-hệ-thống)
-3. [Tổng Quan Dashboard](#tổng-quan-dashboard)
-4. [Quản Lý Phòng Khách Sạn](#quản-lý-phòng-khách-sạn)
-5. [Quản Lý Đặt Chỗ](#quản-lý-đặt-chỗ)
-6. [Quản Lý Đơn Đặt Phòng](#quản-lý-đơn-đặt-phòng)
-7. [Quản Lý Khách Hàng](#quản-lý-khách-hàng)
-8. [Quản Lý Thanh Toán](#quản-lý-thanh-toán)
-9. [Lịch Sử Webhook](#lịch-sử-webhook)
-10. [Quản Lý Hoàn Tiền](#quản-lý-hoàn-tiền)
-11. [Bộ Sưu Tập Ảnh](#bộ-sưu-tập-ảnh)
-12. [Quản Lý Blog](#quản-lý-blog)
-13. [Quản Lý Người Dùng](#quản-lý-người-dùng)
-14. [Cài Đặt Hệ Thống](#cài-đặt-hệ-thống)
-15. [Câu Hỏi Thường Gặp](#câu-hỏi-thường-gặp)
+**Cập nhật:** 16/09/2026
 
 ---
 
-## Giới Thiệu
+## Mục lục
 
-**YHotel Dashboard** là hệ thống quản lý khách sạn toàn diện, giúp bạn quản lý các hoạt động kinh doanh của khách sạn một cách hiệu quả. Hệ thống bao gồm các tính năng chính:
-
-- Quản lý phòng khách sạn
-- Quản lý đặt chỗ và đơn đặt phòng
-- Quản lý khách hàng
-- Quản lý thanh toán và hoàn tiền
-- Báo cáo và thống kê
-- Quản lý nội dung blog
-- Quản lý người dùng và phân quyền
-
----
-
-## Đăng Nhập Hệ Thống
-
-### Cách Đăng Nhập
-
-1. Truy cập vào trang đăng nhập của hệ thống
-2. Nhập **Email** và **Mật khẩu** của bạn
-3. Nhấn nút **"Login"** để đăng nhập
-4. Sau khi đăng nhập thành công, bạn sẽ được chuyển đến trang Dashboard
-
-### Lưu Ý
-
-- Email và mật khẩu là bắt buộc
-- Đảm bảo bạn có quyền truy cập vào hệ thống
-- Nếu quên mật khẩu, liên hệ quản trị viên để được hỗ trợ
+1. [Đăng nhập và tài khoản](#1-đăng-nhập-và-tài-khoản)
+2. [Ba vai trò — ai được làm gì](#2-ba-vai-trò--ai-được-làm-gì)
+3. [Chi nhánh](#3-chi-nhánh)
+4. [Nhân viên — việc hằng ngày](#4-nhân-viên--việc-hằng-ngày)
+5. [Quản lý](#5-quản-lý)
+6. [Toàn quyền (quản trị viên)](#6-toàn-quyền-quản-trị-viên)
+7. [Quy trình nghiệp vụ](#7-quy-trình-nghiệp-vụ)
+8. [Câu hỏi thường gặp](#8-câu-hỏi-thường-gặp)
 
 ---
 
-## Tổng Quan Dashboard
+## 1. Đăng nhập và tài khoản
 
-Trang Dashboard cung cấp cái nhìn tổng quan về hoạt động kinh doanh của khách sạn với các thông tin:
+1. Mở trang dashboard của khách sạn.
+2. Nhập **Email** và **Mật khẩu**.
+3. Bấm **Login**.
 
-### Các Chỉ Số Chính
+Sau khi đăng nhập:
 
-- **Tổng Doanh Thu**: Tổng doanh thu trong khoảng thời gian được chọn
-- **Tổng Số Đặt Phòng**: Tổng số đơn đặt phòng
-- **Tỷ Lệ Lấp Đầy Trung Bình**: Tỷ lệ phòng được đặt trung bình
-- **Tổng Hoàn Tiền**: Tổng số tiền đã hoàn lại cho khách hàng
+- **Nhân viên** vào thẳng trang **Đặt chỗ** (sơ đồ phòng).
+- **Quản lý** và **toàn quyền** vào trang **Tổng quan**.
 
-### Biểu Đồ và Thống Kê
+### Menu tài khoản (góc dưới sidebar)
 
-1. **Biểu Đồ Doanh Thu và Đặt Phòng Theo Tháng**
-   - Xem xu hướng doanh thu và số lượng đặt phòng theo tháng
-   - Có thể chọn xem 6 tháng hoặc 12 tháng gần nhất
+Bấm tên của bạn để:
 
-2. **Thống Kê Theo Loại Phòng**
-   - Biểu đồ tròn hiển thị số lượng phòng theo từng loại (Standard, Deluxe, Superior, Family)
-   - Giúp nắm bắt được loại phòng nào đang phổ biến
+- Xem **Account** (thông tin cá khoản).
+- **Tạo mã QR thanh toán** — tạo QR chuyển khoản nhanh.
+- **Settings** — chỉ hiện với quản lý và toàn quyền.
+- **Log out** — đăng xuất.
 
-3. **Thống Kê Theo Nguồn Khách Hàng**
-   - Phân tích khách hàng đến từ các nguồn khác nhau (Booking.com, Agoda, Website, Vãng lai)
-   - Giúp đánh giá hiệu quả của các kênh marketing
-
-4. **Thống Kê Trạng Thái Phòng**
-   - Xem số lượng phòng theo từng trạng thái (Available, Occupied, Maintenance, etc.)
-
-5. **Danh Sách Thanh Toán Gần Đây**
-   - Hiển thị các giao dịch thanh toán mới nhất
-   - Có thể xuất dữ liệu ra file CSV
-
-### Lọc Dữ Liệu
-
-- Chọn khoảng thời gian để xem báo cáo bằng **Date Range Picker**
-- Chọn loại báo cáo muốn xem
-- Chọn khoảng thời gian cho biểu đồ tháng (6 tháng hoặc 12 tháng)
+Nếu quên mật khẩu: liên hệ quản lý hoặc quản trị viên. Hệ thống không có nút tự đặt lại mật khẩu trên màn hình đăng nhập.
 
 ---
 
-## Quản Lý Phòng Khách Sạn
+## 2. Ba vai trò — ai được làm gì
 
-### Xem Danh Sách Phòng
+Hệ thống có đúng 3 vai trò. Menu bên trái **chỉ hiện những mục bạn được phép**. Không thấy một mục nào đó thường là do vai trò, không phải lỗi.
 
-1. Vào menu **"Phòng Khách Sạn"** từ sidebar
-2. Xem danh sách tất cả các phòng với thông tin:
-   - Tên phòng
-   - Loại phòng
-   - Giá mỗi đêm
-   - Số khách tối đa
-   - Trạng thái phòng
-   - Các tiện ích
+| Vai trò trên hệ thống | Tên hiển thị | Dùng cho |
+| --- | --- | --- |
+| `staff` | Nhân viên | Lễ tân, vận hành phòng mỗi ngày |
+| `manager` | Quản lý | Điều hành chi nhánh, xem báo cáo, duyệt hoàn tiền |
+| `admin` | Quản trị viên | Toàn quyền: người dùng, chi nhánh, cài đặt hệ thống |
 
-### Xem Chi Tiết Phòng
+### Bảng quyền theo menu
 
-1. Nhấn vào phòng muốn xem chi tiết
-2. Xem thông tin đầy đủ:
-   - Thông tin cơ bản (tên, loại, giá, số khách)
-   - Mô tả chi tiết
-   - Danh sách tiện ích
-   - Hình ảnh phòng
-   - Lịch sử đặt phòng
-
-### Tạo Phòng Mới
-
-1. Nhấn nút **"Thêm Phòng"** hoặc **"Tạo Phòng"**
-2. Điền các thông tin:
-   - **Tên phòng**: Tên hiển thị của phòng
-   - **Loại phòng**: Chọn loại (Standard, Deluxe, Superior, Family)
-   - **Giá mỗi đêm**: Giá thuê phòng cho một đêm
-   - **Số khách tối đa**: Số lượng khách tối đa có thể ở
-   - **Mô tả**: Mô tả chi tiết về phòng
-   - **Tiện ích**: Chọn các tiện ích có sẵn (WiFi, Bãi đỗ xe, Cà phê, Bữa sáng, Giặt ủi, Hỗ trợ Taxi)
-   - **Hình ảnh**: Upload hình ảnh phòng
-3. Nhấn **"Lưu"** để tạo phòng mới
-
-### Chỉnh Sửa Phòng
-
-1. Tìm phòng cần chỉnh sửa trong danh sách
-2. Nhấn nút **"Chỉnh sửa"** (biểu tượng bút chì)
-3. Cập nhật thông tin cần thiết
-4. Nhấn **"Lưu"** để cập nhật
-
-### Xóa Phòng
-
-1. Tìm phòng cần xóa
-2. Nhấn nút **"Xóa"** (biểu tượng thùng rác)
-3. Xác nhận việc xóa trong hộp thoại
-
-### Đặt Phòng Nhanh
-
-1. Từ danh sách phòng, nhấn nút **"Đặt Phòng"** trên phòng muốn đặt
-2. Chọn khách hàng
-3. Chọn ngày check-in và check-out
-4. Nhập số lượng khách
-5. Chọn phương thức thanh toán
-6. Nhấn **"Xác nhận"** để tạo đơn đặt phòng
-
-### Kiểm Tra Phòng Trống
-
-- Sử dụng bộ lọc để xem phòng theo trạng thái
-- Xem lịch đặt phòng để biết phòng nào còn trống trong khoảng thời gian cụ thể
+| Menu | Nhân viên | Quản lý | Toàn quyền |
+| --- | --- | --- | --- |
+| Tổng quan (báo cáo) | — | Có | Có |
+| Quản lý ca | — | Có (cần quyền HR, xem mục 5) | Có (cần quyền HR) |
+| Báo cáo (analytics) | — | Có | Có |
+| Chi nhánh | — | Xem | Xem + thêm/sửa/xóa |
+| Phòng | — | Có | Có |
+| Đặt chỗ | Có | Có | Có |
+| Đơn đặt phòng | Có | Có | Có |
+| Phiên online | Có | Có | Có |
+| Khách hàng | Có | Có | Có |
+| Thanh toán | — | Có | Có |
+| Voucher | Xem, áp mã khi đặt phòng | Xem + tạo/sửa/xóa | Xem + tạo/sửa/xóa |
+| Hoàn tiền (danh sách duyệt) | Tạo yêu cầu từ đơn đặt phòng | Có | Có |
+| Webhook (lịch sử thanh toán ngân hàng) | — | Có | Có |
+| Thư viện ảnh | — | Có | Có |
+| Blog | — | Có | Có |
+| Người dùng | — | — | Có |
+| Nhật ký (audit) | — | Có | Có |
+| Settings | — | Có | Có |
+| Đối soát Excel | — | Có | Có |
+| Tạo mã QR thanh toán | Có | Có | Có |
 
 ---
 
-## Quản Lý Đặt Chỗ
+## 3. Chi nhánh
 
-Trang **"Đặt Chỗ"** cung cấp cái nhìn tổng quan về trạng thái các phòng trong khách sạn, giúp bạn theo dõi và quản lý phòng một cách trực quan.
+YHotel có thể có nhiều chi nhánh.
 
-### Xem Trạng Thái Phòng
+- **Nhân viên** gắn với **một chi nhánh**. Chỉ thấy phòng, booking, khách của chi nhánh đó. Không có bộ lọc đổi chi nhánh trên thanh công cụ.
+- **Quản lý** và **toàn quyền** xem được tất cả chi nhánh. Trên thanh công cụ phía trên có bộ chọn chi nhánh:
+  - **Tất cả chi nhánh** — xem tổng hợp.
+  - Chọn một chi nhánh — lọc dữ liệu theo chi nhánh đó.
 
-1. Vào menu **"Đặt Chỗ"** từ sidebar
-2. Xem danh sách tất cả các phòng được nhóm theo tầng
-3. Mỗi phòng hiển thị:
-   - Tên phòng và loại phòng
-   - Trạng thái hiện tại (Trống, Sắp check-in, Đang ở, Sắp check-out, Quá hạn check-out)
-   - Thông tin đặt phòng hiện tại (nếu có)
-   - Thời gian đã ở / thời gian đã đặt (nếu đang ở)
-
-### Lọc Phòng Theo Trạng Thái
-
-1. Sử dụng các nút lọc ở đầu trang để xem phòng theo trạng thái:
-   - **Tất cả**: Hiển thị tất cả phòng
-   - **Trống**: Phòng đang trống, sẵn sàng đón khách
-   - **Sắp check-in**: Phòng có đặt phòng sắp đến ngày check-in
-   - **Đang ở**: Phòng đang có khách ở
-   - **Sắp check-out**: Phòng có khách sắp đến ngày check-out
-   - **Quá hạn check-out**: Phòng có khách quá hạn check-out
-
-### Tìm Kiếm Phòng
-
-1. Sử dụng ô tìm kiếm ở đầu trang
-2. Nhập tên phòng hoặc loại phòng để lọc kết quả
-
-### Chế Độ Hiển Thị
-
-- **Grid**: Hiển thị phòng dạng lưới (mặc định)
-- **List**: Hiển thị phòng dạng danh sách
-
-### Đặt Phòng Nhanh Từ Trang Đặt Chỗ
-
-1. Nhấn vào phòng muốn đặt
-2. Chọn **"Đặt phòng"** từ menu
-3. Điền thông tin đặt phòng trong hộp thoại
-4. Xác nhận để tạo đơn đặt phòng
-
-### Thay Đổi Trạng Thái Phòng
-
-1. Nhấn vào phòng muốn thay đổi trạng thái
-2. Chọn **"Thay đổi trạng thái"** từ menu
-3. Chọn trạng thái mới:
-   - **Sẵn sàng**: Phòng sẵn sàng đón khách
-   - **Sạch**: Phòng đã được dọn dẹp
-   - **Chưa dọn**: Phòng chưa được dọn dẹp
-   - **Bảo trì**: Phòng đang bảo trì
-4. Xác nhận thay đổi
-
-### Checkout Phòng
-
-1. Nhấn vào phòng đang có khách ở
-2. Chọn **"Checkout"** từ menu
-3. Xác nhận checkout để đánh dấu khách đã trả phòng
+Khi tạo booking hoặc khách hàng, quản lý / toàn quyền chọn chi nhánh trên form. Nhân viên thì hệ thống tự gắn chi nhánh của mình.
 
 ---
 
-## Quản Lý Đơn Đặt Phòng
+## 4. Nhân viên — việc hằng ngày
 
-### Xem Danh Sách Đơn Đặt Phòng
+Phần này là checklist lễ tân. Chi tiết từng bước nằm ở [mục 7](#7-quy-trình-nghiệp-vụ).
 
-1. Vào menu **"Đơn Đặt Phòng"** từ sidebar
-2. Xem danh sách tất cả đơn đặt phòng với thông tin:
-   - Mã đơn
-   - Khách hàng
-   - Phòng
-   - Ngày check-in/check-out
-   - Trạng thái
-   - Tổng tiền
+### Màn hình chính: Đặt chỗ
 
-### Lọc và Tìm Kiếm
+Sidebar → **Đặt chỗ**. Đây là sơ đồ phòng theo tầng.
 
-- Sử dụng ô tìm kiếm để tìm đơn theo mã booking, tên khách hàng, tên phòng
-- Sử dụng bộ lọc để tìm đơn theo:
-  - Trạng thái (Pending, Confirmed, Checked-in, Checked-out, Cancelled)
-  - Khoảng thời gian
-  - Khách hàng
-  - Phòng
+Mỗi thẻ phòng cho biết:
 
-### Kiểm Tra Phòng Trống
+| Màu / trạng thái | Ý nghĩa |
+| --- | --- |
+| Đang trống | Có thể nhận khách |
+| Sắp nhận (cam) | Đã có booking sắp check-in |
+| Đang sử dụng (xanh) | Khách đang ở |
+| Sắp trả (xanh dương) | Gần giờ trả phòng |
+| Quá giờ trả (đỏ) | Khách quá hạn checkout — ưu tiên xử lý |
 
-1. Nhấn nút **"Kiểm Tra Phòng Trống"** ở đầu trang
-2. Chọn khoảng thời gian muốn kiểm tra (ngày check-in và check-out)
-3. Hệ thống sẽ hiển thị danh sách phòng còn trống trong khoảng thời gian đó
+Phòng còn có trạng thái dọn:
 
-### Xem Chi Tiết Đơn Đặt Phòng
+- **Sẵn sàng** / **Đã dọn**
+- **Chưa dọn**
+- **Bảo trì** (không đặt được)
 
-1. Nhấn vào đơn đặt phòng muốn xem
-2. Xem thông tin chi tiết:
-   - Thông tin khách hàng
-   - Thông tin phòng
-   - Lịch trình check-in/check-out
-   - Thông tin thanh toán
-   - Ghi chú
+**Việc cần làm trên sơ đồ:**
 
-### Chỉnh Sửa Đơn Đặt Phòng
+1. Lọc theo trạng thái (Sắp nhận, Đang sử dụng, Sắp trả, Quá giờ trả) hoặc tìm số phòng.
+2. Bấm phòng **trống** để **đặt phòng nhanh**.
+3. Menu ba chấm trên thẻ phòng: đánh dấu **Chưa dọn** hoặc **Làm sạch**.
+4. Phòng đang có khách: bấm để **checkout** khi khách trả phòng.
+5. Nút **Kanban**: xem lịch 30 ngày tới (phòng trống + khách sắp nhận).
 
-1. Nhấn nút **"Chỉnh sửa"** trên đơn đặt phòng
-2. Cập nhật thông tin cần thiết
-3. Lưu ý: Không thể chỉnh sửa đơn đã check-in hoặc check-out
+### Đơn đặt phòng
 
-### Thay Đổi Trạng Thái Đơn Đặt Phòng
+Sidebar → **Đơn đặt phòng**.
 
-1. Nhấn nút **"Thay đổi trạng thái"**
-2. Chọn trạng thái mới:
-   - **Pending**: Đang chờ xác nhận
-   - **Confirmed**: Đã xác nhận
-   - **Checked-in**: Đã nhận phòng
-   - **Checked-out**: Đã trả phòng
-   - **Cancelled**: Đã hủy
-3. Nhập ngày check-in/check-out thực tế nếu cần
-4. Xác nhận thay đổi
+- Tìm theo mã booking, tên khách, phòng.
+- Lọc trạng thái: Chờ xác nhận → Đã xác nhận → Đã check-in → Đã check-out / Đã hủy.
+- **Tạo đơn** khi đặt nhiều phòng hoặc cần nhập đầy đủ (voucher, cọc, ghi chú).
+- **Kiểm tra phòng trống** trước khi nhận walk-in.
 
-### Hủy Đơn Đặt Phòng
+Chuỗi trạng thái **chỉ đi một chiều**:
 
-1. Nhấn nút **"Hủy đơn"**
-2. Xác nhận việc hủy đơn
-3. Lưu ý: Đơn đã check-in hoặc check-out không thể hủy
+```
+Chờ xác nhận → Đã xác nhận → Đã check-in → Đã check-out
+                    ↓
+                 Đã hủy
+```
 
-### Chuyển Phòng
+Không sửa / không hủy đơn đã check-out hoặc đã hủy.
 
-1. Nhấn nút **"Chuyển phòng"**
-2. Chọn phòng mới
-3. Xác nhận việc chuyển phòng
-4. Hệ thống sẽ tự động kiểm tra phòng mới có trống không
+Menu ba chấm trên mỗi đơn:
 
-### Đánh Dấu Tiền Đặt Cọc
+- Xem chi tiết
+- Giấy đăng ký / In PDF
+- Hiển thị mã QR (lên màn QR chi nhánh)
+- Chỉnh sửa (khi chưa checkout / chưa hủy)
+- Thay đổi trạng thái (check-in, checkout, xác nhận)
+- Đánh dấu đặt cọc (khi đơn còn chờ xác nhận và có số tiền cọc)
+- Yêu cầu hoàn tiền
+- Hủy booking (có thể gửi email hủy)
 
-1. Nhấn nút **"Đánh dấu tiền đặt cọc"**
-2. Nhập số tiền đặt cọc đã nhận
-3. Xác nhận
+Khi **xác nhận** đơn, hệ thống có thể gửi email xác nhận cho khách nếu đơn có email.
 
-### Tạo Yêu Cầu Hoàn Tiền
+### Khách hàng
 
-1. Từ đơn đặt phòng, nhấn **"Tạo yêu cầu hoàn tiền"**
-2. Điền thông tin yêu cầu hoàn tiền
-3. Xác nhận tạo yêu cầu
+Sidebar → **Khách hàng**.
 
----
+- Thêm khách: họ tên, email, SĐT, quốc tịch, CCCD, ngày sinh, loại khách, **nguồn**.
+- Loại khách: **Thường**, **Khách VIP**, **Blacklist**.
+- Nguồn: Website, Agoda, Expedia, Trip, Booking, Traveloka, Facebook, Tiktok, Hotline/zalo, Khác.
+- Có thể tạo khách ngay trong form đặt phòng nếu chưa có trong hệ thống.
+- Khách gắn với chi nhánh nhà, nhưng **có thể đặt phòng ở chi nhánh khác** (tìm khách khi tạo booking).
 
-## Quản Lý Khách Hàng
+### Phiên online
 
-### Xem Danh Sách Khách Hàng
+Sidebar → **Phiên online**.
 
-1. Vào menu **"Khách Hàng"** từ sidebar
-2. Xem danh sách tất cả khách hàng với thông tin:
-   - Tên
-   - Email
-   - Số điện thoại
-   - Loại khách hàng (Regular, VIP, Blacklist)
-   - Nguồn khách hàng
+Đây là các phiên khách giữ phòng và thanh toán QR / chuyển khoản **trước khi** hệ thống tạo booking.
 
-### Tạo Khách Hàng Mới
+- **Đang chờ**: khách chưa thanh toán hoặc đang thanh toán.
+- **Hết hạn**: mã hết hạn. Nếu khách vẫn chuyển tiền sau đó, dùng **Tạo booking thủ công**.
+- **Đã tạo booking**: xong, không làm gì thêm.
+- **Thất bại**: thanh toán lỗi.
 
-1. Nhấn nút **"Thêm Khách Hàng"** hoặc **"Tạo Khách Hàng"**
-2. Điền thông tin:
-   - **Tên**: Tên đầy đủ của khách hàng
-   - **Email**: Địa chỉ email
-   - **Số điện thoại**: Số điện thoại liên hệ
-   - **Loại khách hàng**: Chọn loại (Thường, VIP, Blacklist)
-   - **Nguồn khách hàng**: Chọn nguồn (Booking.com, Agoda, Website, Vãng lai)
-   - **Địa chỉ**: Địa chỉ của khách hàng (tùy chọn)
-   - **Ghi chú**: Ghi chú về khách hàng (tùy chọn)
-3. Nhấn **"Lưu"** để tạo khách hàng mới
+Nếu báo “phòng đang được khách giữ để thanh toán online”: đợi hết phiên hoặc chọn phòng khác. Đó không phải lỗi hệ thống.
 
-### Chỉnh Sửa Thông Tin Khách Hàng
+### Voucher (nhân viên)
 
-1. Tìm khách hàng cần chỉnh sửa
-2. Nhấn nút **"Chỉnh sửa"**
-3. Cập nhật thông tin
-4. Nhấn **"Lưu"** để cập nhật
+Bạn **xem** danh sách voucher và **nhập mã** khi tạo đơn. Không tạo / sửa / xóa voucher. Nhờ quản lý nếu cần mã mới.
 
-### Xem Chi Tiết Khách Hàng
+### Việc không làm được (và nên báo quản lý)
 
-1. Nhấn vào khách hàng muốn xem
-2. Xem thông tin chi tiết:
-   - Thông tin cá nhân
-   - Lịch sử đặt phòng
-   - Lịch sử thanh toán
-   - Ghi chú
-
-### Xem Lịch Sử Đặt Phòng Của Khách Hàng
-
-1. Từ danh sách khách hàng, nhấn nút **"Xem đặt phòng"** trên khách hàng muốn xem
-2. Hệ thống sẽ chuyển đến trang hiển thị tất cả đơn đặt phòng của khách hàng đó
-
-### Khóa Khách Hàng
-
-1. Tìm khách hàng cần khóa
-2. Nhấn nút **"Xóa"** (thực chất là khóa khách hàng)
-3. Xác nhận việc khóa
-4. Lưu ý: Không thể khóa khách hàng đã có đơn đặt phòng đang hoạt động
+- Sửa giá phòng, thêm phòng, bảo trì dài hạn.
+- Duyệt hoàn tiền, xem sổ thanh toán tổng.
+- Tạo tài khoản đồng nghiệp.
+- Đổi cài đặt website / tài khoản ngân hàng.
 
 ---
 
-## Quản Lý Thanh Toán
+## 5. Quản lý
 
-### Xem Danh Sách Thanh Toán
+Quản lý làm được toàn bộ việc của nhân viên, cộng thêm điều hành và báo cáo. **Không** quản lý danh sách người dùng (chỉ toàn quyền).
 
-1. Vào menu **"Thanh Toán"** từ sidebar
-2. Xem danh sách tất cả giao dịch thanh toán với thông tin:
-   - Mã thanh toán
-   - Đơn đặt phòng liên quan
-   - Khách hàng
-   - Số tiền
-   - Loại thanh toán (Tiền đặt cọc, Tiền phòng)
-   - Phương thức thanh toán
-   - Trạng thái (Pending, Completed, Failed, Refunded)
+### Sau khi đăng nhập
 
-### Lọc Thanh Toán
+Vào **Tổng quan**: doanh thu, số đơn, công suất, hoàn tiền, biểu đồ theo tháng, nguồn khách, loại phòng. Lọc theo khoảng ngày và chi nhánh.
 
-- Lọc theo:
-  - Trạng thái
-  - Phương thức thanh toán
-  - Loại thanh toán
-  - Khoảng thời gian
-  - Khách hàng
+**Báo cáo** (sidebar): KPI sâu hơn — công suất, aging, heatmap, lọc loại phòng / nguồn / tầng.
 
-### Xem Chi Tiết Thanh Toán
+Báo cáo doanh thu **không tính** đơn Chờ xác nhận và Đã hủy. Chỉ tính Đã xác nhận, Đã check-in, Đã check-out.
 
-1. Nhấn vào giao dịch thanh toán muốn xem
-2. Xem thông tin chi tiết:
-   - Thông tin đơn đặt phòng
-   - Thông tin khách hàng
-   - Chi tiết thanh toán
-   - Lịch sử cập nhật
+### Phòng
 
-### Cập Nhật Trạng Thái Thanh Toán
+Sidebar → **Phòng**.
 
-1. Nhấn nút **"Cập nhật trạng thái"** trên giao dịch
-2. Chọn trạng thái mới
-3. Xác nhận cập nhật
+- Thêm / sửa phòng: số phòng, tầng, loại (Standard, Deluxe, Superior, Family), giá/đêm, số khách tối đa, tiện nghi, ảnh, chi nhánh.
+- Đặt trạng thái **Bảo trì** khi phòng không nhận khách.
+- Không xóa phòng nếu còn lịch sử booking gắn với phòng đó.
 
----
+### Tài chính
 
-## Lịch Sử Webhook
+- **Thanh toán**: cọc, tiền phòng, dịch vụ thêm; trạng thái Chờ / Đã thanh toán / Thất bại / Đã hoàn / Đã hủy. Phương thức: Chuyển khoản, Thanh toán tại khách sạn, OnePay, Thanh toán trên nền tảng khác.
+- **Hoàn tiền**: duyệt, từ chối, hoặc đánh dấu đã hoàn.
+- **Webhook**: đối chiếu giao dịch ngân hàng (SePay) với mã booking. Dùng khi khách chuyển khoản nhưng đơn chưa nhảy trạng thái.
+- **Voucher**: tạo mã giảm `%` hoặc số tiền cố định, hạn dùng, bật/tắt.
+- **Đối soát Excel**: menu **Thanh toán** → **Đối soát Excel**. Upload file hóa đơn checkout để đối soát. Nhân viên không vào được trang này.
 
-### Xem Lịch Sử Webhook
+### Nội dung website
 
-1. Vào menu **"Lịch Sử Webhook"** từ sidebar
-2. Xem danh sách tất cả các webhook đã nhận với thông tin:
-   - Thời gian nhận
-   - Loại sự kiện
-   - Trạng thái
-   - Dữ liệu webhook
+- **Thư viện ảnh**: tải ảnh (có thể nhiều file), xóa ảnh (không hoàn tác).
+- **Blog**: nháp / đã xuất bản / lưu trữ.
 
-### Xem Chi Tiết Webhook
+### Chi nhánh
 
-1. Nhấn vào webhook muốn xem
-2. Xem thông tin chi tiết:
-   - Headers
-   - Body
-   - Response
-   - Trạng thái xử lý
+Xem danh sách chi nhánh. **Không** tạo hoặc xóa chi nhánh — việc đó thuộc toàn quyền.
+
+### Nhật ký
+
+Sidebar → **Nhật ký**. Xem ai đã tạo/sửa booking, khách, v.v. Không xóa nhật ký trừ khi là toàn quyền.
+
+### Settings (menu tài khoản)
+
+- **Chung**: tiêu đề, mô tả website, ảnh hero, thông tin liên hệ.
+- **Giá**: hệ số giá theo thứ trong tuần, khoảng ngày lễ / phụ thu.
+- **Hạng phòng web**: hạng phòng hiển thị trên website đặt phòng.
+- **Mạng xã hội**: link Facebook, Instagram, …
+- **Tài khoản ngân hàng**: STK theo chi nhánh (ảnh hưởng QR thanh toán).
+
+### Quản lý ca
+
+Hiện trên sidebar với quản lý và toàn quyền, nhưng **chỉ dùng được** nếu email PMS trùng tài khoản HR có quyền `ADMIN` hoặc `BRANCH_ADMIN`. Nếu báo “Không có quyền quản lý ca HR”, nhờ IT gán quyền bên hệ thống HR Connect.
+
+### Người dùng
+
+Quản lý **không** thấy menu Người dùng. Muốn thêm lễ tân mới: nhờ toàn quyền.
 
 ---
 
-## Quản Lý Hoàn Tiền
+## 6. Toàn quyền (quản trị viên)
 
-### Xem Danh Sách Yêu Cầu Hoàn Tiền
+Toàn quyền = mọi việc của quản lý, cộng:
 
-1. Vào menu **"Hoàn Tiền"** từ sidebar
-2. Xem danh sách tất cả yêu cầu hoàn tiền với thông tin:
-   - Mã yêu cầu
-   - Đơn đặt phòng liên quan
-   - Khách hàng
-   - Số tiền yêu cầu hoàn
-   - Lý do hoàn tiền
-   - Trạng thái (Pending, Approved, Rejected, Completed)
+### Người dùng
 
-### Tạo Yêu Cầu Hoàn Tiền
+Sidebar → **Người dùng**.
 
-1. Nhấn nút **"Tạo Yêu Cầu Hoàn Tiền"**
-2. Chọn đơn đặt phòng
-3. Điền thông tin:
-   - Số tiền yêu cầu hoàn
-   - Lý do hoàn tiền
-   - Ghi chú
-4. Nhấn **"Gửi yêu cầu"**
+**Tạo tài khoản mới** (chỉ tạo được Quản lý hoặc Nhân viên, không tự tạo thêm Quản trị viên từ form tạo):
 
-### Xử Lý Yêu Cầu Hoàn Tiền
+1. Tên, email (dùng để đăng nhập), mật khẩu (tối thiểu 6 ký tự), SĐT.
+2. Vai trò: **Quản lý** hoặc **Nhân viên**.
+3. **Nhân viên bắt buộc chọn chi nhánh.**
+4. Quản lý có thể không gắn chi nhánh cố định (xem tất cả chi nhánh).
+5. Trạng thái: Hoạt động / Vô hiệu hóa / Tạm khóa.
 
-1. Nhấn vào yêu cầu hoàn tiền cần xử lý
-2. Xem thông tin chi tiết
-3. Chọn hành động:
-   - **Duyệt**: Duyệt yêu cầu hoàn tiền
-   - **Từ chối**: Từ chối yêu cầu với lý do
-   - **Hoàn tiền**: Đánh dấu đã hoàn tiền thành công
+**Sửa tài khoản:** có thể đổi vai trò (kể cả thành Quản trị viên), chi nhánh, trạng thái. **Không xóa user** — hãy **Vô hiệu hóa** khi nghỉ việc.
 
----
+Không giao tài khoản toàn quyền cho lễ tân.
 
-## Bộ Sưu Tập Ảnh
+### Chi nhánh
 
-### Xem Bộ Sưu Tập Ảnh
+Thêm / sửa / ngưng hoạt động chi nhánh. Chi nhánh ngưng sẽ không còn trong bộ lọc đặt phòng.
 
-1. Vào menu **"Bộ Sưu Tập Ảnh"** từ sidebar
-2. Xem tất cả hình ảnh đã upload
+### Cài đặt hệ thống
 
-### Upload Ảnh Mới
+Giống quản lý (Settings), cộng quyền quản trị hạ tầng: đừng đổi STK ngân hàng hay giá web nếu chưa thống nhất với kế toán / marketing.
 
-1. Nhấn nút **"Tải ảnh lên"**
-2. Trong hộp thoại, chọn một hoặc nhiều file ảnh từ máy tính (có thể chọn nhiều file cùng lúc)
-3. Xem preview các ảnh đã chọn
-4. Có thể xóa ảnh khỏi danh sách preview trước khi upload
-5. Nhấn **"Tải lên"** để bắt đầu upload
-6. Theo dõi tiến trình upload cho từng ảnh
-7. Sau khi upload thành công, ảnh sẽ được lưu và có thể sử dụng trong các phần khác của hệ thống
+### Nhật ký
 
-### Xem Ảnh Với Zoom
-
-1. Nhấn vào ảnh muốn xem
-2. Ảnh sẽ được hiển thị với khả năng zoom để xem chi tiết
-
-### Xóa Ảnh
-
-1. Di chuột qua ảnh cần xóa
-2. Nhấn nút **"Xóa"** (biểu tượng thùng rác) xuất hiện ở góc trên bên phải
-3. Xác nhận việc xóa trong hộp thoại
-4. Lưu ý: Hành động này không thể hoàn tác
+Xem và (nếu được cấp) xóa nhật ký kiểm toán khi cần dọn dữ liệu.
 
 ---
 
-## Quản Lý Blog
+## 7. Quy trình nghiệp vụ
 
-### Xem Danh Sách Blog
+### 7.1 Đặt phòng walk-in (khách đến quầy)
 
-1. Vào menu **"Blog"** từ sidebar
-2. Xem danh sách tất cả bài viết blog với thông tin:
-   - Tiêu đề
-   - Tác giả
-   - Ngày đăng
-   - Trạng thái (Draft, Published, Archived)
+1. **Đặt chỗ** → tìm phòng trống, hoặc **Đơn đặt phòng** → **Kiểm tra phòng trống** (chọn ngày nhận / trả).
+2. Nếu khách chưa có trong hệ thống: tạo khách (đủ tên, SĐT/email, nguồn).
+3. Tạo đơn:
+   - Từ thẻ phòng trống: **đặt phòng nhanh**, hoặc
+   - **Đơn đặt phòng** → tạo đơn (một hoặc nhiều phòng).
+4. Chọn ngày, số khách, tiền cọc (nếu có), phương thức thanh toán, voucher (nếu có).
+5. Xác nhận đơn. Gửi email nếu khách có email.
+6. Check-in khi khách nhận phòng (trạng thái **Đã check-in**).
+7. In **Giấy đăng ký / PDF** nếu cần.
+8. Checkout khi trả phòng. Đánh dấu phòng **Chưa dọn**, rồi **Làm sạch** khi housekeeping xong.
 
-### Tạo Bài Viết Blog Mới
+### 7.2 Booking từ OTA (Agoda, Booking, Traveloka, Expedia, Trip, …)
 
-1. Nhấn nút **"Tạo Bài Viết"** hoặc **"Thêm Blog"**
-2. Hệ thống sẽ chuyển đến trang tạo blog mới
-3. Điền thông tin:
-   - **Tiêu đề**: Tiêu đề bài viết
-   - **Mô tả ngắn**: Mô tả tóm tắt
-   - **Nội dung**: Nội dung chi tiết (sử dụng trình soạn thảo)
-   - **Hình ảnh đại diện**: Chọn ảnh từ bộ sưu tập hoặc upload mới
-   - **Trạng thái**: Chọn trạng thái (Nháp, Đã xuất bản, Lưu trữ)
-   - **Tags**: Thêm tags cho bài viết
-4. Nhấn **"Lưu"** hoặc **"Xuất bản"** để lưu bài viết
+1. Tạo hoặc tìm khách, chọn **Nguồn** đúng kênh OTA.
+2. Tạo đơn, phương thức thường là **Thanh toán trên nền tảng khác** nếu OTA đã thu tiền.
+3. Xác nhận → check-in / checkout như trên.
 
-### Chỉnh Sửa Bài Viết
+### 7.3 Thanh toán chuyển khoản / QR
 
-1. Tìm bài viết cần chỉnh sửa trong danh sách
-2. Nhấn nút **"Chỉnh sửa"**
-3. Hệ thống sẽ chuyển đến trang chỉnh sửa blog
-4. Cập nhật nội dung
-5. Nhấn **"Lưu"** để cập nhật
+1. Trên đơn: **Hiển thị mã QR** để hiện trên màn hình chi nhánh (`/qr/...`), hoặc dùng **Tạo mã QR thanh toán** trong menu tài khoản.
+2. Khách chuyển khoản theo nội dung có **mã booking**.
+3. Webhook ngân hàng (quản lý xem ở menu **Webhook**) sẽ khớp mã và cập nhật thanh toán.
+4. Nếu khách đặt online: theo dõi **Phiên online**. Hết hạn mà vẫn có tiền: **Tạo booking thủ công** từ phiên đó.
 
-### Xóa Bài Viết
+### 7.4 Check-in / Check-out
 
-1. Tìm bài viết cần xóa
-2. Nhấn nút **"Xóa"**
-3. Xác nhận việc xóa
+1. Mở đơn → **Thay đổi trạng thái**.
+2. Chỉ được chuyển bước kế tiếp (ví dụ Đã xác nhận → Đã check-in).
+3. Checkout cũng làm được từ thẻ phòng trên **Đặt chỗ**.
 
-### Thay Đổi Trạng Thái Bài Viết
+### 7.5 Hủy và hoàn tiền
 
-- **Nháp**: Bài viết chưa được xuất bản
-- **Đã xuất bản**: Bài viết đã được công khai
-- **Lưu trữ**: Bài viết đã được lưu trữ
+1. Đơn chưa checkout: menu → **Hủy booking**. Chọn có gửi email hủy hay không.
+2. Cần trả tiền: **Yêu cầu hoàn tiền** trên đơn.
+3. Quản lý vào **Hoàn tiền**: Duyệt / Từ chối / Đã hoàn tiền.
 
----
+### 7.6 Gắn người tạo đơn (hoa hồng / báo cáo lễ tân)
 
-## Quản Lý Người Dùng
+Trên chi tiết booking, nhân viên/quản lý có quyền **gắn người tạo** nếu đơn chưa có. Quản lý và toàn quyền còn **đổi** người tạo khi đã gắn nhầm. Dùng cho báo cáo thực thu theo lễ tân.
 
-### Xem Danh Sách Người Dùng
+### 7.7 Kanban 30 ngày
 
-1. Vào menu **"Người Dùng"** từ sidebar
-2. Xem danh sách tất cả người dùng trong hệ thống với thông tin:
-   - Tên
-   - Email
-   - Vai trò
-   - Trạng thái
+Từ **Đặt chỗ** bấm **Kanban**.
 
-### Tạo Người Dùng Mới
-
-1. Nhấn nút **"Thêm Người Dùng"** hoặc **"Tạo Người Dùng"**
-2. Điền thông tin:
-   - **Tên**: Tên đầy đủ
-   - **Email**: Địa chỉ email (dùng để đăng nhập)
-   - **Mật khẩu**: Mật khẩu đăng nhập
-   - **Vai trò**: Chọn vai trò (Admin, Manager, Staff, etc.)
-   - **Quyền truy cập**: Cấu hình quyền truy cập các module
-3. Nhấn **"Lưu"** để tạo người dùng
-
-### Chỉnh Sửa Người Dùng
-
-1. Tìm người dùng cần chỉnh sửa
-2. Nhấn nút **"Chỉnh sửa"**
-3. Cập nhật thông tin:
-   - Thông tin cá nhân (tên, email, số điện thoại)
-   - Vai trò (role)
-   - Trạng thái (status)
-4. Nhấn **"Lưu"** để cập nhật
-
-### Quản Lý Phân Quyền
-
-Hệ thống sử dụng hệ thống phân quyền chi tiết:
-- Mỗi module có các quyền: View, Create, Update, Delete
-- Quản trị viên có thể cấu hình quyền cho từng người dùng
-- Người dùng chỉ thấy các menu và tính năng mà họ có quyền truy cập
-
-**Lưu ý**: Hệ thống không hỗ trợ xóa người dùng. Thay vào đó, bạn có thể thay đổi trạng thái của người dùng để vô hiệu hóa tài khoản.
+- Cột phòng trống: khoảng ngày còn trống trong 30 ngày.
+- Các cột theo ngày check-in: khách sắp đến.
+- Bấm card để xem chi tiết, QR, thông tin chuyển khoản.
+- Tự làm mới định kỳ; có ô tìm kiếm mã / tên khách / phòng.
 
 ---
 
-## Cài Đặt Hệ Thống
+## 8. Câu hỏi thường gặp
 
-### Truy Cập Cài Đặt
+**Không thấy menu Tổng quan / Phòng / Thanh toán?**  
+Đúng với tài khoản nhân viên. Liên hệ quản trị viên nếu bạn cần quyền quản lý.
 
-1. Vào menu **"Cài Đặt"** từ sidebar (nếu có quyền)
-2. Xem và cấu hình các thiết lập hệ thống
+**Phòng báo không trống dù trên sơ đồ thấy trống?**  
+Có thể đang bị **phiên online** giữ, hoặc đã có booking chồng ngày. Đổi ngày, đổi phòng, hoặc đợi hết phiên QR.
 
-### Các Thiết Lập Có Thể
+**Khách đã chuyển khoản nhưng đơn vẫn “chờ”?**  
+Kiểm tra nội dung CK có đúng mã booking không. Quản lý xem **Webhook**. Nếu phiên online hết hạn, tạo booking thủ công từ phiên đó.
 
-Trang cài đặt được chia thành các tab:
+**Đặt được khách của chi nhánh khác không?**  
+Có. Tìm khách khi tạo booking. Chi nhánh của **đơn** là nơi khách ở; chi nhánh trên hồ sơ khách là chi nhánh nhà.
 
-1. **Thông tin Website**
-   - **Tiêu đề website**: Tiêu đề hiển thị trên website
-   - **Mô tả website**: Mô tả về website
-   - **Hero Images**: Quản lý hình ảnh hero (có thể thêm nhiều ảnh)
+**Làm sao xem nguồn khách Agoda / Tiktok / Hotline?**  
+Khi tạo hoặc sửa khách, chọn **Nguồn**. Quản lý xem phân bổ nguồn trên **Tổng quan**.
 
-2. **Thông tin Liên Hệ**
-   - **Email liên hệ**: Địa chỉ email liên hệ
-   - **Số điện thoại**: Số điện thoại liên hệ
-   - **Địa chỉ**: Địa chỉ khách sạn
-   - **Giờ làm việc**: Giờ làm việc của khách sạn
+**Tài khoản nhân viên nghỉ việc?**  
+Toàn quyền vào **Người dùng** → đổi trạng thái **Vô hiệu hóa**. Không xóa tài khoản.
 
-3. **Mạng Xã Hội**
-   - Thêm và quản lý các liên kết mạng xã hội (Facebook, Instagram, Twitter, v.v.)
-   - Mỗi mạng xã hội có thể thêm URL tương ứng
-
-4. **Thông tin Ngân Hàng**
-   - **Số tài khoản**: Số tài khoản ngân hàng
-   - **Tên ngân hàng**: Tên ngân hàng
-   - **BIN**: Mã BIN của ngân hàng
-   - **Chủ tài khoản**: Tên chủ tài khoản
-
-### Lưu Cài Đặt
-
-1. Sau khi cập nhật các thiết lập, nhấn nút **"Lưu"** ở cuối trang
-2. Hệ thống sẽ lưu tất cả các thay đổi
-3. Các thiết lập sẽ được áp dụng ngay lập tức
+**Đổi mật khẩu?**  
+Nhờ quản lý hoặc toàn quyền (họ có quyền cập nhật mật khẩu user). Tự đổi trong Account nếu hộp thoại tài khoản cho phép.
 
 ---
 
-## Câu Hỏi Thường Gặp
+## Hỗ trợ
 
-### Làm thế nào để đặt phòng cho khách hàng?
+1. Đọc lại đúng mục vai trò của bạn trong tài liệu này.
+2. Hỏi quản lý tại chi nhánh.
+3. Việc liên quan tài khoản, chi nhánh, quyền hạn: nhờ **quản trị viên**.
 
-1. Vào menu **"Đơn Đặt Phòng"**
-2. Nhấn **"Tạo Đơn Đặt Phòng"**
-3. Chọn khách hàng (hoặc tạo mới)
-4. Chọn phòng và ngày check-in/check-out
-5. Điền thông tin và xác nhận
-
-### Làm thế nào để kiểm tra phòng còn trống?
-
-1. Vào menu **"Đặt Chỗ"** hoặc **"Phòng Khách Sạn"**
-2. Sử dụng tính năng **"Kiểm Tra Phòng Trống"**
-3. Chọn khoảng thời gian muốn kiểm tra
-4. Hệ thống sẽ hiển thị danh sách phòng còn trống
-
-### Làm thế nào để xem báo cáo doanh thu?
-
-1. Vào trang **"Tổng Quan"** (Dashboard)
-2. Xem các chỉ số và biểu đồ doanh thu
-3. Sử dụng bộ lọc thời gian để xem báo cáo theo khoảng thời gian cụ thể
-4. Có thể xuất dữ liệu ra file CSV
-
-### Làm thế nào để hoàn tiền cho khách hàng?
-
-1. Vào menu **"Hoàn Tiền"**
-2. Nhấn **"Tạo Yêu Cầu Hoàn Tiền"**
-3. Chọn đơn đặt phòng liên quan
-4. Điền thông tin và gửi yêu cầu
-5. Sau khi duyệt, đánh dấu đã hoàn tiền thành công
-
-### Tôi không thấy một số menu, tại sao?
-
-Hệ thống sử dụng phân quyền. Bạn chỉ thấy các menu và tính năng mà bạn có quyền truy cập. Liên hệ quản trị viên để được cấp quyền nếu cần.
-
-### Làm thế nào để thay đổi trạng thái đơn đặt phòng?
-
-1. Vào menu **"Đơn Đặt Phòng"**
-2. Tìm đơn cần thay đổi
-3. Nhấn nút **"Thay đổi trạng thái"**
-4. Chọn trạng thái mới và xác nhận
-
-### Làm thế nào để upload ảnh cho phòng?
-
-1. Vào menu **"Bộ Sưu Tập Ảnh"** để upload ảnh trước
-2. Hoặc khi tạo/chỉnh sửa phòng, sử dụng tính năng upload ảnh trực tiếp
-3. Chọn ảnh từ máy tính hoặc từ bộ sưu tập đã có
-
----
-
-## Hỗ Trợ
-
-Nếu bạn gặp vấn đề hoặc có câu hỏi, vui lòng:
-
-1. Kiểm tra lại tài liệu này
-2. Liên hệ quản trị viên hệ thống
-3. Kiểm tra quyền truy cập của bạn
-
----
-
-**Phiên bản tài liệu**: 1.0  
-**Cập nhật lần cuối**: 2024
-
+Tài liệu kỹ thuật cho IT: [TAI_LIEU_KY_THUAT.md](./TAI_LIEU_KY_THUAT.md).

@@ -715,6 +715,51 @@ export async function cancelBookingAction(
   const supabase = await createClient();
   const sendCancellationEmail = options?.sendCancellationEmail !== false;
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { ok: false, message: "Bạn cần đăng nhập" };
+  }
+
+  const { data: bookingStatusRow, error: statusError } = await supabase
+    .from("bookings")
+    .select("id, status")
+    .eq("id", bookingId)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (statusError || !bookingStatusRow) {
+    return { ok: false, message: "Không tìm thấy booking" };
+  }
+
+  if (bookingStatusRow.status === BOOKING_STATUS.CHECKED_OUT) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    if (!profile?.role) {
+      return { ok: false, message: "Không tìm thấy thông tin người dùng" };
+    }
+
+    const canManagePostCheckout = await checkPermission(
+      profile.role,
+      "manage",
+      "post-checkout-bookings",
+      supabase
+    );
+
+    if (!canManagePostCheckout) {
+      return {
+        ok: false,
+        message: "Bạn không có quyền hủy booking đã check-out",
+      };
+    }
+  }
+
   const { error } = await supabase.rpc("cancel_booking_secure", {
     p_booking_id: bookingId,
   });
@@ -729,16 +774,13 @@ export async function cancelBookingAction(
 
   // Send cancellation email (do not block cancellation if email fails)
   if (!sendCancellationEmail) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await logBookingCancel(
-        bookingId,
-        user.id,
-        user.email!,
-        "Cancelled by user",
-        { action: "cancel_booking", send_cancellation_email: false }
-      );
-    }
+    await logBookingCancel(
+      bookingId,
+      user.id,
+      user.email!,
+      "Cancelled by user",
+      { action: "cancel_booking", send_cancellation_email: false }
+    );
     revalidatePath("/dashboard/bookings");
     return { ok: true };
   }
@@ -827,16 +869,13 @@ export async function cancelBookingAction(
   }
 
   // Log audit trail
-  const { data: { user } } = await supabase.auth.getUser();
-  if (user) {
-    await logBookingCancel(
-      bookingId,
-      user.id,
-      user.email!,
-      "Cancelled by user",
-      { action: "cancel_booking", send_cancellation_email: true }
-    );
-  }
+  await logBookingCancel(
+    bookingId,
+    user.id,
+    user.email!,
+    "Cancelled by user",
+    { action: "cancel_booking", send_cancellation_email: true }
+  );
 
   // Revalidate bookings page after cancelling
   revalidatePath("/dashboard/bookings");
